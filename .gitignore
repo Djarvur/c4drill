@@ -58,5 +58,7 @@ temp/
 Thumbs.db
 .DS_Store
 
-# Draft files (AI operations must ignore)
-draft.txt
+.roo
+.serena
+.specify/scripts
+.specify/templates
