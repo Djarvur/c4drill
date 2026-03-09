@@ -1,13 +1,16 @@
-package validator
+package validator_test
 
 import (
 	"testing"
 
+	"github.com/Djarvur/c4drill/internal/validator"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestValidationError_WithLine(t *testing.T) {
-	err := &ValidationError{
+	t.Parallel()
+
+	err := &validator.ValidationError{
 		Message: `undefined unit "db1" referenced from "api"`,
 		Path:    "api",
 		Line:    15,
@@ -18,7 +21,9 @@ func TestValidationError_WithLine(t *testing.T) {
 }
 
 func TestValidationError_WithoutLine(t *testing.T) {
-	err := &ValidationError{
+	t.Parallel()
+
+	err := &validator.ValidationError{
 		Message: `undefined unit "db1"`,
 		Path:    "",
 		Line:    0,
@@ -29,7 +34,9 @@ func TestValidationError_WithoutLine(t *testing.T) {
 }
 
 func TestValidationError_WithPath(t *testing.T) {
-	err := &ValidationError{
+	t.Parallel()
+
+	err := &validator.ValidationError{
 		Message: `invalid type for subunit`,
 		Path:    "mainapp.api.handler",
 		Line:    0,
@@ -40,7 +47,9 @@ func TestValidationError_WithPath(t *testing.T) {
 }
 
 func TestValidationError_WithLineAndPath(t *testing.T) {
-	err := &ValidationError{
+	t.Parallel()
+
+	err := &validator.ValidationError{
 		Message: `unit cannot have subunits`,
 		Path:    "mainapp.api",
 		Line:    42,
@@ -52,7 +61,9 @@ func TestValidationError_WithLineAndPath(t *testing.T) {
 }
 
 func TestValidationError_EmptyPathZeroLine(t *testing.T) {
-	err := &ValidationError{
+	t.Parallel()
+
+	err := &validator.ValidationError{
 		Message: "generic validation error",
 		Path:    "",
 		Line:    0,
@@ -63,14 +74,18 @@ func TestValidationError_EmptyPathZeroLine(t *testing.T) {
 }
 
 func TestValidationErrors_Empty(t *testing.T) {
-	var errors ValidationErrors
+	t.Parallel()
+
+	var errors validator.ValidationErrors
 
 	assert.Equal(t, "no errors", errors.Error())
 	assert.Nil(t, errors)
 }
 
 func TestValidationErrors_Single(t *testing.T) {
-	errors := ValidationErrors{
+	t.Parallel()
+
+	errors := validator.ValidationErrors{
 		{Message: "first error", Path: "", Line: 0},
 	}
 
@@ -78,7 +93,9 @@ func TestValidationErrors_Single(t *testing.T) {
 }
 
 func TestValidationErrors_Multiple(t *testing.T) {
-	errors := ValidationErrors{
+	t.Parallel()
+
+	errors := validator.ValidationErrors{
 		{Message: "first error", Path: "", Line: 0},
 		{Message: "second error", Path: "", Line: 0},
 		{Message: "third error", Path: "", Line: 0},
@@ -88,10 +105,12 @@ func TestValidationErrors_Multiple(t *testing.T) {
 }
 
 func TestValidationErrors_Append(t *testing.T) {
-	var errors ValidationErrors
+	t.Parallel()
 
-	errors = append(errors, &ValidationError{Message: "error 1"})
-	errors = append(errors, &ValidationError{Message: "error 2"})
+	errors := make(validator.ValidationErrors, 0, 2)
+
+	errors = append(errors, &validator.ValidationError{Message: "error 1"})
+	errors = append(errors, &validator.ValidationError{Message: "error 2"})
 
 	assert.Len(t, errors, 2)
 	assert.Equal(t, "2 errors found", errors.Error())

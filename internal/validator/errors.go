@@ -1,3 +1,6 @@
+// Package validator provides validation infrastructure for C4 model integrity checks.
+// It includes error types with human-readable formatting, unit index building for O(1) lookup,
+// and Levenshtein-based suggestion helpers for typo detection.
 package validator
 
 import "fmt"
@@ -22,9 +25,11 @@ func (e *ValidationError) Error() string {
 	if e.Line > 0 {
 		return fmt.Sprintf("error: %s at line %d", e.Message, e.Line)
 	}
+
 	if e.Path != "" {
 		return fmt.Sprintf("error: %s in %s", e.Message, e.Path)
 	}
+
 	return "error: " + e.Message
 }
 
@@ -43,5 +48,6 @@ func (ve ValidationErrors) Error() string {
 	if count == 1 {
 		return "1 error found"
 	}
+
 	return fmt.Sprintf("%d errors found", count)
 }
