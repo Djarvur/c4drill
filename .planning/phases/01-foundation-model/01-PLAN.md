@@ -27,38 +27,47 @@ requirements:
   - TYPE-08
 must_haves:
   truths:
-    - "Developer can run mise test to execute tests"
-    - "Developer can run mise lint to check code quality"
-    - "All C4 unit types are defined as Go constants"
-    - "Link struct defines all required attributes"
+    - "Developer can run `mise test` and see tests execute"
+    - "Developer can run `mise lint` and see linting execute"
+    - "All 14 unit types are defined as Go constants (person, personExternal, system, systemExternal, db, dbExternal, queue, queueExternal, box, container, containerDb, containerQueue, component, componentDb, componentQueue)"
+    - "Unit struct has all required fields including Technology, Width, Height"
+    - "Link struct has all required fields including Technology, Description, LabelPosition"
+    - "Properties struct has LineLength field"
   artifacts:
+    - path: "go.mod"
+      provides: "Go 1.26.1 module definition"
+      contains: "go 1.26.1"
     - path: ".mise.toml"
-      provides: "Development tasks and tool installation"
-      contains: "[tasks.test]"
+      provides: "Development tasks"
+      exports: ["test", "lint"]
     - path: "internal/model/unit.go"
       provides: "UnitType enum and Unit struct"
-      exports: ["UnitType", "Unit", "TypePerson", "TypeSystem"]
+      min_lines: 50
     - path: "internal/model/link.go"
       provides: "Link struct and direction types"
-      exports: ["Link", "ArrowDirection", "RankDirection"]
+      min_lines: 30
     - path: "internal/model/properties.go"
-      provides: "Properties struct for root-level config"
-      exports: ["Properties"]
+      provides: "Properties struct"
+      min_lines: 20
     - path: "internal/model/colors.go"
       provides: "C4-PlantUML color constants"
-      exports: ["ColorPerson", "ColorSystem", "ColorArrow"]
+      min_lines: 30
   key_links:
     - from: ".mise.toml"
+      to: "golangci-lint binary"
+      via: "mise tools"
+      pattern: "golangci-lint"
+    - from: ".mise.toml"
       to: "go test"
-      via: "task definition"
+      via: "task run"
       pattern: "go test.*-cover"
 ---
 
 <objective>
-Set up the development environment with mise tasks and define all domain model types for the C4 architecture.
+Set up development environment with mise tasks and define all domain types for the C4 model.
 
-Purpose: Establish the foundation for the entire project - development tooling and type definitions that all subsequent phases depend on.
-Output: Working mise tasks (test, lint) and complete model package with all C4 unit types, link types, and color constants.
+Purpose: Establish reproducible development workflow and type definitions that all downstream phases will use.
+Output: Working mise tasks (test, lint) and complete domain model types.
 </objective>
 
 <execution_context>
@@ -74,72 +83,62 @@ Output: Working mise tasks (test, lint) and complete model package with all C4 u
 @.planning/phases/01-foundation-model/01-RESEARCH.md
 
 <interfaces>
-<!-- Key patterns from research - executor should use these directly -->
+<!-- Key decisions from CONTEXT.md that define the contracts -->
 
-From 01-RESEARCH.md - UnitType discriminator pattern:
+**Unit struct (flat, all fields top-level):**
 ```go
-type UnitType string
-
-const (
-    // C1 Context level
-    TypePerson         UnitType = "person"
-    TypePersonExternal UnitType = "personExternal"
-    TypeSystem         UnitType = "system"
-    TypeSystemExternal UnitType = "systemExternal"
-    TypeDb             UnitType = "db"
-    TypeDbExternal     UnitType = "dbExternal"
-    TypeQueue          UnitType = "queue"
-    TypeQueueExternal  UnitType = "queueExternal"
-    TypeBox            UnitType = "box"
-
-    // C2 Container level
-    TypeContainer      UnitType = "container"
-    TypeContainerDb    UnitType = "containerDb"
-    TypeContainerQueue UnitType = "containerQueue"
-
-    // C3 Component level
-    TypeComponent      UnitType = "component"
-    TypeComponentDb    UnitType = "componentDb"
-    TypeComponentQueue UnitType = "componentQueue"
-)
-```
-
-From 01-RESEARCH.md - Link struct pattern:
-```go
-type Link struct {
-    Target string
-    Arrow  ArrowDirection  // Forward, Reverse, Bidirectional, None
-    Rank   RankDirection   // Forward, Reverse, Equal
-    Color  string
-    Style  string
+type Unit struct {
+    Type         UnitType          // Discriminator
+    Name         string
+    Description  string
+    Technology   string            // NOT for person types
+    Color        string
+    Style        string
+    Border       string
+    Edges        string            // Cascades from parent
+    Width        float64           // 0 = auto
+    Height       float64           // 0 = auto
+    Expanded     []string
+    Links        map[string]Link
+    LinksFrom    map[string]Link
+    Subunits     map[string]*Unit  // Recursive, needs pointer
 }
 ```
 
-From 01-RESEARCH.md - Mise task configuration:
-```toml
-[tools]
-go = "1.26"
-golangci-lint = "2"
+**Link struct:**
+```go
+type LabelPosition string  // "tail", "head", "middle"
 
-[tasks.test]
-description = "Run Go tests with coverage"
-run = "go test -cover ./..."
-
-[tasks.lint]
-description = "Run golangci-lint"
-run = "golangci-lint run ./..."
+type Link struct {
+    Target        string
+    Arrow         ArrowDirection  // Forward, Reverse, Bidirectional, None
+    Rank          RankDirection   // Forward, Reverse, Equal
+    Color         string
+    Style         string
+    Technology    string          // C4: protocol/technology
+    Description   string          // C4: relationship description
+    LabelPosition LabelPosition   // Default: "middle"
+}
 ```
 
-From 01-RESEARCH.md - C4-PlantUML colors:
-- ELEMENT_FONT_COLOR: #FFFFFF
-- ARROW_COLOR: #666666
-- BOUNDARY_COLOR: #444444
-- Person background: #08427B, border: #073B6F
-- External Person background: #686868, border: #8A8A8A
-- System background: #1168BD, border: #3C7FC0
-- External System background: #999999, border: #8A8A8A
-- Container background: #438DD5, border: #3C7FC0
-- Component background: #85BBF0, border: #78A8D8
+**Properties struct:**
+```go
+type Properties struct {
+    Name        string
+    Description string
+    Color       string
+    Style       string
+    Border      string
+    Edges       string
+    LineLength  int       // 0 = auto wrap
+    Expanded    []string
+}
+```
+
+**UnitType values by level:**
+- C1: person, personExternal, system, systemExternal, db, dbExternal, queue, queueExternal, box
+- C2: container, containerDb, containerQueue
+- C3: component, componentDb, componentQueue
 </interfaces>
 </context>
 
@@ -150,94 +149,235 @@ From 01-RESEARCH.md - C4-PlantUML colors:
   <files>go.mod, .mise.toml</files>
   <action>
     1. Update go.mod: change `go 1.25.1` to `go 1.26.1`
-    2. Create .mise.toml with:
+    2. Add dependencies: `go get github.com/pelletier/go-toml/v2@latest` and `go get github.com/mitchellh/go-wordwrap@latest`
+    3. Create .mise.toml with:
        - [tools] section: go = "1.26", golangci-lint = "2"
-       - [tasks.test] with description and "go test -cover ./..."
-       - [tasks.lint] with description and "golangci-lint run ./..."
-       - [tasks.lint-fix] with description and "golangci-lint run --fix ./..."
+       - [tasks.test] description="Run Go tests with coverage", run="go test -cover ./..."
+       - [tasks.lint] description="Run golangci-lint", run="golangci-lint run ./..."
+       - [tasks.lint-fix] description="Run golangci-lint with auto-fix", run="golangci-lint run --fix ./..."
 
-    This installs golangci-lint v2 into mise sandbox (not globally), satisfying DEVI-04.
-    The tasks provide mise test and mise lint commands (DEVI-02, DEVI-03).
+    The golangci-lint install is sandboxed by mise (not global) per DEVI-04.
   </action>
   <verify>
-    <automated>grep "go 1.26.1" go.mod && grep "\[tasks.test\]" .mise.toml && grep "\[tasks.lint\]" .mise.toml</automated>
+    <automated>mise tasks ls | grep -E "test|lint"</automated>
   </verify>
-  <done>go.mod shows 1.26.1, .mise.toml exists with test and lint tasks, golangci-lint v2 configured in sandbox</done>
+  <done>
+    - go.mod contains "go 1.26.1"
+    - go.sum exists with pelletier/go-toml/v2 and mitchellh/go-wordwrap
+    - `mise tasks ls` shows test and lint tasks
+    - `mise test` runs without error (no tests yet is OK)
+    - `mise lint` runs without error (no Go files yet is OK)
+  </done>
 </task>
 
 <task type="auto">
-  <name>Task 2: Create domain model types</name>
-  <files>internal/model/unit.go, internal/model/link.go, internal/model/properties.go, internal/model/colors.go</files>
+  <name>Task 2: Define UnitType enum and Unit struct</name>
+  <files>internal/model/unit.go</files>
   <action>
-    Create internal/model/ directory and four files:
+    Create internal/model/unit.go with:
 
-    1. unit.go:
-       - Define UnitType as `type UnitType string`
-       - Define all 14 type constants (C1: person, personExternal, system, systemExternal, db, dbExternal, queue, queueExternal, box; C2: container, containerDb, containerQueue; C3: component, componentDb, componentQueue)
-       - Add `func (t UnitType) String() string { return string(t) }`
-       - Define Unit struct with TOML tags matching schema:
-         - Type UnitType `toml:"type"`
-         - Name, Description string
-         - Color, Style, Border, Edges string
-         - Expanded []string
-         - Links, LinksFrom map[string]Link (use `toml:"link"` and `toml:"linkFrom"`)
-         - Subunits map[string]*Unit (use `toml:",inline"` for arbitrary nested tables)
-       - FLAT struct - all fields at top level per CONTEXT.md decision
+    1. UnitType type (string-based) with String() method
+    2. All 14 type constants organized by level:
+       - C1 Context: TypePerson, TypePersonExternal, TypeSystem, TypeSystemExternal, TypeDb, TypeDbExternal, TypeQueue, TypeQueueExternal, TypeBox
+       - C2 Containers: TypeContainer, TypeContainerDb, TypeContainerQueue
+       - C3 Components: TypeComponent, TypeComponentDb, TypeComponentQueue
+    3. Unit struct with TOML tags for all fields:
+       - Type UnitType `toml:"type"`
+       - Name, Description, Technology (string, NOT for person types - validation in Phase 2)
+       - Color, Style, Border, Edges (string)
+       - Width, Height (float64, 0 = auto)
+       - Expanded []string `toml:"expanded"`
+       - Links, LinksFrom map[string]Link (use Link type - will be defined in next task)
+       - Subunits map[string]*Unit (recursive, needs pointer)
 
-    2. link.go:
-       - Define ArrowDirection as `type ArrowDirection string`
-       - Constants: ArrowForward, ArrowReverse, ArrowBidirectional, ArrowNone
-       - Define RankDirection as `type RankDirection string`
-       - Constants: RankForward, RankReverse, RankEqual
-       - Define Link struct with Target, Arrow, Rank, Color, Style fields
+    Use TOML struct tags matching the field names (lowercase). Add `toml:",inline"` for Subunits if needed for nested table unmarshaling.
 
-    3. properties.go:
-       - Define Properties struct with Name, Description, Color, Style, Border, Edges, Expanded fields
-       - Matches [properties] section in TOML schema
-
-    4. colors.go:
-       - Define exported constants for C4-PlantUML colors:
-         - ColorFont = "#FFFFFF"
-         - ColorArrow = "#666666"
-         - ColorBoundary = "#444444"
-         - ColorPersonBg = "#08427B", ColorPersonBorder = "#073B6F"
-         - ColorPersonExtBg = "#686868", ColorPersonExtBorder = "#8A8A8A"
-         - ColorSystemBg = "#1168BD", ColorSystemBorder = "#3C7FC0"
-         - ColorSystemExtBg = "#999999", ColorSystemExtBorder = "#8A8A8A"
-         - ColorContainerBg = "#438DD5", ColorContainerBorder = "#3C7FC0"
-         - ColorComponentBg = "#85BBF0", ColorComponentBorder = "#78A8D8"
-
-    DO NOT use interface-based polymorphism - use discriminator pattern per CONTEXT.md.
-    DO NOT create nested style objects - flat struct per CONTEXT.md.
+    Note: Technology field is on Unit but should not be populated for person types (validation is Phase 2).
   </action>
   <verify>
     <automated>go build ./internal/model/...</automated>
   </verify>
-  <done>All 14 UnitType constants defined, Unit struct with TOML tags compiles, Link struct with Arrow/Rank directions compiles, Properties struct compiles, color constants exported</done>
+  <done>
+    - UnitType has all 14 constants
+    - Unit struct has all required fields with correct types
+    - TOML tags present on all fields
+    - Code compiles without errors
+  </done>
+</task>
+
+<task type="auto">
+  <name>Task 3: Define Link struct and direction types</name>
+  <files>internal/model/link.go</files>
+  <action>
+    Create internal/model/link.go with:
+
+    1. ArrowDirection type (string) with constants:
+       - ArrowForward (default, arrow at target)
+       - ArrowReverse (arrow at source)
+       - ArrowBidirectional (arrows at both ends)
+       - ArrowNone (no arrow)
+
+    2. RankDirection type (string) with constants:
+       - RankForward (target ranks after source)
+       - RankReverse (target ranks before source)
+       - RankEqual (same rank)
+
+    3. LabelPosition type (string) with constants:
+       - LabelMiddle (default)
+       - LabelTail
+       - LabelHead
+
+    4. Link struct with TOML tags:
+       - Target string `toml:"-"` (set from map key, not TOML field)
+       - Arrow ArrowDirection
+       - Rank RankDirection
+       - Color, Style string
+       - Technology string (protocol/technology for the relationship)
+       - Description string (relationship description)
+       - LabelPosition LabelPosition
+
+    Note: Target is populated from the map key in Links/LinksFrom maps, not from a TOML field. Consider using `toml:"-"` tag.
+  </action>
+  <verify>
+    <automated>go build ./internal/model/...</automated>
+  </verify>
+  <done>
+    - ArrowDirection has Forward, Reverse, Bidirectional, None constants
+    - RankDirection has Forward, Reverse, Equal constants
+    - LabelPosition has Middle, Tail, Head constants
+    - Link struct has all required fields
+    - Code compiles without errors
+  </done>
+</task>
+
+<task type="auto">
+  <name>Task 4: Define Properties struct</name>
+  <files>internal/model/properties.go</files>
+  <action>
+    Create internal/model/properties.go with:
+
+    Properties struct for root-level TOML [properties] section:
+    - Name string `toml:"name"`
+    - Description string `toml:"description"`
+    - Color string `toml:"color"`
+    - Style string `toml:"style"`
+    - Border string `toml:"border"`
+    - Edges string `toml:"edges"`
+    - LineLength int `toml:"lineLength"` (0 = auto wrap)
+    - Expanded []string `toml:"expanded"`
+  </action>
+  <verify>
+    <automated>go build ./internal/model/...</automated>
+  </verify>
+  <done>
+    - Properties struct has all required fields
+    - LineLength field present (int type)
+    - Code compiles without errors
+  </done>
+</task>
+
+<task type="auto">
+  <name>Task 5: Define C4-PlantUML color constants</name>
+  <files>internal/model/colors.go</files>
+  <action>
+    Create internal/model/colors.go with color constants from C4-PlantUML:
+
+    Base colors:
+    - ElementFontColor = "#FFFFFF"
+    - ArrowColor = "#666666"
+    - BoundaryColor = "#444444"
+
+    C1 Context level (background, border):
+    - Person: "#08427B", "#073B6F"
+    - PersonExternal: "#686868", "#8A8A8A"
+    - System: "#1168BD", "#3C7FC0"
+    - SystemExternal: "#999999", "#8A8A8A"
+
+    C2 Container level:
+    - Container: "#438DD5", "#3C7FC0"
+    - ContainerExternal: "#B3B3B3", "#A6A6A6"
+
+    C3 Component level:
+    - Component: "#85BBF0", "#78A8D8"
+    - ComponentExternal: "#CCCCCC", "#BFBFBF"
+
+    Font colors:
+    - C1/C2: "#FFFFFF" (white)
+    - C3: "#000000" (black)
+
+    Note: Db and Queue types use same colors as their parent level.
+    Export all constants (capital first letter) so they're accessible from other packages.
+  </action>
+  <verify>
+    <automated>go build ./internal/model/...</automated>
+  </verify>
+  <done>
+    - All base colors defined
+    - All type-specific colors defined with Background and Border variants
+    - Constants are exported (capitalized)
+    - Code compiles without errors
+  </done>
+</task>
+
+<task type="auto">
+  <name>Task 6: Run lint and verify model package</name>
+  <files>internal/model/*.go</files>
+  <action>
+    Run `mise lint` and fix any lint errors in the model package.
+
+    Common fixes that may be needed:
+    - Add comments for exported types and constants
+    - Fix any import issues
+
+    DO NOT modify .golangci.yml to silence errors per QUAL-02.
+  </action>
+  <verify>
+    <automated>mise lint</automated>
+  </verify>
+  <done>
+    - `mise lint` passes with no errors
+    - No modifications to .golangci.yml
+  </done>
 </task>
 
 </tasks>
 
 <verification>
-After completing all tasks:
-1. Run `mise install` to verify tools install correctly
-2. Run `go build ./...` to verify all code compiles
-3. Run `mise lint` to verify no lint errors in new code
+Phase 1 Plan 01 verification:
+
+1. **Environment check:**
+   ```bash
+   mise tasks ls | grep -E "test|lint"
+   # Should show test and lint tasks
+
+   grep "go 1.26" go.mod
+   # Should find go 1.26.1
+   ```
+
+2. **Model types check:**
+   ```bash
+   go build ./internal/model/...
+   # Should compile without errors
+
+   grep -c "Type.*UnitType" internal/model/unit.go
+   # Should find 14+ type constants
+   ```
+
+3. **Lint check:**
+   ```bash
+   mise lint
+   # Should pass with no errors
+   ```
 </verification>
 
 <success_criteria>
-- [x] go.mod updated to Go 1.26.1
-- [x] .mise.toml exists with test and lint tasks
-- [x] golangci-lint v2 configured for sandbox install
-- [x] UnitType enum defines all 14 C4 types (C1, C2, C3 levels)
-- [x] Unit struct has flat design with TOML tags
-- [x] Link struct has Arrow and Rank direction fields
-- [x] Properties struct matches TOML schema
-- [x] Color constants match C4-PlantUML values
-- [x] All code compiles without errors
-- [x] No lint errors in new code
+- Developer can run `mise test` and `mise lint` to verify code quality
+- All unit types (person, system, db, queue, box, external variants) are defined as Go types
+- Link objects with target, arrow, rank, color, style, technology, description, labelPosition attributes are defined
+- Properties struct includes LineLength field
+- Unit struct includes Technology, Width, Height fields
 </success_criteria>
 
 <output>
-After completion, create `.planning/phases/01-foundation-model/01-SUMMARY.md`
+After completion, create `.planning/phases/01-foundation-model/01-01-SUMMARY.md`
 </output>
