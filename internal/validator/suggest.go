@@ -43,6 +43,7 @@ func SuggestSimilar(typo string, candidates []string) string {
 	if bestDistance <= maxSuggestionDistance {
 		return bestMatch
 	}
+
 	return ""
 }
 
@@ -52,5 +53,6 @@ func FormatSuggestion(typo string, candidates []string) string {
 	if suggestion := SuggestSimilar(typo, candidates); suggestion != "" {
 		return fmt.Sprintf(` (did you mean "%s"?)`, suggestion)
 	}
+
 	return ""
 }

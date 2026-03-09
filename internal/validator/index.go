@@ -1,6 +1,8 @@
 package validator
 
 import (
+	"maps"
+
 	"github.com/Djarvur/c4drill/internal/model"
 )
 
@@ -36,9 +38,7 @@ func BuildIndex(units map[string]*model.Unit, parentPath string) map[string]*Uni
 		// Recursively add subunits
 		if len(unit.Subunits) > 0 {
 			subIndex := BuildIndex(unit.Subunits, fullPath)
-			for k, v := range subIndex {
-				index[k] = v
-			}
+			maps.Copy(index, subIndex)
 		}
 	}
 

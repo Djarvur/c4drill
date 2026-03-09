@@ -11,7 +11,7 @@ import (
 // ValidateReferences checks that all referenced units exist.
 // It validates both Links (target references) and LinksFrom (source references).
 // Returns all errors found (not fail-fast).
-func ValidateReferences(units map[string]*model.Unit, index map[string]*UnitInfo) ValidationErrors {
+func ValidateReferences(index map[string]*UnitInfo) ValidationErrors {
 	var errors ValidationErrors
 
 	// Collect all unit names for suggestions
@@ -47,7 +47,7 @@ func ValidateReferences(units map[string]*model.Unit, index map[string]*UnitInfo
 // ValidateSubunitRules checks that only allowed types have subunits.
 // Only system, systemExternal, and box types can have subunits.
 // Returns all errors found (not fail-fast).
-func ValidateSubunitRules(units map[string]*model.Unit, index map[string]*UnitInfo) ValidationErrors {
+func ValidateSubunitRules(index map[string]*UnitInfo) ValidationErrors {
 	var errors ValidationErrors
 
 	// Types that can have subunits
@@ -78,11 +78,12 @@ func ValidateSubunitRules(units map[string]*model.Unit, index map[string]*UnitIn
 // - Units with subunits cannot have LinksFrom (VALD-02)
 // - Links cannot target units with subunits (VALD-03)
 // Returns all errors found (not fail-fast).
-func ValidateLinkRules(units map[string]*model.Unit, index map[string]*UnitInfo) ValidationErrors {
+func ValidateLinkRules(index map[string]*UnitInfo) ValidationErrors {
 	var errors ValidationErrors
 
 	// First pass: identify all units with subunits
 	hasSubunits := make(map[string]bool)
+
 	for path, info := range index {
 		if len(info.Unit.Subunits) > 0 {
 			hasSubunits[path] = true

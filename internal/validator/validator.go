@@ -7,6 +7,9 @@ import (
 	"github.com/Djarvur/c4drill/internal/parser"
 )
 
+// typicalErrorCount is the preallocation size for error slices.
+const typicalErrorCount = 4
+
 // Validate checks a parsed model for semantic errors.
 // It runs all validation rules and collects all errors (not fail-fast).
 // Returns nil if the model is valid, or a slice of ValidationErrors.
@@ -18,11 +21,12 @@ func Validate(m *parser.Model) ValidationErrors {
 	// Build index for O(1) lookup
 	index := BuildIndex(m.Units, "")
 
-	// Collect all errors from all rules
-	var errors ValidationErrors
-	errors = append(errors, ValidateReferences(m.Units, index)...)
-	errors = append(errors, ValidateSubunitRules(m.Units, index)...)
-	errors = append(errors, ValidateLinkRules(m.Units, index)...)
+	// Collect all errors from all rules (preallocate for typical case)
+	errors := make(ValidationErrors, 0, typicalErrorCount)
+
+	errors = append(errors, ValidateReferences(index)...)
+	errors = append(errors, ValidateSubunitRules(index)...)
+	errors = append(errors, ValidateLinkRules(index)...)
 
 	if len(errors) == 0 {
 		return nil
@@ -40,15 +44,15 @@ func ReportErrors(errors ValidationErrors, w io.Writer) int {
 	}
 
 	for _, err := range errors {
-		fmt.Fprintln(w, err.Error())
+		_, _ = fmt.Fprintln(w, err.Error())
 	}
 
 	// Print summary
 	count := len(errors)
 	if count == 1 {
-		fmt.Fprintln(w, "1 error found")
+		_, _ = fmt.Fprintln(w, "1 error found")
 	} else {
-		fmt.Fprintf(w, "%d errors found\n", count)
+		_, _ = fmt.Fprintf(w, "%d errors found\n", count)
 	}
 
 	return 1
