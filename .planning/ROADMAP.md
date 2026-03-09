@@ -58,7 +58,12 @@ Plans:
   4. Validator prevents subunits on non-system/non-box types
   5. Error messages include line numbers and human-readable context
 
-**Plans**: TBD
+**Plans**: 3 plans in 3 waves
+
+Plans:
+- [ ] 02-01-PLAN.md - Validation infrastructure: error types, index builder, suggestion helper (Wave 1)
+- [ ] 02-02-PLAN.md - Validation rules implementation: references, subunits, links (Wave 2)
+- [ ] 02-03-PLAN.md - CLI integration and quality gates (Wave 3, has checkpoint)
 
 ### Phase 3: Views & Graphs
 
@@ -137,7 +142,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Model | 2/3 | In Progress|  |
-| 2. Validation | 0/TBD | Not started | - |
+| 2. Validation | 0/3 | Not started | - |
 | 3. Views & Graphs | 0/TBD | Not started | - |
 | 4. Rendering & Output | 0/TBD | Not started | - |
 | 5. Navigation | 0/TBD | Not started | - |
@@ -146,4 +151,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 ---
 *Roadmap created: 2026-03-09*
 *Granularity: standard*
-*Last updated: 2026-03-09 - Phase 1 plans created (3 plans in 3 waves)*
+*Last updated: 2026-03-09 - Phase 2 plans created (3 plans in 3 waves)*
