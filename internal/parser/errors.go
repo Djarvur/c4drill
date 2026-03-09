@@ -41,9 +41,7 @@ func (e *ParseError) Unwrap() error {
 // wrapDecodeError wraps a go-toml DecodeError to extract line number information.
 // If the error is not a DecodeError, it returns a generic ParseError.
 func wrapDecodeError(err error) error {
-	var de *toml.DecodeError
-
-	if errors.As(err, &de) {
+	if de, ok := errors.AsType[*toml.DecodeError](err); ok {
 		// DecodeError.String() already provides a nicely formatted error
 		// with line number and context. We extract the line for our ParseError.
 		line := extractLineFromDecodeError(de)

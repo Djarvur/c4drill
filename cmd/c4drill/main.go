@@ -42,13 +42,7 @@ func main() {
 
 // printUnit recursively prints a unit and its subunits with indentation.
 func printUnit(name string, unit *model.Unit, depth int) {
-	var sb strings.Builder
-
-	for range depth {
-		sb.WriteString("  ")
-	}
-
-	indent := sb.String()
+	indent := strings.Repeat("  ", depth)
 
 	//nolint:forbidigo // Debug output for Phase 1 CLI
 	fmt.Printf("%s- %s: %s (%s)\n", indent, name, unit.Name, unit.Type)

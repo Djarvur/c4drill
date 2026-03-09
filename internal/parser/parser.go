@@ -3,6 +3,7 @@ package parser
 
 import (
 	"os"
+	"slices"
 
 	"github.com/Djarvur/c4drill/internal/model"
 	"github.com/pelletier/go-toml/v2"
@@ -113,23 +114,12 @@ func parseUnit(name string, value any) (*model.Unit, error) {
 
 // isBuiltinField returns true if the key is a known Unit struct field.
 func isBuiltinField(key string) bool {
-	builtinFields := map[string]bool{
-		"type":        true,
-		"name":        true,
-		"description": true,
-		"technology":  true,
-		"color":       true,
-		"style":       true,
-		"border":      true,
-		"edges":       true,
-		"width":       true,
-		"height":      true,
-		"expanded":    true,
-		"link":        true,
-		"linkFrom":    true,
-	}
-
-	return builtinFields[key]
+	return slices.Contains([]string{
+		"type", "name", "description", "technology",
+		"color", "style", "border", "edges",
+		"width", "height", "expanded",
+		"link", "linkFrom",
+	}, key)
 }
 
 // ParseFile reads a TOML file and parses it into a Model.
