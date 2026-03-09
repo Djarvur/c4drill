@@ -31,7 +31,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. All unit types (person, system, db, queue, box, external variants) are defined as Go types
   4. Link objects with target, reverse, equal, color, style attributes are defined
   5. Parser handles nested unit definitions at arbitrary depth
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 01-PLAN.md - Development environment (mise, go.mod) and domain model types
+- [ ] 02-PLAN.md - TOML parser implementation with go-toml v2
+- [ ] 03-PLAN.md - CLI entry point for development testing
+- [ ] 04-PLAN.md - Parser tests with 75% coverage
 
 ### Phase 2: Validation
 **Goal**: Invalid TOML files produce clear, actionable error messages before any rendering
@@ -101,7 +107,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Model | 0/TBD | Not started | - |
+| 1. Foundation & Model | 0/4 | Ready to execute | - |
 | 2. Validation | 0/TBD | Not started | - |
 | 3. Views & Graphs | 0/TBD | Not started | - |
 | 4. Rendering & Output | 0/TBD | Not started | - |
@@ -111,3 +117,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 ---
 *Roadmap created: 2026-03-09*
 *Granularity: standard*
+*Last updated: 2026-03-09 - Phase 1 plans created*
