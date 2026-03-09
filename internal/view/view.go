@@ -1,0 +1,60 @@
+// Package view provides types and functions for generating scoped C4 architecture views.
+package view
+
+import "github.com/Djarvur/c4drill/internal/model"
+
+// Level represents the C4 hierarchy level.
+type Level int
+
+const (
+	// LevelC1 is the Context level (top-level systems and actors).
+	LevelC1 Level = iota
+	// LevelC2 is the Container level (subunits of expanded systems).
+	LevelC2
+	// LevelC3 is the Component level (subunits of expanded containers).
+	LevelC3
+)
+
+// View represents a scoped view of the architecture model.
+// It contains the units visible at a specific C4 level.
+type View struct {
+	// Level indicates the C4 level (C1, C2, or C3).
+	Level Level
+	// Title is the diagram title (from properties.name or parent name).
+	Title string
+	// Units are the units visible in this view (keyed by full path).
+	Units map[string]*ViewUnit
+	// Edges is the edge routing style for this view.
+	Edges string
+	// Parent is the parent unit path for C2/C3 views (empty for C1).
+	Parent string
+	// ExpandedUnit is the unit being expanded (for C2/C3 views).
+	ExpandedUnit string
+}
+
+// ViewUnit represents a unit within a view.
+// It wraps a model.Unit with additional view-specific metadata.
+type ViewUnit struct {
+	// Unit is the underlying model unit.
+	Unit *model.Unit
+	// FullPath is the dotted path (e.g., "mainapp.api").
+	FullPath string
+	// IsExpanded indicates if this unit is expanded (shows subunits).
+	IsExpanded bool
+	// IsExternal indicates if this is an external boundary node.
+	IsExternal bool
+	// HasSubunits indicates if this unit has children (for [+] indicator).
+	HasSubunits bool
+}
+
+// IsExternalType returns true if the unit type is an external variant.
+// External types represent systems or actors outside the current scope.
+func IsExternalType(t model.UnitType) bool {
+	switch t {
+	case model.TypePersonExternal, model.TypeSystemExternal,
+		model.TypeDbExternal, model.TypeQueueExternal:
+		return true
+	default:
+		return false
+	}
+}
