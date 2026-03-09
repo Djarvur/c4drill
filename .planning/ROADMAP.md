@@ -81,7 +81,12 @@ Plans:
   5. Graph builder creates nodes with type-appropriate shapes (person icon, db cylinder, etc.)
   6. Graph builder creates edges with configured routing styles (straight, spline, square)
 
-**Plans**: TBD
+**Plans**: 3 plans in 3 waves
+
+Plans:
+- [ ] 03-01-PLAN.md - View package: View/ViewUnit types, GenerateC1View/GenerateC2View/GenerateC3View (Wave 1)
+- [ ] 03-02-PLAN.md - Graph package: Graph/Node/Edge/Cluster types, BuildGraph, shape/style mapping (Wave 2)
+- [ ] 03-03-PLAN.md - Integration tests and quality verification (Wave 3)
 
 ### Phase 4: Rendering & Output
 
@@ -143,7 +148,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Foundation & Model | 2/3 | Done | 2026-03-09 |
 | 2. Validation | 2/3 | In Progress|  |
-| 3. Views & Graphs | 0/TBD | Not started | - |
+| 3. Views & Graphs | 0/3 | Not started | - |
 | 4. Rendering & Output | 0/TBD | Not started | - |
 | 5. Navigation | 0/TBD | Not started | - |
 | 6. CLI & Polish | 0/TBD | Not started | - |
@@ -151,4 +156,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 ---
 *Roadmap created: 2026-03-09*
 *Granularity: standard*
-*Last updated: 2026-03-09 - Phase 2 plans created (3 plans in 3 waves)*
+*Last updated: 2026-03-09 - Phase 3 plans created (3 plans in 3 waves)*
