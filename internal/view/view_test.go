@@ -15,7 +15,7 @@ func TestView_StructContainsFields(t *testing.T) {
 	v := &view.View{
 		Level:        view.LevelC1,
 		Title:        "Test Diagram",
-		Units:        make(map[string]*view.ViewUnit),
+		Units:        make(map[string]*view.Entry),
 		Edges:        "spline",
 		Parent:       "",
 		ExpandedUnit: "",
@@ -29,7 +29,7 @@ func TestView_StructContainsFields(t *testing.T) {
 	assert.Empty(t, v.ExpandedUnit)
 }
 
-func TestViewUnit_StructContainsFields(t *testing.T) {
+func TestEntry_StructContainsFields(t *testing.T) {
 	t.Parallel()
 
 	unit := &model.Unit{
@@ -39,7 +39,7 @@ func TestViewUnit_StructContainsFields(t *testing.T) {
 		Technology:  "Go",
 	}
 
-	vu := &view.ViewUnit{
+	e := &view.Entry{
 		Unit:        unit,
 		FullPath:    "system.api",
 		IsExpanded:  true,
@@ -47,21 +47,21 @@ func TestViewUnit_StructContainsFields(t *testing.T) {
 		HasSubunits: true,
 	}
 
-	require.NotNil(t, vu.Unit)
-	assert.Equal(t, model.TypeSystem, vu.Unit.Type)
-	assert.Equal(t, "system.api", vu.FullPath)
-	assert.True(t, vu.IsExpanded)
-	assert.False(t, vu.IsExternal)
-	assert.True(t, vu.HasSubunits)
+	require.NotNil(t, e.Unit)
+	assert.Equal(t, model.TypeSystem, e.Unit.Type)
+	assert.Equal(t, "system.api", e.FullPath)
+	assert.True(t, e.IsExpanded)
+	assert.False(t, e.IsExternal)
+	assert.True(t, e.HasSubunits)
 }
 
 func TestLevel_Constants(t *testing.T) {
 	t.Parallel()
 
 	// Verify Level constants exist and have distinct values
-	assert.Equal(t, view.Level(0), view.LevelC1)
-	assert.Equal(t, view.Level(1), view.LevelC2)
-	assert.Equal(t, view.Level(2), view.LevelC3)
+	assert.Equal(t, view.LevelC1, view.Level(0))
+	assert.Equal(t, view.LevelC2, view.Level(1))
+	assert.Equal(t, view.LevelC3, view.Level(2))
 
 	// Verify they are distinct
 	assert.NotEqual(t, view.LevelC1, view.LevelC2)

@@ -23,7 +23,7 @@ type View struct {
 	// Title is the diagram title (from properties.name or parent name).
 	Title string
 	// Units are the units visible in this view (keyed by full path).
-	Units map[string]*ViewUnit
+	Units map[string]*Entry
 	// Edges is the edge routing style for this view.
 	Edges string
 	// Parent is the parent unit path for C2/C3 views (empty for C1).
@@ -32,9 +32,9 @@ type View struct {
 	ExpandedUnit string
 }
 
-// ViewUnit represents a unit within a view.
+// Entry represents a unit entry within a view.
 // It wraps a model.Unit with additional view-specific metadata.
-type ViewUnit struct {
+type Entry struct {
 	// Unit is the underlying model unit.
 	Unit *model.Unit
 	// FullPath is the dotted path (e.g., "mainapp.api").
@@ -50,11 +50,8 @@ type ViewUnit struct {
 // IsExternalType returns true if the unit type is an external variant.
 // External types represent systems or actors outside the current scope.
 func IsExternalType(t model.UnitType) bool {
-	switch t {
-	case model.TypePersonExternal, model.TypeSystemExternal,
-		model.TypeDbExternal, model.TypeQueueExternal:
-		return true
-	default:
-		return false
-	}
+	return t == model.TypePersonExternal ||
+		t == model.TypeSystemExternal ||
+		t == model.TypeDbExternal ||
+		t == model.TypeQueueExternal
 }

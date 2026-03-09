@@ -182,7 +182,7 @@ func TestGenerateC1View_ExternalBoundaryNodesForReferencedUnits(t *testing.T) {
 
 	// External boundary node should be marked external
 	assert.True(t, v.Units["externaldb"].IsExternal)
-	assert.True(t, v.Units["externaldb"].Unit.Type == model.TypeSystemExternal)
+	assert.Equal(t, model.TypeSystemExternal, v.Units["externaldb"].Unit.Type)
 }
 
 func TestGenerateC1View_ExternalBoundaryFromLinksFrom(t *testing.T) {
@@ -319,9 +319,9 @@ func TestGenerateC2View_ContainsSubunitsOfExpandedSystem(t *testing.T) {
 				Type: model.TypeSystem,
 				Name: "System",
 				Subunits: map[string]*model.Unit{
-					"api":   {Type: model.TypeContainer, Name: "API"},
-					"web":   {Type: model.TypeContainer, Name: "Web"},
-					"db":    {Type: model.TypeContainerDb, Name: "Database"},
+					"api": {Type: model.TypeContainer, Name: "API"},
+					"web": {Type: model.TypeContainer, Name: "Web"},
+					"db":  {Type: model.TypeContainerDb, Name: "Database"},
 				},
 			},
 		},
@@ -488,9 +488,9 @@ func TestGenerateC3View_ContainsSubunitsOfExpandedContainer(t *testing.T) {
 						Type: model.TypeContainer,
 						Name: "API",
 						Subunits: map[string]*model.Unit{
-							"handler":  {Type: model.TypeComponent, Name: "Handler"},
-							"service":  {Type: model.TypeComponent, Name: "Service"},
-							"repo":     {Type: model.TypeComponentDb, Name: "Repository"},
+							"handler": {Type: model.TypeComponent, Name: "Handler"},
+							"service": {Type: model.TypeComponent, Name: "Service"},
+							"repo":    {Type: model.TypeComponentDb, Name: "Repository"},
 						},
 					},
 				},
@@ -656,8 +656,8 @@ func TestGenerateC2View_IsExpandedForChildUnits(t *testing.T) {
 		Properties: model.Properties{Name: "Test"},
 		Units: map[string]*model.Unit{
 			"system": {
-				Type: model.TypeSystem,
-				Name: "System",
+				Type:     model.TypeSystem,
+				Name:     "System",
 				Expanded: []string{"api"}, // Expand the api subunit
 				Subunits: map[string]*model.Unit{
 					"api": {

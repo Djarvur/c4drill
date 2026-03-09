@@ -16,15 +16,15 @@ func GenerateC1View(m *parser.Model) *View {
 	}
 
 	v := &View{
-		Level:  LevelC1,
-		Title:  m.Properties.Name,
-		Edges:  m.Properties.Edges,
-		Units:  make(map[string]*ViewUnit),
+		Level: LevelC1,
+		Title: m.Properties.Name,
+		Edges: m.Properties.Edges,
+		Units: make(map[string]*Entry),
 	}
 
 	// Add all top-level units
 	for name, unit := range m.Units {
-		v.Units[name] = &ViewUnit{
+		v.Units[name] = &Entry{
 			Unit:        unit,
 			FullPath:    name,
 			IsExpanded:  isUnitExpanded(unit, name),
@@ -67,11 +67,11 @@ func addExternalBoundaryNodes(v *View, m *parser.Model) {
 	}
 }
 
-// createExternalBoundaryNode creates a ViewUnit representing an external boundary node.
+// createExternalBoundaryNode creates an Entry representing an external boundary node.
 // It infers the appropriate external type based on the context.
-func createExternalBoundaryNode(name string, _ string) *ViewUnit {
+func createExternalBoundaryNode(name string, _ string) *Entry {
 	// Default to external system type for boundary nodes
-	return &ViewUnit{
+	return &Entry{
 		Unit: &model.Unit{
 			Type: model.TypeSystemExternal,
 			Name: name,
@@ -102,13 +102,13 @@ func GenerateC2View(m *parser.Model, systemPath string) *View {
 		Edges:        systemUnit.Edges,
 		Parent:       systemPath,
 		ExpandedUnit: systemPath,
-		Units:        make(map[string]*ViewUnit),
+		Units:        make(map[string]*Entry),
 	}
 
 	// Add subunits (containers) of the expanded system
 	for name, unit := range systemUnit.Subunits {
 		fullPath := systemPath + "." + name
-		v.Units[fullPath] = &ViewUnit{
+		v.Units[fullPath] = &Entry{
 			Unit:        unit,
 			FullPath:    fullPath,
 			IsExpanded:  isUnitExpanded(systemUnit, name),
@@ -139,8 +139,10 @@ func GenerateC3View(m *parser.Model, containerPath string) *View {
 	// Extract parent path for title
 	parentPath := ""
 	title := containerUnit.Name + " - Components"
+
 	if idx := strings.LastIndex(containerPath, "."); idx > 0 {
 		parentPath = containerPath[:idx]
+
 		parentUnit := findUnitByPath(m, parentPath)
 		if parentUnit != nil {
 			title = parentUnit.Name + " - " + containerUnit.Name + " - Components"
@@ -153,13 +155,13 @@ func GenerateC3View(m *parser.Model, containerPath string) *View {
 		Edges:        containerUnit.Edges,
 		Parent:       parentPath,
 		ExpandedUnit: containerPath,
-		Units:        make(map[string]*ViewUnit),
+		Units:        make(map[string]*Entry),
 	}
 
 	// Add subunits (components) of the expanded container
 	for name, unit := range containerUnit.Subunits {
 		fullPath := containerPath + "." + name
-		v.Units[fullPath] = &ViewUnit{
+		v.Units[fullPath] = &Entry{
 			Unit:        unit,
 			FullPath:    fullPath,
 			IsExpanded:  isUnitExpanded(containerUnit, name),
@@ -197,10 +199,12 @@ func findUnitByPath(m *parser.Model, path string) *model.Unit {
 		if unit.Subunits == nil {
 			return nil
 		}
+
 		subunit, exists := unit.Subunits[parts[i]]
 		if !exists {
 			return nil
 		}
+
 		unit = subunit
 	}
 
