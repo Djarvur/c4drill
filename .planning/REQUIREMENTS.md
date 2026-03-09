@@ -19,14 +19,14 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Model/Types
 
-- [ ] **TYPE-01**: System defines person type with name, description, styling
-- [ ] **TYPE-02**: System defines personExternal type (external actor)
-- [ ] **TYPE-03**: System defines system type (can contain subunits for containers)
-- [ ] **TYPE-04**: System defines systemExternal type (external system)
-- [ ] **TYPE-05**: System defines db and dbExternal types (database storage)
-- [ ] **TYPE-06**: System defines queue and queueExternal types (message queues)
-- [ ] **TYPE-07**: System defines box type (grouping container, can contain context-level units)
-- [ ] **TYPE-08**: Link object defines target, reverse, equal, color, style attributes
+- [x] **TYPE-01**: System defines person type with name, description, styling
+- [x] **TYPE-02**: System defines personExternal type (external actor)
+- [x] **TYPE-03**: System defines system type (can contain subunits for containers)
+- [x] **TYPE-04**: System defines systemExternal type (external system)
+- [x] **TYPE-05**: System defines db and dbExternal types (database storage)
+- [x] **TYPE-06**: System defines queue and queueExternal types (message queues)
+- [x] **TYPE-07**: System defines box type (grouping container, can contain context-level units)
+- [x] **TYPE-08**: Link object defines target, reverse, equal, color, style attributes
 
 ### Validation
 
@@ -84,10 +84,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Development Environment
 
-- [ ] **DEVI-01**: Go version updated to 1.26.1 in go.mod and all config files before development
-- [ ] **DEVI-02**: Mise config includes tasks for running tests
-- [ ] **DEVI-03**: Mise config includes tasks for running lint
-- [ ] **DEVI-04**: Mise installs golangci-lint v2 into sandbox (not global)
+- [x] **DEVI-01**: Go version updated to 1.26.1 in go.mod and all config files before development
+- [x] **DEVI-02**: Mise config includes tasks for running tests
+- [x] **DEVI-03**: Mise config includes tasks for running lint
+- [x] **DEVI-04**: Mise installs golangci-lint v2 into sandbox (not global)
 - [ ] **DEVI-05**: Modern Go plugin loaded via /use-modern-go before any development task
 
 ### Quality Gates
@@ -143,18 +143,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INPT-05 | Phase 1 | Pending |
 | INPT-06 | Phase 1 | Pending |
 | INPT-07 | Phase 1 | Pending |
-| TYPE-01 | Phase 1 | Pending |
-| TYPE-02 | Phase 1 | Pending |
-| TYPE-03 | Phase 1 | Pending |
-| TYPE-04 | Phase 1 | Pending |
-| TYPE-05 | Phase 1 | Pending |
-| TYPE-06 | Phase 1 | Pending |
-| TYPE-07 | Phase 1 | Pending |
-| TYPE-08 | Phase 1 | Pending |
-| DEVI-01 | Phase 1 | Pending |
-| DEVI-02 | Phase 1 | Pending |
-| DEVI-03 | Phase 1 | Pending |
-| DEVI-04 | Phase 1 | Pending |
+| TYPE-01 | Phase 1 | Complete |
+| TYPE-02 | Phase 1 | Complete |
+| TYPE-03 | Phase 1 | Complete |
+| TYPE-04 | Phase 1 | Complete |
+| TYPE-05 | Phase 1 | Complete |
+| TYPE-06 | Phase 1 | Complete |
+| TYPE-07 | Phase 1 | Complete |
+| TYPE-08 | Phase 1 | Complete |
+| DEVI-01 | Phase 1 | Complete |
+| DEVI-02 | Phase 1 | Complete |
+| DEVI-03 | Phase 1 | Complete |
+| DEVI-04 | Phase 1 | Complete |
 | DEVI-05 | All Phases | Pending |
 | VALD-01 | Phase 2 | Pending |
 | VALD-02 | Phase 2 | Pending |
