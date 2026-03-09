@@ -53,7 +53,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **GRPH-02**: Builder creates edges for each link definition
 - [ ] **GRPH-03**: Builder applies edge routing style (straight, spline, square)
 - [ ] **GRPH-04**: Builder creates clusters for expanded units
-- [ ] **GRPH-05**: Shapes: person uses 👤 icon, db uses ⛁ icon, queue uses ╟╢ bars
+- [ ] **GRPH-05**: Shapes: person uses icon, db uses cylinder icon, queue uses bars
 - [ ] **GRPH-06**: System shape includes name, description, explore link
 
 ### Rendering
@@ -151,6 +151,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TYPE-06 | Phase 1 | Pending |
 | TYPE-07 | Phase 1 | Pending |
 | TYPE-08 | Phase 1 | Pending |
+| DEVI-01 | Phase 1 | Pending |
+| DEVI-02 | Phase 1 | Pending |
+| DEVI-03 | Phase 1 | Pending |
+| DEVI-04 | Phase 1 | Pending |
+| DEVI-05 | All Phases | Pending |
 | VALD-01 | Phase 2 | Pending |
 | VALD-02 | Phase 2 | Pending |
 | VALD-03 | Phase 2 | Pending |
@@ -173,13 +178,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REND-01 | Phase 4 | Pending |
 | REND-02 | Phase 4 | Pending |
 | REND-03 | Phase 4 | Pending |
+| OUTP-01 | Phase 4 | Pending |
+| OUTP-02 | Phase 4 | Pending |
+| OUTP-04 | Phase 4 | Pending |
 | REND-04 | Phase 5 | Pending |
 | REND-05 | Phase 5 | Pending |
 | REND-06 | Phase 5 | Pending |
-| OUTP-01 | Phase 4 | Pending |
-| OUTP-02 | Phase 4 | Pending |
-| OUTP-03 | Phase 6 | Pending |
-| OUTP-04 | Phase 4 | Pending |
 | OUTP-05 | Phase 5 | Pending |
 | CLII-01 | Phase 6 | Pending |
 | CLII-02 | Phase 6 | Pending |
@@ -187,10 +191,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLII-04 | Phase 6 | Pending |
 | CLII-05 | Phase 6 | Pending |
 | CLII-06 | Phase 6 | Pending |
-| MISE-01 | Phase 1 | Pending |
-| MISE-02 | Phase 1 | Pending |
-| DEVI-01 | Phase 1 | Pending |
-| DEVI-05 | All Phases | Pending |
+| OUTP-03 | Phase 6 | Pending |
 | QUAL-01 | All Phases | Pending |
 | QUAL-02 | All Phases | Pending |
 | QUAL-03 | All Phases | Pending |
@@ -198,10 +199,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 | QUAL-05 | All Phases | Pending |
 
 **Coverage:**
-- v1 requirements: 60 total
-- Mapped to phases: 60
-- Unmapped: 0 ✓
+- v1 requirements: 56 total
+- Mapped to phases: 56
+- Unmapped: 0
+
+**By Phase:**
+- Phase 1 (Foundation & Model): 20 requirements (INPT: 7, TYPE: 8, DEVI: 5)
+- Phase 2 (Validation): 6 requirements (VALD: 6)
+- Phase 3 (Views & Graphs): 13 requirements (VIEW: 7, GRPH: 6)
+- Phase 4 (Rendering & Output): 6 requirements (REND: 3, OUTP: 3)
+- Phase 5 (Navigation): 4 requirements (REND: 3, OUTP: 1)
+- Phase 6 (CLI & Polish): 7 requirements (CLII: 6, OUTP: 1)
+- Cross-cutting (All Phases): 6 requirements (DEVI-05, QUAL: 5)
 
 ---
 *Requirements defined: 2026-03-09*
-*Last updated: 2026-03-09 after initial definition*
+*Last updated: 2026-03-09 after roadmap creation*
