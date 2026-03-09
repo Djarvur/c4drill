@@ -142,7 +142,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Model | 2/3 | Done | 2026-03-09 |
-| 2. Validation | 1/3 | In Progress | - |
+| 2. Validation | 2/3 | In Progress|  |
 | 3. Views & Graphs | 0/TBD | Not started | - |
 | 4. Rendering & Output | 0/TBD | Not started | - |
 | 5. Navigation | 0/TBD | Not started | - |

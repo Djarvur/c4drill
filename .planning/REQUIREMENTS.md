@@ -30,10 +30,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Validation
 
-- [ ] **VALD-01**: Validator checks all referenced units are defined
-- [ ] **VALD-02**: Validator prevents links on units that have subunits
-- [ ] **VALD-03**: Validator prevents referencing units that have subunits
-- [ ] **VALD-04**: Validator prevents subunits on non-system/non-box types
+- [x] **VALD-01**: Validator checks all referenced units are defined
+- [x] **VALD-02**: Validator prevents links on units that have subunits
+- [x] **VALD-03**: Validator prevents referencing units that have subunits
+- [x] **VALD-04**: Validator prevents subunits on non-system/non-box types
 - [x] **VALD-05**: Error messages include line numbers and context
 - [x] **VALD-06**: Error messages use human-readable format (not JSON)
 
@@ -156,10 +156,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEVI-03 | Phase 1 | Complete |
 | DEVI-04 | Phase 1 | Complete |
 | DEVI-05 | All Phases | Pending |
-| VALD-01 | Phase 2 | Pending |
-| VALD-02 | Phase 2 | Pending |
-| VALD-03 | Phase 2 | Pending |
-| VALD-04 | Phase 2 | Pending |
+| VALD-01 | Phase 2 | Complete |
+| VALD-02 | Phase 2 | Complete |
+| VALD-03 | Phase 2 | Complete |
+| VALD-04 | Phase 2 | Complete |
 | VALD-05 | Phase 2 | Complete |
 | VALD-06 | Phase 2 | Complete |
 | VIEW-01 | Phase 3 | Pending |
