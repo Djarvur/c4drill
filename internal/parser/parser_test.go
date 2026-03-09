@@ -1,13 +1,13 @@
 package parser_test
 
 import (
-	"errors"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/Djarvur/c4drill/internal/model"
 	"github.com/Djarvur/c4drill/internal/parser"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const webappKey = "webapp"
@@ -16,499 +16,270 @@ func TestParseValidProperties(t *testing.T) {
 	t.Parallel()
 
 	data, err := os.ReadFile("../../testdata/valid.toml")
-	if err != nil {
-		t.Fatalf("failed to read test fixture: %v", err)
-	}
+	require.NoError(t, err, "failed to read test fixture")
 
 	got, err := parser.Parse(data)
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil", err)
-	}
+	require.NoError(t, err, "Parse() should not error")
 
-	if got.Properties.Name != "Test System" {
-		t.Errorf("Properties.Name = %q, want %q", got.Properties.Name, "Test System")
-	}
-
-	if got.Properties.Description != "A test architecture" {
-		t.Errorf("Properties.Description = %q, want %q", got.Properties.Description, "A test architecture")
-	}
-
-	if got.Properties.LineLength != 40 {
-		t.Errorf("Properties.LineLength = %d, want 40", got.Properties.LineLength)
-	}
-
-	if len(got.Properties.Expanded) != 1 || got.Properties.Expanded[0] != webappKey {
-		t.Errorf("Properties.Expanded = %v, want [webapp]", got.Properties.Expanded)
-	}
+	assert.Equal(t, "Test System", got.Properties.Name, "Properties.Name")
+	assert.Equal(t, "A test architecture", got.Properties.Description, "Properties.Description")
+	assert.Equal(t, 40, got.Properties.LineLength, "Properties.LineLength")
+	assert.Equal(t, []string{webappKey}, got.Properties.Expanded, "Properties.Expanded")
 }
 
 func TestParseValidUserUnit(t *testing.T) {
 	t.Parallel()
 
 	data, err := os.ReadFile("../../testdata/valid.toml")
-	if err != nil {
-		t.Fatalf("failed to read test fixture: %v", err)
-	}
+	require.NoError(t, err, "failed to read test fixture")
 
 	got, err := parser.Parse(data)
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil", err)
-	}
-
-	if len(got.Units) != 2 {
-		t.Fatalf("len(Units) = %d, want 2", len(got.Units))
-	}
+	require.NoError(t, err, "Parse() should not error")
+	require.Len(t, got.Units, 2, "should have 2 units")
 
 	user, ok := got.Units["user"]
-	if !ok {
-		t.Fatal("missing 'user' unit")
-	}
+	require.True(t, ok, "missing 'user' unit")
 
-	if user.Type != model.TypePerson {
-		t.Errorf("user.Type = %q, want %q", user.Type, model.TypePerson)
-	}
-
-	if user.Name != "User" {
-		t.Errorf("user.Name = %q, want %q", user.Name, "User")
-	}
-
-	if user.Description != "End user of the system" {
-		t.Errorf("user.Description = %q, want %q", user.Description, "End user of the system")
-	}
+	assert.Equal(t, model.TypePerson, user.Type, "user.Type")
+	assert.Equal(t, "User", user.Name, "user.Name")
+	assert.Equal(t, "End user of the system", user.Description, "user.Description")
 }
 
 func TestParseValidWebappUnit(t *testing.T) {
 	t.Parallel()
 
 	data, err := os.ReadFile("../../testdata/valid.toml")
-	if err != nil {
-		t.Fatalf("failed to read test fixture: %v", err)
-	}
+	require.NoError(t, err, "failed to read test fixture")
 
 	got, err := parser.Parse(data)
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil", err)
-	}
+	require.NoError(t, err, "Parse() should not error")
 
 	webapp, ok := got.Units[webappKey]
-	if !ok {
-		t.Fatal("missing 'webapp' unit")
-	}
+	require.True(t, ok, "missing 'webapp' unit")
 
-	if webapp.Type != model.TypeSystem {
-		t.Errorf("webapp.Type = %q, want %q", webapp.Type, model.TypeSystem)
-	}
-
-	if webapp.Name != "Web Application" {
-		t.Errorf("webapp.Name = %q, want %q", webapp.Name, "Web Application")
-	}
-
-	if webapp.Technology != "Go, React" {
-		t.Errorf("webapp.Technology = %q, want %q", webapp.Technology, "Go, React")
-	}
+	assert.Equal(t, model.TypeSystem, webapp.Type, "webapp.Type")
+	assert.Equal(t, "Web Application", webapp.Name, "webapp.Name")
+	assert.Equal(t, "Go, React", webapp.Technology, "webapp.Technology")
 }
 
 func TestParseNestedProperties(t *testing.T) {
 	t.Parallel()
 
 	data, err := os.ReadFile("../../testdata/nested.toml")
-	if err != nil {
-		t.Fatalf("failed to read test fixture: %v", err)
-	}
+	require.NoError(t, err, "failed to read test fixture")
 
 	got, err := parser.Parse(data)
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil", err)
-	}
+	require.NoError(t, err, "Parse() should not error")
 
-	if got.Properties.Name != "Nested Test" {
-		t.Errorf("Properties.Name = %q, want %q", got.Properties.Name, "Nested Test")
-	}
+	assert.Equal(t, "Nested Test", got.Properties.Name, "Properties.Name")
 }
 
 func TestParseNestedExternalUnit(t *testing.T) {
 	t.Parallel()
 
 	data, err := os.ReadFile("../../testdata/nested.toml")
-	if err != nil {
-		t.Fatalf("failed to read test fixture: %v", err)
-	}
+	require.NoError(t, err, "failed to read test fixture")
 
 	got, err := parser.Parse(data)
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil", err)
-	}
-
-	if len(got.Units) != 2 {
-		t.Fatalf("len(Units) = %d, want 2", len(got.Units))
-	}
+	require.NoError(t, err, "Parse() should not error")
+	require.Len(t, got.Units, 2, "should have 2 units")
 
 	externals, ok := got.Units["externals"]
-	if !ok {
-		t.Fatal("missing 'externals' unit")
-	}
+	require.True(t, ok, "missing 'externals' unit")
 
-	if externals.Type != model.TypeSystemExternal {
-		t.Errorf("externals.Type = %q, want %q", externals.Type, model.TypeSystemExternal)
-	}
+	assert.Equal(t, model.TypeSystemExternal, externals.Type, "externals.Type")
 }
 
 func TestParseNestedMainappUnit(t *testing.T) {
 	t.Parallel()
 
 	data, err := os.ReadFile("../../testdata/nested.toml")
-	if err != nil {
-		t.Fatalf("failed to read test fixture: %v", err)
-	}
+	require.NoError(t, err, "failed to read test fixture")
 
 	got, err := parser.Parse(data)
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil", err)
-	}
+	require.NoError(t, err, "Parse() should not error")
 
 	mainapp, ok := got.Units["mainapp"]
-	if !ok {
-		t.Fatal("missing 'mainapp' unit")
-	}
+	require.True(t, ok, "missing 'mainapp' unit")
 
-	if mainapp.Type != model.TypeSystem {
-		t.Errorf("mainapp.Type = %q, want %q", mainapp.Type, model.TypeSystem)
-	}
-
-	if mainapp.Name != "Main Application" {
-		t.Errorf("mainapp.Name = %q, want %q", mainapp.Name, "Main Application")
-	}
-
-	if mainapp.Technology != "Go" {
-		t.Errorf("mainapp.Technology = %q, want %q", mainapp.Technology, "Go")
-	}
+	assert.Equal(t, model.TypeSystem, mainapp.Type, "mainapp.Type")
+	assert.Equal(t, "Main Application", mainapp.Name, "mainapp.Name")
+	assert.Equal(t, "Go", mainapp.Technology, "mainapp.Technology")
 }
 
 func TestParseNestedContainers(t *testing.T) {
 	t.Parallel()
 
 	data, err := os.ReadFile("../../testdata/nested.toml")
-	if err != nil {
-		t.Fatalf("failed to read test fixture: %v", err)
-	}
+	require.NoError(t, err, "failed to read test fixture")
 
 	got, err := parser.Parse(data)
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil", err)
-	}
+	require.NoError(t, err, "Parse() should not error")
 
 	mainapp, ok := got.Units["mainapp"]
-	if !ok {
-		t.Fatal("missing 'mainapp' unit")
-	}
-
-	if len(mainapp.Subunits) != 2 {
-		t.Fatalf("len(mainapp.Subunits) = %d, want 2", len(mainapp.Subunits))
-	}
+	require.True(t, ok, "missing 'mainapp' unit")
+	require.Len(t, mainapp.Subunits, 2, "mainapp should have 2 subunits")
 
 	api, ok := mainapp.Subunits["api"]
-	if !ok {
-		t.Fatal("missing 'mainapp.api' subunit")
-	}
+	require.True(t, ok, "missing 'mainapp.api' subunit")
 
-	if api.Type != model.TypeContainer {
-		t.Errorf("api.Type = %q, want %q", api.Type, model.TypeContainer)
-	}
-
-	if api.Name != "API Server" {
-		t.Errorf("api.Name = %q, want %q", api.Name, "API Server")
-	}
+	assert.Equal(t, model.TypeContainer, api.Type, "api.Type")
+	assert.Equal(t, "API Server", api.Name, "api.Name")
 
 	db, ok := mainapp.Subunits["db"]
-	if !ok {
-		t.Fatal("missing 'mainapp.db' subunit")
-	}
+	require.True(t, ok, "missing 'mainapp.db' subunit")
 
-	if db.Type != model.TypeContainerDb {
-		t.Errorf("db.Type = %q, want %q", db.Type, model.TypeContainerDb)
-	}
-
-	if db.Name != "Database" {
-		t.Errorf("db.Name = %q, want %q", db.Name, "Database")
-	}
+	assert.Equal(t, model.TypeContainerDb, db.Type, "db.Type")
+	assert.Equal(t, "Database", db.Name, "db.Name")
 }
 
 func TestParseNestedComponents(t *testing.T) {
 	t.Parallel()
 
 	data, err := os.ReadFile("../../testdata/nested.toml")
-	if err != nil {
-		t.Fatalf("failed to read test fixture: %v", err)
-	}
+	require.NoError(t, err, "failed to read test fixture")
 
 	got, err := parser.Parse(data)
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil", err)
-	}
+	require.NoError(t, err, "Parse() should not error")
 
 	mainapp := got.Units["mainapp"]
-	api := mainapp.Subunits["api"]
+	require.NotNil(t, mainapp, "missing 'mainapp' unit")
 
-	if len(api.Subunits) != 1 {
-		t.Fatalf("len(api.Subunits) = %d, want 1", len(api.Subunits))
-	}
+	api := mainapp.Subunits["api"]
+	require.NotNil(t, api, "missing 'mainapp.api' subunit")
+	require.Len(t, api.Subunits, 1, "api should have 1 subunit")
 
 	handler, ok := api.Subunits["handler"]
-	if !ok {
-		t.Fatal("missing 'mainapp.api.handler' subunit")
-	}
+	require.True(t, ok, "missing 'mainapp.api.handler' subunit")
 
-	if handler.Type != model.TypeComponent {
-		t.Errorf("handler.Type = %q, want %q", handler.Type, model.TypeComponent)
-	}
-
-	if handler.Name != "Request Handler" {
-		t.Errorf("handler.Name = %q, want %q", handler.Name, "Request Handler")
-	}
+	assert.Equal(t, model.TypeComponent, handler.Type, "handler.Type")
+	assert.Equal(t, "Request Handler", handler.Name, "handler.Name")
 }
 
 func TestParseLinksProperties(t *testing.T) {
 	t.Parallel()
 
 	data, err := os.ReadFile("../../testdata/links.toml")
-	if err != nil {
-		t.Fatalf("failed to read test fixture: %v", err)
-	}
+	require.NoError(t, err, "failed to read test fixture")
 
 	got, err := parser.Parse(data)
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil", err)
-	}
+	require.NoError(t, err, "Parse() should not error")
 
-	if got.Properties.Name != "Links Test" {
-		t.Errorf("Properties.Name = %q, want %q", got.Properties.Name, "Links Test")
-	}
-
-	if got.Properties.Edges != "spline" {
-		t.Errorf("Properties.Edges = %q, want %q", got.Properties.Edges, "spline")
-	}
+	assert.Equal(t, "Links Test", got.Properties.Name, "Properties.Name")
+	assert.Equal(t, "spline", got.Properties.Edges, "Properties.Edges")
 }
 
 func TestParseLinksOutgoing(t *testing.T) {
 	t.Parallel()
 
 	data, err := os.ReadFile("../../testdata/links.toml")
-	if err != nil {
-		t.Fatalf("failed to read test fixture: %v", err)
-	}
+	require.NoError(t, err, "failed to read test fixture")
 
 	got, err := parser.Parse(data)
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil", err)
-	}
+	require.NoError(t, err, "Parse() should not error")
 
 	webapp, ok := got.Units[webappKey]
-	if !ok {
-		t.Fatal("missing 'webapp' unit")
-	}
-
-	if len(webapp.Links) != 1 {
-		t.Fatalf("len(webapp.Links) = %d, want 1", len(webapp.Links))
-	}
+	require.True(t, ok, "missing 'webapp' unit")
+	require.Len(t, webapp.Links, 1, "webapp should have 1 link")
 
 	link, ok := webapp.Links["user"]
-	if !ok {
-		t.Fatal("missing 'user' link in webapp")
-	}
+	require.True(t, ok, "missing 'user' link in webapp")
 
-	if link.Target != "user" {
-		t.Errorf("link.Target = %q, want %q", link.Target, "user")
-	}
-
-	if link.Arrow != model.ArrowForward {
-		t.Errorf("link.Arrow = %q, want %q", link.Arrow, model.ArrowForward)
-	}
-
-	if link.Rank != model.RankForward {
-		t.Errorf("link.Rank = %q, want %q", link.Rank, model.RankForward)
-	}
-
-	if link.Technology != "HTTPS" {
-		t.Errorf("link.Technology = %q, want %q", link.Technology, "HTTPS")
-	}
-
-	if link.Description != "Uses" {
-		t.Errorf("link.Description = %q, want %q", link.Description, "Uses")
-	}
+	assert.Equal(t, "user", link.Target, "link.Target")
+	assert.Equal(t, model.ArrowForward, link.Arrow, "link.Arrow")
+	assert.Equal(t, model.RankForward, link.Rank, "link.Rank")
+	assert.Equal(t, "HTTPS", link.Technology, "link.Technology")
+	assert.Equal(t, "Uses", link.Description, "link.Description")
 }
 
 func TestParseLinksIncoming(t *testing.T) {
 	t.Parallel()
 
 	data, err := os.ReadFile("../../testdata/links.toml")
-	if err != nil {
-		t.Fatalf("failed to read test fixture: %v", err)
-	}
+	require.NoError(t, err, "failed to read test fixture")
 
 	got, err := parser.Parse(data)
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil", err)
-	}
+	require.NoError(t, err, "Parse() should not error")
 
 	api, ok := got.Units["api"]
-	if !ok {
-		t.Fatal("missing 'api' unit")
-	}
-
-	if len(api.LinksFrom) != 1 {
-		t.Fatalf("len(api.LinksFrom) = %d, want 1", len(api.LinksFrom))
-	}
+	require.True(t, ok, "missing 'api' unit")
+	require.Len(t, api.LinksFrom, 1, "api should have 1 linkFrom")
 
 	linkFrom, ok := api.LinksFrom[webappKey]
-	if !ok {
-		t.Fatal("missing 'webapp' linkFrom in api")
-	}
+	require.True(t, ok, "missing 'webapp' linkFrom in api")
 
-	if linkFrom.Target != webappKey {
-		t.Errorf("linkFrom.Target = %q, want %q", linkFrom.Target, webappKey)
-	}
-
-	if linkFrom.Arrow != model.ArrowForward {
-		t.Errorf("linkFrom.Arrow = %q, want %q", linkFrom.Arrow, model.ArrowForward)
-	}
-
-	if linkFrom.Technology != "HTTP/JSON" {
-		t.Errorf("linkFrom.Technology = %q, want %q", linkFrom.Technology, "HTTP/JSON")
-	}
+	assert.Equal(t, webappKey, linkFrom.Target, "linkFrom.Target")
+	assert.Equal(t, model.ArrowForward, linkFrom.Arrow, "linkFrom.Arrow")
+	assert.Equal(t, "HTTP/JSON", linkFrom.Technology, "linkFrom.Technology")
 }
 
 func TestParseInvalidTOML(t *testing.T) {
 	t.Parallel()
 
 	invalidData := []byte("invalid [[[")
-
 	_, err := parser.Parse(invalidData)
-	if err == nil {
-		t.Fatal("Parse() error = nil, want error for invalid TOML")
-	}
-
-	if !strings.Contains(err.Error(), "parse error") {
-		t.Errorf("error message should contain 'parse error', got %q", err.Error())
-	}
+	require.Error(t, err, "Parse() should error for invalid TOML")
+	assert.Contains(t, err.Error(), "parse error", "error message should contain 'parse error'")
 
 	var parseErr *parser.ParseError
-
-	if !errors.As(err, &parseErr) {
-		t.Fatalf("error type = %T, want *ParseError", err)
-	}
-
-	if parseErr.Line == 0 {
-		t.Error("ParseError.Line = 0, want non-zero for invalid TOML")
-	}
+	require.ErrorAs(t, err, &parseErr, "error should be *ParseError")
+	assert.NotZero(t, parseErr.Line, "ParseError.Line should be non-zero for invalid TOML")
 }
 
 func TestParseMissingFile(t *testing.T) {
 	t.Parallel()
 
 	_, err := parser.ParseFile("nonexistent.toml")
-	if err == nil {
-		t.Fatal("ParseFile() error = nil, want error for missing file")
-	}
+	require.Error(t, err, "ParseFile() should error for missing file")
 
 	var parseErr *parser.ParseError
-
-	if !errors.As(err, &parseErr) {
-		t.Fatalf("error type = %T, want *ParseError", err)
-	}
-
-	if parseErr.Message != "failed to read file" {
-		t.Errorf("ParseError.Message = %q, want %q", parseErr.Message, "failed to read file")
-	}
-
-	if parseErr.Context != "nonexistent.toml" {
-		t.Errorf("ParseError.Context = %q, want %q", parseErr.Context, "nonexistent.toml")
-	}
+	require.ErrorAs(t, err, &parseErr, "error should be *ParseError")
+	assert.Equal(t, "failed to read file", parseErr.Message, "ParseError.Message")
+	assert.Equal(t, "nonexistent.toml", parseErr.Context, "ParseError.Context")
 }
 
 func TestParsePropertiesFields(t *testing.T) {
 	t.Parallel()
 
 	data, err := os.ReadFile("../../testdata/valid.toml")
-	if err != nil {
-		t.Fatalf("failed to read test fixture: %v", err)
-	}
+	require.NoError(t, err, "failed to read test fixture")
 
 	got, err := parser.Parse(data)
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil", err)
-	}
+	require.NoError(t, err, "Parse() should not error")
 
-	if got.Properties.Color != "transparent" {
-		t.Errorf("Properties.Color = %q, want %q", got.Properties.Color, "transparent")
-	}
-
-	if got.Properties.Edges != "straight" {
-		t.Errorf("Properties.Edges = %q, want %q", got.Properties.Edges, "straight")
-	}
-
-	if got.Properties.LineLength != 40 {
-		t.Errorf("Properties.LineLength = %d, want 40", got.Properties.LineLength)
-	}
-
-	if len(got.Properties.Expanded) != 1 {
-		t.Errorf("len(Properties.Expanded) = %d, want 1", len(got.Properties.Expanded))
-	}
-
-	if got.Properties.Expanded[0] != webappKey {
-		t.Errorf("Properties.Expanded[0] = %q, want %q", got.Properties.Expanded[0], webappKey)
-	}
+	assert.Equal(t, "transparent", got.Properties.Color, "Properties.Color")
+	assert.Equal(t, "straight", got.Properties.Edges, "Properties.Edges")
+	assert.Equal(t, 40, got.Properties.LineLength, "Properties.LineLength")
+	assert.Len(t, got.Properties.Expanded, 1, "len(Properties.Expanded)")
+	assert.Equal(t, webappKey, got.Properties.Expanded[0], "Properties.Expanded[0]")
 }
 
 func TestParseUnitFields(t *testing.T) {
 	t.Parallel()
 
 	data, err := os.ReadFile("../../testdata/valid.toml")
-	if err != nil {
-		t.Fatalf("failed to read test fixture: %v", err)
-	}
+	require.NoError(t, err, "failed to read test fixture")
 
 	got, err := parser.Parse(data)
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil", err)
-	}
+	require.NoError(t, err, "Parse() should not error")
 
 	webapp, ok := got.Units[webappKey]
-	if !ok {
-		t.Fatal("missing 'webapp' unit")
-	}
+	require.True(t, ok, "missing 'webapp' unit")
 
-	if webapp.Type != model.TypeSystem {
-		t.Errorf("webapp.Type = %q, want %q", webapp.Type, model.TypeSystem)
-	}
-
-	if webapp.Name != "Web Application" {
-		t.Errorf("webapp.Name = %q, want %q", webapp.Name, "Web Application")
-	}
-
-	if webapp.Description != "Main web application" {
-		t.Errorf("webapp.Description = %q, want %q", webapp.Description, "Main web application")
-	}
-
-	if webapp.Technology != "Go, React" {
-		t.Errorf("webapp.Technology = %q, want %q", webapp.Technology, "Go, React")
-	}
+	assert.Equal(t, model.TypeSystem, webapp.Type, "webapp.Type")
+	assert.Equal(t, "Web Application", webapp.Name, "webapp.Name")
+	assert.Equal(t, "Main web application", webapp.Description, "webapp.Description")
+	assert.Equal(t, "Go, React", webapp.Technology, "webapp.Technology")
 }
 
 func TestParseEmptyFile(t *testing.T) {
 	t.Parallel()
 
 	got, err := parser.Parse([]byte(""))
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil for empty file", err)
-	}
+	require.NoError(t, err, "Parse() should not error for empty file")
 
-	if got.Properties.Name != "" {
-		t.Errorf("Properties.Name = %q, want empty string", got.Properties.Name)
-	}
-
-	if len(got.Units) != 0 {
-		t.Errorf("len(Units) = %d, want 0", len(got.Units))
-	}
+	assert.Empty(t, got.Properties.Name, "Properties.Name should be empty")
+	assert.Empty(t, got.Units, "Units should be empty")
 }
 
 func TestParseOnlyProperties(t *testing.T) {
@@ -521,17 +292,10 @@ description = "Test with only properties"
 `)
 
 	got, err := parser.Parse(data)
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil", err)
-	}
+	require.NoError(t, err, "Parse() should not error")
 
-	if got.Properties.Name != "Only Properties Test" {
-		t.Errorf("Properties.Name = %q, want %q", got.Properties.Name, "Only Properties Test")
-	}
-
-	if len(got.Units) != 0 {
-		t.Errorf("len(Units) = %d, want 0", len(got.Units))
-	}
+	assert.Equal(t, "Only Properties Test", got.Properties.Name, "Properties.Name")
+	assert.Empty(t, got.Units, "Units should be empty")
 }
 
 func TestParseExternalTypes(t *testing.T) {
@@ -559,25 +323,12 @@ name = "External Queue"
 `)
 
 	got, err := parser.Parse(data)
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil", err)
-	}
+	require.NoError(t, err, "Parse() should not error")
 
-	if got.Units["personext"].Type != model.TypePersonExternal {
-		t.Errorf("personext.Type = %q, want %q", got.Units["personext"].Type, model.TypePersonExternal)
-	}
-
-	if got.Units["systemext"].Type != model.TypeSystemExternal {
-		t.Errorf("systemext.Type = %q, want %q", got.Units["systemext"].Type, model.TypeSystemExternal)
-	}
-
-	if got.Units["dbext"].Type != model.TypeDbExternal {
-		t.Errorf("dbext.Type = %q, want %q", got.Units["dbext"].Type, model.TypeDbExternal)
-	}
-
-	if got.Units["queueext"].Type != model.TypeQueueExternal {
-		t.Errorf("queueext.Type = %q, want %q", got.Units["queueext"].Type, model.TypeQueueExternal)
-	}
+	assert.Equal(t, model.TypePersonExternal, got.Units["personext"].Type, "personext.Type")
+	assert.Equal(t, model.TypeSystemExternal, got.Units["systemext"].Type, "systemext.Type")
+	assert.Equal(t, model.TypeDbExternal, got.Units["dbext"].Type, "dbext.Type")
+	assert.Equal(t, model.TypeQueueExternal, got.Units["queueext"].Type, "queueext.Type")
 }
 
 func TestParseLinkFrom(t *testing.T) {
@@ -594,35 +345,18 @@ linkFrom = { "b" = { arrow = "reverse", technology = "TCP" } }
 `)
 
 	got, err := parser.Parse(data)
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil", err)
-	}
+	require.NoError(t, err, "Parse() should not error")
 
 	unitA, ok := got.Units["a"]
-	if !ok {
-		t.Fatal("missing 'a' unit")
-	}
-
-	if len(unitA.LinksFrom) != 1 {
-		t.Fatalf("len(unitA.LinksFrom) = %d, want 1", len(unitA.LinksFrom))
-	}
+	require.True(t, ok, "missing 'a' unit")
+	require.Len(t, unitA.LinksFrom, 1, "unitA should have 1 linkFrom")
 
 	linkFrom, ok := unitA.LinksFrom["b"]
-	if !ok {
-		t.Fatal("missing 'b' linkFrom in a")
-	}
+	require.True(t, ok, "missing 'b' linkFrom in a")
 
-	if linkFrom.Target != "b" {
-		t.Errorf("linkFrom.Target = %q, want %q", linkFrom.Target, "b")
-	}
-
-	if linkFrom.Arrow != model.ArrowReverse {
-		t.Errorf("linkFrom.Arrow = %q, want %q", linkFrom.Arrow, model.ArrowReverse)
-	}
-
-	if linkFrom.Technology != "TCP" {
-		t.Errorf("linkFrom.Technology = %q, want %q", linkFrom.Technology, "TCP")
-	}
+	assert.Equal(t, "b", linkFrom.Target, "linkFrom.Target")
+	assert.Equal(t, model.ArrowReverse, linkFrom.Arrow, "linkFrom.Arrow")
+	assert.Equal(t, "TCP", linkFrom.Technology, "linkFrom.Technology")
 }
 
 func TestParseAllUnitTypesC1(t *testing.T) {
@@ -649,9 +383,7 @@ type = "box"
 `)
 
 	got, err := parser.Parse(data)
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil", err)
-	}
+	require.NoError(t, err, "Parse() should not error")
 
 	expectedTypes := map[string]model.UnitType{
 		"p1": model.TypePerson,
@@ -663,15 +395,8 @@ type = "box"
 
 	for name, expectedType := range expectedTypes {
 		unit, ok := got.Units[name]
-		if !ok {
-			t.Errorf("missing unit %q", name)
-
-			continue
-		}
-
-		if unit.Type != expectedType {
-			t.Errorf("%s.Type = %q, want %q", name, unit.Type, expectedType)
-		}
+		require.True(t, ok, "missing unit %q", name)
+		assert.Equal(t, expectedType, unit.Type, "%s.Type", name)
 	}
 }
 
@@ -693,9 +418,7 @@ type = "containerQueue"
 `)
 
 	got, err := parser.Parse(data)
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil", err)
-	}
+	require.NoError(t, err, "Parse() should not error")
 
 	expectedTypes := map[string]model.UnitType{
 		"c1":  model.TypeContainer,
@@ -705,15 +428,8 @@ type = "containerQueue"
 
 	for name, expectedType := range expectedTypes {
 		unit, ok := got.Units[name]
-		if !ok {
-			t.Errorf("missing unit %q", name)
-
-			continue
-		}
-
-		if unit.Type != expectedType {
-			t.Errorf("%s.Type = %q, want %q", name, unit.Type, expectedType)
-		}
+		require.True(t, ok, "missing unit %q", name)
+		assert.Equal(t, expectedType, unit.Type, "%s.Type", name)
 	}
 }
 
@@ -735,9 +451,7 @@ type = "componentQueue"
 `)
 
 	got, err := parser.Parse(data)
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil", err)
-	}
+	require.NoError(t, err, "Parse() should not error")
 
 	expectedTypes := map[string]model.UnitType{
 		"cmp1":  model.TypeComponent,
@@ -747,15 +461,8 @@ type = "componentQueue"
 
 	for name, expectedType := range expectedTypes {
 		unit, ok := got.Units[name]
-		if !ok {
-			t.Errorf("missing unit %q", name)
-
-			continue
-		}
-
-		if unit.Type != expectedType {
-			t.Errorf("%s.Type = %q, want %q", name, unit.Type, expectedType)
-		}
+		require.True(t, ok, "missing unit %q", name)
+		assert.Equal(t, expectedType, unit.Type, "%s.Type", name)
 	}
 }
 
@@ -781,42 +488,19 @@ labelPosition = "head"
 `)
 
 	got, err := parser.Parse(data)
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil", err)
-	}
+	require.NoError(t, err, "Parse() should not error")
 
 	unitA, ok := got.Units["a"]
-	if !ok {
-		t.Fatal("missing 'a' unit")
-	}
+	require.True(t, ok, "missing 'a' unit")
 
 	link, ok := unitA.Links["b"]
-	if !ok {
-		t.Fatal("missing 'b' link in a")
-	}
+	require.True(t, ok, "missing 'b' link in a")
 
-	// Verify link target
-	if link.Target != "b" {
-		t.Errorf("link.Target = %q, want %q", link.Target, "b")
-	}
-
-	// Verify arrow/rank directions
-	if link.Arrow != model.ArrowBidirectional {
-		t.Errorf("link.Arrow = %q, want %q", link.Arrow, model.ArrowBidirectional)
-	}
-
-	if link.Rank != model.RankEqual {
-		t.Errorf("link.Rank = %q, want %q", link.Rank, model.RankEqual)
-	}
-
-	// Verify visual styling
-	if link.Color != "red" {
-		t.Errorf("link.Color = %q, want %q", link.Color, "red")
-	}
-
-	if link.Style != "dashed" {
-		t.Errorf("link.Style = %q, want %q", link.Style, "dashed")
-	}
+	assert.Equal(t, "b", link.Target, "link.Target")
+	assert.Equal(t, model.ArrowBidirectional, link.Arrow, "link.Arrow")
+	assert.Equal(t, model.RankEqual, link.Rank, "link.Rank")
+	assert.Equal(t, "red", link.Color, "link.Color")
+	assert.Equal(t, "dashed", link.Style, "link.Style")
 }
 
 func TestParseLinkAllFieldsMetadata(t *testing.T) {
@@ -837,24 +521,14 @@ labelPosition = "head"
 `)
 
 	got, err := parser.Parse(data)
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil", err)
-	}
+	require.NoError(t, err, "Parse() should not error")
 
 	link := got.Units["a"].Links["b"]
+	require.NotNil(t, link, "missing 'b' link")
 
-	// Verify metadata fields
-	if link.Technology != "gRPC" {
-		t.Errorf("link.Technology = %q, want %q", link.Technology, "gRPC")
-	}
-
-	if link.Description != "syncs data" {
-		t.Errorf("link.Description = %q, want %q", link.Description, "syncs data")
-	}
-
-	if link.LabelPosition != model.LabelHead {
-		t.Errorf("link.LabelPosition = %q, want %q", link.LabelPosition, model.LabelHead)
-	}
+	assert.Equal(t, "gRPC", link.Technology, "link.Technology")
+	assert.Equal(t, "syncs data", link.Description, "link.Description")
+	assert.Equal(t, model.LabelHead, link.LabelPosition, "link.LabelPosition")
 }
 
 func TestParseNestedLink(t *testing.T) {
@@ -877,43 +551,26 @@ other = { technology = "HTTP" }
 `)
 
 	got, err := parser.Parse(data)
-	if err != nil {
-		t.Fatalf("Parse() error = %v, want nil", err)
-	}
+	require.NoError(t, err, "Parse() should not error")
 
 	parent, ok := got.Units["parent"]
-	if !ok {
-		t.Fatal("missing 'parent' unit")
-	}
+	require.True(t, ok, "missing 'parent' unit")
 
 	child, ok := parent.Subunits["child"]
-	if !ok {
-		t.Fatal("missing 'parent.child' subunit")
-	}
-
-	if len(child.Links) != 1 {
-		t.Fatalf("len(child.Links) = %d, want 1", len(child.Links))
-	}
+	require.True(t, ok, "missing 'parent.child' subunit")
+	require.Len(t, child.Links, 1, "child should have 1 link")
 
 	link, ok := child.Links["other"]
-	if !ok {
-		t.Fatal("missing 'other' link in child")
-	}
+	require.True(t, ok, "missing 'other' link in child")
 
-	if link.Target != "other" {
-		t.Errorf("link.Target = %q, want %q", link.Target, "other")
-	}
+	assert.Equal(t, "other", link.Target, "link.Target")
 }
 
 func TestParseFile(t *testing.T) {
 	t.Parallel()
 
 	got, err := parser.ParseFile("../../testdata/valid.toml")
-	if err != nil {
-		t.Fatalf("ParseFile() error = %v, want nil", err)
-	}
+	require.NoError(t, err, "ParseFile() should not error")
 
-	if got.Properties.Name != "Test System" {
-		t.Errorf("Properties.Name = %q, want %q", got.Properties.Name, "Test System")
-	}
+	assert.Equal(t, "Test System", got.Properties.Name, "Properties.Name")
 }
