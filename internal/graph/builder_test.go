@@ -1,8 +1,9 @@
-package graph
+package graph_test
 
 import (
 	"testing"
 
+	"github.com/Djarvur/c4drill/internal/graph"
 	"github.com/Djarvur/c4drill/internal/model"
 	"github.com/Djarvur/c4drill/internal/parser"
 	"github.com/Djarvur/c4drill/internal/view"
@@ -32,7 +33,7 @@ func TestBuildGraphBasicProperties(t *testing.T) {
 	v := view.GenerateC1View(m)
 	require.NotNil(t, v)
 
-	g := BuildGraph(v)
+	g := graph.BuildGraph(v)
 
 	// Test 1: BuildGraph creates Graph with Title from View.Title
 	assert.Equal(t, "Test System", g.Title)
@@ -65,7 +66,7 @@ func TestBuildGraphNodes(t *testing.T) {
 	}
 
 	v := view.GenerateC1View(m)
-	g := BuildGraph(v)
+	g := graph.BuildGraph(v)
 
 	// Test 4: BuildGraph creates Node for each non-expanded ViewUnit
 	assert.Len(t, g.Nodes, 2)
@@ -75,6 +76,7 @@ func TestBuildGraphNodes(t *testing.T) {
 	for _, node := range g.Nodes {
 		nodeIDs[node.ID] = true
 	}
+
 	assert.True(t, nodeIDs["app"])
 	assert.True(t, nodeIDs["db"])
 }
@@ -95,7 +97,7 @@ func TestBuildGraphNodeLabels(t *testing.T) {
 	}
 
 	v := view.GenerateC1View(m)
-	g := BuildGraph(v)
+	g := graph.BuildGraph(v)
 	require.Len(t, g.Nodes, 1)
 
 	node := g.Nodes[0]
@@ -127,7 +129,7 @@ func TestBuildGraphCollapsedIndicator(t *testing.T) {
 	}
 
 	v := view.GenerateC1View(m)
-	g := BuildGraph(v)
+	g := graph.BuildGraph(v)
 
 	require.Len(t, g.Nodes, 1)
 
@@ -159,7 +161,7 @@ func TestBuildGraphEdges(t *testing.T) {
 	}
 
 	v := view.GenerateC1View(m)
-	g := BuildGraph(v)
+	g := graph.BuildGraph(v)
 
 	// Test 10: Edge created for each link where both endpoints are in view
 	require.Len(t, g.Edges, 1)
@@ -194,7 +196,7 @@ func TestBuildGraphEdgeDefaults(t *testing.T) {
 	}
 
 	v := view.GenerateC1View(m)
-	g := BuildGraph(v)
+	g := graph.BuildGraph(v)
 
 	require.Len(t, g.Edges, 1)
 	edge := g.Edges[0]
@@ -231,7 +233,7 @@ func TestBuildGraphClusters(t *testing.T) {
 	}
 
 	v := view.GenerateC1View(m)
-	g := BuildGraph(v)
+	g := graph.BuildGraph(v)
 
 	// Test 5: BuildGraph creates Cluster for each expanded ViewUnit
 	require.Len(t, g.Clusters, 1)
@@ -271,7 +273,7 @@ func TestBuildGraphMultipleLinks(t *testing.T) {
 	}
 
 	v := view.GenerateC1View(m)
-	g := BuildGraph(v)
+	g := graph.BuildGraph(v)
 
 	// Test 15: Multiple links between same units shown separately
 	// bidirectional: app->db and db->app

@@ -1,6 +1,8 @@
 package graph
 
 import (
+	"slices"
+
 	"github.com/Djarvur/c4drill/internal/model"
 	"github.com/Djarvur/c4drill/internal/view"
 )
@@ -24,7 +26,7 @@ func BuildGraph(v *view.View) *Graph {
 	// Build nodes and clusters
 	for _, entry := range v.Units {
 		if entry.IsExpanded {
-			cluster := buildCluster(entry, v)
+			cluster := buildCluster(entry)
 			g.Clusters = append(g.Clusters, cluster)
 		} else {
 			node := buildNode(entry)
@@ -49,7 +51,7 @@ func buildNode(entry *view.Entry) *Node {
 
 	// Add [+] indicator for collapsed units with subunits
 	if entry.HasSubunits && !entry.IsExpanded {
-		label.Name = label.Name + " [+]"
+		label.Name += " [+]"
 	}
 
 	return &Node{
@@ -62,7 +64,7 @@ func buildNode(entry *view.Entry) *Node {
 }
 
 // buildCluster creates a cluster for an expanded unit.
-func buildCluster(entry *view.Entry, v *view.View) *Cluster {
+func buildCluster(entry *view.Entry) *Cluster {
 	cluster := &Cluster{
 		ID:    "cluster_" + entry.FullPath,
 		Label: buildClusterLabel(entry),
@@ -101,12 +103,7 @@ func buildClusterLabel(entry *view.Entry) *Label {
 
 // isUnitExpanded checks if a child unit should be expanded.
 func isUnitExpanded(parent *model.Unit, childName string) bool {
-	for _, exp := range parent.Expanded {
-		if exp == childName {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(parent.Expanded, childName)
 }
 
 // buildEdges creates edges from view links.
@@ -116,77 +113,107 @@ func buildEdges(v *view.View) []*Edge {
 
 	for path, entry := range v.Units {
 		// Process outgoing links
-		for target, link := range entry.Unit.Links {
-			edgeKey := path + "->" + target + ":" + link.Technology + ":" + link.Description
-
-			// Only include if target is in view (as regular or boundary node)
-			if _, exists := v.Units[target]; !exists {
-				continue
-			}
-
-			edge := &Edge{
-				Source: path,
-				Target: target,
-				Label: &EdgeLabel{
-					Technology:  link.Technology,
-					Description: link.Description,
-					Position:    string(link.LabelPosition),
-				},
-				Style:     link.Style,
-				ArrowHead: ArrowDirection(link.Arrow),
-			}
-
-			// Apply defaults
-			if edge.Style == "" {
-				edge.Style = "solid"
-			}
-			if edge.Label.Position == "" {
-				edge.Label.Position = "middle"
-			}
-
-			// Track this edge to avoid duplicates
-			if !seen[edgeKey] {
-				seen[edgeKey] = true
-				edges = append(edges, edge)
-			}
-		}
+		outEdges := processOutgoingLinks(path, entry.Unit.Links, v.Units, seen)
+		edges = append(edges, outEdges...)
 
 		// Process incoming links (linkFrom)
-		for source, link := range entry.Unit.LinksFrom {
-			edgeKey := source + "->" + path + ":" + link.Technology + ":" + link.Description
+		inEdges := processIncomingLinks(path, entry.Unit.LinksFrom, v.Units, seen)
+		edges = append(edges, inEdges...)
+	}
 
-			// Only include if source is in view
-			if _, exists := v.Units[source]; !exists {
-				continue
-			}
+	return edges
+}
 
-			edge := &Edge{
-				Source: source,
-				Target: path,
-				Label: &EdgeLabel{
-					Technology:  link.Technology,
-					Description: link.Description,
-					Position:    string(link.LabelPosition),
-				},
-				Style:     link.Style,
-				ArrowHead: ArrowDirection(link.Arrow),
-			}
+// processOutgoingLinks processes outgoing links from a unit.
+func processOutgoingLinks(
+	path string,
+	links map[string]model.Link,
+	viewUnits map[string]*view.Entry,
+	seen map[string]bool,
+) []*Edge {
+	edges := make([]*Edge, 0)
 
-			// Apply defaults
-			if edge.Style == "" {
-				edge.Style = "solid"
-			}
-			if edge.Label.Position == "" {
-				edge.Label.Position = "middle"
-			}
+	for target, link := range links {
+		if !isTargetInView(viewUnits, target) {
+			continue
+		}
 
-			// Track this edge to avoid duplicates
-			if !seen[edgeKey] {
-				seen[edgeKey] = true
-				edges = append(edges, edge)
-			}
+		edge := createEdge(path, target, link)
+		edgeKey := path + "->" + target + ":" + link.Technology + ":" + link.Description
+
+		if markSeen(seen, edgeKey) {
+			edges = append(edges, edge)
 		}
 	}
 
 	return edges
+}
+
+// processIncomingLinks processes incoming links (linkFrom) to a unit.
+func processIncomingLinks(
+	path string,
+	linksFrom map[string]model.Link,
+	viewUnits map[string]*view.Entry,
+	seen map[string]bool,
+) []*Edge {
+	edges := make([]*Edge, 0)
+
+	for source, link := range linksFrom {
+		if !isTargetInView(viewUnits, source) {
+			continue
+		}
+
+		edge := createEdge(source, path, link)
+		edgeKey := source + "->" + path + ":" + link.Technology + ":" + link.Description
+
+		if markSeen(seen, edgeKey) {
+			edges = append(edges, edge)
+		}
+	}
+
+	return edges
+}
+
+// isTargetInView checks if a unit exists in the view.
+func isTargetInView(units map[string]*view.Entry, target string) bool {
+	_, exists := units[target]
+
+	return exists
+}
+
+// createEdge creates an edge from a link with defaults applied.
+func createEdge(source, target string, link model.Link) *Edge {
+	edge := &Edge{
+		Source: source,
+		Target: target,
+		Label: &EdgeLabel{
+			Technology:  link.Technology,
+			Description: link.Description,
+			Position:    string(link.LabelPosition),
+		},
+		Style:     link.Style,
+		ArrowHead: ArrowDirection(link.Arrow),
+	}
+
+	// Apply defaults
+	if edge.Style == "" {
+		edge.Style = "solid"
+	}
+
+	if edge.Label.Position == "" {
+		edge.Label.Position = "middle"
+	}
+
+	return edge
+}
+
+// markSeen marks an edge key as seen and returns true if it was not already seen.
+func markSeen(seen map[string]bool, edgeKey string) bool {
+	if seen[edgeKey] {
+		return false
+	}
+
+	seen[edgeKey] = true
+
+	return true
 }

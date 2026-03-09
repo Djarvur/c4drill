@@ -4,6 +4,13 @@ import (
 	"github.com/Djarvur/c4drill/internal/model"
 )
 
+// C4 level constants.
+const (
+	levelC1 = 1
+	levelC2 = 2
+	levelC3 = 3
+)
+
 // ShapeForType returns the appropriate shape for a unit type.
 // Per CONTEXT.md decision: all types use HTML-like labels for proper cell formatting.
 func ShapeForType(_ model.UnitType) Shape {
@@ -14,7 +21,7 @@ func ShapeForType(_ model.UnitType) Shape {
 // Per CONTEXT.md design:
 // - Person: U+1F464 (person emoji)
 // - DB: U+26C1 (flag in hole, used as cylinder proxy)
-// - Queue: U+255F/U+2562 (box drawing characters for bars)
+// - Queue: U+255F/U+2562 (box drawing characters for bars).
 func IconForType(t model.UnitType) string {
 	switch t {
 	case model.TypePerson, model.TypePersonExternal:
@@ -25,8 +32,11 @@ func IconForType(t model.UnitType) string {
 	case model.TypeQueue, model.TypeQueueExternal,
 		model.TypeContainerQueue, model.TypeComponentQueue:
 		return "\u255F\n\u2562" // queue bars
+	case model.TypeSystem, model.TypeSystemExternal,
+		model.TypeContainer, model.TypeComponent, model.TypeBox:
+		return "" // No icon for these types
 	default:
-		return "" // System, Container, Component, Box
+		return ""
 	}
 }
 
@@ -46,26 +56,27 @@ func LevelForType(t model.UnitType) int {
 		model.TypeDb, model.TypeDbExternal,
 		model.TypeQueue, model.TypeQueueExternal,
 		model.TypeBox:
-		return 1 // C1
+		return levelC1
 	case model.TypeContainer, model.TypeContainerDb,
 		model.TypeContainerQueue:
-		return 2 // C2
+		return levelC2
 	case model.TypeComponent, model.TypeComponentDb,
 		model.TypeComponentQueue:
-		return 3 // C3
+		return levelC3
 	default:
-		return 1 // Default to C1
+		return levelC1
 	}
 }
 
 // GetStyleForType returns styling based on unit type and external status.
 // Per CONTEXT.md decisions:
 // - No inheritance: each unit's style is independent
-// - External nodes: same size, dashed border, external palette colors
+// - External nodes: same size, dashed border, external palette colors.
 func GetStyleForType(t model.UnitType, isExternal bool) *NodeStyle {
 	if isExternal {
 		return getExternalStyle(t)
 	}
+
 	return getLevelStyle(t)
 }
 
@@ -74,21 +85,21 @@ func getLevelStyle(t model.UnitType) *NodeStyle {
 	level := LevelForType(t)
 
 	switch level {
-	case 1:
+	case levelC1:
 		return &NodeStyle{
 			FillColor:   model.SystemBackground,
 			BorderColor: model.SystemBorder,
 			FontColor:   model.FontColorC1C2,
 			BorderStyle: "solid",
 		}
-	case 2:
+	case levelC2:
 		return &NodeStyle{
 			FillColor:   model.ContainerBackground,
 			BorderColor: model.ContainerBorder,
 			FontColor:   model.FontColorC1C2,
 			BorderStyle: "solid",
 		}
-	case 3:
+	case levelC3:
 		return &NodeStyle{
 			FillColor:   model.ComponentBackground,
 			BorderColor: model.ComponentBorder,
@@ -111,21 +122,21 @@ func getExternalStyle(t model.UnitType) *NodeStyle {
 	level := LevelForType(t)
 
 	switch level {
-	case 1:
+	case levelC1:
 		return &NodeStyle{
 			FillColor:   model.SystemExternalBackground,
 			BorderColor: model.SystemExternalBorder,
 			FontColor:   model.FontColorC1C2,
 			BorderStyle: "dashed",
 		}
-	case 2:
+	case levelC2:
 		return &NodeStyle{
 			FillColor:   model.ContainerExternalBackground,
 			BorderColor: model.ContainerExternalBorder,
 			FontColor:   model.FontColorC1C2,
 			BorderStyle: "dashed",
 		}
-	case 3:
+	case levelC3:
 		return &NodeStyle{
 			FillColor:   model.ComponentExternalBackground,
 			BorderColor: model.ComponentExternalBorder,

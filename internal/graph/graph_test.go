@@ -1,8 +1,9 @@
-package graph
+package graph_test
 
 import (
 	"testing"
 
+	"github.com/Djarvur/c4drill/internal/graph"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -10,14 +11,14 @@ func TestGraphStruct(t *testing.T) {
 	t.Parallel()
 
 	// Test 1: Graph struct contains Title, Direction, EdgeStyle, Nodes, Edges, Clusters, Legend
-	g := &Graph{
+	g := &graph.Graph{
 		Title:     "Test Diagram",
 		Direction: "TB",
 		EdgeStyle: "spline",
-		Nodes:     []*Node{},
-		Edges:     []*Edge{},
-		Clusters:  []*Cluster{},
-		Legend:    &Legend{},
+		Nodes:     []*graph.Node{},
+		Edges:     []*graph.Edge{},
+		Clusters:  []*graph.Cluster{},
+		Legend:    &graph.Legend{},
 	}
 
 	assert.Equal(t, "Test Diagram", g.Title)
@@ -33,18 +34,18 @@ func TestNodeStruct(t *testing.T) {
 	t.Parallel()
 
 	// Test 2: Node struct contains ID, Label, Shape, Style, IsExternal, IsInCluster
-	n := &Node{
+	n := &graph.Node{
 		ID:          "mainapp.api",
-		Label:       &Label{Name: "API"},
-		Shape:       ShapeHTML,
-		Style:       &NodeStyle{FillColor: "#1168BD"},
+		Label:       &graph.Label{Name: "API"},
+		Shape:       graph.ShapeHTML,
+		Style:       &graph.NodeStyle{FillColor: "#1168BD"},
 		IsExternal:  false,
 		IsInCluster: true,
 	}
 
 	assert.Equal(t, "mainapp.api", n.ID)
 	assert.NotNil(t, n.Label)
-	assert.Equal(t, ShapeHTML, n.Shape)
+	assert.Equal(t, graph.ShapeHTML, n.Shape)
 	assert.NotNil(t, n.Style)
 	assert.False(t, n.IsExternal)
 	assert.True(t, n.IsInCluster)
@@ -54,30 +55,30 @@ func TestEdgeStruct(t *testing.T) {
 	t.Parallel()
 
 	// Test 3: Edge struct contains Source, Target, Label, Style, ArrowHead
-	e := &Edge{
+	e := &graph.Edge{
 		Source:    "mainapp.api",
 		Target:    "mainapp.db",
-		Label:     &EdgeLabel{Technology: "SQL"},
+		Label:     &graph.EdgeLabel{Technology: "SQL"},
 		Style:     "solid",
-		ArrowHead: ArrowForward,
+		ArrowHead: graph.ArrowForward,
 	}
 
 	assert.Equal(t, "mainapp.api", e.Source)
 	assert.Equal(t, "mainapp.db", e.Target)
 	assert.NotNil(t, e.Label)
 	assert.Equal(t, "solid", e.Style)
-	assert.Equal(t, ArrowForward, e.ArrowHead)
+	assert.Equal(t, graph.ArrowForward, e.ArrowHead)
 }
 
 func TestClusterStruct(t *testing.T) {
 	t.Parallel()
 
 	// Test 4: Cluster struct contains ID, Label, Nodes, Style
-	c := &Cluster{
+	c := &graph.Cluster{
 		ID:    "cluster_mainapp",
-		Label: &Label{Name: "Main App"},
-		Nodes: []*Node{},
-		Style: &NodeStyle{FillColor: "#438DD5"},
+		Label: &graph.Label{Name: "Main App"},
+		Nodes: []*graph.Node{},
+		Style: &graph.NodeStyle{FillColor: "#438DD5"},
 	}
 
 	assert.Equal(t, "cluster_mainapp", c.ID)
@@ -90,7 +91,7 @@ func TestLabelStruct(t *testing.T) {
 	t.Parallel()
 
 	// Test 5: Label struct contains Name, Technology, Description, Icon
-	l := &Label{
+	l := &graph.Label{
 		Name:        "API Server",
 		Technology:  "Go",
 		Description: "Handles HTTP requests",
@@ -107,7 +108,7 @@ func TestNodeStyleStruct(t *testing.T) {
 	t.Parallel()
 
 	// Test 6: NodeStyle struct contains FillColor, BorderColor, FontColor, BorderStyle
-	s := &NodeStyle{
+	s := &graph.NodeStyle{
 		FillColor:   "#1168BD",
 		BorderColor: "#3C7FC0",
 		FontColor:   "#FFFFFF",
@@ -124,17 +125,17 @@ func TestShapeConstants(t *testing.T) {
 	t.Parallel()
 
 	// Test 7: Shape constants (ShapeRecord, ShapeHTML, ShapeCluster) are defined
-	assert.Equal(t, Shape("record"), ShapeRecord)
-	assert.Equal(t, Shape("html"), ShapeHTML)
-	assert.Equal(t, Shape("cluster"), ShapeCluster)
+	assert.Equal(t, graph.ShapeRecord, graph.Shape("record"))
+	assert.Equal(t, graph.ShapeHTML, graph.Shape("html"))
+	assert.Equal(t, graph.ShapeCluster, graph.Shape("cluster"))
 }
 
 func TestArrowDirectionConstants(t *testing.T) {
 	t.Parallel()
 
 	// Test 8: ArrowDirection constants (ArrowForward, ArrowReverse, ArrowBoth, ArrowNone) are defined
-	assert.Equal(t, ArrowDirection("forward"), ArrowForward)
-	assert.Equal(t, ArrowDirection("reverse"), ArrowReverse)
-	assert.Equal(t, ArrowDirection("both"), ArrowBoth)
-	assert.Equal(t, ArrowDirection("none"), ArrowNone)
+	assert.Equal(t, graph.ArrowForward, graph.ArrowDirection("forward"))
+	assert.Equal(t, graph.ArrowReverse, graph.ArrowDirection("reverse"))
+	assert.Equal(t, graph.ArrowBoth, graph.ArrowDirection("both"))
+	assert.Equal(t, graph.ArrowNone, graph.ArrowDirection("none"))
 }
