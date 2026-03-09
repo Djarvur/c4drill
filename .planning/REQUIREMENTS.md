@@ -92,11 +92,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Quality Gates
 
-- [ ] **QUAL-01**: All lint errors must be fixed before commit
-- [ ] **QUAL-02**: Lint config (.golangci.yml) MUST NOT be adjusted to silence errors
-- [ ] **QUAL-03**: nolint directives require explicit user confirmation before adding
-- [ ] **QUAL-04**: Minimum 75% test coverage required
-- [ ] **QUAL-05**: Coverage enforced in CI/quality gate
+- [x] **QUAL-01**: All lint errors must be fixed before commit
+- [x] **QUAL-02**: Lint config (.golangci.yml) MUST NOT be adjusted to silence errors
+- [x] **QUAL-03**: nolint directives require explicit user confirmation before adding
+- [x] **QUAL-04**: Minimum 75% test coverage required
+- [x] **QUAL-05**: Coverage enforced in CI/quality gate
 
 ## v2 Requirements
 
@@ -192,11 +192,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLII-05 | Phase 6 | Pending |
 | CLII-06 | Phase 6 | Pending |
 | OUTP-03 | Phase 6 | Pending |
-| QUAL-01 | All Phases | Pending |
-| QUAL-02 | All Phases | Pending |
-| QUAL-03 | All Phases | Pending |
-| QUAL-04 | All Phases | Pending |
-| QUAL-05 | All Phases | Pending |
+| QUAL-01 | All Phases | Complete |
+| QUAL-02 | All Phases | Complete |
+| QUAL-03 | All Phases | Complete |
+| QUAL-04 | All Phases | Complete |
+| QUAL-05 | All Phases | Complete |
 
 **Coverage:**
 - v1 requirements: 56 total
