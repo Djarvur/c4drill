@@ -6,11 +6,12 @@ go = "1.26.1"
 golangci-lint = "2"
 
 [tasks.test]
-description = "Run Go tests with coverage"
-run = "go test -cover ./..."
+description = "Run Go tests with coverage and race detection"
+run = "go test -v -race -cover ./..."
 
 [tasks.lint]
-description = "Run golangci-lint"
+description = "Run golangci-lint (auto-fix first)"
+depends = ["lint-fix"]
 run = "golangci-lint run ./..."
 
 [tasks.lint-fix]
