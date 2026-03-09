@@ -1,0 +1,12 @@
+[properties]
+name = "Invalid References Test"
+
+[user]
+type = "person"
+name = "User"
+link = { "undefined_db" = { technology = "HTTP" } }
+
+[app]
+type = "system"
+name = "App"
+linkFrom = { "missing_system" = { technology = "TCP" } }

@@ -1,0 +1,16 @@
+[properties]
+name = "Invalid Links Test"
+
+[parent]
+type = "system"
+name = "Parent System"
+link = { "other" = { technology = "HTTP" } }
+
+[parent.child]
+type = "container"
+name = "Child Container"
+
+[other]
+type = "system"
+name = "Other System"
+link = { "parent" = { technology = "TCP" } }
