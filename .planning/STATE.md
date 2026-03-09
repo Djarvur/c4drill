@@ -9,26 +9,26 @@ See: .planning/PROJECT.md (updated 2026-03-09)
 
 ## Current Position
 
-Phase: 1 of 6 (Foundation & Model)
-Plan: 2 of TBD
+Phase: 2 of 6 (Validation)
+Plan: 1 of 4
 Status: In progress
-Last activity: 2026-03-09 — Plan 01-02 completed: TOML parser with error handling
+Last activity: 2026-03-09 — Plan 02-01 completed: Validation infrastructure
 
-Progress: [███░░░░░░░] 30%
+Progress: [████░░░░░░] 35%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 4.5 min
-- Total execution time: 0.2 hours
+- Total plans completed: 3
+- Average duration: 5.0 min
+- Total execution time: 0.3 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1. Foundation & Model | 2 | 9min | 4.5min |
-| 2. Validation | 0 | - | - |
+| 2. Validation | 1 | 6min | 6.0min |
 | 3. Views & Graphs | 0 | - | - |
 | 4. Rendering & Output | 0 | - | - |
 | 5. Navigation | 0 | - | - |
@@ -36,7 +36,7 @@ Progress: [███░░░░░░░] 30%
 
 **Recent Trend:**
 
-- Last 5 plans: 01-01 (4min), 01-02 (5min)
+- Last 5 plans: 01-01 (4min), 01-02 (5min), 02-01 (6min)
 - Trend: Consistent execution
 
 *Updated after each plan completion*
@@ -54,6 +54,9 @@ Recent decisions affecting current work:
 - Exported color constants matching C4-PlantUML palette
 - go-toml v2 DecodeError.Position() for line number extraction in parser errors
 - toml:",inline" tag for capturing top-level units in parser Model
+- Line number takes precedence over path in validation error formatting
+- Skip suggestions for names shorter than 3 characters
+- Max Levenshtein distance of 2 for valid suggestions
 
 ### Pending Todos
 
@@ -70,5 +73,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-09
-Stopped at: Plan 01-02 completed: TOML parser with error handling
+Stopped at: Plan 02-01 completed: Validation infrastructure
 Resume file: None

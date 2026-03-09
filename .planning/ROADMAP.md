@@ -39,8 +39,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-PLAN.md - Development environment (mise, go.mod) and domain model types (Wave 1)
-- [ ] 02-PLAN.md - TOML parser implementation with go-toml v2 (Wave 2)
+- [x] 01-PLAN.md - Development environment (mise, go.mod) and domain model types (Wave 1)
+- [x] 02-PLAN.md - TOML parser implementation with go-toml v2 (Wave 2)
 - [ ] 03-PLAN.md - CLI entry point and parser tests with 75% coverage (Wave 3, has checkpoint)
 
 ### Phase 2: Validation
@@ -61,7 +61,7 @@ Plans:
 **Plans**: 3 plans in 3 waves
 
 Plans:
-- [ ] 02-01-PLAN.md - Validation infrastructure: error types, index builder, suggestion helper (Wave 1)
+- [x] 02-01-PLAN.md - Validation infrastructure: error types, index builder, suggestion helper (Wave 1)
 - [ ] 02-02-PLAN.md - Validation rules implementation: references, subunits, links (Wave 2)
 - [ ] 02-03-PLAN.md - CLI integration and quality gates (Wave 3, has checkpoint)
 
@@ -141,8 +141,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Model | 2/3 | In Progress|  |
-| 2. Validation | 0/3 | Not started | - |
+| 1. Foundation & Model | 2/3 | Done | 2026-03-09 |
+| 2. Validation | 1/3 | In Progress | - |
 | 3. Views & Graphs | 0/TBD | Not started | - |
 | 4. Rendering & Output | 0/TBD | Not started | - |
 | 5. Navigation | 0/TBD | Not started | - |

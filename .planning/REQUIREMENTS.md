@@ -34,8 +34,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **VALD-02**: Validator prevents links on units that have subunits
 - [ ] **VALD-03**: Validator prevents referencing units that have subunits
 - [ ] **VALD-04**: Validator prevents subunits on non-system/non-box types
-- [ ] **VALD-05**: Error messages include line numbers and context
-- [ ] **VALD-06**: Error messages use human-readable format (not JSON)
+- [x] **VALD-05**: Error messages include line numbers and context
+- [x] **VALD-06**: Error messages use human-readable format (not JSON)
 
 ### View Generation
 
@@ -160,8 +160,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VALD-02 | Phase 2 | Pending |
 | VALD-03 | Phase 2 | Pending |
 | VALD-04 | Phase 2 | Pending |
-| VALD-05 | Phase 2 | Pending |
-| VALD-06 | Phase 2 | Pending |
+| VALD-05 | Phase 2 | Complete |
+| VALD-06 | Phase 2 | Complete |
 | VIEW-01 | Phase 3 | Pending |
 | VIEW-02 | Phase 3 | Pending |
 | VIEW-03 | Phase 3 | Pending |
