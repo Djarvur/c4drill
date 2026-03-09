@@ -2,7 +2,6 @@
 package parser
 
 import (
-	"bytes"
 	"os"
 
 	"github.com/Djarvur/c4drill/internal/model"
@@ -18,18 +17,12 @@ type Model struct {
 	Units map[string]*model.Unit
 }
 
-// rawModel is used for initial TOML unmarshaling.
-// go-toml v2 doesn't support toml:",inline" for capturing unknown keys,
-// so we unmarshal to a raw map first, then process each section.
-type rawModel struct {
-	Properties model.Properties `toml:"properties"`
-}
-
 // Parse parses TOML data into a Model.
 // It unmarshals the TOML content and populates Link.Target fields from map keys.
 func Parse(data []byte) (*Model, error) {
 	// First pass: unmarshal the entire document to a raw map
-	var rawMap map[string]interface{}
+	var rawMap map[string]any
+
 	if err := toml.Unmarshal(data, &rawMap); err != nil {
 		return nil, wrapDecodeError(err)
 	}
@@ -45,6 +38,7 @@ func Parse(data []byte) (*Model, error) {
 		if err != nil {
 			return nil, &ParseError{Message: "failed to marshal properties", Cause: err}
 		}
+
 		if err := toml.Unmarshal(propsData, &m.Properties); err != nil {
 			return nil, wrapDecodeError(err)
 		}
@@ -60,6 +54,7 @@ func Parse(data []byte) (*Model, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		m.Units[name] = unit
 	}
 
@@ -72,8 +67,8 @@ func Parse(data []byte) (*Model, error) {
 }
 
 // parseUnit parses a raw map value into a Unit struct, including nested subunits.
-func parseUnit(name string, value interface{}) (*model.Unit, error) {
-	unitMap, ok := value.(map[string]interface{})
+func parseUnit(name string, value any) (*model.Unit, error) {
+	unitMap, ok := value.(map[string]any)
 	if !ok {
 		return nil, &ParseError{
 			Message: "invalid unit format",
@@ -88,6 +83,7 @@ func parseUnit(name string, value interface{}) (*model.Unit, error) {
 	}
 
 	var unit model.Unit
+
 	if err := toml.Unmarshal(unitData, &unit); err != nil {
 		return nil, wrapDecodeError(err)
 	}
@@ -108,6 +104,7 @@ func parseUnit(name string, value interface{}) (*model.Unit, error) {
 		if unit.Subunits == nil {
 			unit.Subunits = make(map[string]*model.Unit)
 		}
+
 		unit.Subunits[key] = subunit
 	}
 
@@ -131,13 +128,8 @@ func isBuiltinField(key string) bool {
 		"link":        true,
 		"linkFrom":    true,
 	}
-	return builtinFields[key]
-}
 
-// isNestedUnitData checks if the data contains nested TOML sections.
-// This is used to detect when to use the two-pass parsing approach.
-func isNestedUnitData(data []byte) bool {
-	return bytes.Contains(data, []byte("."))
+	return builtinFields[key]
 }
 
 // ParseFile reads a TOML file and parses it into a Model.

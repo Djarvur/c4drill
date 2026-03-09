@@ -1,20 +1,26 @@
-package parser
+package parser_test
 
 import (
+	"errors"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/Djarvur/c4drill/internal/model"
+	"github.com/Djarvur/c4drill/internal/parser"
 )
 
-func TestParseValid(t *testing.T) {
+const webappKey = "webapp"
+
+func TestParseValidProperties(t *testing.T) {
+	t.Parallel()
+
 	data, err := os.ReadFile("../../testdata/valid.toml")
 	if err != nil {
 		t.Fatalf("failed to read test fixture: %v", err)
 	}
 
-	got, err := Parse(data)
+	got, err := parser.Parse(data)
 	if err != nil {
 		t.Fatalf("Parse() error = %v, want nil", err)
 	}
@@ -31,8 +37,22 @@ func TestParseValid(t *testing.T) {
 		t.Errorf("Properties.LineLength = %d, want 40", got.Properties.LineLength)
 	}
 
-	if len(got.Properties.Expanded) != 1 || got.Properties.Expanded[0] != "webapp" {
+	if len(got.Properties.Expanded) != 1 || got.Properties.Expanded[0] != webappKey {
 		t.Errorf("Properties.Expanded = %v, want [webapp]", got.Properties.Expanded)
+	}
+}
+
+func TestParseValidUserUnit(t *testing.T) {
+	t.Parallel()
+
+	data, err := os.ReadFile("../../testdata/valid.toml")
+	if err != nil {
+		t.Fatalf("failed to read test fixture: %v", err)
+	}
+
+	got, err := parser.Parse(data)
+	if err != nil {
+		t.Fatalf("Parse() error = %v, want nil", err)
 	}
 
 	if len(got.Units) != 2 {
@@ -43,44 +63,80 @@ func TestParseValid(t *testing.T) {
 	if !ok {
 		t.Fatal("missing 'user' unit")
 	}
+
 	if user.Type != model.TypePerson {
 		t.Errorf("user.Type = %q, want %q", user.Type, model.TypePerson)
 	}
+
 	if user.Name != "User" {
 		t.Errorf("user.Name = %q, want %q", user.Name, "User")
 	}
+
 	if user.Description != "End user of the system" {
 		t.Errorf("user.Description = %q, want %q", user.Description, "End user of the system")
 	}
+}
 
-	webapp, ok := got.Units["webapp"]
+func TestParseValidWebappUnit(t *testing.T) {
+	t.Parallel()
+
+	data, err := os.ReadFile("../../testdata/valid.toml")
+	if err != nil {
+		t.Fatalf("failed to read test fixture: %v", err)
+	}
+
+	got, err := parser.Parse(data)
+	if err != nil {
+		t.Fatalf("Parse() error = %v, want nil", err)
+	}
+
+	webapp, ok := got.Units[webappKey]
 	if !ok {
 		t.Fatal("missing 'webapp' unit")
 	}
+
 	if webapp.Type != model.TypeSystem {
 		t.Errorf("webapp.Type = %q, want %q", webapp.Type, model.TypeSystem)
 	}
+
 	if webapp.Name != "Web Application" {
 		t.Errorf("webapp.Name = %q, want %q", webapp.Name, "Web Application")
 	}
+
 	if webapp.Technology != "Go, React" {
 		t.Errorf("webapp.Technology = %q, want %q", webapp.Technology, "Go, React")
 	}
 }
 
-func TestParseNestedUnits(t *testing.T) {
+func TestParseNestedProperties(t *testing.T) {
+	t.Parallel()
+
 	data, err := os.ReadFile("../../testdata/nested.toml")
 	if err != nil {
 		t.Fatalf("failed to read test fixture: %v", err)
 	}
 
-	got, err := Parse(data)
+	got, err := parser.Parse(data)
 	if err != nil {
 		t.Fatalf("Parse() error = %v, want nil", err)
 	}
 
 	if got.Properties.Name != "Nested Test" {
 		t.Errorf("Properties.Name = %q, want %q", got.Properties.Name, "Nested Test")
+	}
+}
+
+func TestParseNestedExternalUnit(t *testing.T) {
+	t.Parallel()
+
+	data, err := os.ReadFile("../../testdata/nested.toml")
+	if err != nil {
+		t.Fatalf("failed to read test fixture: %v", err)
+	}
+
+	got, err := parser.Parse(data)
+	if err != nil {
+		t.Fatalf("Parse() error = %v, want nil", err)
 	}
 
 	if len(got.Units) != 2 {
@@ -91,22 +147,59 @@ func TestParseNestedUnits(t *testing.T) {
 	if !ok {
 		t.Fatal("missing 'externals' unit")
 	}
+
 	if externals.Type != model.TypeSystemExternal {
 		t.Errorf("externals.Type = %q, want %q", externals.Type, model.TypeSystemExternal)
+	}
+}
+
+func TestParseNestedMainappUnit(t *testing.T) {
+	t.Parallel()
+
+	data, err := os.ReadFile("../../testdata/nested.toml")
+	if err != nil {
+		t.Fatalf("failed to read test fixture: %v", err)
+	}
+
+	got, err := parser.Parse(data)
+	if err != nil {
+		t.Fatalf("Parse() error = %v, want nil", err)
 	}
 
 	mainapp, ok := got.Units["mainapp"]
 	if !ok {
 		t.Fatal("missing 'mainapp' unit")
 	}
+
 	if mainapp.Type != model.TypeSystem {
 		t.Errorf("mainapp.Type = %q, want %q", mainapp.Type, model.TypeSystem)
 	}
+
 	if mainapp.Name != "Main Application" {
 		t.Errorf("mainapp.Name = %q, want %q", mainapp.Name, "Main Application")
 	}
+
 	if mainapp.Technology != "Go" {
 		t.Errorf("mainapp.Technology = %q, want %q", mainapp.Technology, "Go")
+	}
+}
+
+func TestParseNestedContainers(t *testing.T) {
+	t.Parallel()
+
+	data, err := os.ReadFile("../../testdata/nested.toml")
+	if err != nil {
+		t.Fatalf("failed to read test fixture: %v", err)
+	}
+
+	got, err := parser.Parse(data)
+	if err != nil {
+		t.Fatalf("Parse() error = %v, want nil", err)
+	}
+
+	mainapp, ok := got.Units["mainapp"]
+	if !ok {
+		t.Fatal("missing 'mainapp' unit")
 	}
 
 	if len(mainapp.Subunits) != 2 {
@@ -117,9 +210,11 @@ func TestParseNestedUnits(t *testing.T) {
 	if !ok {
 		t.Fatal("missing 'mainapp.api' subunit")
 	}
+
 	if api.Type != model.TypeContainer {
 		t.Errorf("api.Type = %q, want %q", api.Type, model.TypeContainer)
 	}
+
 	if api.Name != "API Server" {
 		t.Errorf("api.Name = %q, want %q", api.Name, "API Server")
 	}
@@ -128,12 +223,31 @@ func TestParseNestedUnits(t *testing.T) {
 	if !ok {
 		t.Fatal("missing 'mainapp.db' subunit")
 	}
+
 	if db.Type != model.TypeContainerDb {
 		t.Errorf("db.Type = %q, want %q", db.Type, model.TypeContainerDb)
 	}
+
 	if db.Name != "Database" {
 		t.Errorf("db.Name = %q, want %q", db.Name, "Database")
 	}
+}
+
+func TestParseNestedComponents(t *testing.T) {
+	t.Parallel()
+
+	data, err := os.ReadFile("../../testdata/nested.toml")
+	if err != nil {
+		t.Fatalf("failed to read test fixture: %v", err)
+	}
+
+	got, err := parser.Parse(data)
+	if err != nil {
+		t.Fatalf("Parse() error = %v, want nil", err)
+	}
+
+	mainapp := got.Units["mainapp"]
+	api := mainapp.Subunits["api"]
 
 	if len(api.Subunits) != 1 {
 		t.Fatalf("len(api.Subunits) = %d, want 1", len(api.Subunits))
@@ -143,21 +257,25 @@ func TestParseNestedUnits(t *testing.T) {
 	if !ok {
 		t.Fatal("missing 'mainapp.api.handler' subunit")
 	}
+
 	if handler.Type != model.TypeComponent {
 		t.Errorf("handler.Type = %q, want %q", handler.Type, model.TypeComponent)
 	}
+
 	if handler.Name != "Request Handler" {
 		t.Errorf("handler.Name = %q, want %q", handler.Name, "Request Handler")
 	}
 }
 
-func TestParseLinks(t *testing.T) {
+func TestParseLinksProperties(t *testing.T) {
+	t.Parallel()
+
 	data, err := os.ReadFile("../../testdata/links.toml")
 	if err != nil {
 		t.Fatalf("failed to read test fixture: %v", err)
 	}
 
-	got, err := Parse(data)
+	got, err := parser.Parse(data)
 	if err != nil {
 		t.Fatalf("Parse() error = %v, want nil", err)
 	}
@@ -169,8 +287,22 @@ func TestParseLinks(t *testing.T) {
 	if got.Properties.Edges != "spline" {
 		t.Errorf("Properties.Edges = %q, want %q", got.Properties.Edges, "spline")
 	}
+}
 
-	webapp, ok := got.Units["webapp"]
+func TestParseLinksOutgoing(t *testing.T) {
+	t.Parallel()
+
+	data, err := os.ReadFile("../../testdata/links.toml")
+	if err != nil {
+		t.Fatalf("failed to read test fixture: %v", err)
+	}
+
+	got, err := parser.Parse(data)
+	if err != nil {
+		t.Fatalf("Parse() error = %v, want nil", err)
+	}
+
+	webapp, ok := got.Units[webappKey]
 	if !ok {
 		t.Fatal("missing 'webapp' unit")
 	}
@@ -187,17 +319,35 @@ func TestParseLinks(t *testing.T) {
 	if link.Target != "user" {
 		t.Errorf("link.Target = %q, want %q", link.Target, "user")
 	}
+
 	if link.Arrow != model.ArrowForward {
 		t.Errorf("link.Arrow = %q, want %q", link.Arrow, model.ArrowForward)
 	}
+
 	if link.Rank != model.RankForward {
 		t.Errorf("link.Rank = %q, want %q", link.Rank, model.RankForward)
 	}
+
 	if link.Technology != "HTTPS" {
 		t.Errorf("link.Technology = %q, want %q", link.Technology, "HTTPS")
 	}
+
 	if link.Description != "Uses" {
 		t.Errorf("link.Description = %q, want %q", link.Description, "Uses")
+	}
+}
+
+func TestParseLinksIncoming(t *testing.T) {
+	t.Parallel()
+
+	data, err := os.ReadFile("../../testdata/links.toml")
+	if err != nil {
+		t.Fatalf("failed to read test fixture: %v", err)
+	}
+
+	got, err := parser.Parse(data)
+	if err != nil {
+		t.Fatalf("Parse() error = %v, want nil", err)
 	}
 
 	api, ok := got.Units["api"]
@@ -209,56 +359,60 @@ func TestParseLinks(t *testing.T) {
 		t.Fatalf("len(api.LinksFrom) = %d, want 1", len(api.LinksFrom))
 	}
 
-	linkFrom, ok := api.LinksFrom["webapp"]
+	linkFrom, ok := api.LinksFrom[webappKey]
 	if !ok {
 		t.Fatal("missing 'webapp' linkFrom in api")
 	}
 
-	if linkFrom.Target != "webapp" {
-		t.Errorf("linkFrom.Target = %q, want %q", linkFrom.Target, "webapp")
+	if linkFrom.Target != webappKey {
+		t.Errorf("linkFrom.Target = %q, want %q", linkFrom.Target, webappKey)
 	}
+
 	if linkFrom.Arrow != model.ArrowForward {
 		t.Errorf("linkFrom.Arrow = %q, want %q", linkFrom.Arrow, model.ArrowForward)
 	}
+
 	if linkFrom.Technology != "HTTP/JSON" {
 		t.Errorf("linkFrom.Technology = %q, want %q", linkFrom.Technology, "HTTP/JSON")
 	}
 }
 
 func TestParseInvalidTOML(t *testing.T) {
+	t.Parallel()
+
 	invalidData := []byte("invalid [[[")
 
-	_, err := Parse(invalidData)
+	_, err := parser.Parse(invalidData)
 	if err == nil {
 		t.Fatal("Parse() error = nil, want error for invalid TOML")
 	}
 
-	var parseErr *ParseError
 	if !strings.Contains(err.Error(), "parse error") {
 		t.Errorf("error message should contain 'parse error', got %q", err.Error())
 	}
 
-	// Check that the error is a ParseError
-	parseErr, ok := err.(*ParseError)
-	if !ok {
+	var parseErr *parser.ParseError
+
+	if !errors.As(err, &parseErr) {
 		t.Fatalf("error type = %T, want *ParseError", err)
 	}
 
-	// Line should be extracted from DecodeError
 	if parseErr.Line == 0 {
 		t.Error("ParseError.Line = 0, want non-zero for invalid TOML")
 	}
 }
 
 func TestParseMissingFile(t *testing.T) {
-	_, err := ParseFile("nonexistent.toml")
+	t.Parallel()
+
+	_, err := parser.ParseFile("nonexistent.toml")
 	if err == nil {
 		t.Fatal("ParseFile() error = nil, want error for missing file")
 	}
 
-	var parseErr *ParseError
-	parseErr, ok := err.(*ParseError)
-	if !ok {
+	var parseErr *parser.ParseError
+
+	if !errors.As(err, &parseErr) {
 		t.Fatalf("error type = %T, want *ParseError", err)
 	}
 
@@ -272,12 +426,14 @@ func TestParseMissingFile(t *testing.T) {
 }
 
 func TestParsePropertiesFields(t *testing.T) {
+	t.Parallel()
+
 	data, err := os.ReadFile("../../testdata/valid.toml")
 	if err != nil {
 		t.Fatalf("failed to read test fixture: %v", err)
 	}
 
-	got, err := Parse(data)
+	got, err := parser.Parse(data)
 	if err != nil {
 		t.Fatalf("Parse() error = %v, want nil", err)
 	}
@@ -298,23 +454,25 @@ func TestParsePropertiesFields(t *testing.T) {
 		t.Errorf("len(Properties.Expanded) = %d, want 1", len(got.Properties.Expanded))
 	}
 
-	if got.Properties.Expanded[0] != "webapp" {
-		t.Errorf("Properties.Expanded[0] = %q, want %q", got.Properties.Expanded[0], "webapp")
+	if got.Properties.Expanded[0] != webappKey {
+		t.Errorf("Properties.Expanded[0] = %q, want %q", got.Properties.Expanded[0], webappKey)
 	}
 }
 
 func TestParseUnitFields(t *testing.T) {
+	t.Parallel()
+
 	data, err := os.ReadFile("../../testdata/valid.toml")
 	if err != nil {
 		t.Fatalf("failed to read test fixture: %v", err)
 	}
 
-	got, err := Parse(data)
+	got, err := parser.Parse(data)
 	if err != nil {
 		t.Fatalf("Parse() error = %v, want nil", err)
 	}
 
-	webapp, ok := got.Units["webapp"]
+	webapp, ok := got.Units[webappKey]
 	if !ok {
 		t.Fatal("missing 'webapp' unit")
 	}
@@ -337,7 +495,9 @@ func TestParseUnitFields(t *testing.T) {
 }
 
 func TestParseEmptyFile(t *testing.T) {
-	got, err := Parse([]byte(""))
+	t.Parallel()
+
+	got, err := parser.Parse([]byte(""))
 	if err != nil {
 		t.Fatalf("Parse() error = %v, want nil for empty file", err)
 	}
@@ -352,13 +512,15 @@ func TestParseEmptyFile(t *testing.T) {
 }
 
 func TestParseOnlyProperties(t *testing.T) {
+	t.Parallel()
+
 	data := []byte(`
 [properties]
 name = "Only Properties Test"
 description = "Test with only properties"
 `)
 
-	got, err := Parse(data)
+	got, err := parser.Parse(data)
 	if err != nil {
 		t.Fatalf("Parse() error = %v, want nil", err)
 	}
@@ -373,6 +535,8 @@ description = "Test with only properties"
 }
 
 func TestParseExternalTypes(t *testing.T) {
+	t.Parallel()
+
 	data := []byte(`
 [properties]
 name = "External Types Test"
@@ -394,7 +558,7 @@ type = "queueExternal"
 name = "External Queue"
 `)
 
-	got, err := Parse(data)
+	got, err := parser.Parse(data)
 	if err != nil {
 		t.Fatalf("Parse() error = %v, want nil", err)
 	}
@@ -417,6 +581,8 @@ name = "External Queue"
 }
 
 func TestParseLinkFrom(t *testing.T) {
+	t.Parallel()
+
 	data := []byte(`
 [properties]
 name = "LinkFrom Test"
@@ -427,7 +593,7 @@ name = "System A"
 linkFrom = { "b" = { arrow = "reverse", technology = "TCP" } }
 `)
 
-	got, err := Parse(data)
+	got, err := parser.Parse(data)
 	if err != nil {
 		t.Fatalf("Parse() error = %v, want nil", err)
 	}
@@ -459,54 +625,121 @@ linkFrom = { "b" = { arrow = "reverse", technology = "TCP" } }
 	}
 }
 
-func TestParseAllUnitTypes(t *testing.T) {
+func TestParseAllUnitTypesC1(t *testing.T) {
+	t.Parallel()
+
 	data := []byte(`
 [properties]
-name = "All Types Test"
+name = "C1 Types Test"
 
-# C1 types
 [p1]
 type = "person"
+
 [s1]
 type = "system"
+
 [d1]
 type = "db"
+
 [q1]
 type = "queue"
+
 [b1]
 type = "box"
-
-# C2 types
-[c1]
-type = "container"
-[cd1]
-type = "containerDb"
-[cq1]
-type = "containerQueue"
-
-# C3 types
-[cmp1]
-type = "component"
-[cmpd1]
-type = "componentDb"
-[cmpq1]
-type = "componentQueue"
 `)
 
-	got, err := Parse(data)
+	got, err := parser.Parse(data)
 	if err != nil {
 		t.Fatalf("Parse() error = %v, want nil", err)
 	}
 
 	expectedTypes := map[string]model.UnitType{
-		"p1":    model.TypePerson,
-		"s1":    model.TypeSystem,
-		"d1":    model.TypeDb,
-		"q1":    model.TypeQueue,
-		"b1":    model.TypeBox,
-		"c1":    model.TypeContainer,
-		"cd1":   model.TypeContainerDb,
-		"cq1":   model.TypeContainerQueue,
+		"p1": model.TypePerson,
+		"s1": model.TypeSystem,
+		"d1": model.TypeDb,
+		"q1": model.TypeQueue,
+		"b1": model.TypeBox,
+	}
+
+	for name, expectedType := range expectedTypes {
+		unit, ok := got.Units[name]
+		if !ok {
+			t.Errorf("missing unit %q", name)
+
+			continue
+		}
+
+		if unit.Type != expectedType {
+			t.Errorf("%s.Type = %q, want %q", name, unit.Type, expectedType)
+		}
+	}
+}
+
+func TestParseAllUnitTypesC2(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "C2 Types Test"
+
+[c1]
+type = "container"
+
+[cd1]
+type = "containerDb"
+
+[cq1]
+type = "containerQueue"
+`)
+
+	got, err := parser.Parse(data)
+	if err != nil {
+		t.Fatalf("Parse() error = %v, want nil", err)
+	}
+
+	expectedTypes := map[string]model.UnitType{
+		"c1":  model.TypeContainer,
+		"cd1": model.TypeContainerDb,
+		"cq1": model.TypeContainerQueue,
+	}
+
+	for name, expectedType := range expectedTypes {
+		unit, ok := got.Units[name]
+		if !ok {
+			t.Errorf("missing unit %q", name)
+
+			continue
+		}
+
+		if unit.Type != expectedType {
+			t.Errorf("%s.Type = %q, want %q", name, unit.Type, expectedType)
+		}
+	}
+}
+
+func TestParseAllUnitTypesC3(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "C3 Types Test"
+
+[cmp1]
+type = "component"
+
+[cmpd1]
+type = "componentDb"
+
+[cmpq1]
+type = "componentQueue"
+`)
+
+	got, err := parser.Parse(data)
+	if err != nil {
+		t.Fatalf("Parse() error = %v, want nil", err)
+	}
+
+	expectedTypes := map[string]model.UnitType{
 		"cmp1":  model.TypeComponent,
 		"cmpd1": model.TypeComponentDb,
 		"cmpq1": model.TypeComponentQueue,
@@ -516,8 +749,10 @@ type = "componentQueue"
 		unit, ok := got.Units[name]
 		if !ok {
 			t.Errorf("missing unit %q", name)
+
 			continue
 		}
+
 		if unit.Type != expectedType {
 			t.Errorf("%s.Type = %q, want %q", name, unit.Type, expectedType)
 		}
@@ -525,6 +760,8 @@ type = "componentQueue"
 }
 
 func TestParseLinkAllFields(t *testing.T) {
+	t.Parallel()
+
 	data := []byte(`
 [properties]
 name = "Link Fields Test"
@@ -532,10 +769,18 @@ name = "Link Fields Test"
 [a]
 type = "system"
 name = "A"
-link = { "b" = { arrow = "bidirectional", rank = "equal", color = "red", style = "dashed", technology = "gRPC", description = "syncs data", labelPosition = "head" } }
+
+[a.link.b]
+arrow = "bidirectional"
+rank = "equal"
+color = "red"
+style = "dashed"
+technology = "gRPC"
+description = "syncs data"
+labelPosition = "head"
 `)
 
-	got, err := Parse(data)
+	got, err := parser.Parse(data)
 	if err != nil {
 		t.Fatalf("Parse() error = %v, want nil", err)
 	}
@@ -550,33 +795,71 @@ link = { "b" = { arrow = "bidirectional", rank = "equal", color = "red", style =
 		t.Fatal("missing 'b' link in a")
 	}
 
+	// Verify link target
 	if link.Target != "b" {
 		t.Errorf("link.Target = %q, want %q", link.Target, "b")
 	}
+
+	// Verify arrow/rank directions
 	if link.Arrow != model.ArrowBidirectional {
 		t.Errorf("link.Arrow = %q, want %q", link.Arrow, model.ArrowBidirectional)
 	}
+
 	if link.Rank != model.RankEqual {
 		t.Errorf("link.Rank = %q, want %q", link.Rank, model.RankEqual)
 	}
+
+	// Verify visual styling
 	if link.Color != "red" {
 		t.Errorf("link.Color = %q, want %q", link.Color, "red")
 	}
+
 	if link.Style != "dashed" {
 		t.Errorf("link.Style = %q, want %q", link.Style, "dashed")
 	}
+}
+
+func TestParseLinkAllFieldsMetadata(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Link Fields Test"
+
+[a]
+type = "system"
+name = "A"
+
+[a.link.b]
+technology = "gRPC"
+description = "syncs data"
+labelPosition = "head"
+`)
+
+	got, err := parser.Parse(data)
+	if err != nil {
+		t.Fatalf("Parse() error = %v, want nil", err)
+	}
+
+	link := got.Units["a"].Links["b"]
+
+	// Verify metadata fields
 	if link.Technology != "gRPC" {
 		t.Errorf("link.Technology = %q, want %q", link.Technology, "gRPC")
 	}
+
 	if link.Description != "syncs data" {
 		t.Errorf("link.Description = %q, want %q", link.Description, "syncs data")
 	}
+
 	if link.LabelPosition != model.LabelHead {
 		t.Errorf("link.LabelPosition = %q, want %q", link.LabelPosition, model.LabelHead)
 	}
 }
 
 func TestParseNestedLink(t *testing.T) {
+	t.Parallel()
+
 	data := []byte(`
 [properties]
 name = "Nested Link Test"
@@ -588,10 +871,12 @@ name = "Parent"
 [parent.child]
 type = "container"
 name = "Child"
-link = { "other" = { technology = "HTTP" } }
+
+[parent.child.link]
+other = { technology = "HTTP" }
 `)
 
-	got, err := Parse(data)
+	got, err := parser.Parse(data)
 	if err != nil {
 		t.Fatalf("Parse() error = %v, want nil", err)
 	}
@@ -621,7 +906,9 @@ link = { "other" = { technology = "HTTP" } }
 }
 
 func TestParseFile(t *testing.T) {
-	got, err := ParseFile("../../testdata/valid.toml")
+	t.Parallel()
+
+	got, err := parser.ParseFile("../../testdata/valid.toml")
 	if err != nil {
 		t.Fatalf("ParseFile() error = %v, want nil", err)
 	}
