@@ -2,6 +2,7 @@
 package parser
 
 import (
+	"bytes"
 	"os"
 
 	"github.com/Djarvur/c4drill/internal/model"
@@ -14,16 +15,52 @@ type Model struct {
 	// Properties contains the global [properties] section.
 	Properties model.Properties `toml:"properties"`
 	// Units contains all top-level units keyed by section name.
-	// The toml:",inline" tag captures all sections except [properties].
-	Units map[string]*model.Unit `toml:",inline"`
+	Units map[string]*model.Unit
+}
+
+// rawModel is used for initial TOML unmarshaling.
+// go-toml v2 doesn't support toml:",inline" for capturing unknown keys,
+// so we unmarshal to a raw map first, then process each section.
+type rawModel struct {
+	Properties model.Properties `toml:"properties"`
 }
 
 // Parse parses TOML data into a Model.
 // It unmarshals the TOML content and populates Link.Target fields from map keys.
 func Parse(data []byte) (*Model, error) {
-	var m Model
-	if err := toml.Unmarshal(data, &m); err != nil {
+	// First pass: unmarshal the entire document to a raw map
+	var rawMap map[string]interface{}
+	if err := toml.Unmarshal(data, &rawMap); err != nil {
 		return nil, wrapDecodeError(err)
+	}
+
+	// Second pass: build the Model struct
+	m := &Model{
+		Units: make(map[string]*model.Unit),
+	}
+
+	// Extract properties if present
+	if props, ok := rawMap["properties"]; ok {
+		propsData, err := toml.Marshal(props)
+		if err != nil {
+			return nil, &ParseError{Message: "failed to marshal properties", Cause: err}
+		}
+		if err := toml.Unmarshal(propsData, &m.Properties); err != nil {
+			return nil, wrapDecodeError(err)
+		}
+	}
+
+	// Process all other sections as units
+	for name, value := range rawMap {
+		if name == "properties" {
+			continue
+		}
+
+		unit, err := parseUnit(name, value)
+		if err != nil {
+			return nil, err
+		}
+		m.Units[name] = unit
 	}
 
 	// Populate Link.Target from map keys for all units
@@ -31,7 +68,76 @@ func Parse(data []byte) (*Model, error) {
 		populateLinkTargets(m.Units)
 	}
 
-	return &m, nil
+	return m, nil
+}
+
+// parseUnit parses a raw map value into a Unit struct, including nested subunits.
+func parseUnit(name string, value interface{}) (*model.Unit, error) {
+	unitMap, ok := value.(map[string]interface{})
+	if !ok {
+		return nil, &ParseError{
+			Message: "invalid unit format",
+			Context: name,
+		}
+	}
+
+	// Re-marshal and unmarshal to get proper type conversion
+	unitData, err := toml.Marshal(unitMap)
+	if err != nil {
+		return nil, &ParseError{Message: "failed to marshal unit", Context: name, Cause: err}
+	}
+
+	var unit model.Unit
+	if err := toml.Unmarshal(unitData, &unit); err != nil {
+		return nil, wrapDecodeError(err)
+	}
+
+	// Handle nested subunits (sections like [parent.child])
+	for key, val := range unitMap {
+		// Skip fields that are already in the Unit struct
+		if isBuiltinField(key) {
+			continue
+		}
+
+		// This must be a subunit
+		subunit, err := parseUnit(key, val)
+		if err != nil {
+			return nil, err
+		}
+
+		if unit.Subunits == nil {
+			unit.Subunits = make(map[string]*model.Unit)
+		}
+		unit.Subunits[key] = subunit
+	}
+
+	return &unit, nil
+}
+
+// isBuiltinField returns true if the key is a known Unit struct field.
+func isBuiltinField(key string) bool {
+	builtinFields := map[string]bool{
+		"type":        true,
+		"name":        true,
+		"description": true,
+		"technology":  true,
+		"color":       true,
+		"style":       true,
+		"border":      true,
+		"edges":       true,
+		"width":       true,
+		"height":      true,
+		"expanded":    true,
+		"link":        true,
+		"linkFrom":    true,
+	}
+	return builtinFields[key]
+}
+
+// isNestedUnitData checks if the data contains nested TOML sections.
+// This is used to detect when to use the two-pass parsing approach.
+func isNestedUnitData(data []byte) bool {
+	return bytes.Contains(data, []byte("."))
 }
 
 // ParseFile reads a TOML file and parses it into a Model.
