@@ -49,12 +49,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Graph Construction
 
-- [ ] **GRPH-01**: Builder creates nodes for each unit with type-appropriate shapes
-- [ ] **GRPH-02**: Builder creates edges for each link definition
-- [ ] **GRPH-03**: Builder applies edge routing style (straight, spline, square)
-- [ ] **GRPH-04**: Builder creates clusters for expanded units
-- [ ] **GRPH-05**: Shapes: person uses icon, db uses cylinder icon, queue uses bars
-- [ ] **GRPH-06**: System shape includes name, description, explore link
+- [x] **GRPH-01**: Builder creates nodes for each unit with type-appropriate shapes
+- [x] **GRPH-02**: Builder creates edges for each link definition
+- [x] **GRPH-03**: Builder applies edge routing style (straight, spline, square)
+- [x] **GRPH-04**: Builder creates clusters for expanded units
+- [x] **GRPH-05**: Shapes: person uses icon, db uses cylinder icon, queue uses bars
+- [x] **GRPH-06**: System shape includes name, description, explore link
 
 ### Rendering
 
@@ -169,12 +169,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VIEW-05 | Phase 3 | Pending |
 | VIEW-06 | Phase 3 | Pending |
 | VIEW-07 | Phase 3 | Pending |
-| GRPH-01 | Phase 3 | Pending |
-| GRPH-02 | Phase 3 | Pending |
-| GRPH-03 | Phase 3 | Pending |
-| GRPH-04 | Phase 3 | Pending |
-| GRPH-05 | Phase 3 | Pending |
-| GRPH-06 | Phase 3 | Pending |
+| GRPH-01 | Phase 3 | Complete |
+| GRPH-02 | Phase 3 | Complete |
+| GRPH-03 | Phase 3 | Complete |
+| GRPH-04 | Phase 3 | Complete |
+| GRPH-05 | Phase 3 | Complete |
+| GRPH-06 | Phase 3 | Complete |
 | REND-01 | Phase 4 | Pending |
 | REND-02 | Phase 4 | Pending |
 | REND-03 | Phase 4 | Pending |
