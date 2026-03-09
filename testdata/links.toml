@@ -1,0 +1,17 @@
+[properties]
+name = "Links Test"
+edges = "spline"
+
+[user]
+type = "person"
+name = "User"
+
+[webapp]
+type = "system"
+name = "Web App"
+link = { "user" = { arrow = "forward", rank = "forward", technology = "HTTPS", description = "Uses" } }
+
+[api]
+type = "system"
+name = "API"
+linkFrom = { "webapp" = { arrow = "forward", technology = "HTTP/JSON" } }
