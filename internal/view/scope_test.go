@@ -284,3 +284,398 @@ func TestGenerateC1View_EmptyModelReturnsEmptyView(t *testing.T) {
 	require.NotNil(t, v)
 	assert.Empty(t, v.Units)
 }
+
+// Tests for GenerateC2View
+
+func TestGenerateC2View_ReturnsViewWithLevelC2(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"system": {
+				Type: model.TypeSystem,
+				Name: "System",
+				Subunits: map[string]*model.Unit{
+					"api": {Type: model.TypeContainer, Name: "API"},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC2View(m, "system")
+
+	require.NotNil(t, v)
+	assert.Equal(t, view.LevelC2, v.Level)
+}
+
+func TestGenerateC2View_ContainsSubunitsOfExpandedSystem(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"system": {
+				Type: model.TypeSystem,
+				Name: "System",
+				Subunits: map[string]*model.Unit{
+					"api":   {Type: model.TypeContainer, Name: "API"},
+					"web":   {Type: model.TypeContainer, Name: "Web"},
+					"db":    {Type: model.TypeContainerDb, Name: "Database"},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC2View(m, "system")
+
+	require.NotNil(t, v)
+	require.Len(t, v.Units, 3)
+	assert.Contains(t, v.Units, "system.api")
+	assert.Contains(t, v.Units, "system.web")
+	assert.Contains(t, v.Units, "system.db")
+}
+
+func TestGenerateC2View_ParentSetToSystemPath(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"system": {
+				Type: model.TypeSystem,
+				Name: "System",
+				Subunits: map[string]*model.Unit{
+					"api": {Type: model.TypeContainer, Name: "API"},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC2View(m, "system")
+
+	require.NotNil(t, v)
+	assert.Equal(t, "system", v.Parent)
+}
+
+func TestGenerateC2View_ExpandedUnitSetToSystemPath(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"system": {
+				Type: model.TypeSystem,
+				Name: "System",
+				Subunits: map[string]*model.Unit{
+					"api": {Type: model.TypeContainer, Name: "API"},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC2View(m, "system")
+
+	require.NotNil(t, v)
+	assert.Equal(t, "system", v.ExpandedUnit)
+}
+
+func TestGenerateC2View_TitleIncludesSystemName(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"mainsystem": {
+				Type: model.TypeSystem,
+				Name: "Main System",
+				Subunits: map[string]*model.Unit{
+					"api": {Type: model.TypeContainer, Name: "API"},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC2View(m, "mainsystem")
+
+	require.NotNil(t, v)
+	assert.Contains(t, v.Title, "Main System")
+}
+
+func TestGenerateC2View_EdgesFromExpandedUnit(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test", Edges: "spline"},
+		Units: map[string]*model.Unit{
+			"system": {
+				Type:  model.TypeSystem,
+				Name:  "System",
+				Edges: "straight",
+				Subunits: map[string]*model.Unit{
+					"api": {Type: model.TypeContainer, Name: "API"},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC2View(m, "system")
+
+	require.NotNil(t, v)
+	assert.Equal(t, "straight", v.Edges) // From expanded unit, not properties
+}
+
+func TestGenerateC2View_NilModelReturnsNil(t *testing.T) {
+	t.Parallel()
+
+	v := view.GenerateC2View(nil, "system")
+	assert.Nil(t, v)
+}
+
+func TestGenerateC2View_NonExistentPathReturnsNil(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units:      map[string]*model.Unit{},
+	}
+
+	v := view.GenerateC2View(m, "nonexistent")
+	assert.Nil(t, v)
+}
+
+// Tests for GenerateC3View
+
+func TestGenerateC3View_ReturnsViewWithLevelC3(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"system": {
+				Type: model.TypeSystem,
+				Name: "System",
+				Subunits: map[string]*model.Unit{
+					"api": {
+						Type: model.TypeContainer,
+						Name: "API",
+						Subunits: map[string]*model.Unit{
+							"handler": {Type: model.TypeComponent, Name: "Handler"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC3View(m, "system.api")
+
+	require.NotNil(t, v)
+	assert.Equal(t, view.LevelC3, v.Level)
+}
+
+func TestGenerateC3View_ContainsSubunitsOfExpandedContainer(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"system": {
+				Type: model.TypeSystem,
+				Name: "System",
+				Subunits: map[string]*model.Unit{
+					"api": {
+						Type: model.TypeContainer,
+						Name: "API",
+						Subunits: map[string]*model.Unit{
+							"handler":  {Type: model.TypeComponent, Name: "Handler"},
+							"service":  {Type: model.TypeComponent, Name: "Service"},
+							"repo":     {Type: model.TypeComponentDb, Name: "Repository"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC3View(m, "system.api")
+
+	require.NotNil(t, v)
+	require.Len(t, v.Units, 3)
+	assert.Contains(t, v.Units, "system.api.handler")
+	assert.Contains(t, v.Units, "system.api.service")
+	assert.Contains(t, v.Units, "system.api.repo")
+}
+
+func TestGenerateC3View_FullPathIsParentChildFormat(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"system": {
+				Type: model.TypeSystem,
+				Name: "System",
+				Subunits: map[string]*model.Unit{
+					"api": {
+						Type: model.TypeContainer,
+						Name: "API",
+						Subunits: map[string]*model.Unit{
+							"handler": {Type: model.TypeComponent, Name: "Handler"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC3View(m, "system.api")
+
+	require.NotNil(t, v)
+	require.Contains(t, v.Units, "system.api.handler")
+	assert.Equal(t, "system.api.handler", v.Units["system.api.handler"].FullPath)
+}
+
+func TestGenerateC3View_ExternalBoundaryFromSubunitLinks(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"system": {
+				Type: model.TypeSystem,
+				Name: "System",
+				Subunits: map[string]*model.Unit{
+					"api": {
+						Type: model.TypeContainer,
+						Name: "API",
+						Subunits: map[string]*model.Unit{
+							"handler": {
+								Type: model.TypeComponent,
+								Name: "Handler",
+								Links: map[string]model.Link{
+									"externalservice": {Target: "externalservice"},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC3View(m, "system.api")
+
+	require.NotNil(t, v)
+	assert.Contains(t, v.Units, "externalservice")
+	assert.True(t, v.Units["externalservice"].IsExternal)
+}
+
+func TestGenerateC3View_EdgesFromExpandedUnit(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"system": {
+				Type:  model.TypeSystem,
+				Name:  "System",
+				Edges: "spline",
+				Subunits: map[string]*model.Unit{
+					"api": {
+						Type:  model.TypeContainer,
+						Name:  "API",
+						Edges: "square",
+						Subunits: map[string]*model.Unit{
+							"handler": {Type: model.TypeComponent, Name: "Handler"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC3View(m, "system.api")
+
+	require.NotNil(t, v)
+	assert.Equal(t, "square", v.Edges) // From expanded container, not parent system
+}
+
+func TestGenerateC3View_NilModelReturnsNil(t *testing.T) {
+	t.Parallel()
+
+	v := view.GenerateC3View(nil, "system.api")
+	assert.Nil(t, v)
+}
+
+func TestGenerateC3View_NonExistentPathReturnsNil(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units:      map[string]*model.Unit{},
+	}
+
+	v := view.GenerateC3View(m, "nonexistent.path")
+	assert.Nil(t, v)
+}
+
+func TestGenerateC2View_ExternalBoundaryFromSubunitLinks(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"system": {
+				Type: model.TypeSystem,
+				Name: "System",
+				Subunits: map[string]*model.Unit{
+					"api": {
+						Type: model.TypeContainer,
+						Name: "API",
+						Links: map[string]model.Link{
+							"externaldb": {Target: "externaldb"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC2View(m, "system")
+
+	require.NotNil(t, v)
+	assert.Contains(t, v.Units, "externaldb")
+	assert.True(t, v.Units["externaldb"].IsExternal)
+}
+
+func TestGenerateC2View_IsExpandedForChildUnits(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"system": {
+				Type: model.TypeSystem,
+				Name: "System",
+				Expanded: []string{"api"}, // Expand the api subunit
+				Subunits: map[string]*model.Unit{
+					"api": {
+						Type: model.TypeContainer,
+						Name: "API",
+						Subunits: map[string]*model.Unit{
+							"handler": {Type: model.TypeComponent},
+						},
+					},
+					"web": {Type: model.TypeContainer, Name: "Web"},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC2View(m, "system")
+
+	require.NotNil(t, v)
+	assert.True(t, v.Units["system.api"].IsExpanded)
+	assert.False(t, v.Units["system.web"].IsExpanded)
+}
