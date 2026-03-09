@@ -10,24 +10,24 @@ See: .planning/PROJECT.md (updated 2026-03-09)
 ## Current Position
 
 Phase: 1 of 6 (Foundation & Model)
-Plan: 1 of TBD
+Plan: 2 of TBD
 Status: In progress
-Last activity: 2026-03-09 — Plan 01-01 completed: Development environment and domain types
+Last activity: 2026-03-09 — Plan 01-02 completed: TOML parser with error handling
 
-Progress: [██░░░░░░░░] 20%
+Progress: [███░░░░░░░] 30%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 4 min
-- Total execution time: 0.1 hours
+- Total plans completed: 2
+- Average duration: 4.5 min
+- Total execution time: 0.2 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1. Foundation & Model | 1 | 4min | 4min |
+| 1. Foundation & Model | 2 | 9min | 4.5min |
 | 2. Validation | 0 | - | - |
 | 3. Views & Graphs | 0 | - | - |
 | 4. Rendering & Output | 0 | - | - |
@@ -36,8 +36,8 @@ Progress: [██░░░░░░░░] 20%
 
 **Recent Trend:**
 
-- Last 5 plans: 01-01 (4min)
-- Trend: Initial baseline
+- Last 5 plans: 01-01 (4min), 01-02 (5min)
+- Trend: Consistent execution
 
 *Updated after each plan completion*
 
@@ -52,6 +52,8 @@ Recent decisions affecting current work:
 - Type discriminator pattern for UnitType enum
 - Flat struct design with all fields at top level
 - Exported color constants matching C4-PlantUML palette
+- go-toml v2 DecodeError.Position() for line number extraction in parser errors
+- toml:",inline" tag for capturing top-level units in parser Model
 
 ### Pending Todos
 
@@ -68,5 +70,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-09
-Stopped at: Plan 01-01 completed: Development environment and domain types
+Stopped at: Plan 01-02 completed: TOML parser with error handling
 Resume file: None

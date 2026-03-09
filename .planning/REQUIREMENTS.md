@@ -9,13 +9,13 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Input/Parsing
 
-- [ ] **INPT-01**: CLI accepts path to TOML input file
-- [ ] **INPT-02**: Parser handles nested unit definitions with arbitrary depth
-- [ ] **INPT-03**: Parser extracts properties section with name, description, styling
-- [ ] **INPT-04**: Parser extracts context-level units (person, system, db, queue, box types)
-- [ ] **INPT-05**: Parser handles external variants (personExternal, systemExternal, etc.)
-- [ ] **INPT-06**: Parser extracts link and linkFrom definitions with styling attributes
-- [ ] **INPT-07**: Parser handles expanded list for collapsed/expanded rendering control
+- [x] **INPT-01**: CLI accepts path to TOML input file
+- [x] **INPT-02**: Parser handles nested unit definitions with arbitrary depth
+- [x] **INPT-03**: Parser extracts properties section with name, description, styling
+- [x] **INPT-04**: Parser extracts context-level units (person, system, db, queue, box types)
+- [x] **INPT-05**: Parser handles external variants (personExternal, systemExternal, etc.)
+- [x] **INPT-06**: Parser extracts link and linkFrom definitions with styling attributes
+- [x] **INPT-07**: Parser handles expanded list for collapsed/expanded rendering control
 
 ### Model/Types
 
@@ -136,13 +136,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INPT-01 | Phase 1 | Pending |
-| INPT-02 | Phase 1 | Pending |
-| INPT-03 | Phase 1 | Pending |
-| INPT-04 | Phase 1 | Pending |
-| INPT-05 | Phase 1 | Pending |
-| INPT-06 | Phase 1 | Pending |
-| INPT-07 | Phase 1 | Pending |
+| INPT-01 | Phase 1 | Complete |
+| INPT-02 | Phase 1 | Complete |
+| INPT-03 | Phase 1 | Complete |
+| INPT-04 | Phase 1 | Complete |
+| INPT-05 | Phase 1 | Complete |
+| INPT-06 | Phase 1 | Complete |
+| INPT-07 | Phase 1 | Complete |
 | TYPE-01 | Phase 1 | Complete |
 | TYPE-02 | Phase 1 | Complete |
 | TYPE-03 | Phase 1 | Complete |
