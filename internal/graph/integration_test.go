@@ -1,0 +1,455 @@
+package graph_test
+
+import (
+	"testing"
+
+	"github.com/Djarvur/c4drill/internal/graph"
+	"github.com/Djarvur/c4drill/internal/model"
+	"github.com/Djarvur/c4drill/internal/parser"
+	"github.com/Djarvur/c4drill/internal/view"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// TestIntegrationBuildGraphFromC1View tests that BuildGraph from a C1 view
+// produces correct nodes and edges.
+func TestIntegrationBuildGraphFromC1View(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{
+			Name:  "Test System",
+			Edges: "spline",
+		},
+		Units: map[string]*model.Unit{
+			"app": {
+				Type:        model.TypeSystem,
+				Name:        "App",
+				Description: "Main app",
+				Technology:  "Go",
+				Links: map[string]model.Link{
+					"db": {
+						Target:      "db",
+						Technology:  "SQL",
+						Description: "Queries",
+					},
+				},
+			},
+			"db": {
+				Type:        model.TypeDb,
+				Name:        "Database",
+				Description: "Data store",
+				Technology:  "PostgreSQL",
+			},
+			"user": {
+				Type:        model.TypePerson,
+				Name:        "User",
+				Description: "End user",
+			},
+		},
+	}
+
+	// Test 1: BuildGraph from C1 view produces correct nodes and edges
+	v := view.GenerateC1View(m)
+	require.NotNil(t, v)
+
+	g := graph.BuildGraph(v)
+	require.NotNil(t, g)
+
+	// Verify basic graph properties
+	assert.Equal(t, "Test System", g.Title)
+	assert.Equal(t, "TB", g.Direction)
+	assert.Equal(t, "spline", g.EdgeStyle)
+
+	// Should have 3 nodes (app, db, user)
+	assert.Len(t, g.Nodes, 3)
+
+	// Verify nodes have correct shapes based on type
+	nodeMap := make(map[string]*graph.Node)
+	for _, node := range g.Nodes {
+		nodeMap[node.ID] = node
+	}
+
+	assert.Equal(t, graph.ShapeHTML, nodeMap["app"].Shape)
+	assert.Equal(t, graph.ShapeHTML, nodeMap["db"].Shape)
+	assert.Equal(t, graph.ShapeHTML, nodeMap["user"].Shape)
+
+	// Verify icons
+	assert.Empty(t, nodeMap["app"].Label.Icon)                // System has no icon
+	assert.Equal(t, "\u26C1", nodeMap["db"].Label.Icon)       // DB has cylinder icon
+	assert.Equal(t, "\U0001F464", nodeMap["user"].Label.Icon) // Person has person icon
+
+	// Should have 1 edge (app -> db)
+	assert.Len(t, g.Edges, 1)
+	assert.Equal(t, "app", g.Edges[0].Source)
+	assert.Equal(t, "db", g.Edges[0].Target)
+}
+
+// TestIntegrationBuildGraphFromC2ViewWithClusters tests that BuildGraph from C2 view
+// produces correct clusters for expanded systems.
+func TestIntegrationBuildGraphFromC2ViewWithClusters(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"mainsystem": {
+				Type:     model.TypeSystem,
+				Name:     "Main System",
+				Expanded: []string{"mainsystem"}, // Expanded
+				Edges:    "square",
+				Subunits: map[string]*model.Unit{
+					"api": {
+						Type:        model.TypeContainer,
+						Name:        "API",
+						Description: "API container",
+						Technology:  "Go",
+					},
+					"web": {
+						Type:        model.TypeContainer,
+						Name:        "Web",
+						Description: "Web frontend",
+						Technology:  "React",
+					},
+				},
+			},
+		},
+	}
+
+	// Test 2: BuildGraph from C2 view produces correct clusters
+	v := view.GenerateC1View(m) // C1 view with expanded system
+	require.NotNil(t, v)
+
+	g := graph.BuildGraph(v)
+	require.NotNil(t, g)
+
+	// Should have 1 cluster for the expanded system
+	require.Len(t, g.Clusters, 1)
+
+	cluster := g.Clusters[0]
+	assert.Equal(t, "cluster_mainsystem", cluster.ID)
+	assert.Equal(t, "Main System", cluster.Label.Name)
+
+	// Cluster should contain 2 child nodes
+	assert.Len(t, cluster.Nodes, 2)
+
+	// Verify child nodes are marked as in cluster
+	for _, node := range cluster.Nodes {
+		assert.True(t, node.IsInCluster)
+	}
+}
+
+// TestIntegrationBuildGraphExternalBoundaryNodes tests that BuildGraph with external
+// boundary nodes produces correct styling.
+func TestIntegrationBuildGraphExternalBoundaryNodes(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"internal": {
+				Type:        model.TypeSystem,
+				Name:        "Internal System",
+				Description: "Our system",
+				Links: map[string]model.Link{
+					"externalapi": {
+						Target:      "externalapi",
+						Technology:  "HTTP",
+						Description: "External call",
+					},
+				},
+			},
+		},
+	}
+
+	// Test 3: BuildGraph with external boundary nodes produces correct styling
+	v := view.GenerateC1View(m)
+	require.NotNil(t, v)
+
+	g := graph.BuildGraph(v)
+	require.NotNil(t, g)
+
+	// Find the external boundary node
+	var externalNode *graph.Node
+
+	for _, node := range g.Nodes {
+		if node.ID == "externalapi" {
+			externalNode = node
+
+			break
+		}
+	}
+
+	require.NotNil(t, externalNode, "External boundary node should exist")
+	assert.True(t, externalNode.IsExternal)
+
+	// External nodes should have dashed border
+	require.NotNil(t, externalNode.Style)
+	assert.Equal(t, "dashed", externalNode.Style.BorderStyle)
+
+	// External nodes should use external palette colors
+	assert.Equal(t, model.SystemExternalBackground, externalNode.Style.FillColor)
+}
+
+// TestIntegrationFullPipelineModelToGraph tests the full pipeline:
+// model -> view -> graph produces valid structure.
+func TestIntegrationFullPipelineModelToGraph(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{
+			Name:  "Full Pipeline Test",
+			Edges: "straight",
+		},
+		Units: map[string]*model.Unit{
+			"system": {
+				Type:        model.TypeSystem,
+				Name:        "System",
+				Description: "Main system",
+				Technology:  "Go",
+				Links: map[string]model.Link{
+					"db": {
+						Target:      "db",
+						Technology:  "SQL",
+						Description: "Queries",
+					},
+				},
+			},
+			"db": {
+				Type:        model.TypeDb,
+				Name:        "Database",
+				Description: "Data store",
+				Technology:  "PostgreSQL",
+			},
+		},
+	}
+
+	// Test 4: Full pipeline: model -> view -> graph produces valid structure
+	v := view.GenerateC1View(m)
+	require.NotNil(t, v)
+	assert.Equal(t, view.LevelC1, v.Level)
+
+	g := graph.BuildGraph(v)
+	require.NotNil(t, g)
+
+	// Verify the graph structure
+	assert.Equal(t, "Full Pipeline Test", g.Title)
+	assert.Equal(t, "straight", g.EdgeStyle)
+	assert.Len(t, g.Nodes, 2)
+	require.Len(t, g.Edges, 1)
+
+	// Verify edge has correct properties
+	edge := g.Edges[0]
+	assert.Equal(t, "system", edge.Source)
+	assert.Equal(t, "db", edge.Target)
+	assert.Equal(t, "SQL", edge.Label.Technology)
+	assert.Equal(t, "Queries", edge.Label.Description)
+	assert.Equal(t, "solid", edge.Style) // Default style
+}
+
+// TestIntegrationMultipleLinksBetweenSameUnits tests that multiple links
+// between the same units produce separate edges.
+func TestIntegrationMultipleLinksBetweenSameUnits(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"app": {
+				Type: model.TypeSystem,
+				Name: "App",
+				Links: map[string]model.Link{
+					"db": {
+						Target:      "db",
+						Technology:  "SQL",
+						Description: "Reads",
+					},
+				},
+				LinksFrom: map[string]model.Link{
+					"db": {
+						Target:      "app",
+						Technology:  "Callback",
+						Description: "Notifications",
+					},
+				},
+			},
+			"db": {
+				Type: model.TypeDb,
+				Name: "Database",
+			},
+		},
+	}
+
+	// Test 5: Multiple links between same units produce separate edges
+	v := view.GenerateC1View(m)
+	require.NotNil(t, v)
+
+	g := graph.BuildGraph(v)
+	require.NotNil(t, g)
+
+	// Should have 2 edges: app->db and db->app
+	require.Len(t, g.Edges, 2)
+
+	// Verify edges have different directions
+	var appToDB, dbToApp bool
+
+	for _, edge := range g.Edges {
+		if edge.Source == "app" && edge.Target == "db" {
+			appToDB = true
+
+			assert.Equal(t, "SQL", edge.Label.Technology)
+		}
+
+		if edge.Source == "db" && edge.Target == "app" {
+			dbToApp = true
+
+			assert.Equal(t, "Callback", edge.Label.Technology)
+		}
+	}
+
+	assert.True(t, appToDB, "Should have app->db edge")
+	assert.True(t, dbToApp, "Should have db->app edge")
+}
+
+// TestIntegrationCollapsedIndicatorOnNodesWithSubunits tests that the [+] indicator
+// appears on nodes with subunits that are not expanded.
+func TestIntegrationCollapsedIndicatorOnNodesWithSubunits(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"collapsed": {
+				Type: model.TypeSystem,
+				Name: "Collapsed System",
+				// Not expanded, has subunits
+				Subunits: map[string]*model.Unit{
+					"container": {
+						Type: model.TypeContainer,
+						Name: "Container",
+					},
+				},
+			},
+			"expanded": {
+				Type:     model.TypeSystem,
+				Name:     "Expanded System",
+				Expanded: []string{"expanded"}, // Expanded
+				Subunits: map[string]*model.Unit{
+					"container": {
+						Type: model.TypeContainer,
+						Name: "Container",
+					},
+				},
+			},
+			"simple": {
+				Type: model.TypeSystem,
+				Name: "Simple System",
+				// No subunits
+			},
+		},
+	}
+
+	// Test 6: [+] indicator appears on nodes with subunits
+	v := view.GenerateC1View(m)
+	require.NotNil(t, v)
+
+	g := graph.BuildGraph(v)
+	require.NotNil(t, g)
+
+	nodeMap := make(map[string]*graph.Node)
+	for _, node := range g.Nodes {
+		nodeMap[node.ID] = node
+	}
+
+	// Collapsed system with subunits should have [+]
+	assert.Contains(t, nodeMap["collapsed"].Label.Name, "[+]", "Collapsed system should have [+] indicator")
+
+	// Expanded system becomes a cluster, not a node (so check cluster label)
+	// The expanded system itself becomes a cluster
+	var expandedCluster *graph.Cluster
+
+	for _, cluster := range g.Clusters {
+		if cluster.ID == "cluster_expanded" {
+			expandedCluster = cluster
+
+			break
+		}
+	}
+
+	require.NotNil(t, expandedCluster, "Expanded system should be a cluster")
+	assert.NotContains(t, expandedCluster.Label.Name, "[+]", "Expanded cluster label should not have [+]")
+
+	// Simple system without subunits should not have [+]
+	assert.NotContains(t, nodeMap["simple"].Label.Name, "[+]", "Simple system should not have [+] indicator")
+}
+
+// TestIntegrationGraphWithAllUnitTypes tests that the graph correctly handles
+// all unit types with appropriate shapes and icons.
+func TestIntegrationGraphWithAllUnitTypes(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "All Types Test"},
+		Units: map[string]*model.Unit{
+			"person": {
+				Type: model.TypePerson,
+				Name: "Person",
+			},
+			"personExt": {
+				Type: model.TypePersonExternal,
+				Name: "External Person",
+			},
+			"system": {
+				Type: model.TypeSystem,
+				Name: "System",
+			},
+			"systemExt": {
+				Type: model.TypeSystemExternal,
+				Name: "External System",
+			},
+			"db": {
+				Type: model.TypeDb,
+				Name: "Database",
+			},
+			"dbExt": {
+				Type: model.TypeDbExternal,
+				Name: "External Database",
+			},
+			"queue": {
+				Type: model.TypeQueue,
+				Name: "Queue",
+			},
+			"queueExt": {
+				Type: model.TypeQueueExternal,
+				Name: "External Queue",
+			},
+		},
+	}
+
+	v := view.GenerateC1View(m)
+	require.NotNil(t, v)
+
+	g := graph.BuildGraph(v)
+	require.NotNil(t, g)
+
+	nodeMap := make(map[string]*graph.Node)
+	for _, node := range g.Nodes {
+		nodeMap[node.ID] = node
+	}
+
+	// Verify icons for each type
+	assert.Equal(t, "\U0001F464", nodeMap["person"].Label.Icon)       // Person icon
+	assert.Equal(t, "\U0001F464", nodeMap["personExt"].Label.Icon)    // Person icon
+	assert.Empty(t, nodeMap["system"].Label.Icon)                     // No icon
+	assert.Empty(t, nodeMap["systemExt"].Label.Icon)                  // No icon
+	assert.Equal(t, "\u26C1", nodeMap["db"].Label.Icon)               // DB icon
+	assert.Equal(t, "\u26C1", nodeMap["dbExt"].Label.Icon)            // DB icon
+	assert.Equal(t, "\u255F\n\u2562", nodeMap["queue"].Label.Icon)    // Queue bars
+	assert.Equal(t, "\u255F\n\u2562", nodeMap["queueExt"].Label.Icon) // Queue bars
+
+	// Verify external nodes have dashed border and external colors
+	for _, id := range []string{"personExt", "systemExt", "dbExt", "queueExt"} {
+		assert.True(t, nodeMap[id].IsExternal, "%s should be external", id)
+		assert.Equal(t, "dashed", nodeMap[id].Style.BorderStyle, "%s should have dashed border", id)
+	}
+}
