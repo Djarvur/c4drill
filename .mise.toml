@@ -2,7 +2,7 @@
 # https://mise.jdx.dev
 
 [tools]
-go = "1.26"
+go = "1.26.1"
 golangci-lint = "2"
 
 [tasks.test]
