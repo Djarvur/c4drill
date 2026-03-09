@@ -25,10 +25,12 @@ func (e *ParseError) Error() string {
 	if e.Line > 0 {
 		return fmt.Sprintf("parse error at line %d: %s", e.Line, e.Message)
 	}
+
 	if e.Context != "" {
 		return fmt.Sprintf("parse error: %s (%s)", e.Message, e.Context)
 	}
-	return fmt.Sprintf("parse error: %s", e.Message)
+
+	return "parse error: " + e.Message
 }
 
 // Unwrap returns the underlying cause of the error.
@@ -40,16 +42,19 @@ func (e *ParseError) Unwrap() error {
 // If the error is not a DecodeError, it returns a generic ParseError.
 func wrapDecodeError(err error) error {
 	var de *toml.DecodeError
+
 	if errors.As(err, &de) {
 		// DecodeError.String() already provides a nicely formatted error
 		// with line number and context. We extract the line for our ParseError.
 		line := extractLineFromDecodeError(de)
+
 		return &ParseError{
 			Message: de.Error(),
 			Line:    line,
 			Cause:   de,
 		}
 	}
+
 	return &ParseError{
 		Message: err.Error(),
 		Cause:   err,
@@ -60,5 +65,6 @@ func wrapDecodeError(err error) error {
 // go-toml v2 DecodeError has a Position() method that returns row and column.
 func extractLineFromDecodeError(de *toml.DecodeError) int {
 	row, _ := de.Position()
+
 	return row
 }

@@ -36,6 +36,8 @@ func Parse(data []byte) (*Model, error) {
 
 // ParseFile reads a TOML file and parses it into a Model.
 // It returns an error if the file cannot be read or parsed.
+//
+//nolint:gosec // G304: Path is provided by caller, this is intentional for CLI tool
 func ParseFile(path string) (*Model, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -45,6 +47,7 @@ func ParseFile(path string) (*Model, error) {
 			Cause:   err,
 		}
 	}
+
 	return Parse(data)
 }
 
