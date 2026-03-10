@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: AI-Ready
 current_plan: 02
 status: executing
-stopped_at: Phase 08 context gathered
-last_updated: "2026-03-10T22:47:30.136Z"
+stopped_at: Completed 08-all-expanded-mode-01-PLAN.md
+last_updated: "2026-03-10T23:08:42.399Z"
 last_activity: 2026-03-10
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 4
+  completed_plans: 3
   percent: 89
 ---
 
@@ -52,6 +52,7 @@ Progress: [█████████░] 89%
 **Recent Executions:**
 - Phase 07-01 Plan 01: 3 min, 2 tasks, 6 files
 | Phase 07-ai-documentation P02 | 1 min | 1 tasks | 1 files |
+| Phase 08-all-expanded-mode P01 | 4 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -63,6 +64,8 @@ Recent decisions affecting v1.1:
 - **Separate code path**: All-expanded mode will use `GenerateAllExpandedView()` as a separate function to avoid regression risk
 - [Phase 07-01]: Reference-style documentation optimized for AI comprehension, not tutorial format — AI assistants benefit from concise, structured references with tables and clear patterns rather than narrative tutorials. This enables quick lookup and pattern matching during TOML generation.
 - [Phase 07-ai-documentation]: Use go-version-file: 'go.mod' to automatically track Go version requirements — Workflow only runs when skill/ files change
+- [Phase 08-all-expanded-mode]: GenerateExpandedView uses LevelC1 (consistent with modified C1 approach) — Locked decision from CONTEXT.md specifies using modified C1 view approach
+- [Phase 08-all-expanded-mode]: External boundary nodes scanned recursively from all nested subunits — addExternalBoundaryNodesRecursive traverses all subunits to find links, not just top-level units
 
 ### Pending Todos
 
@@ -74,9 +77,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-10T22:47:30.127Z
-Stopped at: Phase 08 context gathered
-Resume file: .planning/phases/08-all-expanded-mode/08-CONTEXT.md
+Last session: 2026-03-10T23:08:42.391Z
+Stopped at: Completed 08-all-expanded-mode-01-PLAN.md
+Resume file: None
 
 ## v1.0 Summary
 
