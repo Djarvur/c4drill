@@ -41,8 +41,26 @@ version: 1.0.0
 
 **Every unit must have:**
 ```toml
-type = "<unit_type>"  # Required
 name = "Display Name"  # Required
+type = "<unit_type>"   # Optional - defaults based on nesting level
+```
+
+**Default types by nesting level:**
+| Level | Parent | Default Type |
+|-------|--------|--------------|
+| C1 | None (root) | `system` |
+| C2 | system, systemExternal, box | `container` |
+| C3 | container | `component` |
+
+```toml
+[webapp]              # C1: defaults to "system"
+name = "Web App"
+
+[webapp.api]          # C2: defaults to "container"
+name = "API Service"
+
+[webapp.api.handlers] # C3: defaults to "component"
+name = "Handlers"
 ```
 
 **Every TOML file must have:**
@@ -77,7 +95,7 @@ Each unit is a TOML section. Section name becomes the identifier:
 
 ```toml
 [section_name]
-type = "system"                 # Required: Unit type
+type = "system"                 # Optional: Unit type (defaults based on nesting)
 name = "Display Name"           # Required: Display name
 description = "What it does"    # Optional: Brief description
 technology = "Go, PostgreSQL"   # Optional: Tech stack (not for person types)
@@ -92,6 +110,11 @@ link = { ... }                  # Optional: Outgoing links
 linkFrom = { ... }              # Optional: Incoming links
 ```
 
+**Type defaults** (when `type` is omitted):
+- Root-level units → `system`
+- Units inside system/box → `container`
+- Units inside container → `component`
+
 ### Nesting (C2/C3 Diagrams)
 
 Use dotted notation for nested units. Types that can have subunits:
@@ -99,6 +122,29 @@ Use dotted notation for nested units. Types that can have subunits:
 - `container` — can contain components or boxes
 - `box` — can contain any unit type (grouping container)
 
+**Minimal example** (types inferred from nesting):
+```toml
+[properties]
+name = "My App"
+
+[mainapp]                       # C1: defaults to "system"
+name = "Main Application"
+
+[mainapp.api]                   # C2: defaults to "container"
+name = "API Service"
+
+[mainapp.api.handlers]          # C3: defaults to "component"
+name = "HTTP Handlers"
+
+[mainapp.api.services]          # C3: Another component
+name = "Business Services"
+
+[mainapp.db]                    # C2: Container database (type required for non-default)
+type = "containerDb"
+name = "Database"
+```
+
+**Explicit types** (when you need specific variants):
 ```toml
 [mainapp]                       # C1: System
 type = "system"
