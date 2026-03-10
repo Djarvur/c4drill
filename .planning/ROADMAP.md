@@ -43,12 +43,16 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 **Depends on**: Nothing (documentation-only, independent of Phase 8)
 **Requirements**: AIDOC-01, AIDOC-02, AIDOC-03, AIDOC-04, AIDOC-05
 **Success Criteria** (what must be TRUE):
-  1. User can read CLAUDE.md and understand the complete TOML schema with all unit types, fields, and link syntax
-  2. User can copy any example TOML from CLAUDE.md and have it parse and validate successfully
-  3. AI assistants given CLAUDE.md produce syntactically valid TOML files
+  1. User can read SKILL.md and understand the complete TOML schema with all unit types, fields, and link syntax
+  2. User can copy any example TOML from skill/examples/ and have it parse and validate successfully
+  3. AI assistants given the skill produce syntactically valid TOML files
   4. All validation rules are documented with clear explanations of what triggers each error
-  5. CI validates all TOML examples in CLAUDE.md against the actual parser to prevent drift
-**Plans**: TBD
+  5. CI validates all TOML examples against the actual parser to prevent drift
+**Plans:** 2 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — Create skill package (SKILL.md + examples)
+- [ ] 07-02-PLAN.md — Add CI validation for examples
 
 ### Phase 8: All-Expanded Mode
 **Goal**: Users can generate a single diagram showing all units expanded with cross-level edges
@@ -87,10 +91,10 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 4. Rendering & Output | v1.0 | 3/3 | Complete | 2026-03-10 |
 | 5. Navigation | v1.0 | 2/2 | Complete | 2026-03-10 |
 | 6. CLI & Polish | v1.0 | 2/2 | Complete | 2026-03-10 |
-| 7. AI Documentation | v1.1 | 0/TBD | Not started | - |
+| 7. AI Documentation | v1.1 | 0/2 | Ready to execute | - |
 | 8. All-Expanded Mode | v1.1 | 0/TBD | Not started | - |
 | 9. No Orphan Units | v1.1 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-03-09*
-*Last updated: 2026-03-10 - v1.1 AI-Ready milestone started*
+*Last updated: 2026-03-10 - Phase 7 planned (2 plans)*
