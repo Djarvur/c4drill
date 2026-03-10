@@ -10,8 +10,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 // TestHelpText verifies that help shows usage examples and flag descriptions (CLII-04).
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestHelpText(t *testing.T) {
 	cmd := NewRootCmd()
 
@@ -32,8 +33,9 @@ func TestHelpText(t *testing.T) {
 	assert.Contains(t, output, "dot|svg", "Help should show available formats")
 }
 
-//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 // TestHelpSubcommand verifies that help subcommand shows same content as --help.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestHelpSubcommand(t *testing.T) {
 	cmd := NewRootCmd()
 
@@ -361,8 +363,9 @@ technology = "Go"
 // Tests using test fixtures from testdata/ directory
 // =============================================================================
 
-//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 // TestExitCode_Success verifies exit code 0 for successful execution.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestExitCode_Success(t *testing.T) {
 	tmpDir := t.TempDir()
 
@@ -377,8 +380,9 @@ func TestExitCode_Success(t *testing.T) {
 	assert.NoError(t, err, "Expected exit code 0 (no error)")
 }
 
-//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 // TestExitCode_NonexistentFile verifies exit code 1 for nonexistent file.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestExitCode_NonexistentFile(t *testing.T) {
 	cmd := NewRootCmd()
 
@@ -390,8 +394,9 @@ func TestExitCode_NonexistentFile(t *testing.T) {
 	assert.Error(t, err, "Expected exit code 1 (error)")
 }
 
-//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 // TestExitCode_InvalidTOML verifies exit code 1 for invalid TOML syntax.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestExitCode_InvalidTOML(t *testing.T) {
 	cmd := NewRootCmd()
 
@@ -403,8 +408,9 @@ func TestExitCode_InvalidTOML(t *testing.T) {
 	assert.Error(t, err, "Expected exit code 1 (error)")
 }
 
-//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 // TestStderrOutput verifies errors go to stderr, not stdout (CLII-06).
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestStderrOutput(t *testing.T) {
 	cmd := NewRootCmd()
 
@@ -421,8 +427,9 @@ func TestStderrOutput(t *testing.T) {
 	assert.Empty(t, stdout.String(), "stdout should be empty on error")
 }
 
-//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 // TestSilentOnSuccess verifies no stdout output on successful execution.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestSilentOnSuccess(t *testing.T) {
 	tmpDir := t.TempDir()
 
@@ -440,8 +447,9 @@ func TestSilentOnSuccess(t *testing.T) {
 	assert.Empty(t, stdout.String(), "stdout should be empty on success (silent)")
 }
 
-//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 // TestExpandedUnits verifies C2/C3 diagrams generated for expanded units.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestExpandedUnits(t *testing.T) {
 	tmpDir := t.TempDir()
 
@@ -468,8 +476,9 @@ func TestExpandedUnits(t *testing.T) {
 	require.NoError(t, err, "C3 diagram for mainsystem.webapp should exist")
 }
 
-//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 // TestFormatFlag_Dot verifies DOT format output using test fixture.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestFormatFlag_Dot(t *testing.T) {
 	tmpDir := t.TempDir()
 
@@ -486,4 +495,96 @@ func TestFormatFlag_Dot(t *testing.T) {
 	// Verify .dot file was created
 	_, err = os.Stat(filepath.Join(tmpDir, "valid.dot"))
 	require.NoError(t, err, "DOT file should be created")
+}
+
+// =============================================================================
+// Tests for --expanded flag (EXPD-01, EXPD-03, EXPD-05)
+// =============================================================================
+
+// TestExpandedFlag_Exists verifies the --expanded flag is registered.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestExpandedFlag_Exists(t *testing.T) {
+	cmd := NewRootCmd()
+
+	expandedFlag := cmd.PersistentFlags().Lookup("expanded")
+	require.NotNil(t, expandedFlag, "--expanded flag should exist")
+	assert.Equal(t, "false", expandedFlag.DefValue, "--expanded should default to false")
+}
+
+// TestExpandedFlag_GeneratesExpandedFile verifies --expanded produces .expanded.{ext} file.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestExpandedFlag_GeneratesExpandedFile(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	cmd := NewRootCmd()
+	cmd.SetArgs([]string{
+		filepath.Join("testdata", "expanded.toml"),
+		"--output", tmpDir,
+		"--format", "svg",
+		"--expanded",
+	})
+
+	err := cmd.Execute()
+	require.NoError(t, err, "--expanded should succeed")
+
+	// Verify .expanded.svg file was created
+	assert.FileExists(t, filepath.Join(tmpDir, "expanded.expanded.svg"), "Expanded file should exist")
+}
+
+// TestExpandedFlag_SkipsC1C2C3 verifies --expanded skips C1/C2/C3 generation (EXPD-05).
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestExpandedFlag_SkipsC1C2C3(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	cmd := NewRootCmd()
+	cmd.SetArgs([]string{
+		filepath.Join("testdata", "expanded.toml"), // Has expanded units that normally generate C2/C3
+		"--output", tmpDir,
+		"--format", "svg",
+		"--expanded",
+	})
+
+	err := cmd.Execute()
+	require.NoError(t, err, "--expanded should succeed")
+
+	// Only expanded file should exist, no C1/C2/C3 files
+	assert.FileExists(t, filepath.Join(tmpDir, "expanded.expanded.svg"), "Expanded file should exist")
+
+	// C1 file should NOT exist
+	_, err = os.Stat(filepath.Join(tmpDir, "expanded.svg"))
+	assert.True(t, os.IsNotExist(err), "C1 file should NOT exist with --expanded")
+
+	// C2 file should NOT exist
+	_, err = os.Stat(filepath.Join(tmpDir, "expanded", "mainsystem.svg"))
+	assert.True(t, os.IsNotExist(err), "C2 file should NOT exist with --expanded")
+}
+
+// TestExpandedFlag_Off_StandardBehavior verifies normal C1/C2/C3 without --expanded.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestExpandedFlag_Off_StandardBehavior(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	cmd := NewRootCmd()
+	cmd.SetArgs([]string{
+		filepath.Join("testdata", "expanded.toml"),
+		"--output", tmpDir,
+		"--format", "svg",
+	})
+
+	err := cmd.Execute()
+	require.NoError(t, err, "Standard mode should succeed")
+
+	// C1 file should exist
+	assert.FileExists(t, filepath.Join(tmpDir, "expanded.svg"), "C1 file should exist")
+
+	// C2 file should exist (mainsystem is expanded)
+	assert.FileExists(t, filepath.Join(tmpDir, "expanded", "mainsystem.svg"), "C2 file should exist")
+
+	// Expanded file should NOT exist
+	_, err = os.Stat(filepath.Join(tmpDir, "expanded.expanded.svg"))
+	assert.True(t, os.IsNotExist(err), "Expanded file should NOT exist without --expanded")
 }

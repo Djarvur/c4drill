@@ -29,6 +29,7 @@ var (
 var (
 	format    string
 	outputDir string
+	expanded  bool
 	version   = "dev"
 )
 
@@ -62,6 +63,8 @@ Output:
 		"Output format (dot|svg)")
 	cmd.PersistentFlags().StringVarP(&outputDir, "output", "o", ".",
 		"Output directory")
+	cmd.PersistentFlags().BoolVar(&expanded, "expanded", false,
+		"Generate all-expanded diagram showing all units")
 
 	return cmd
 }
@@ -103,6 +106,11 @@ func runRoot(cmd *cobra.Command, args []string) error {
 
 	// Create output writer
 	writer := output.NewWriter(outputDir)
+
+	// Handle --expanded mode (skip normal C1/C2/C3 generation)
+	if expanded {
+		return processExpandedView(m, basename, writer)
+	}
 
 	// Collect all expanded unit paths (C1 + expanded C2/C3)
 	expandedPaths := collectExpandedPaths(m)
@@ -191,6 +199,35 @@ func processView(m *parser.Model, unitPath, basename string, writer *output.Writ
 
 	// Write
 	if err := writer.Write(basename, unitPath, format, data); err != nil {
+		return fmt.Errorf("write: %w", err)
+	}
+
+	return nil
+}
+
+// processExpandedView generates a single all-expanded diagram showing all units.
+// This is used for the --expanded flag which produces a single file with nested clusters.
+func processExpandedView(m *parser.Model, basename string, writer *output.Writer) error {
+	// Generate expanded view with all units at all nesting levels
+	v := view.GenerateExpandedView(m)
+	if v == nil {
+		return fmt.Errorf("%w: expanded view", errGenerateView)
+	}
+
+	// Build graph with nested clusters (no navigation for expanded view)
+	g := graph.BuildExpandedGraph(v)
+	if g == nil {
+		return fmt.Errorf("%w: expanded graph", errBuildGraph)
+	}
+
+	// Render
+	data, err := render.Render(g, format)
+	if err != nil {
+		return fmt.Errorf("render: %w", err)
+	}
+
+	// Write to {basename}.expanded.{format}
+	if err := writer.WriteExpanded(basename, format, data); err != nil {
 		return fmt.Errorf("write: %w", err)
 	}
 
