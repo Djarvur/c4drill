@@ -53,7 +53,7 @@ Output:
   - C2 diagrams: {basename}/{system}.{format}
   - C3 diagrams: {basename}/{system}/{container}.{format}`,
 		Version:      version,
-		Args:         cobra.ExactArgs(1),
+		Args:         cobra.MaximumNArgs(1),
 		RunE:         runRoot,
 		SilenceUsage: true,
 	}
@@ -69,6 +69,11 @@ Output:
 // runRoot is the main execution function for the root command.
 // It validates flags early, then orchestrates the full pipeline.
 func runRoot(cmd *cobra.Command, args []string) error {
+	// Show help if no input file provided
+	if len(args) == 0 {
+		return cmd.Help()
+	}
+
 	// Validate flags early (before file I/O)
 	if format != "dot" && format != "svg" {
 		return fmt.Errorf("%w: %q", errInvalidFormat, format)
