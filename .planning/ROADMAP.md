@@ -31,7 +31,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 **Milestone Goal:** Make C4Drill AI-friendly with documentation, single-view expanded diagrams, and stricter validation
 
 - [ ] **Phase 7: AI Documentation** — TOML language manual for AI assistants
-- [ ] **Phase 8: All-Expanded Mode** — Single-view expanded rendering with cross-level edges
+- [x] **Phase 8: All-Expanded Mode** — Single-view expanded rendering with cross-level edges (completed 2026-03-10)
 - [ ] **Phase 9: No Orphan Units** — Validation rule requiring all units to be linked
 
 ---
@@ -64,7 +64,7 @@ Plans:
   3. Edges between units at different nesting depths are visible in the diagram
   4. Output file is saved with `{basename}.expanded.{ext}` naming convention
   5. Existing C1/C2/C3 view generation produces identical output when `--expanded` is not used
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 08-01-PLAN.md — Add core data structures and view generation
@@ -96,7 +96,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 5. Navigation | v1.0 | 2/2 | Complete | 2026-03-10 |
 | 6. CLI & Polish | v1.0 | 2/2 | Complete | 2026-03-10 |
 | 7. AI Documentation | v1.1 | 0/2 | Ready to execute | - |
-| 8. All-Expanded Mode | v1.1 | 0/2 | Ready to execute | - |
+| 8. All-Expanded Mode | v1.1 | Complete    | 2026-03-10 | - |
 | 9. No Orphan Units | v1.1 | 0/TBD | Not started | - |
 
 ---
