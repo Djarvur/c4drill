@@ -2,6 +2,7 @@ package render
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Djarvur/c4drill/internal/graph"
 	"github.com/goccy/go-graphviz"
@@ -91,11 +92,46 @@ func configureGraphSettings(cg *cgraph.Graph, g *graph.Graph) {
 	cg.SetFontName("Helvetica")
 	cg.SetFontSize(fontSizeGraph)
 
-	// Graph label (title)
+	// Build combined label with navigation and title
+	var labelParts []string
+
+	// Navigation bar (back-link + breadcrumbs) for C2/C3
+	if g.Navigation != nil {
+		navLabel := BuildNavigationLabel(g.Navigation)
+		if navLabel != "" {
+			labelParts = append(labelParts, navLabel)
+		}
+	}
+
+	// Graph title
 	if g.Title != "" {
-		cg.SetLabel(g.Title)
+		labelParts = append(labelParts, g.Title)
+	}
+
+	// Set combined label
+	if len(labelParts) > 0 {
+		cg.SetLabel(joinLabels(labelParts))
 		cg.SetLabelLocation(cgraph.TopLocation)
 	}
+}
+
+// joinLabels combines multiple label parts with newlines.
+func joinLabels(parts []string) string {
+	result := ""
+
+	var resultSb120 strings.Builder
+
+	for i, part := range parts {
+		if i > 0 {
+			resultSb120.WriteString("\n")
+		}
+
+		resultSb120.WriteString(part)
+	}
+
+	result += resultSb120.String()
+
+	return result
 }
 
 // createNode creates a cgraph.Node from a graph.Node.

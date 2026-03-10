@@ -28,6 +28,7 @@ func BuildNavigationLabel(nav *graph.Navigation) string {
 	// Breadcrumbs
 	if len(nav.Breadcrumbs) > 0 {
 		var crumbs []string
+
 		for _, item := range nav.Breadcrumbs {
 			if item.URL != "" {
 				// Clickable ancestor
@@ -38,6 +39,7 @@ func BuildNavigationLabel(nav *graph.Navigation) string {
 				crumbs = append(crumbs, item.Name)
 			}
 		}
+
 		if len(crumbs) > 0 {
 			parts = append(parts, strings.Join(crumbs, " > "))
 		}

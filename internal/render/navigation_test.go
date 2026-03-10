@@ -12,11 +12,11 @@ import (
 // Note: Tests in this file do NOT use t.Parallel() because the go-graphviz
 // library uses a WASM-based rendering engine that has concurrency issues.
 
-//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+//nolint:paralleltest,funlen // go-graphviz WASM engine has concurrency issues
 func TestBuildNavigationLabel(t *testing.T) {
 	t.Run("empty navigation returns empty string", func(t *testing.T) {
 		result := render.BuildNavigationLabel(nil)
-		assert.Equal(t, "", result)
+		assert.Empty(t, result)
 	})
 
 	t.Run("navigation with nil backlink and empty breadcrumbs returns empty string", func(t *testing.T) {
@@ -25,7 +25,7 @@ func TestBuildNavigationLabel(t *testing.T) {
 			Breadcrumbs: []graph.BreadcrumbItem{},
 		}
 		result := render.BuildNavigationLabel(nav)
-		assert.Equal(t, "", result)
+		assert.Empty(t, result)
 	})
 
 	t.Run("backlink only produces correct format", func(t *testing.T) {
@@ -124,13 +124,13 @@ func TestBuildNavigationLabel(t *testing.T) {
 		}
 		result := render.BuildNavigationLabel(nav)
 		// Empty URL backlink should not produce output
-		assert.Equal(t, "", result)
+		assert.Empty(t, result)
 	})
 }
 
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestNavigationInGraphOutput(t *testing.T) {
-	t.Run("C2/C3 diagram with navigation has xlabel in output", func(t *testing.T) {
+	t.Run("C2/C3 diagram with navigation has label in output", func(t *testing.T) {
 		g := &graph.Graph{
 			Title:     "API Container",
 			Direction: "TB",
@@ -151,12 +151,12 @@ func TestNavigationInGraphOutput(t *testing.T) {
 
 		output, err := render.RenderDOT(g)
 		require.NoError(t, err)
-		// Navigation should appear as xlabel in DOT output
-		assert.Contains(t, string(output), "xlabel")
+		// Navigation should appear in the label attribute in DOT output
+		assert.Contains(t, string(output), "label")
 		assert.Contains(t, string(output), "Back to Main System")
 	})
 
-	t.Run("C1 diagram without navigation has no xlabel", func(t *testing.T) {
+	t.Run("C1 diagram without navigation has no navigation label", func(t *testing.T) {
 		g := &graph.Graph{
 			Title:      "System Context",
 			Direction:  "TB",
@@ -168,7 +168,7 @@ func TestNavigationInGraphOutput(t *testing.T) {
 
 		output, err := render.RenderDOT(g)
 		require.NoError(t, err)
-		// C1 should not have navigation-related xlabel
+		// C1 should not have navigation-related label
 		dotStr := string(output)
 		assert.NotContains(t, dotStr, "Back to")
 	})
