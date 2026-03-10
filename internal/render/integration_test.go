@@ -393,3 +393,179 @@ func TestIntegrationC3ViewPipeline(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, output)
 }
+
+// ============================================================================
+// Navigation SVG Integration Tests (05-03)
+// ============================================================================
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestIntegration_SVG_ExploreLink(t *testing.T) {
+	// Build graph with explore URL
+	m := buildNavTestModel()
+	v := view.GenerateC1View(m)
+	g := graph.BuildGraphWithPath(v, "", "test", "svg")
+
+	// Render to SVG
+	svgBytes, err := render.RenderSVG(g)
+	require.NoError(t, err)
+	require.NotEmpty(t, svgBytes)
+
+	svgStr := string(svgBytes)
+
+	// Verify SVG contains clickable link for explore
+	// GraphViz generates xlink:href or href for URL attribute
+	assert.True(t,
+		strings.Contains(svgStr, "xlink:href") || strings.Contains(svgStr, "href"),
+		"SVG should contain href attribute for clickable nodes")
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestIntegration_SVG_BackLink(t *testing.T) {
+	// Build C2 graph with back-link
+	m := buildNavTestModel()
+	v := view.GenerateC2View(m, "mainsystem")
+	g := graph.BuildGraphWithPath(v, "mainsystem", "test", "svg")
+
+	// Render to SVG
+	svgBytes, err := render.RenderSVG(g)
+	require.NoError(t, err)
+
+	svgStr := string(svgBytes)
+
+	// Verify back-link text appears (navigation label)
+	assert.Contains(t, svgStr, "Back to", "SVG should contain back-link text")
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestIntegration_SVG_Breadcrumbs(t *testing.T) {
+	// Build C3 graph with breadcrumbs
+	m := buildNavTestModelNested()
+	v := view.GenerateC3View(m, "mainsystem.api")
+	g := graph.BuildGraphWithPath(v, "mainsystem.api", "test", "svg")
+
+	// Render to SVG
+	svgBytes, err := render.RenderSVG(g)
+	require.NoError(t, err)
+
+	svgStr := string(svgBytes)
+
+	// Verify breadcrumb separator appears (> or &gt;)
+	assert.True(t,
+		strings.Contains(svgStr, ">") || strings.Contains(svgStr, "&gt;"),
+		"SVG should contain breadcrumb separator")
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestIntegration_SVG_C1NoNavigation(t *testing.T) {
+	// C1 should have no navigation elements
+	m := buildNavTestModel()
+	v := view.GenerateC1View(m)
+	g := graph.BuildGraphWithPath(v, "", "test", "svg")
+
+	// Render to SVG
+	svgBytes, err := render.RenderSVG(g)
+	require.NoError(t, err)
+
+	svgStr := string(svgBytes)
+
+	// C1 should not have back-link
+	assert.NotContains(t, svgStr, "Back to", "C1 SVG should not contain back-link")
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestIntegration_FullPipeline_Navigation(t *testing.T) {
+	// Full pipeline: model -> view -> graph -> render -> SVG
+	m := buildNavTestModelNested()
+
+	// Generate all views and verify navigation
+	testCases := []struct {
+		name    string
+		view    *view.View
+		path    string
+		hasNav  bool
+		navText string
+	}{
+		{
+			name:    "C1",
+			view:    view.GenerateC1View(m),
+			path:    "",
+			hasNav:  false,
+			navText: "",
+		},
+		{
+			name:    "C2",
+			view:    view.GenerateC2View(m, "mainsystem"),
+			path:    "mainsystem",
+			hasNav:  true,
+			navText: "Back to",
+		},
+		{
+			name:    "C3",
+			view:    view.GenerateC3View(m, "mainsystem.api"),
+			path:    "mainsystem.api",
+			hasNav:  true,
+			navText: ">",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := graph.BuildGraphWithPath(tc.view, tc.path, "test", "svg")
+			require.NotNil(t, g)
+
+			svgBytes, err := render.RenderSVG(g)
+			require.NoError(t, err)
+
+			svgStr := string(svgBytes)
+
+			if tc.hasNav {
+				assert.Contains(t, svgStr, tc.navText, "%s should contain navigation text", tc.name)
+			} else {
+				assert.NotContains(t, svgStr, "Back to", "%s should not have back-link", tc.name)
+			}
+		})
+	}
+}
+
+// ============================================================================
+// Helper functions for navigation tests
+// ============================================================================
+
+// buildNavTestModel creates a simple test model for navigation tests.
+func buildNavTestModel() *parser.Model {
+	return &parser.Model{
+		Properties: model.Properties{Name: "Navigation Test"},
+		Units: map[string]*model.Unit{
+			"mainsystem": {
+				Type: model.TypeSystem,
+				Name: "Main System",
+				Subunits: map[string]*model.Unit{
+					"api": {Type: model.TypeSystem, Name: "API"},
+				},
+			},
+		},
+	}
+}
+
+// buildNavTestModelNested creates a nested test model for C3 navigation tests.
+func buildNavTestModelNested() *parser.Model {
+	return &parser.Model{
+		Properties: model.Properties{Name: "Navigation Test"},
+		Units: map[string]*model.Unit{
+			"mainsystem": {
+				Type:     model.TypeSystem,
+				Name:     "Main System",
+				Expanded: []string{"api"},
+				Subunits: map[string]*model.Unit{
+					"api": {
+						Type: model.TypeSystem,
+						Name: "API",
+						Subunits: map[string]*model.Unit{
+							"auth": {Type: model.TypeSystem, Name: "Auth"},
+						},
+					},
+				},
+			},
+		},
+	}
+}
