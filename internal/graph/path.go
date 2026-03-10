@@ -10,13 +10,15 @@ import (
 // targetPath is the dotted path of the target unit.
 // basename is the output base filename (from TOML file).
 // format is the output format (e.g., "svg").
-func ComputeExploreURL(currentPath, targetPath, basename, format string) string {
+func ComputeExploreURL(_ string, targetPath, _ string, format string) string {
 	// Convert dotted path to directory structure with URL-encoded segments
 	parts := strings.Split(targetPath, ".")
+
 	encodedParts := make([]string, len(parts))
 	for i, part := range parts {
 		encodedParts[i] = URLEncodePath(part)
 	}
+
 	return "./" + strings.Join(encodedParts, "/") + "." + format
 }
 
@@ -38,6 +40,7 @@ func ComputeBackLinkURL(currentPath, basename, format string) string {
 	// C3+ level - go back one level to parent directory
 	// The parent file is named after the parent unit (last but one part)
 	parentName := parts[len(parts)-2]
+
 	return "../" + URLEncodePath(parentName) + "." + format
 }
 
@@ -72,10 +75,16 @@ func computeBreadcrumbURL(parts []string, ancestorIndex int, basename, format st
 	// Number of levels to go up = total depth - ancestor level
 	levelsUp := len(parts) - ancestorIndex - 1
 
-	var up string
-	for i := 0; i < levelsUp; i++ {
-		up += "../"
+	var (
+		up     string
+		upSb76 strings.Builder
+	)
+
+	for range levelsUp {
+		upSb76.WriteString("../")
 	}
+
+	up += upSb76.String()
 
 	if ancestorIndex == 0 {
 		// First level ancestor - link to C1 basename
@@ -84,6 +93,7 @@ func computeBreadcrumbURL(parts []string, ancestorIndex int, basename, format st
 
 	// Build path to ancestor
 	ancestorPath := strings.Join(parts[:ancestorIndex+1], "/")
+
 	return up + URLEncodePath(ancestorPath) + "." + format
 }
 
