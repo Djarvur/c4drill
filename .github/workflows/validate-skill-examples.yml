@@ -1,0 +1,32 @@
+name: Validate Skill Examples
+
+on:
+  push:
+    paths:
+      - 'skill/**'
+  pull_request:
+    paths:
+      - 'skill/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+      
+      - name: Build c4drill
+        run: go build -o c4drill ./cmd/c4drill
+      
+      - name: Validate skill examples
+        run: |
+          for file in skill/examples/*.toml; do
+            echo "Validating $file..."
+            ./c4drill "$file" -f dot > /dev/null
+          done
