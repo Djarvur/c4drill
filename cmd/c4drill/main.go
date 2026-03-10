@@ -36,8 +36,8 @@ func main() {
 		os.Exit(exitCode)
 	}
 
-	// Generate C1 view and build graph
-	// This demonstrates the view-to-graph pipeline works correctly
+	// Generate C1 view and build graph with navigation paths
+	// This demonstrates the full pipeline from model to graph with clickable navigation
 	// Full rendering output comes in Phase 4
 	c1View := view.GenerateC1View(model)
 	if c1View == nil {
@@ -47,12 +47,37 @@ func main() {
 
 	_, _ = fmt.Fprintf(os.Stdout, "Generated C1 view: %q with %d units\n", c1View.Title, len(c1View.Units))
 
-	g := graph.BuildGraph(c1View)
+	// Use BuildGraphWithPath to compute navigation URLs for clickable diagrams
+	g := graph.BuildGraphWithPath(c1View, "", "diagram", "svg")
 	if g == nil {
 		fmt.Fprintln(os.Stderr, "error: failed to build graph")
 		os.Exit(1)
 	}
 
-	_, _ = fmt.Fprintf(os.Stdout, "Built graph: %d nodes, %d edges, %d clusters\n",
-		len(g.Nodes), len(g.Edges), len(g.Clusters))
+	// Count nodes with explore URLs (clickable drill-down capability)
+	exploreCount := countExploreURLs(g)
+
+	_, _ = fmt.Fprintf(os.Stdout, "Built graph: %d nodes, %d edges, %d clusters, %d explore links\n",
+		len(g.Nodes), len(g.Edges), len(g.Clusters), exploreCount)
+}
+
+// countExploreURLs counts nodes that have explore URLs (clickable drill-down).
+func countExploreURLs(g *graph.Graph) int {
+	count := 0
+
+	for _, node := range g.Nodes {
+		if node.ExploreURL != "" {
+			count++
+		}
+	}
+
+	for _, cluster := range g.Clusters {
+		for _, node := range cluster.Nodes {
+			if node.ExploreURL != "" {
+				count++
+			}
+		}
+	}
+
+	return count
 }
