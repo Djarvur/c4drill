@@ -679,3 +679,244 @@ func TestGenerateC2View_IsExpandedForChildUnits(t *testing.T) {
 	assert.True(t, v.Units["system.api"].IsExpanded)
 	assert.False(t, v.Units["system.web"].IsExpanded)
 }
+
+// Tests for GenerateExpandedView
+
+func TestGenerateExpandedView_NilModelReturnsNil(t *testing.T) {
+	t.Parallel()
+
+	// Test 1: GenerateExpandedView returns nil for nil model
+	v := view.GenerateExpandedView(nil)
+	assert.Nil(t, v)
+}
+
+func TestGenerateExpandedView_IncludesAllTopLevelUnits(t *testing.T) {
+	t.Parallel()
+
+	// Test 2: GenerateExpandedView includes all top-level units
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test System"},
+		Units: map[string]*model.Unit{
+			"api": {
+				Type: model.TypeSystem,
+				Name: "API System",
+			},
+			"db": {
+				Type: model.TypeDb,
+				Name: "Database",
+			},
+			"user": {
+				Type: model.TypePerson,
+				Name: "User",
+			},
+		},
+	}
+
+	v := view.GenerateExpandedView(m)
+
+	require.NotNil(t, v)
+	require.Len(t, v.Units, 3)
+	assert.Contains(t, v.Units, "api")
+	assert.Contains(t, v.Units, "db")
+	assert.Contains(t, v.Units, "user")
+}
+
+func TestGenerateExpandedView_RecursivelyIncludesNestedSubunits(t *testing.T) {
+	t.Parallel()
+
+	// Test 3: GenerateExpandedView recursively includes nested subunits
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"mainapp": {
+				Type: model.TypeSystem,
+				Name: "Main App",
+				Subunits: map[string]*model.Unit{
+					"api": {
+						Type: model.TypeContainer,
+						Name: "API Container",
+						Subunits: map[string]*model.Unit{
+							"handler": {
+								Type: model.TypeComponent,
+								Name: "Handler",
+							},
+							"service": {
+								Type: model.TypeComponent,
+								Name: "Service",
+							},
+						},
+					},
+					"web": {
+						Type: model.TypeContainer,
+						Name: "Web Container",
+					},
+				},
+			},
+			"externaldb": {
+				Type: model.TypeDbExternal,
+				Name: "External DB",
+			},
+		},
+	}
+
+	v := view.GenerateExpandedView(m)
+
+	require.NotNil(t, v)
+
+	// Should include top-level units
+	assert.Contains(t, v.Units, "mainapp")
+	assert.Contains(t, v.Units, "externaldb")
+
+	// Should include second-level subunits
+	assert.Contains(t, v.Units, "mainapp.api")
+	assert.Contains(t, v.Units, "mainapp.web")
+
+	// Should include third-level subunits
+	assert.Contains(t, v.Units, "mainapp.api.handler")
+	assert.Contains(t, v.Units, "mainapp.api.service")
+
+	// Verify full paths are correct
+	assert.Equal(t, "mainapp", v.Units["mainapp"].FullPath)
+	assert.Equal(t, "mainapp.api", v.Units["mainapp.api"].FullPath)
+	assert.Equal(t, "mainapp.api.handler", v.Units["mainapp.api.handler"].FullPath)
+}
+
+func TestGenerateExpandedView_AddsExternalBoundaryNodesForLinkedUnits(t *testing.T) {
+	t.Parallel()
+
+	// Test 4: GenerateExpandedView adds external boundary nodes for linked units
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"api": {
+				Type: model.TypeSystem,
+				Name: "API",
+				Subunits: map[string]*model.Unit{
+					"handler": {
+						Type: model.TypeComponent,
+						Name: "Handler",
+						Links: map[string]model.Link{
+							"cloudstorage": {Target: "cloudstorage"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateExpandedView(m)
+
+	require.NotNil(t, v)
+
+	// Should include all nested units
+	assert.Contains(t, v.Units, "api")
+	assert.Contains(t, v.Units, "api.handler")
+
+	// Should include external boundary node for linked unit
+	assert.Contains(t, v.Units, "cloudstorage")
+	assert.True(t, v.Units["cloudstorage"].IsExternal)
+}
+
+func TestGenerateExpandedView_HasSubunitsReflectsActualState(t *testing.T) {
+	t.Parallel()
+
+	// Additional test: HasSubunits reflects actual state at each level
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"system": {
+				Type: model.TypeSystem,
+				Name: "System",
+				Subunits: map[string]*model.Unit{
+					"container": {
+						Type: model.TypeContainer,
+						Name: "Container",
+						Subunits: map[string]*model.Unit{
+							"component": {
+								Type: model.TypeComponent,
+								Name: "Component",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateExpandedView(m)
+
+	require.NotNil(t, v)
+
+	// system has subunits
+	assert.True(t, v.Units["system"].HasSubunits)
+
+	// container has subunits
+	assert.True(t, v.Units["system.container"].HasSubunits)
+
+	// component has no subunits
+	assert.False(t, v.Units["system.container.component"].HasSubunits)
+}
+
+func TestGenerateExpandedView_IsExpandedTrueWhenHasSubunits(t *testing.T) {
+	t.Parallel()
+
+	// In expanded view, units with subunits are always shown as expanded
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"system": {
+				Type: model.TypeSystem,
+				Name: "System",
+				Subunits: map[string]*model.Unit{
+					"container": {
+						Type: model.TypeContainer,
+						Name: "Container",
+					},
+				},
+			},
+			"standalone": {
+				Type: model.TypeSystem,
+				Name: "Standalone",
+			},
+		},
+	}
+
+	v := view.GenerateExpandedView(m)
+
+	require.NotNil(t, v)
+
+	// Units with subunits should be marked as expanded
+	assert.True(t, v.Units["system"].IsExpanded)
+
+	// Units without subunits should not be marked as expanded
+	assert.False(t, v.Units["standalone"].IsExpanded)
+	assert.False(t, v.Units["system.container"].IsExpanded)
+}
+
+func TestGenerateExpandedView_TitleFromProperties(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "My Architecture"},
+		Units:      map[string]*model.Unit{},
+	}
+
+	v := view.GenerateExpandedView(m)
+
+	require.NotNil(t, v)
+	assert.Equal(t, "My Architecture", v.Title)
+}
+
+func TestGenerateExpandedView_LevelIsC1(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units:      map[string]*model.Unit{},
+	}
+
+	v := view.GenerateExpandedView(m)
+
+	require.NotNil(t, v)
+	assert.Equal(t, view.LevelC1, v.Level)
+}
