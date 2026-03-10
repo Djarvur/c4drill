@@ -17,11 +17,11 @@ Requirements for AI-Ready milestone. Each maps to roadmap phases.
 
 ### All-Expanded Mode
 
-- [ ] **EXPD-01**: User can pass `--expanded` flag to CLI to request all-expanded rendering
+- [x] **EXPD-01**: User can pass `--expanded` flag to CLI to request all-expanded rendering
 - [x] **EXPD-02**: All-expanded view renders all units as expanded nested clusters in single diagram
-- [ ] **EXPD-03**: Cross-level edges (between units at different nesting depths) are visible
+- [x] **EXPD-03**: Cross-level edges (between units at different nesting depths) are visible
 - [x] **EXPD-04**: Output saved to `{basename}.expanded.{ext}` format (dot/svg)
-- [ ] **EXPD-05**: Existing C1/C2/C3 view generation remains unchanged (zero regression)
+- [x] **EXPD-05**: Existing C1/C2/C3 view generation remains unchanged (zero regression)
 
 ### Validation Enhancement
 
@@ -60,11 +60,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AIDOC-03 | Phase 7 | Complete |
 | AIDOC-04 | Phase 7 | Complete |
 | AIDOC-05 | Phase 7 | Complete |
-| EXPD-01 | Phase 8 | Pending |
+| EXPD-01 | Phase 8 | Complete |
 | EXPD-02 | Phase 8 | Complete |
-| EXPD-03 | Phase 8 | Pending |
+| EXPD-03 | Phase 8 | Complete |
 | EXPD-04 | Phase 8 | Complete |
-| EXPD-05 | Phase 8 | Pending |
+| EXPD-05 | Phase 8 | Complete |
 | VAL-01 | Phase 9 | Pending |
 | VAL-02 | Phase 9 | Pending |
 
