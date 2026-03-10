@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Plan 04-03 completed
-last_updated: "2026-03-10T09:28:30Z"
-last_activity: "2026-03-10 — Plan 04-03 completed: Integration tests and quality verification"
+status: in-progress
+stopped_at: Plan 05-01 completed
+last_updated: "2026-03-10T11:29:02Z"
+last_activity: "2026-03-10 — Plan 05-01 completed: Navigation types and path computation"
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 12
-  completed_plans: 11
-  percent: 83
+  completed_plans: 12
+  percent: 92
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** Phase 4 - Rendering & Output (Complete)
+**Current focus:** Phase 5 - Navigation
 
 ## Current Position
 
-Phase: 4 of 6 (Rendering & Output)
-Plan: 3 of 3
-Status: Phase complete
-Last activity: 2026-03-10 — Plan 04-03 completed: Integration tests and quality verification
+Phase: 5 of 6 (Navigation)
+Plan: 1 of 3
+Status: In progress
+Last activity: 2026-03-10 — Plan 05-01 completed: Navigation types and path computation
 
-Progress: [█████████░] 83%
+Progress: [██████████] 92%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
+- Total plans completed: 12
 - Average duration: 5.8 min
-- Total execution time: 1.07 hours
+- Total execution time: 1.23 hours
 
 **By Phase:**
 
@@ -47,12 +47,12 @@ Progress: [█████████░] 83%
 | 2. Validation | 3 | 17min | 5.7min |
 | 3. Views & Graphs | 3 | 31min | 10.3min |
 | 4. Rendering & Output | 3 | 22min | 7.3min |
-| 5. Navigation | 0 | - | - |
+| 5. Navigation | 1 | 10min | 10min |
 | 6. CLI & Polish | 0 | - | - |
 
 **Recent Trend:**
 
-- Last 5 plans: 03-02 (8min), 03-03 (8min), 04-01 (7min), 04-02 (7min), 04-03 (8min)
+- Last 5 plans: 04-01 (7min), 04-02 (7min), 04-03 (8min), 05-01 (10min)
 - Trend: Consistent execution
 
 ## Accumulated Context
@@ -89,6 +89,9 @@ Recent decisions affecting current work:
 - [Phase 04-rendering-output]: Two-line edge labels: [Technology] on first line, Description on second line
 - [Phase 04-rendering-output]: Skipped t.Parallel() in tests due to go-graphviz WASM concurrency issues
 - [Phase 04-03]: Added nolint:gosec comments for os.ReadFile in test files (false positives for t.TempDir())
+- [Phase 05-01]: Only system and box types get explore links (not person/db/queue)
+- [Phase 05-01]: Path segments URL-encoded individually to preserve directory separators
+- [Phase 05-01]: C3 back-link uses parent directory name (e.g., `../mainsystem.svg` for `mainapp.api`)
 
 ### Pending Todos
 
@@ -104,6 +107,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-10T09:20:30Z
-Stopped at: Plan 04-03 completed
-Resume file: .planning/phases/04-rendering-output/04-03-SUMMARY.md
+Last session: 2026-03-10T11:29:02Z
+Stopped at: Plan 05-01 completed
+Resume file: .planning/phases/05-navigation/05-02-PLAN.md
