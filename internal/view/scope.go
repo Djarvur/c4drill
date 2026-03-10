@@ -8,6 +8,48 @@ import (
 	"github.com/Djarvur/c4drill/internal/parser"
 )
 
+// GenerateExpandedView creates a view containing ALL units in the model at all nesting levels.
+// This is used for the --expanded mode that shows the complete hierarchy in a single diagram.
+// It includes external boundary nodes for units referenced by links but not defined.
+func GenerateExpandedView(m *parser.Model) *View {
+	if m == nil {
+		return nil
+	}
+
+	v := &View{
+		Level: LevelC1,
+		Title: m.Properties.Name,
+		Edges: m.Properties.Edges,
+		Units: make(map[string]*Entry),
+	}
+
+	// Recursively add all units depth-first
+	for name, unit := range m.Units {
+		addUnitRecursive(v, name, unit)
+	}
+
+	// Add external boundary nodes for referenced units not in the model
+	addExternalBoundaryNodes(v, m)
+
+	return v
+}
+
+// addUnitRecursive adds a unit and all its subunits to the view recursively.
+func addUnitRecursive(v *View, path string, unit *model.Unit) {
+	v.Units[path] = &Entry{
+		Unit:        unit,
+		FullPath:    path,
+		IsExpanded:  len(unit.Subunits) > 0, // Always show as expanded if has subunits
+		HasSubunits: len(unit.Subunits) > 0,
+		IsExternal:  IsExternalType(unit.Type),
+	}
+
+	// Recursively add subunits
+	for subName, subUnit := range unit.Subunits {
+		addUnitRecursive(v, path+"."+subName, subUnit)
+	}
+}
+
 // GenerateC1View creates a C1 (Context) level view showing all top-level units.
 // It includes external boundary nodes for units referenced by links but not defined.
 func GenerateC1View(m *parser.Model) *View {
@@ -45,25 +87,36 @@ func isUnitExpanded(unit *model.Unit, unitPath string) bool {
 	return slices.Contains(unit.Expanded, unitPath)
 }
 
-// addExternalBoundaryNodes scans all links and adds boundary nodes for
-// referenced units that are not in the current view.
+// addExternalBoundaryNodes scans all links (including nested subunits) and adds
+// boundary nodes for referenced units that are not in the current view.
 func addExternalBoundaryNodes(v *View, m *parser.Model) {
 	for name, unit := range m.Units {
-		// Check outgoing links
-		for target := range unit.Links {
-			if _, exists := v.Units[target]; !exists {
-				// Create external boundary node
-				v.Units[target] = createExternalBoundaryNode(target, name)
-			}
-		}
+		addExternalBoundaryNodesRecursive(v, name, unit)
+	}
+}
 
-		// Check incoming links (LinksFrom)
-		for source := range unit.LinksFrom {
-			if _, exists := v.Units[source]; !exists {
-				// Create external boundary node
-				v.Units[source] = createExternalBoundaryNode(source, name)
-			}
+// addExternalBoundaryNodesRecursive recursively scans a unit and its subunits for links
+// and adds boundary nodes for referenced units not in the view.
+func addExternalBoundaryNodesRecursive(v *View, path string, unit *model.Unit) {
+	// Check outgoing links
+	for target := range unit.Links {
+		if _, exists := v.Units[target]; !exists {
+			// Create external boundary node
+			v.Units[target] = createExternalBoundaryNode(target, path)
 		}
+	}
+
+	// Check incoming links (LinksFrom)
+	for source := range unit.LinksFrom {
+		if _, exists := v.Units[source]; !exists {
+			// Create external boundary node
+			v.Units[source] = createExternalBoundaryNode(source, path)
+		}
+	}
+
+	// Recursively check subunits
+	for subName, subUnit := range unit.Subunits {
+		addExternalBoundaryNodesRecursive(v, path+"."+subName, subUnit)
 	}
 }
 
