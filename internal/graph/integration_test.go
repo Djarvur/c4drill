@@ -541,6 +541,7 @@ func TestIntegration_ExploreURL_ExpandedSystem(t *testing.T) {
 
 	// The system should be a cluster (expanded), not a standalone node
 	var mainsystemInNodes bool
+
 	for _, node := range g.Nodes {
 		if node.ID == "mainsystem" {
 			mainsystemInNodes = true
@@ -554,6 +555,7 @@ func TestIntegration_ExploreURL_ExpandedSystem(t *testing.T) {
 
 	// Verify it's in clusters
 	var mainsystemCluster *graph.Cluster
+
 	for _, cluster := range g.Clusters {
 		if cluster.ID == "cluster_mainsystem" {
 			mainsystemCluster = cluster

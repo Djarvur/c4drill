@@ -12,32 +12,35 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ Parse TOML input file with C4 model definition — v1.0
+- ✓ Validate model integrity (references, type rules, subunit constraints) — v1.0
+- ✓ Generate GraphViz DOT output for C1-C3 layers — v1.0
+- ✓ Render SVG output via go-graphviz — v1.0
+- ✓ Support collapsed/expanded unit views — v1.0
+- ✓ Generate explore links for drilling into nested structures — v1.0
+- ✓ Support all unit types — v1.0
+- ✓ Apply styling: colors, borders, edge routing styles — v1.0
+- ✓ Single CLI command interface — v1.0
 
 ### Active
 
-- [ ] Parse TOML input file with C4 model definition
-- [ ] Validate model integrity (references, type rules, subunit constraints)
-- [ ] Generate GraphViz DOT output for C1-C3 layers
-- [ ] Render SVG output via go-graphviz
-- [ ] Support collapsed/expanded unit views
-- [ ] Generate explore links for drilling into nested structures
-- [ ] Support all unit types: person, personExternal, system, systemExternal, db, dbExternal, queue, queueExternal, box
-- [ ] Apply styling: colors, borders, edge routing styles
-- [ ] Single CLI command interface
+(Next milestone requirements will be added via /gsd:new-milestone)
 
 ### Out of Scope
 
-- **C4 Layer 4 (Code)** — Class/function level diagrams not needed for v1
+- **C4 Layer 4 (Code)** — Class/function level diagrams not needed
 - **Go library/module** — Pure CLI tool, no library interface
 - **Manual positioning** — Rely on GraphViz auto-layout
-- **JSON error output** — CLI errors only for v1
+- **JSON error output** — CLI errors sufficient
 - **Live editing/watch mode** — Single-shot rendering
 - **Multiple commands** — Single command does everything
 
 ## Context
 
+**Shipped v1.0** with 9,624 LOC Go across 48 files.
+
 C4 model is a lean approach to software architecture documentation created by Simon Brown. It uses four levels of abstraction:
+
 - **C1 (Context)**: System context showing users and external systems
 - **C2 (Containers)**: Deployable units within a system (apps, databases, etc.)
 - **C3 (Components)**: Logical components within a container
@@ -47,23 +50,24 @@ The tool uses nested TOML objects where each level contains strictly typed subun
 
 ## Constraints
 
-- **Tech Stack**: Go 1.21+ — User specified
-- **Input Format**: TOML — User specified, single file
-- **Output**: GraphViz DOT and SVG — User specified, via go-graphviz
-- **Diagram Scope**: C1-C3 layers only — User specified
+- **Tech Stack**: Go 1.26.1
+- **Input Format**: TOML — single file
+- **Output**: GraphViz DOT and SVG via go-graphviz
+- **Diagram Scope**: C1-C3 layers only
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Single CLI command | Simplicity for documentation workflow | — Pending |
-| Auto-layout only | Let GraphViz handle positioning | — Pending |
-| TOML input | Human-readable, supports nested structures | — Pending |
-| go-graphviz library | Native Go, no external graphviz binary needed | — Pending |
+| Single CLI command | Simplicity for documentation workflow | ✓ Good — users run `c4drill file.toml` |
+| Auto-layout only | Let GraphViz handle positioning | ✓ Good — clean diagrams without manual effort |
+| TOML input | Human-readable, supports nested structures | ✓ Good — intuitive authoring |
+| go-graphviz library | Native Go, no external graphviz binary needed | ✓ Good — simple deployment |
 
 ## TOML Schema (Reference)
 
 ### Root Level
+
 ```toml
 [properties]
 name = "Project Name"
@@ -93,6 +97,7 @@ expanded = ["subunit1"]      # optional
 ```
 
 ### Unit Types
+
 - `person`, `personExternal` — Actors using the system
 - `system`, `systemExternal` — Software systems
 - `db`, `dbExternal` — Databases
@@ -100,6 +105,7 @@ expanded = ["subunit1"]      # optional
 - `box` — Grouping container
 
 ### Link Object
+
 ```toml
 link = { "target_unit" = { reverse = false, equal = false, color = "black", style = "solid" } }
 ```
@@ -119,4 +125,4 @@ link = { "target_unit" = { reverse = false, equal = false, color = "black", styl
 - **Shapes**: Person, DB, Queue, System each have distinct record shapes
 
 ---
-*Last updated: 2026-03-09 after initialization*
+*Last updated: 2026-03-10 after v1.0 milestone*
