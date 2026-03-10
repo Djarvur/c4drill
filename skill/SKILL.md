@@ -25,7 +25,7 @@ version: 1.0.0
 - `dbExternal` - External database
 - `queue` - Message queue
 - `queueExternal` - External queue
-- `box` - Grouping container
+- `box` - Grouping container (can appear at any level: C1, C2, C3)
 
 **C2 Container Level:**
 - `container` - Container within system
@@ -94,7 +94,7 @@ linkFrom = { ... }              # Optional: Incoming links
 
 ### Nesting (C2/C3 Diagrams)
 
-Use dotted notation for nested units. Only `system` and `box` types can have subunits:
+Use dotted notation for nested units. Only `system`, `systemExternal`, and `box` types can have subunits:
 
 ```toml
 [mainapp]                       # C1: System
@@ -112,6 +112,26 @@ name = "HTTP Handlers"
 [mainapp.db]                    # C2: Container database
 type = "containerDb"
 name = "Database"
+```
+
+**`box` can be used at any nesting level** to create logical groupings:
+
+```toml
+[mainapp]                       # C1: System
+type = "system"
+name = "Main App"
+
+[mainapp.services]              # C2: Box grouping containers
+type = "box"
+name = "Microservices"
+
+[mainapp.services.user]         # C2: Container inside box
+type = "container"
+name = "User Service"
+
+[mainapp.services.order]        # C2: Another container
+type = "container"
+name = "Order Service"
 ```
 
 ### Link Syntax
@@ -211,7 +231,7 @@ type = "container"
 link = { "mainapp.api" = { description = "Uses" } }
 ```
 
-**Rule 4: Subunits only for system and box types**
+**Rule 4: Subunits only for system, systemExternal, and box types**
 ```toml
 # ❌ INVALID: Database cannot have subunits
 [postgres]
