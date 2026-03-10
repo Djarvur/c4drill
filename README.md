@@ -64,6 +64,11 @@ expanded = ["payments"]             # Optional: Units to expand by default
 
 Each unit is defined as a TOML section. The section name becomes the unit's identifier.
 
+**Type is optional** — defaults based on nesting level:
+- Root-level units → `system`
+- Units inside system/box → `container`
+- Units inside container → `component`
+
 #### Person (Actor)
 
 ```toml
@@ -149,11 +154,11 @@ type = "system"
 name = "Main Application"
 
 [mainapp.api]                # C2 level (container)
-type = "system"
+type = "container"
 name = "API Service"
 
 [mainapp.webapp]             # C2 level (container)
-type = "system"
+type = "container"
 name = "Web App"
 
 [mainapp.api.handlers]       # C3 level (component)
