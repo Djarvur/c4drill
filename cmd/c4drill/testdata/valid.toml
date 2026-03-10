@@ -1,0 +1,18 @@
+[properties]
+name = "Test System"
+description = "A test architecture"
+
+[user]
+type = "person"
+name = "User"
+description = "End user"
+
+[app]
+type = "system"
+name = "Application"
+description = "Main application"
+
+[app.db]
+type = "db"
+name = "Database"
+description = "Data storage"

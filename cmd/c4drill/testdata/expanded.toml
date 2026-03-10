@@ -1,0 +1,35 @@
+[properties]
+name = "Expanded System"
+description = "Test with drill-down"
+
+[mainsystem]
+type = "system"
+name = "Main System"
+description = "The main system"
+expanded = ["mainsystem"]
+
+[mainsystem.webapp]
+type = "system"
+name = "Web Application"
+description = "Frontend"
+expanded = ["mainsystem.webapp"]
+
+[mainsystem.webapp.handler]
+type = "component"
+name = "Handler"
+description = "HTTP handlers"
+
+[mainsystem.webapp.service]
+type = "component"
+name = "Service"
+description = "Business logic"
+
+[mainsystem.api]
+type = "system"
+name = "API"
+description = "Backend API"
+
+[external]
+type = "systemExternal"
+name = "External System"
+description = "External dependency"
