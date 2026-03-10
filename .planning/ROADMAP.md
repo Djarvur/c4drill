@@ -104,11 +104,12 @@ Plans:
   5. Expanded units render to {basename}/{unit-name}.{format}
   6. Output directory structure is created recursively as needed
 
-**Plans**: 2 plans in 2 waves
+**Plans**: 3 plans in 2 waves
 
 Plans:
-- [ ] 04-01-PLAN.md - Render and output packages: go-graphviz integration, RenderDOT/RenderSVG, Writer with directory creation (Wave 1)
-- [ ] 04-02-PLAN.md - Integration tests and quality verification (Wave 2)
+- [ ] 04-01-PLAN.md - Render package: go-graphviz integration, RenderDOT/RenderSVG/Render functions with format selection (Wave 1)
+- [ ] 04-02-PLAN.md - Output package: Writer with directory creation for C1/C2/C3 paths (Wave 1)
+- [ ] 04-03-PLAN.md - Integration tests and quality verification (Wave 2)
 
 ### Phase 5: Navigation
 
@@ -153,11 +154,11 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Foundation & Model | 2/3 | Done | 2026-03-09 |
 | 2. Validation | 2/3 | Done | 2026-03-09 |
 | 3. Views & Graphs | 3/3 | Done | 2026-03-09 |
-| 4. Rendering & Output | 0/2 | Not started | - |
+| 4. Rendering & Output | 0/3 | Not started | - |
 | 5. Navigation | 0/TBD | Not started | - |
 | 6. CLI & Polish | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-03-09*
 *Granularity: standard*
-*Last updated: 2026-03-10 - Phase 4 planned (render + output packages)*
+*Last updated: 2026-03-10 - Phase 4 revised (3 plans: render, output, integration)*
