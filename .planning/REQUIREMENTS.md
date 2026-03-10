@@ -62,8 +62,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **REND-02**: Renderer generates SVG via go-graphviz library
 - [x] **REND-03**: Output format controlled by --format flag (dot|svg)
 - [x] **REND-04**: Collapsed units include explore link pointing to drill-down file
-- [ ] **REND-05**: All diagrams include back-link to parent level
-- [ ] **REND-06**: All diagrams include breadcrumb trail showing path
+- [x] **REND-05**: All diagrams include back-link to parent level
+- [x] **REND-06**: All diagrams include breadcrumb trail showing path
 
 ### Output
 
@@ -182,8 +182,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OUTP-02 | Phase 4 | Complete |
 | OUTP-04 | Phase 4 | Complete |
 | REND-04 | Phase 5 | Complete |
-| REND-05 | Phase 5 | Pending |
-| REND-06 | Phase 5 | Pending |
+| REND-05 | Phase 5 | Complete |
+| REND-06 | Phase 5 | Complete |
 | OUTP-05 | Phase 5 | Complete |
 | CLII-01 | Phase 6 | Pending |
 | CLII-02 | Phase 6 | Pending |
