@@ -7,6 +7,7 @@ C4Drill transforms TOML architecture definitions into professional C4 diagrams t
 ## Milestones
 
 - ✅ **v1.0 Initial Release** — Phases 1-6 (shipped 2026-03-10)
+- 🚧 **v1.1 AI-Ready** — Phases 7-8 (in progress)
 - 📋 **v2.0** — Future features (planned)
 
 ## Phases
@@ -25,23 +26,59 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 
 </details>
 
-### 📋 v2.0 (Planned)
+### 🚧 v1.1 AI-Ready (In Progress)
 
-Next milestone requirements will be defined via `/gsd:new-milestone`.
+**Milestone Goal:** Make C4Drill AI-friendly with documentation and single-view expanded diagrams
+
+- [ ] **Phase 7: AI Documentation** — TOML language manual for AI assistants
+- [ ] **Phase 8: All-Expanded Mode** — Single-view expanded rendering with cross-level edges
+
+---
+
+## Phase Details
+
+### Phase 7: AI Documentation
+**Goal**: AI assistants can generate valid C4Drill TOML without prior training
+**Depends on**: Nothing (documentation-only, independent of Phase 8)
+**Requirements**: AIDOC-01, AIDOC-02, AIDOC-03, AIDOC-04, AIDOC-05
+**Success Criteria** (what must be TRUE):
+  1. User can read CLAUDE.md and understand the complete TOML schema with all unit types, fields, and link syntax
+  2. User can copy any example TOML from CLAUDE.md and have it parse and validate successfully
+  3. AI assistants given CLAUDE.md produce syntactically valid TOML files
+  4. All validation rules are documented with clear explanations of what triggers each error
+  5. CI validates all TOML examples in CLAUDE.md against the actual parser to prevent drift
+**Plans**: TBD
+
+### Phase 8: All-Expanded Mode
+**Goal**: Users can generate a single diagram showing all units expanded with cross-level edges
+**Depends on**: Nothing (independent of Phase 7, can run in parallel)
+**Requirements**: EXPD-01, EXPD-02, EXPD-03, EXPD-04, EXPD-05
+**Success Criteria** (what must be TRUE):
+  1. User can run `c4drill input.toml --expanded` and receive expanded diagram output
+  2. All units in the model appear as nested clusters in a single diagram
+  3. Edges between units at different nesting depths are visible in the diagram
+  4. Output file is saved with `{basename}.expanded.{ext}` naming convention
+  5. Existing C1/C2/C3 view generation produces identical output when `--expanded` is not used
+**Plans**: TBD
 
 ---
 
 ## Progress
 
-| Phase | Milestone | Status | Completed |
-| ----- | --------- | ------ | --------- |
-| 1. Foundation & Model | v1.0 | Complete | 2026-03-09 |
-| 2. Validation | v1.0 | Complete | 2026-03-09 |
-| 3. Views & Graphs | v1.0 | Complete | 2026-03-09 |
-| 4. Rendering & Output | v1.0 | Complete | 2026-03-10 |
-| 5. Navigation | v1.0 | Complete | 2026-03-10 |
-| 6. CLI & Polish | v1.0 | Complete | 2026-03-10 |
+**Execution Order:**
+Phases 7 and 8 are independent and can run in parallel.
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Foundation & Model | v1.0 | 3/3 | Complete | 2026-03-09 |
+| 2. Validation | v1.0 | 2/2 | Complete | 2026-03-09 |
+| 3. Views & Graphs | v1.0 | 4/4 | Complete | 2026-03-09 |
+| 4. Rendering & Output | v1.0 | 3/3 | Complete | 2026-03-10 |
+| 5. Navigation | v1.0 | 2/2 | Complete | 2026-03-10 |
+| 6. CLI & Polish | v1.0 | 2/2 | Complete | 2026-03-10 |
+| 7. AI Documentation | v1.1 | 0/TBD | Not started | - |
+| 8. All-Expanded Mode | v1.1 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-03-09*
-*Last updated: 2026-03-10 - v1.0 shipped*
+*Last updated: 2026-03-10 - v1.1 AI-Ready milestone started*

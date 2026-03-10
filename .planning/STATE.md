@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI-Ready
 status: planning
-stopped_at: Defining requirements
-last_updated: "2026-03-10T21:00:00Z"
-last_activity: "2026-03-10 — Milestone v1.1 started"
+stopped_at: Roadmap created
+last_updated: "2026-03-10T22:00:00Z"
+last_activity: "2026-03-10 — Roadmap created for v1.1 (2 phases)"
 progress:
-  total_phases: 0
+  total_phases: 2
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,15 +21,52 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** v1.1 AI-Ready — TOML manual + all-expanded mode
+**Current focus:** v1.1 AI-Ready — Phase 7 ready to plan
 
 ## Current Position
 
 Milestone: v1.1 AI-Ready
-Status: Defining requirements
-Last activity: 2026-03-10 — Milestone v1.1 started
+Phase: 7 of 8 (AI Documentation)
+Status: Ready to plan
+Last activity: 2026-03-10 — Roadmap created for v1.1 (2 phases, 10 requirements)
 
-Progress: Planning
+Progress: [░░░░░░░░░░] 0%
+
+## Performance Metrics
+
+**Velocity:**
+- Total plans completed (v1.0): 16
+- v1.1 plans completed: 0
+
+**By Phase (v1.1):**
+
+| Phase | Plans | Completed | Status |
+|-------|-------|-----------|--------|
+| 7. AI Documentation | TBD | 0 | Ready to plan |
+| 8. All-Expanded Mode | TBD | 0 | Not started |
+
+## Accumulated Context
+
+### Decisions
+
+Recent decisions affecting v1.1:
+
+- **Phase independence**: Phases 7 and 8 are independent with no shared code changes — can run in parallel
+- **Separate code path**: All-expanded mode will use `GenerateAllExpandedView()` as a separate function to avoid regression risk
+
+### Pending Todos
+
+None yet.
+
+### Blockers/Concerns
+
+None yet.
+
+## Session Continuity
+
+Last session: 2026-03-10
+Stopped at: Roadmap created, ready for `/gsd:plan-phase 7`
+Resume file: None
 
 ## v1.0 Summary
 
@@ -38,19 +75,3 @@ Progress: Planning
 - 6 phases, 16 plans completed
 - 9,624 LOC Go across 48 files
 - 28 feature commits
-
-**Key accomplishments:**
-
-- TOML parser with nested unit definitions and error handling
-- C4 model validation with clear error messages and line numbers
-- C1/C2/C3 view generation with collapsed/expanded rendering
-- GraphViz DOT and SVG rendering via go-graphviz
-- Interactive navigation with explore links, back-links, and breadcrumbs
-- Production-ready Cobra CLI with help text and error handling
-
-## v1.1 Goals
-
-**Target features:**
-
-1. TOML Language Manual (AI-focused CLAUDE.md + human reference)
-2. All-Expanded Mode (`--expanded` flag, cross-level edges, `{basename}.expanded.{ext}`)
