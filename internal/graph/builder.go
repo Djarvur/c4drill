@@ -41,6 +41,87 @@ func BuildGraph(v *view.View) *Graph {
 	return g
 }
 
+// BuildExpandedGraph constructs a graph with nested clusters for all-expanded mode.
+// Unlike BuildGraph, this creates recursive cluster structures that show all nesting levels.
+func BuildExpandedGraph(v *view.View) *Graph {
+	if v == nil {
+		return nil
+	}
+
+	g := &Graph{
+		Title:     v.Title,
+		Direction: "TB",
+		EdgeStyle: v.Edges,
+		Nodes:     make([]*Node, 0),
+		Edges:     make([]*Edge, 0),
+		Clusters:  make([]*Cluster, 0),
+	}
+
+	// Find top-level units (those without a dot in their path)
+	topLevelUnits := make(map[string]*view.Entry)
+	for path, entry := range v.Units {
+		if !strings.Contains(path, ".") {
+			topLevelUnits[path] = entry
+		}
+	}
+
+	// Build nodes and nested clusters for top-level units
+	for path, entry := range topLevelUnits {
+		if entry.HasSubunits {
+			cluster := buildNestedCluster(entry, path, v)
+			g.Clusters = append(g.Clusters, cluster)
+		} else {
+			node := buildNode(entry)
+			g.Nodes = append(g.Nodes, node)
+		}
+	}
+
+	// Build edges (handles cross-level connections)
+	g.Edges = buildEdges(v)
+
+	return g
+}
+
+// buildNestedCluster recursively creates a cluster with nested clusters for subunits.
+// This is used by BuildExpandedGraph to show the complete hierarchy in a single diagram.
+func buildNestedCluster(entry *view.Entry, path string, v *view.View) *Cluster {
+	cluster := &Cluster{
+		ID:       "cluster_" + path,
+		Label:    buildClusterLabel(entry),
+		Nodes:    make([]*Node, 0),
+		Clusters: make([]*Cluster, 0),
+		Style:    GetStyleForType(entry.Unit.Type, entry.IsExternal),
+	}
+
+	// Process subunits
+	for childName, childUnit := range entry.Unit.Subunits {
+		childPath := path + "." + childName
+		childEntry, exists := v.Units[childPath]
+		if !exists {
+			// Create entry if not in view (shouldn't happen, but be defensive)
+			childEntry = &view.Entry{
+				Unit:        childUnit,
+				FullPath:    childPath,
+				HasSubunits: len(childUnit.Subunits) > 0,
+				IsExternal:  view.IsExternalType(childUnit.Type),
+			}
+		}
+
+		if childEntry.HasSubunits {
+			// Recursively build nested cluster
+			nestedCluster := buildNestedCluster(childEntry, childPath, v)
+			cluster.Clusters = append(cluster.Clusters, nestedCluster)
+		} else {
+			// Build node for leaf subunit
+			node := buildNode(childEntry)
+			node.IsInCluster = true
+			cluster.Nodes = append(cluster.Nodes, node)
+		}
+	}
+
+	return cluster
+}
+
 // buildNode creates a node from a view entry.
 func buildNode(entry *view.Entry) *Node {
 	label := &Label{
