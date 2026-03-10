@@ -147,7 +147,11 @@ Plans:
   4. Tool exits with code 0 on success, non-zero on failure
   5. Errors are written to stderr (not stdout)
 
-**Plans**: TBD
+**Plans**: 2 plans in 2 waves
+
+Plans:
+- [ ] 06-01-PLAN.md - Cobra CLI with flags and pipeline orchestration (Wave 1)
+- [ ] 06-02-PLAN.md - Integration tests and quality verification with checkpoint (Wave 2)
 
 ## Progress
 
@@ -161,9 +165,9 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Views & Graphs | 3/3 | Done | 2026-03-09 |
 | 4. Rendering & Output | 3/3 | Done | 2026-03-10 |
 | 5. Navigation | 3/3 | Complete    | 2026-03-10 |
-| 6. CLI & Polish | 0/TBD | Not started | - |
+| 6. CLI & Polish | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-03-09*
 *Granularity: standard*
-*Last updated: 2026-03-10 - Phase 5 complete*
+*Last updated: 2026-03-10 - Phase 6 planned*
