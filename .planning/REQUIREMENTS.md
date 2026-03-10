@@ -1,119 +1,31 @@
 # Requirements: C4Drill
 
-**Defined:** 2026-03-09
-**Core Value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
+**Defined:** 2026-03-10
+**Core Value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing
 
-## v1 Requirements
+## v1.1 Requirements
 
-Requirements for initial release. Each maps to roadmap phases.
+Requirements for AI-Ready milestone. Each maps to roadmap phases.
 
-### Input/Parsing
+### AI Documentation (CLAUDE.md)
 
-- [x] **INPT-01**: CLI accepts path to TOML input file
-- [x] **INPT-02**: Parser handles nested unit definitions with arbitrary depth
-- [x] **INPT-03**: Parser extracts properties section with name, description, styling
-- [x] **INPT-04**: Parser extracts context-level units (person, system, db, queue, box types)
-- [x] **INPT-05**: Parser handles external variants (personExternal, systemExternal, etc.)
-- [x] **INPT-06**: Parser extracts link and linkFrom definitions with styling attributes
-- [x] **INPT-07**: Parser handles expanded list for collapsed/expanded rendering control
+- [ ] **AIDOC-01**: CLAUDE.md contains complete TOML schema reference with all unit types, fields, and link syntax
+- [ ] **AIDOC-02**: CLAUDE.md includes 3-5 working examples (minimal, medium, complex architectures)
+- [ ] **AIDOC-03**: CLAUDE.md documents all validation rules with clear error explanations
+- [ ] **AIDOC-04**: CLAUDE.md provides prompt patterns for AI assistants to generate valid TOML
+- [ ] **AIDOC-05**: All TOML examples in CLAUDE.md are validated by CI to prevent drift
 
-### Model/Types
+### All-Expanded Mode
 
-- [x] **TYPE-01**: System defines person type with name, description, styling
-- [x] **TYPE-02**: System defines personExternal type (external actor)
-- [x] **TYPE-03**: System defines system type (can contain subunits for containers)
-- [x] **TYPE-04**: System defines systemExternal type (external system)
-- [x] **TYPE-05**: System defines db and dbExternal types (database storage)
-- [x] **TYPE-06**: System defines queue and queueExternal types (message queues)
-- [x] **TYPE-07**: System defines box type (grouping container, can contain context-level units)
-- [x] **TYPE-08**: Link object defines target, reverse, equal, color, style attributes
+- [ ] **EXPD-01**: User can pass `--expanded` flag to CLI to request all-expanded rendering
+- [ ] **EXPD-02**: All-expanded view renders all units as expanded nested clusters in single diagram
+- [ ] **EXPD-03**: Cross-level edges (between units at different nesting depths) are visible
+- [ ] **EXPD-04**: Output saved to `{basename}.expanded.{ext}` format (dot/svg)
+- [ ] **EXPD-05**: Existing C1/C2/C3 view generation remains unchanged (zero regression)
 
-### Validation
+## v1.0 Requirements (Shipped)
 
-- [x] **VALD-01**: Validator checks all referenced units are defined
-- [x] **VALD-02**: Validator prevents links on units that have subunits
-- [x] **VALD-03**: Validator prevents referencing units that have subunits
-- [x] **VALD-04**: Validator prevents subunits on non-system/non-box types
-- [x] **VALD-05**: Error messages include line numbers and context
-- [x] **VALD-06**: Error messages use human-readable format (not JSON)
-
-### View Generation
-
-- [ ] **VIEW-01**: Generator creates C1 (Context) level view from model
-- [ ] **VIEW-02**: Generator creates C2 (Containers) level view for expanded systems
-- [ ] **VIEW-03**: Generator creates C3 (Components) level view for expanded containers
-- [ ] **VIEW-04**: Collapsed units render as single record shape
-- [ ] **VIEW-05**: Expanded units render as clusters with subunits inside
-- [ ] **VIEW-06**: View respects expanded list from properties and unit-level overrides
-- [ ] **VIEW-07**: Styling (color, border, style, edges) inherits from parent with override
-
-### Graph Construction
-
-- [x] **GRPH-01**: Builder creates nodes for each unit with type-appropriate shapes
-- [x] **GRPH-02**: Builder creates edges for each link definition
-- [x] **GRPH-03**: Builder applies edge routing style (straight, spline, square)
-- [x] **GRPH-04**: Builder creates clusters for expanded units
-- [x] **GRPH-05**: Shapes: person uses icon, db uses cylinder icon, queue uses bars
-- [x] **GRPH-06**: System shape includes name, description, explore link
-
-### Rendering
-
-- [x] **REND-01**: Renderer generates valid GraphViz DOT format
-- [x] **REND-02**: Renderer generates SVG via go-graphviz library
-- [x] **REND-03**: Output format controlled by --format flag (dot|svg)
-- [x] **REND-04**: Collapsed units include explore link pointing to drill-down file
-- [x] **REND-05**: All diagrams include back-link to parent level
-- [x] **REND-06**: All diagrams include breadcrumb trail showing path
-
-### Output
-
-- [x] **OUTP-01**: Context level renders to {basename}.{format}
-- [x] **OUTP-02**: Expanded units render to {basename}/{unit-name}.{format}
-- [x] **OUTP-03**: Output directory controlled by --output flag (default: current directory)
-- [x] **OUTP-04**: Directory structure created recursively as needed
-- [x] **OUTP-05**: Relative paths used for explore and back links
-
-### CLI
-
-- [x] **CLII-01**: Single command: c4drill <input.toml> [flags]
-- [x] **CLII-02**: --format flag selects output format (dot|svg)
-- [x] **CLII-03**: --output flag specifies output directory
-- [x] **CLII-04**: Help text with usage examples
-- [x] **CLII-05**: Exit code 0 on success, non-zero on failure
-- [x] **CLII-06**: Errors written to stderr
-
-### Development Environment
-
-- [x] **DEVI-01**: Go version updated to 1.26.1 in go.mod and all config files before development
-- [x] **DEVI-02**: Mise config includes tasks for running tests
-- [x] **DEVI-03**: Mise config includes tasks for running lint
-- [x] **DEVI-04**: Mise installs golangci-lint v2 into sandbox (not global)
-- [ ] **DEVI-05**: Modern Go plugin loaded via /use-modern-go before any development task
-
-### Quality Gates
-
-- [x] **QUAL-01**: All lint errors must be fixed before commit
-- [x] **QUAL-02**: Lint config (.golangci.yml) MUST NOT be adjusted to silence errors
-- [x] **QUAL-03**: nolint directives require explicit user confirmation before adding
-- [x] **QUAL-04**: Minimum 75% test coverage required
-- [x] **QUAL-05**: Coverage enforced in CI/quality gate
-
-## v2 Requirements
-
-Deferred to future release. Tracked but not in current roadmap.
-
-### Advanced Features
-
-- **TAGS-01**: Tags/stereotypes metadata on units
-- **THME-01**: Predefined color themes/schemes
-- **THME-02**: Custom theme loading from file
-- **WTCH-01**: Watch mode for auto-regeneration on file change
-- **WTCH-02**: Live reload integration for browser preview
-
-### Extended Output
-
-- **OUTP-06**: PNG output format
-- **OUTP-07**: PDF output format
+Completed in v1.0 Initial Release (2026-03-10). See `.planning/milestones/v1.0-REQUIREMENTS.md` for archive.
 
 ## Out of Scope
 
@@ -121,14 +33,16 @@ Explicitly excluded. Documented to prevent scope creep.
 
 | Feature | Reason |
 |---------|--------|
-| C4 Layer 4 (Code) | Class/function level not needed for architecture docs |
-| Go library/module | Pure CLI tool per user specification |
+| C4 Layer 4 (Code) | Class/function level diagrams not needed |
+| Go library/module | Pure CLI tool, no library interface |
 | Manual positioning | Rely on GraphViz auto-layout |
-| JSON error output | CLI errors sufficient for v1 |
-| Multiple subcommands | Single command workflow per user specification |
-| Real-time collaboration | Single-user tool |
-| Diagram editing UI | Text-based input only |
-| Cloud hosting | Local file generation only |
+| JSON error output | CLI errors sufficient |
+| Live editing/watch mode | Single-shot rendering |
+| Multiple commands | Single command does everything |
+| Interactive legend in expanded view | Nice-to-have, defer to v1.2 |
+| Partial expansion (`--expand=unit1,unit2`) | Adds complexity, defer to v1.2 |
+| AI validation workflow integration | Outside CLI scope |
+| Edge filtering/aggregation | Future enhancement for cluttered diagrams |
 
 ## Traceability
 
@@ -136,82 +50,22 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INPT-01 | Phase 1 | Complete |
-| INPT-02 | Phase 1 | Complete |
-| INPT-03 | Phase 1 | Complete |
-| INPT-04 | Phase 1 | Complete |
-| INPT-05 | Phase 1 | Complete |
-| INPT-06 | Phase 1 | Complete |
-| INPT-07 | Phase 1 | Complete |
-| TYPE-01 | Phase 1 | Complete |
-| TYPE-02 | Phase 1 | Complete |
-| TYPE-03 | Phase 1 | Complete |
-| TYPE-04 | Phase 1 | Complete |
-| TYPE-05 | Phase 1 | Complete |
-| TYPE-06 | Phase 1 | Complete |
-| TYPE-07 | Phase 1 | Complete |
-| TYPE-08 | Phase 1 | Complete |
-| DEVI-01 | Phase 1 | Complete |
-| DEVI-02 | Phase 1 | Complete |
-| DEVI-03 | Phase 1 | Complete |
-| DEVI-04 | Phase 1 | Complete |
-| DEVI-05 | All Phases | Pending |
-| VALD-01 | Phase 2 | Complete |
-| VALD-02 | Phase 2 | Complete |
-| VALD-03 | Phase 2 | Complete |
-| VALD-04 | Phase 2 | Complete |
-| VALD-05 | Phase 2 | Complete |
-| VALD-06 | Phase 2 | Complete |
-| VIEW-01 | Phase 3 | Pending |
-| VIEW-02 | Phase 3 | Pending |
-| VIEW-03 | Phase 3 | Pending |
-| VIEW-04 | Phase 3 | Pending |
-| VIEW-05 | Phase 3 | Pending |
-| VIEW-06 | Phase 3 | Pending |
-| VIEW-07 | Phase 3 | Pending |
-| GRPH-01 | Phase 3 | Complete |
-| GRPH-02 | Phase 3 | Complete |
-| GRPH-03 | Phase 3 | Complete |
-| GRPH-04 | Phase 3 | Complete |
-| GRPH-05 | Phase 3 | Complete |
-| GRPH-06 | Phase 3 | Complete |
-| REND-01 | Phase 4 | Complete |
-| REND-02 | Phase 4 | Complete |
-| REND-03 | Phase 4 | Complete |
-| OUTP-01 | Phase 4 | Complete |
-| OUTP-02 | Phase 4 | Complete |
-| OUTP-04 | Phase 4 | Complete |
-| REND-04 | Phase 5 | Complete |
-| REND-05 | Phase 5 | Complete |
-| REND-06 | Phase 5 | Complete |
-| OUTP-05 | Phase 5 | Complete |
-| CLII-01 | Phase 6 | Complete |
-| CLII-02 | Phase 6 | Complete |
-| CLII-03 | Phase 6 | Complete |
-| CLII-04 | Phase 6 | Complete |
-| CLII-05 | Phase 6 | Complete |
-| CLII-06 | Phase 6 | Complete |
-| OUTP-03 | Phase 6 | Complete |
-| QUAL-01 | All Phases | Complete |
-| QUAL-02 | All Phases | Complete |
-| QUAL-03 | All Phases | Complete |
-| QUAL-04 | All Phases | Complete |
-| QUAL-05 | All Phases | Complete |
+| AIDOC-01 | Phase 7 | Pending |
+| AIDOC-02 | Phase 7 | Pending |
+| AIDOC-03 | Phase 7 | Pending |
+| AIDOC-04 | Phase 7 | Pending |
+| AIDOC-05 | Phase 7 | Pending |
+| EXPD-01 | Phase 8 | Pending |
+| EXPD-02 | Phase 8 | Pending |
+| EXPD-03 | Phase 8 | Pending |
+| EXPD-04 | Phase 8 | Pending |
+| EXPD-05 | Phase 8 | Pending |
 
 **Coverage:**
-- v1 requirements: 56 total
-- Mapped to phases: 56
-- Unmapped: 0
-
-**By Phase:**
-- Phase 1 (Foundation & Model): 20 requirements (INPT: 7, TYPE: 8, DEVI: 5)
-- Phase 2 (Validation): 6 requirements (VALD: 6)
-- Phase 3 (Views & Graphs): 13 requirements (VIEW: 7, GRPH: 6)
-- Phase 4 (Rendering & Output): 6 requirements (REND: 3, OUTP: 3)
-- Phase 5 (Navigation): 4 requirements (REND: 3, OUTP: 1)
-- Phase 6 (CLI & Polish): 7 requirements (CLII: 6, OUTP: 1)
-- Cross-cutting (All Phases): 6 requirements (DEVI-05, QUAL: 5)
+- v1.1 requirements: 10 total
+- Mapped to phases: 10
+- Unmapped: 0 ✓
 
 ---
-*Requirements defined: 2026-03-09*
-*Last updated: 2026-03-10 after Plan 06-01 completed*
+*Requirements defined: 2026-03-10*
+*Last updated: 2026-03-10 after v1.1 milestone started*
