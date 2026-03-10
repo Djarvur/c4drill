@@ -13,6 +13,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	// windowsOS is the runtime.GOOS value for Windows systems.
+	windowsOS = "windows"
+	// dirPermission is the permission for created directories.
+	dirPermission = 0o750
+	// filePermission is the permission for created files.
+	filePermission = 0o600
+)
+
 func TestWriterC1FlatPath(t *testing.T) {
 	t.Parallel()
 
@@ -97,7 +106,7 @@ func TestWriterDirectoryCreationError(t *testing.T) {
 	t.Parallel()
 
 	// Test 5: Writer returns error when directory creation fails
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == windowsOS {
 		t.Skip("Unix-specific error test")
 	}
 
@@ -106,7 +115,7 @@ func TestWriterDirectoryCreationError(t *testing.T) {
 
 	// Create a file where we need a directory to force mkdir error
 	filePath := filepath.Join(tmpDir, "blocked")
-	err := os.WriteFile(filePath, []byte("blocker"), 0o644)
+	err := os.WriteFile(filePath, []byte("blocker"), filePermission)
 	require.NoError(t, err)
 
 	// Try to write a file that would require "blocked" to be a directory
@@ -122,7 +131,7 @@ func TestWriterFileWriteError(t *testing.T) {
 	t.Parallel()
 
 	// Test 6: Writer returns error when file write fails
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == windowsOS {
 		t.Skip("Unix-specific error test")
 	}
 
@@ -131,7 +140,7 @@ func TestWriterFileWriteError(t *testing.T) {
 
 	// Create a directory where we need a file to force write error
 	dirPath := filepath.Join(tmpDir, "system.svg")
-	err := os.MkdirAll(dirPath, 0o755)
+	err := os.MkdirAll(dirPath, dirPermission)
 	require.NoError(t, err)
 
 	// Try to write to a path that's a directory
@@ -222,7 +231,7 @@ func TestWriterErrorWrapping(t *testing.T) {
 	t.Parallel()
 
 	// Verify errors are properly wrapped with context
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == windowsOS {
 		t.Skip("Unix-specific error test")
 	}
 
@@ -231,7 +240,7 @@ func TestWriterErrorWrapping(t *testing.T) {
 
 	// Create a file where directory should be
 	blockerPath := filepath.Join(tmpDir, "test")
-	err := os.WriteFile(blockerPath, []byte("blocker"), 0o644)
+	err := os.WriteFile(blockerPath, []byte("blocker"), filePermission)
 	require.NoError(t, err)
 
 	// This should fail with wrapped error

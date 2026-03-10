@@ -8,6 +8,13 @@ import (
 	"strings"
 )
 
+const (
+	// dirPermission is the permission for created directories.
+	dirPermission = 0o750
+	// filePermission is the permission for created files.
+	filePermission = 0o600
+)
+
 // Writer handles writing rendered diagrams to files with proper directory structure.
 type Writer struct {
 	baseDir string
@@ -37,12 +44,12 @@ func (w *Writer) Write(basename, unitPath, format string, data []byte) error {
 
 	// Create parent directories (fail fast on error)
 	dir := filepath.Dir(fullPath)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, dirPermission); err != nil {
 		return fmt.Errorf("create output directory %s: %w", dir, err)
 	}
 
 	// Write file (fail fast on error)
-	if err := os.WriteFile(fullPath, data, 0o644); err != nil {
+	if err := os.WriteFile(fullPath, data, filePermission); err != nil {
 		return fmt.Errorf("write output file %s: %w", fullPath, err)
 	}
 
