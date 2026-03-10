@@ -297,3 +297,71 @@ func TestExternalNodes(t *testing.T) {
 		assert.Contains(t, string(output), "external_system")
 	})
 }
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestCreateNode_WithExploreURL(t *testing.T) {
+	t.Run("node with ExploreURL gets URL attribute in DOT output", func(t *testing.T) {
+		g := &graph.Graph{
+			Title:     "Test Diagram",
+			Direction: "TB",
+			Nodes: []*graph.Node{
+				{
+					ID:         "expandable_system",
+					Label:      &graph.Label{Name: "Expandable System"},
+					Shape:      graph.ShapeHTML,
+					ExploreURL: "./expandable_system.svg",
+					Style:      &graph.NodeStyle{FillColor: "#438DD5"},
+				},
+			},
+		}
+
+		output, err := render.RenderDOT(g)
+		require.NoError(t, err)
+		// URL attribute should be present in DOT output
+		assert.Contains(t, string(output), "URL")
+		assert.Contains(t, string(output), "./expandable_system.svg")
+	})
+
+	t.Run("node without ExploreURL does not get URL attribute", func(t *testing.T) {
+		g := &graph.Graph{
+			Title:     "Test Diagram",
+			Direction: "TB",
+			Nodes: []*graph.Node{
+				{
+					ID:    "simple_node",
+					Label: &graph.Label{Name: "Simple Node"},
+					Shape: graph.ShapeHTML,
+					Style: &graph.NodeStyle{FillColor: "#438DD5"},
+				},
+			},
+		}
+
+		output, err := render.RenderDOT(g)
+		require.NoError(t, err)
+		// Simple node should exist but not have URL pointing to svg
+		assert.Contains(t, string(output), "simple_node")
+		assert.NotContains(t, string(output), ".svg")
+	})
+
+	t.Run("node with empty ExploreURL does not get URL attribute", func(t *testing.T) {
+		g := &graph.Graph{
+			Title:     "Test Diagram",
+			Direction: "TB",
+			Nodes: []*graph.Node{
+				{
+					ID:         "empty_url_node",
+					Label:      &graph.Label{Name: "Empty URL Node"},
+					Shape:      graph.ShapeHTML,
+					ExploreURL: "",
+					Style:      &graph.NodeStyle{FillColor: "#438DD5"},
+				},
+			},
+		}
+
+		output, err := render.RenderDOT(g)
+		require.NoError(t, err)
+		assert.Contains(t, string(output), "empty_url_node")
+		// Empty URL should not produce a URL attribute
+		assert.NotContains(t, string(output), `URL=""`)
+	})
+}

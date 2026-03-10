@@ -135,6 +135,11 @@ func createNode(cg *cgraph.Graph, node *graph.Node) (*cgraph.Node, error) {
 		cn.SetStyle(cgraph.DashedNodeStyle)
 	}
 
+	// Set URL for clickable nodes (explore links)
+	if node.ExploreURL != "" {
+		cn.SetURL(node.ExploreURL)
+	}
+
 	return cn, nil
 }
 
