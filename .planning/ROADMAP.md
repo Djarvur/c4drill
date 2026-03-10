@@ -64,7 +64,11 @@ Plans:
   3. Edges between units at different nesting depths are visible in the diagram
   4. Output file is saved with `{basename}.expanded.{ext}` naming convention
   5. Existing C1/C2/C3 view generation produces identical output when `--expanded` is not used
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — Add core data structures and view generation
+- [ ] 08-02-PLAN.md — Add CLI flag integration and recursive cluster building
 
 ### Phase 9: No Orphan Units
 **Goal**: All units in the architecture must be connected via links (no isolated units)
@@ -92,9 +96,9 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 5. Navigation | v1.0 | 2/2 | Complete | 2026-03-10 |
 | 6. CLI & Polish | v1.0 | 2/2 | Complete | 2026-03-10 |
 | 7. AI Documentation | v1.1 | 0/2 | Ready to execute | - |
-| 8. All-Expanded Mode | v1.1 | 0/TBD | Not started | - |
+| 8. All-Expanded Mode | v1.1 | 0/2 | Ready to execute | - |
 | 9. No Orphan Units | v1.1 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-03-09*
-*Last updated: 2026-03-10 - Phase 7 planned (2 plans)*
+*Last updated: 2026-03-11 - Phase 8 planned (2 plans)*
