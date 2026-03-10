@@ -125,7 +125,12 @@ Plans:
   3. All diagrams include breadcrumb trail showing navigation path
   4. Relative paths are used for explore and back links (portable across contexts)
 
-**Plans**: TBD
+**Plans**: 3 plans in 2 waves
+
+Plans:
+- [ ] 05-01-PLAN.md - Navigation types and graph builder extension: Navigation/BackLink/BreadcrumbItem types, BuildGraphWithPath, path computation (Wave 1)
+- [ ] 05-02-PLAN.md - Renderer extension: SetURL for explore links, navigation bar label with back-link and breadcrumbs (Wave 1)
+- [ ] 05-03-PLAN.md - Integration tests and quality verification (Wave 2)
 
 ### Phase 6: CLI & Polish
 
@@ -155,10 +160,10 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. Validation | 2/3 | Done | 2026-03-09 |
 | 3. Views & Graphs | 3/3 | Done | 2026-03-09 |
 | 4. Rendering & Output | 3/3 | Done | 2026-03-10 |
-| 5. Navigation | 0/TBD | Not started | - |
+| 5. Navigation | 0/3 | Not started | - |
 | 6. CLI & Polish | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-03-09*
 *Granularity: standard*
-*Last updated: 2026-03-10 - Plan 04-03 completed*
+*Last updated: 2026-03-10 - Phase 5 plans created*
