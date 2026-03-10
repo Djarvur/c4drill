@@ -69,18 +69,18 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **OUTP-01**: Context level renders to {basename}.{format}
 - [x] **OUTP-02**: Expanded units render to {basename}/{unit-name}.{format}
-- [ ] **OUTP-03**: Output directory controlled by --output flag (default: current directory)
+- [x] **OUTP-03**: Output directory controlled by --output flag (default: current directory)
 - [x] **OUTP-04**: Directory structure created recursively as needed
 - [x] **OUTP-05**: Relative paths used for explore and back links
 
 ### CLI
 
-- [ ] **CLII-01**: Single command: c4drill <input.toml> [flags]
-- [ ] **CLII-02**: --format flag selects output format (dot|svg)
-- [ ] **CLII-03**: --output flag specifies output directory
+- [x] **CLII-01**: Single command: c4drill <input.toml> [flags]
+- [x] **CLII-02**: --format flag selects output format (dot|svg)
+- [x] **CLII-03**: --output flag specifies output directory
 - [ ] **CLII-04**: Help text with usage examples
-- [ ] **CLII-05**: Exit code 0 on success, non-zero on failure
-- [ ] **CLII-06**: Errors written to stderr
+- [x] **CLII-05**: Exit code 0 on success, non-zero on failure
+- [x] **CLII-06**: Errors written to stderr
 
 ### Development Environment
 
@@ -185,13 +185,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REND-05 | Phase 5 | Complete |
 | REND-06 | Phase 5 | Complete |
 | OUTP-05 | Phase 5 | Complete |
-| CLII-01 | Phase 6 | Pending |
-| CLII-02 | Phase 6 | Pending |
-| CLII-03 | Phase 6 | Pending |
+| CLII-01 | Phase 6 | Complete |
+| CLII-02 | Phase 6 | Complete |
+| CLII-03 | Phase 6 | Complete |
 | CLII-04 | Phase 6 | Pending |
-| CLII-05 | Phase 6 | Pending |
-| CLII-06 | Phase 6 | Pending |
-| OUTP-03 | Phase 6 | Pending |
+| CLII-05 | Phase 6 | Complete |
+| CLII-06 | Phase 6 | Complete |
+| OUTP-03 | Phase 6 | Complete |
 | QUAL-01 | All Phases | Complete |
 | QUAL-02 | All Phases | Complete |
 | QUAL-03 | All Phases | Complete |
@@ -214,4 +214,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-09*
-*Last updated: 2026-03-09 after roadmap creation*
+*Last updated: 2026-03-10 after Plan 06-01 completed*

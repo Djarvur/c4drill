@@ -150,7 +150,7 @@ Plans:
 **Plans**: 2 plans in 2 waves
 
 Plans:
-- [ ] 06-01-PLAN.md - Cobra CLI with flags and pipeline orchestration (Wave 1)
+- [x] 06-01-PLAN.md - Cobra CLI with flags and pipeline orchestration (Wave 1)
 - [ ] 06-02-PLAN.md - Integration tests and quality verification with checkpoint (Wave 2)
 
 ## Progress
@@ -165,9 +165,9 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Views & Graphs | 3/3 | Done | 2026-03-09 |
 | 4. Rendering & Output | 3/3 | Done | 2026-03-10 |
 | 5. Navigation | 3/3 | Complete    | 2026-03-10 |
-| 6. CLI & Polish | 0/2 | Not started | - |
+| 6. CLI & Polish | 1/2 | In progress | - |
 
 ---
 *Roadmap created: 2026-03-09*
 *Granularity: standard*
-*Last updated: 2026-03-10 - Phase 6 planned*
+*Last updated: 2026-03-10 - Plan 06-01 completed*
