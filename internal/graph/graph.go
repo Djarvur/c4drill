@@ -98,6 +98,8 @@ type Cluster struct {
 	Label *Label
 	// Nodes are the nodes inside this cluster.
 	Nodes []*Node
+	// Clusters are nested clusters inside this cluster (for all-expanded mode).
+	Clusters []*Cluster
 	// Style contains cluster styling attributes.
 	Style *NodeStyle
 }
