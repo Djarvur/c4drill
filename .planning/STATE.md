@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: TBD
+milestone: v1.1
+milestone_name: AI-Ready
 status: planning
-stopped_at: Milestone v1.0 completed
-last_updated: "2026-03-10T20:45:00Z"
-last_activity: "2026-03-10 — v1.0 shipped"
+stopped_at: Defining requirements
+last_updated: "2026-03-10T21:00:00Z"
+last_activity: "2026-03-10 — Milestone v1.1 started"
 progress:
   total_phases: 0
   completed_phases: 0
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** Planning v2.0
+**Current focus:** v1.1 AI-Ready — TOML manual + all-expanded mode
 
 ## Current Position
 
-Milestone: v1.0 shipped on 2026-03-10
-Status: Ready for next milestone
-Last activity: 2026-03-10 — v1.0 shipped
+Milestone: v1.1 AI-Ready
+Status: Defining requirements
+Last activity: 2026-03-10 — Milestone v1.1 started
 
-Progress: v1.0 complete
+Progress: Planning
 
 ## v1.0 Summary
 
@@ -48,6 +48,9 @@ Progress: v1.0 complete
 - Interactive navigation with explore links, back-links, and breadcrumbs
 - Production-ready Cobra CLI with help text and error handling
 
-## Next Steps
+## v1.1 Goals
 
-Run `/gsd:new-milestone` to start v2.0 planning.
+**Target features:**
+
+1. TOML Language Manual (AI-focused CLAUDE.md + human reference)
+2. All-Expanded Mode (`--expanded` flag, cross-level edges, `{basename}.expanded.{ext}`)

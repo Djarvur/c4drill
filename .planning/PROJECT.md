@@ -24,7 +24,18 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 ### Active
 
-(Next milestone requirements will be added via /gsd:new-milestone)
+- [ ] TOML Language Manual for AI-assisted diagram generation
+- [ ] All-Expanded rendering mode with cross-level edges
+
+## Current Milestone: v1.1 AI-Ready
+
+**Goal:** Make C4Drill AI-friendly with documentation and single-view expanded diagrams
+
+**Target features:**
+
+- AI-focused prompt file (CLAUDE.md) + human reference for TOML authoring
+- `--expanded` CLI flag to render all units expanded with all cross-level edges
+- Output saved to `{basename}.expanded.{ext}`
 
 ### Out of Scope
 
@@ -125,4 +136,4 @@ link = { "target_unit" = { reverse = false, equal = false, color = "black", styl
 - **Shapes**: Person, DB, Queue, System each have distinct record shapes
 
 ---
-*Last updated: 2026-03-10 after v1.0 milestone*
+*Last updated: 2026-03-10 after v1.1 milestone started*
