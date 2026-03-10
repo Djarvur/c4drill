@@ -94,7 +94,10 @@ linkFrom = { ... }              # Optional: Incoming links
 
 ### Nesting (C2/C3 Diagrams)
 
-Use dotted notation for nested units. Only `system`, `systemExternal`, and `box` types can have subunits:
+Use dotted notation for nested units. Types that can have subunits:
+- `system`, `systemExternal` — can contain containers or boxes
+- `container` — can contain components or boxes
+- `box` — can contain any unit type (grouping container)
 
 ```toml
 [mainapp]                       # C1: System
@@ -105,11 +108,15 @@ name = "Main Application"
 type = "container"
 name = "API Service"
 
-[mainapp.api.handlers]          # C3: Component
+[mainapp.api.handlers]          # C3: Component (inside container)
 type = "component"
 name = "HTTP Handlers"
 
-[mainapp.db]                    # C2: Container database
+[mainapp.api.services]          # C3: Another component
+type = "component"
+name = "Business Services"
+
+[mainapp.db]                    # C2: Container database (no subunits)
 type = "containerDb"
 name = "Database"
 ```
@@ -231,7 +238,7 @@ type = "container"
 link = { "mainapp.api" = { description = "Uses" } }
 ```
 
-**Rule 4: Subunits only for system, systemExternal, and box types**
+**Rule 4: Subunits only for system, systemExternal, box, and container types**
 ```toml
 # ❌ INVALID: Database cannot have subunits
 [postgres]
@@ -240,7 +247,7 @@ type = "db"
 [postgres.replica]
 type = "db"
 
-# ✅ VALID: Use box for grouping
+# ✅ VALID: Use box for grouping databases
 [postgres]
 type = "box"
 name = "Database Cluster"
@@ -252,6 +259,15 @@ name = "Primary"
 [postgres.replica]
 type = "db"
 name = "Replica"
+
+# ✅ VALID: Container can have component subunits
+[api]
+type = "container"
+name = "API"
+
+[api.handlers]
+type = "component"
+name = "Handlers"
 ```
 
 ---

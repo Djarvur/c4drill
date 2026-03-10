@@ -45,7 +45,8 @@ func ValidateReferences(index map[string]*UnitInfo) ValidationErrors {
 }
 
 // ValidateSubunitRules checks that only allowed types have subunits.
-// Only system, systemExternal, and box types can have subunits.
+// System-level types (system, systemExternal, box) and containers can have subunits.
+// Container variants (containerDb, containerQueue) cannot have subunits.
 // Returns all errors found (not fail-fast).
 func ValidateSubunitRules(index map[string]*UnitInfo) ValidationErrors {
 	var errors ValidationErrors
@@ -55,6 +56,7 @@ func ValidateSubunitRules(index map[string]*UnitInfo) ValidationErrors {
 		model.TypeSystem:         true,
 		model.TypeSystemExternal: true,
 		model.TypeBox:            true,
+		model.TypeContainer:      true,
 	}
 
 	for path, info := range index {

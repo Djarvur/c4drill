@@ -172,7 +172,6 @@ func TestValidateSubunitRules_RejectsInvalidTypes(t *testing.T) {
 		{"dbExternal", model.TypeDbExternal},
 		{"queue", model.TypeQueue},
 		{"queueExternal", model.TypeQueueExternal},
-		{"container", model.TypeContainer},
 		{"containerDb", model.TypeContainerDb},
 		{"containerQueue", model.TypeContainerQueue},
 		{"component", model.TypeComponent},
@@ -218,6 +217,7 @@ func TestValidateSubunitRules_AllowsValidTypes(t *testing.T) {
 		{"system", model.TypeSystem},
 		{"systemExternal", model.TypeSystemExternal},
 		{"box", model.TypeBox},
+		{"container", model.TypeContainer},
 	}
 
 	for _, tc := range validTypes {
