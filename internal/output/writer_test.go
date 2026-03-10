@@ -38,6 +38,7 @@ func TestWriterC1FlatPath(t *testing.T) {
 	assert.FileExists(t, expectedPath)
 
 	// Verify content
+	//nolint:gosec // G304: Test reads from temp directory created by t.TempDir()
 	content, err := os.ReadFile(expectedPath)
 	require.NoError(t, err)
 	assert.Equal(t, data, content)
@@ -59,6 +60,7 @@ func TestWriterC2C3NestedPath(t *testing.T) {
 	assert.FileExists(t, expectedPath)
 
 	// Verify content
+	//nolint:gosec // G304: Test reads from temp directory created by t.TempDir()
 	content, err := os.ReadFile(expectedPath)
 	require.NoError(t, err)
 	assert.Equal(t, data, content)
@@ -194,10 +196,12 @@ func TestWriterDifferentFormats(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify both files exist with correct extensions
+	//nolint:gosec // G304: Test reads from temp directory created by t.TempDir()
 	dotContent, err := os.ReadFile(filepath.Join(tmpDir, "system.dot"))
 	require.NoError(t, err)
 	assert.Equal(t, dotData, dotContent)
 
+	//nolint:gosec // G304: Test reads from temp directory created by t.TempDir()
 	svgContent, err := os.ReadFile(filepath.Join(tmpDir, "system.svg"))
 	require.NoError(t, err)
 	assert.Equal(t, svgData, svgContent)

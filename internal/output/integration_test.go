@@ -96,6 +96,7 @@ func TestIntegrationWriteRenderedDOTToC1Path(t *testing.T) {
 	assert.FileExists(t, expectedPath, "DOT file should exist at C1 path")
 
 	// Read file and verify content matches rendered output
+	//nolint:gosec // G304: Test reads from temp directory created by t.TempDir()
 	content, err := os.ReadFile(expectedPath)
 	require.NoError(t, err, "Should be able to read written file")
 	assert.Equal(t, dotData, content, "Written content should match rendered output")
@@ -125,6 +126,7 @@ func TestIntegrationWriteRenderedSVGToC2Path(t *testing.T) {
 	assert.FileExists(t, expectedPath, "SVG file should exist at C2/C3 nested path")
 
 	// Read file and verify content matches rendered output
+	//nolint:gosec // G304: Test reads from temp directory created by t.TempDir()
 	content, err := os.ReadFile(expectedPath)
 	require.NoError(t, err, "Should be able to read written file")
 	assert.Equal(t, svgData, content, "Written content should match rendered output")
@@ -208,6 +210,7 @@ func TestIntegrationWrittenFilesContainValidDOT(t *testing.T) {
 	require.NoError(t, err, "Write should not error")
 
 	// Read back and verify DOT structure
+	//nolint:gosec // G304: Test reads from temp directory created by t.TempDir()
 	content, err := os.ReadFile(filepath.Join(tmpDir, "diagram.dot"))
 	require.NoError(t, err, "Should be able to read written file")
 
@@ -233,6 +236,7 @@ func TestIntegrationWrittenFilesContainValidSVG(t *testing.T) {
 	require.NoError(t, err, "Write should not error")
 
 	// Read back and verify SVG structure
+	//nolint:gosec // G304: Test reads from temp directory created by t.TempDir()
 	content, err := os.ReadFile(filepath.Join(tmpDir, "diagram.svg"))
 	require.NoError(t, err, "Should be able to read written file")
 
@@ -273,10 +277,12 @@ func TestIntegrationFullEndToEndPipeline(t *testing.T) {
 	assert.FileExists(t, filepath.Join(tmpDir, "architecture", "mainapp.svg"), "C2 file should exist")
 
 	// Verify content is valid SVG
+	//nolint:gosec // G304: Test reads from temp directory created by t.TempDir()
 	c1Content, err := os.ReadFile(filepath.Join(tmpDir, "architecture.svg"))
 	require.NoError(t, err)
 	assert.Contains(t, string(c1Content), "<svg", "C1 should be valid SVG")
 
+	//nolint:gosec // G304: Test reads from temp directory created by t.TempDir()
 	c2Content, err := os.ReadFile(filepath.Join(tmpDir, "architecture", "mainapp.svg"))
 	require.NoError(t, err)
 	assert.Contains(t, string(c2Content), "<svg", "C2 should be valid SVG")
@@ -306,10 +312,12 @@ func TestIntegrationBothFormatsSameDiagram(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify both files exist with correct content
+	//nolint:gosec // G304: Test reads from temp directory created by t.TempDir()
 	dotContent, err := os.ReadFile(filepath.Join(tmpDir, "diagram.dot"))
 	require.NoError(t, err)
 	assert.Equal(t, dotData, dotContent)
 
+	//nolint:gosec // G304: Test reads from temp directory created by t.TempDir()
 	svgContent, err := os.ReadFile(filepath.Join(tmpDir, "diagram.svg"))
 	require.NoError(t, err)
 	assert.Equal(t, svgData, svgContent)
