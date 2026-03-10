@@ -78,7 +78,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **CLII-01**: Single command: c4drill <input.toml> [flags]
 - [x] **CLII-02**: --format flag selects output format (dot|svg)
 - [x] **CLII-03**: --output flag specifies output directory
-- [ ] **CLII-04**: Help text with usage examples
+- [x] **CLII-04**: Help text with usage examples
 - [x] **CLII-05**: Exit code 0 on success, non-zero on failure
 - [x] **CLII-06**: Errors written to stderr
 
@@ -188,7 +188,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLII-01 | Phase 6 | Complete |
 | CLII-02 | Phase 6 | Complete |
 | CLII-03 | Phase 6 | Complete |
-| CLII-04 | Phase 6 | Pending |
+| CLII-04 | Phase 6 | Complete |
 | CLII-05 | Phase 6 | Complete |
 | CLII-06 | Phase 6 | Complete |
 | OUTP-03 | Phase 6 | Complete |
