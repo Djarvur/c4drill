@@ -13,7 +13,7 @@ Requirements for AI-Ready milestone. Each maps to roadmap phases.
 - [x] **AIDOC-02**: CLAUDE.md includes 3-5 working examples (minimal, medium, complex architectures)
 - [x] **AIDOC-03**: CLAUDE.md documents all validation rules with clear error explanations
 - [x] **AIDOC-04**: CLAUDE.md provides prompt patterns for AI assistants to generate valid TOML
-- [ ] **AIDOC-05**: All TOML examples in CLAUDE.md are validated by CI to prevent drift
+- [x] **AIDOC-05**: All TOML examples in CLAUDE.md are validated by CI to prevent drift
 
 ### All-Expanded Mode
 
@@ -59,7 +59,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AIDOC-02 | Phase 7 | Complete |
 | AIDOC-03 | Phase 7 | Complete |
 | AIDOC-04 | Phase 7 | Complete |
-| AIDOC-05 | Phase 7 | Pending |
+| AIDOC-05 | Phase 7 | Complete |
 | EXPD-01 | Phase 8 | Pending |
 | EXPD-02 | Phase 8 | Pending |
 | EXPD-03 | Phase 8 | Pending |
