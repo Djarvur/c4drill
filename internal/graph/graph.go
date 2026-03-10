@@ -44,6 +44,8 @@ type Graph struct {
 	Clusters []*Cluster
 	// Legend contains legend information for the diagram.
 	Legend *Legend
+	// Navigation contains breadcrumb and back-link info (nil for C1).
+	Navigation *Navigation
 }
 
 // Node represents a single node in the graph.
@@ -60,6 +62,8 @@ type Node struct {
 	IsExternal bool
 	// IsInCluster indicates if this node is inside a cluster.
 	IsInCluster bool
+	// ExploreURL is the relative path for drill-down (empty if not expandable).
+	ExploreURL string
 }
 
 // Edge represents a connection between two nodes.
