@@ -9,10 +9,10 @@ Requirements for AI-Ready milestone. Each maps to roadmap phases.
 
 ### AI Documentation (CLAUDE.md)
 
-- [ ] **AIDOC-01**: CLAUDE.md contains complete TOML schema reference with all unit types, fields, and link syntax
-- [ ] **AIDOC-02**: CLAUDE.md includes 3-5 working examples (minimal, medium, complex architectures)
-- [ ] **AIDOC-03**: CLAUDE.md documents all validation rules with clear error explanations
-- [ ] **AIDOC-04**: CLAUDE.md provides prompt patterns for AI assistants to generate valid TOML
+- [x] **AIDOC-01**: CLAUDE.md contains complete TOML schema reference with all unit types, fields, and link syntax
+- [x] **AIDOC-02**: CLAUDE.md includes 3-5 working examples (minimal, medium, complex architectures)
+- [x] **AIDOC-03**: CLAUDE.md documents all validation rules with clear error explanations
+- [x] **AIDOC-04**: CLAUDE.md provides prompt patterns for AI assistants to generate valid TOML
 - [ ] **AIDOC-05**: All TOML examples in CLAUDE.md are validated by CI to prevent drift
 
 ### All-Expanded Mode
@@ -55,10 +55,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AIDOC-01 | Phase 7 | Pending |
-| AIDOC-02 | Phase 7 | Pending |
-| AIDOC-03 | Phase 7 | Pending |
-| AIDOC-04 | Phase 7 | Pending |
+| AIDOC-01 | Phase 7 | Complete |
+| AIDOC-02 | Phase 7 | Complete |
+| AIDOC-03 | Phase 7 | Complete |
+| AIDOC-04 | Phase 7 | Complete |
 | AIDOC-05 | Phase 7 | Pending |
 | EXPD-01 | Phase 8 | Pending |
 | EXPD-02 | Phase 8 | Pending |
