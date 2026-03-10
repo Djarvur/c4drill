@@ -55,3 +55,23 @@ func (w *Writer) Write(basename, unitPath, format string, data []byte) error {
 
 	return nil
 }
+
+// WriteExpanded writes expanded diagram data to {basename}.expanded.{format}.
+// This is used for the --expanded mode that generates a single diagram with all units.
+func (w *Writer) WriteExpanded(basename, format string, data []byte) error {
+	relPath := fmt.Sprintf("%s.expanded.%s", basename, format)
+	fullPath := filepath.Join(w.baseDir, relPath)
+
+	// Create parent directories (fail fast on error)
+	dir := filepath.Dir(fullPath)
+	if err := os.MkdirAll(dir, dirPermission); err != nil {
+		return fmt.Errorf("create output directory %s: %w", dir, err)
+	}
+
+	// Write file (fail fast on error)
+	if err := os.WriteFile(fullPath, data, filePermission); err != nil {
+		return fmt.Errorf("write output file %s: %w", fullPath, err)
+	}
+
+	return nil
+}

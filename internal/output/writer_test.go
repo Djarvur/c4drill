@@ -256,3 +256,103 @@ func TestWriterErrorWrapping(t *testing.T) {
 		errors.Is(err, os.ErrExist) || strings.Contains(err.Error(), "not a directory"),
 		"error should wrap underlying OS error")
 }
+
+// Tests for WriteExpanded
+
+func TestWriteExpanded_CreatesFileWithExpandedExtension(t *testing.T) {
+	t.Parallel()
+
+	// Test: WriteExpanded creates file at {basename}.expanded.{format}
+	tmpDir := t.TempDir()
+	w := output.NewWriter(tmpDir)
+
+	data := []byte("expanded diagram content")
+	err := w.WriteExpanded("system", "svg", data)
+	require.NoError(t, err)
+
+	// Verify file exists at expected path
+	expectedPath := filepath.Join(tmpDir, "system.expanded.svg")
+	assert.FileExists(t, expectedPath)
+
+	// Verify content
+	//nolint:gosec // G304: Test reads from temp directory created by t.TempDir()
+	content, err := os.ReadFile(expectedPath)
+	require.NoError(t, err)
+	assert.Equal(t, data, content)
+}
+
+func TestWriteExpanded_DifferentFormats(t *testing.T) {
+	t.Parallel()
+
+	// Test: WriteExpanded works with different formats
+	tmpDir := t.TempDir()
+	w := output.NewWriter(tmpDir)
+
+	dotData := []byte("digraph { }")
+	svgData := []byte("<svg></svg>")
+
+	err := w.WriteExpanded("system", "dot", dotData)
+	require.NoError(t, err)
+
+	err = w.WriteExpanded("system", "svg", svgData)
+	require.NoError(t, err)
+
+	// Verify both files exist with correct extensions
+	assert.FileExists(t, filepath.Join(tmpDir, "system.expanded.dot"))
+	assert.FileExists(t, filepath.Join(tmpDir, "system.expanded.svg"))
+}
+
+func TestWriteExpanded_CreatesParentDirectory(t *testing.T) {
+	t.Parallel()
+
+	// Test: WriteExpanded creates parent directories if needed
+	tmpDir := t.TempDir()
+	nestedDir := filepath.Join(tmpDir, "nested", "deep", "path")
+	w := output.NewWriter(nestedDir)
+
+	data := []byte("content")
+	err := w.WriteExpanded("system", "svg", data)
+	require.NoError(t, err)
+
+	// Verify file was created in nested directory
+	expectedPath := filepath.Join(nestedDir, "system.expanded.svg")
+	assert.FileExists(t, expectedPath)
+}
+
+func TestWriteExpanded_EmptyBasename(t *testing.T) {
+	t.Parallel()
+
+	// Edge case: Empty basename should still work
+	tmpDir := t.TempDir()
+	w := output.NewWriter(tmpDir)
+
+	data := []byte("content")
+	err := w.WriteExpanded("", "svg", data)
+	require.NoError(t, err)
+
+	// File should be at tmpDir/.expanded.svg
+	expectedPath := filepath.Join(tmpDir, ".expanded.svg")
+	assert.FileExists(t, expectedPath)
+}
+
+func TestWriteExpanded_OverwritesExistingFile(t *testing.T) {
+	t.Parallel()
+
+	// Test: WriteExpanded overwrites existing file
+	tmpDir := t.TempDir()
+	w := output.NewWriter(tmpDir)
+
+	// Write initial content
+	err := w.WriteExpanded("system", "svg", []byte("original content"))
+	require.NoError(t, err)
+
+	// Overwrite with new content
+	err = w.WriteExpanded("system", "svg", []byte("new content"))
+	require.NoError(t, err)
+
+	// Verify new content
+	//nolint:gosec // G304: Test reads from temp directory created by t.TempDir()
+	content, err := os.ReadFile(filepath.Join(tmpDir, "system.expanded.svg"))
+	require.NoError(t, err)
+	assert.Equal(t, []byte("new content"), content)
+}
