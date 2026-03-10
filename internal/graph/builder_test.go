@@ -372,6 +372,260 @@ func TestBuildGraphWithPathSetsExploreURL(t *testing.T) {
 }
 
 //nolint:funlen // Test functions with model setup are naturally longer
+func TestBuildExpandedGraph(t *testing.T) {
+	t.Parallel()
+
+	// Test 1: buildNestedCluster creates cluster with correct ID (cluster_path)
+	t.Run("creates cluster with correct ID", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"mainapp": {
+					Type: model.TypeSystem,
+					Name: "Main App",
+					Subunits: map[string]*model.Unit{
+						"api": {
+							Type: model.TypeContainer,
+							Name: "API",
+						},
+					},
+				},
+			},
+		}
+
+		v := view.GenerateExpandedView(m)
+		require.NotNil(t, v)
+
+		g := graph.BuildExpandedGraph(v)
+		require.NotNil(t, g)
+
+		// Top-level unit with subunits should become a cluster
+		require.Len(t, g.Clusters, 1)
+		assert.Equal(t, "cluster_mainapp", g.Clusters[0].ID)
+	})
+
+	// Test 2: buildNestedCluster recursively builds nested clusters for subunits
+	t.Run("recursively builds nested clusters", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"mainapp": {
+					Type: model.TypeSystem,
+					Name: "Main App",
+					Subunits: map[string]*model.Unit{
+						"api": {
+							Type: model.TypeContainer,
+							Name: "API",
+							Subunits: map[string]*model.Unit{
+								"auth": {
+									Type: model.TypeComponent,
+									Name: "Auth",
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		v := view.GenerateExpandedView(m)
+		g := graph.BuildExpandedGraph(v)
+
+		require.NotNil(t, g)
+		require.Len(t, g.Clusters, 1)
+
+		// Top-level cluster
+		topCluster := g.Clusters[0]
+		assert.Equal(t, "cluster_mainapp", topCluster.ID)
+
+		// Nested cluster for api (has subunits)
+		require.Len(t, topCluster.Clusters, 1)
+		nestedCluster := topCluster.Clusters[0]
+		assert.Equal(t, "cluster_mainapp.api", nestedCluster.ID)
+	})
+
+	// Test 3: buildNestedCluster adds leaf subunits as nodes (not clusters)
+	t.Run("adds leaf subunits as nodes", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"mainapp": {
+					Type: model.TypeSystem,
+					Name: "Main App",
+					Subunits: map[string]*model.Unit{
+						"api": {
+							Type: model.TypeContainer,
+							Name: "API",
+							// No subunits - leaf
+						},
+						"web": {
+							Type: model.TypeContainer,
+							Name: "Web",
+							// No subunits - leaf
+						},
+					},
+				},
+			},
+		}
+
+		v := view.GenerateExpandedView(m)
+		g := graph.BuildExpandedGraph(v)
+
+		require.NotNil(t, g)
+		require.Len(t, g.Clusters, 1)
+
+		cluster := g.Clusters[0]
+		// Both leaf subunits should be nodes, not clusters
+		assert.Len(t, cluster.Nodes, 2)
+		assert.Len(t, cluster.Clusters, 0)
+
+		// Verify node IDs
+		nodeIDs := make(map[string]bool)
+		for _, node := range cluster.Nodes {
+			nodeIDs[node.ID] = true
+		}
+		assert.True(t, nodeIDs["mainapp.api"])
+		assert.True(t, nodeIDs["mainapp.web"])
+	})
+
+	// Test 4: BuildExpandedGraph produces graph with deeply nested clusters
+	t.Run("produces deeply nested clusters", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"system": {
+					Type: model.TypeSystem,
+					Name: "System",
+					Subunits: map[string]*model.Unit{
+						"container": {
+							Type: model.TypeContainer,
+							Name: "Container",
+							Subunits: map[string]*model.Unit{
+								"component": {
+									Type: model.TypeComponent,
+									Name: "Component",
+									Subunits: map[string]*model.Unit{
+										"subcomponent": {
+											Type: model.TypeComponent,
+											Name: "SubComponent",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		v := view.GenerateExpandedView(m)
+		g := graph.BuildExpandedGraph(v)
+
+		require.NotNil(t, g)
+		require.Len(t, g.Clusters, 1)
+
+		// Level 1: system
+		l1 := g.Clusters[0]
+		assert.Equal(t, "cluster_system", l1.ID)
+		require.Len(t, l1.Clusters, 1)
+
+		// Level 2: container
+		l2 := l1.Clusters[0]
+		assert.Equal(t, "cluster_system.container", l2.ID)
+		require.Len(t, l2.Clusters, 1)
+
+		// Level 3: component
+		l3 := l2.Clusters[0]
+		assert.Equal(t, "cluster_system.container.component", l3.ID)
+		// subcomponent is a leaf, so it's a node
+		require.Len(t, l3.Nodes, 1)
+		assert.Equal(t, "system.container.component.subcomponent", l3.Nodes[0].ID)
+	})
+
+	// Test 5: BuildExpandedGraph handles mixed top-level (clusters + nodes)
+	t.Run("handles mixed top-level units", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"system": {
+					Type: model.TypeSystem,
+					Name: "System",
+					Subunits: map[string]*model.Unit{
+						"api": {Type: model.TypeContainer, Name: "API"},
+					},
+				},
+				"db": {
+					Type: model.TypeDb,
+					Name: "Database",
+					// No subunits - should be a node
+				},
+			},
+		}
+
+		v := view.GenerateExpandedView(m)
+		g := graph.BuildExpandedGraph(v)
+
+		require.NotNil(t, g)
+
+		// System with subunits -> cluster
+		require.Len(t, g.Clusters, 1)
+		assert.Equal(t, "cluster_system", g.Clusters[0].ID)
+
+		// DB without subunits -> node
+		require.Len(t, g.Nodes, 1)
+		assert.Equal(t, "db", g.Nodes[0].ID)
+	})
+
+	// Test 6: BuildExpandedGraph builds edges for cross-level connections
+	t.Run("builds edges for cross-level connections", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"system": {
+					Type: model.TypeSystem,
+					Name: "System",
+					Subunits: map[string]*model.Unit{
+						"api": {
+							Type: model.TypeContainer,
+							Name: "API",
+							Links: map[string]model.Link{
+								"db": {Technology: "SQL"},
+							},
+						},
+					},
+				},
+				"db": {
+					Type: model.TypeDb,
+					Name: "Database",
+				},
+			},
+		}
+
+		v := view.GenerateExpandedView(m)
+		g := graph.BuildExpandedGraph(v)
+
+		require.NotNil(t, g)
+
+		// Edge should exist between nested api and top-level db
+		require.Len(t, g.Edges, 1)
+		assert.Equal(t, "system.api", g.Edges[0].Source)
+		assert.Equal(t, "db", g.Edges[0].Target)
+	})
+}
+
+//nolint:funlen // Test functions with model setup are naturally longer
 func TestBuildGraphWithPathSetsNavigation(t *testing.T) {
 	t.Parallel()
 
