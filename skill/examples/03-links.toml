@@ -1,0 +1,86 @@
+# Link Syntax Example
+# Demonstrates all link attributes and variations
+
+[properties]
+name = "Link Examples"
+description = "Various link configurations"
+
+# Basic units
+[customer]
+type = "person"
+name = "Customer"
+link = { "webapp" = { arrow = "forward", technology = "HTTPS", description = "Browses" } }
+
+[webapp]
+type = "system"
+name = "Web Application"
+technology = "React"
+
+# Multiple links with different attributes
+[webapp.link.api]
+arrow = "reverse"
+technology = "REST/JSON"
+description = "Queries API"
+color = "blue"
+
+[webapp.link.cache]
+labelPosition = "tail"
+technology = "Redis"
+description = "Session cache"
+
+[api]
+type = "system"
+name = "API Gateway"
+technology = "Node.js"
+
+[api.link.cache]
+arrow = "bidirectional"
+technology = "Redis Protocol"
+description = "Caches/Retrieves"
+style = "dashed"
+
+[api.link.analytics]
+arrow = "none"
+technology = "HTTP POST"
+description = "Sends events"
+color = "gray"
+style = "dotted"
+
+[api.link.database]
+rank = "reverse"
+technology = "SQL"
+description = "Queries"
+color = "green"
+
+[api.link.payment]
+rank = "equal"
+technology = "HTTPS"
+description = "Processes payments"
+color = "orange"
+style = "solid"
+
+[api.linkFrom.payment]
+labelPosition = "head"
+technology = "Webhook"
+description = "Payment callback"
+color = "purple"
+
+[payment]
+type = "systemExternal"
+name = "Payment Service"
+description = "External payment processor"
+
+[analytics]
+type = "systemExternal"
+name = "Analytics"
+description = "Usage analytics platform"
+
+[database]
+type = "db"
+name = "Database"
+technology = "PostgreSQL"
+
+[cache]
+type = "db"
+name = "Cache"
+technology = "Redis"
