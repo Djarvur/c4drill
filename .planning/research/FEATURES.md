@@ -1,194 +1,327 @@
-# Feature Research
+# Feature Landscape: v1.1 AI-Ready
 
-**Domain:** C4 Architecture Diagram Generation Tools
-**Researched:** 2026-03-09
-**Confidence:** MEDIUM
+**Domain:** C4Drill v1.1 Milestone Features
+**Researched:** 2026-03-10
+**Scope:** NEW features only (TOML Language Manual, All-Expanded Mode)
+**Confidence:** MEDIUM (web search rate-limited, based on existing knowledge and codebase analysis)
 
-## Feature Landscape
+## Executive Summary
 
-### Table Stakes (Users Expect These)
+This research covers two specific features for the v1.1 milestone:
 
-Features users assume exist. Missing these = product feels incomplete.
+1. **TOML Language Manual (AI-focused)** — A CLAUDE.md file that teaches AI assistants how to write valid C4Drill TOML, plus a human reference document
+2. **All-Expanded Mode** — A `--expanded` CLI flag that renders the complete architecture in a single view with all units expanded and cross-level edges visible
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| DSL/Config file parsing | All C4 tools use "diagrams as code" approach | MEDIUM | TOML parsing in Go is straightforward with libraries like pelletier/go-toml |
-| C1-C3 layer support | Core C4 model layers are the minimum viable scope | MEDIUM | Context, Containers, Components - each has distinct visualization |
-| Basic unit types (person, system, db, queue) | Standard C4 notation elements | LOW | Record shapes with distinct styling per type |
-| Relationships/links between units | Diagrams without connections are useless | MEDIUM | Directed edges with labels, styling options |
-| Auto-layout (GraphViz) | Manual positioning is tedious and brittle | LOW | Let GraphViz handle layout via dot algorithm |
-| SVG output | Vector format is standard for diagrams | MEDIUM | Via go-graphviz library |
-| DOT output | Debugging and pipeline compatibility | LOW | Native GraphViz format, intermediate representation |
-| Validation with error messages | Broken references silently fail without it | MEDIUM | Must validate unit references, type rules, subunit constraints |
+Both features build on the existing v1.0 foundation (parser, validator, view generator, graph builder, renderer).
 
-### Differentiators (Competitive Advantage)
+---
 
-Features that set the product apart. Not required, but valuable.
+## Feature 1: TOML Language Manual (AI-Focused)
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| Collapsed/expanded views | Drill-down navigation without separate files | HIGH | Toggle between summary and detailed views |
-| Interactive explore links | Click-through navigation between diagram levels | MEDIUM | Generates clickable links to subunit diagrams |
-| Themes/color schemes | Consistent branding, visual differentiation | LOW | Inheritable styling from root properties |
-| Tags/stereotypes | Categorize and filter elements | MEDIUM | Apply metadata to units for grouping |
-| Legend generation | Auto-document notation and color meanings | MEDIUM | Useful for complex diagrams |
-| Sprites/icons | Visual distinction beyond shapes | HIGH | Custom icons for specific tech/roles |
-| External/internal variants | Clear visual distinction for boundary elements | LOW | person vs personExternal, system vs systemExternal |
-| Box grouping | Logical clustering without C4 hierarchy | MEDIUM | Generic container for visual organization |
-| Single-file definition | No complex project structures | LOW | All architecture in one TOML file |
-| Native Go binary | Zero runtime dependencies, easy deployment | LOW | Static binary distribution |
+### What It Is
 
-### Anti-Features (Commonly Requested, Often Problematic)
+A documentation file (CLAUDE.md) that provides structured instructions for AI assistants to generate valid C4Drill TOML files. This enables users to describe their architecture in natural language and have an AI produce correct TOML output.
 
-Features that seem good but create problems.
+### Table Stakes (Expected Behavior)
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| Manual node positioning | "I want it to look exactly like my sketch" | Fights GraphViz, breaks when model changes, maintenance burden | Tune GraphViz parameters, use rank/groups |
-| JSON structured errors | "I want to parse errors programmatically" | Over-engineering for v1 CLI tool | Clear text error messages with context |
-| Watch/live mode | "Re-render on file save" | Adds complexity, file watching edge cases | Run command explicitly, shell integration |
-| Multiple CLI commands | "I want separate validate/generate/render" | Fragmented UX, more to learn, more to break | Single command with flags for control |
-| C4/Code (level 4) | "I want class diagrams too" | Scope explosion, different visualization needs | Stop at C3, use UML tools for code level |
-| Go library interface | "I want to embed this in my app" | API design overhead, different use case | Stay focused on CLI tool first |
-| Web UI | "Visual editing would be nice" | Massive scope shift, defeats "diagrams as code" | Keep it CLI + text editor workflow |
+| Aspect | Expected Behavior | Complexity | Notes |
+|--------|-------------------|------------|-------|
+| Schema documentation | Complete TOML schema with all types, attributes, constraints | LOW | Already exists in PROJECT.md and README.md |
+| Validation rules | Clear explanation of what makes TOML valid/invalid | LOW | Already enforced by validator |
+| Examples | Working examples covering all unit types and link patterns | LOW | Existing testdata/*.toml files |
+| Error patterns | Common mistakes and how to avoid them | MEDIUM | Derived from validator errors |
+
+### Differentiators (AI-Specific)
+
+| Aspect | Value Proposition | Complexity | Notes |
+|--------|-------------------|------------|-------|
+| AI-readable structure | Structured for machine parsing, not just human reading | MEDIUM | Clear sections, explicit rules, examples with explanations |
+| Prompt patterns | Example prompts for generating C4Drill TOML | LOW | "Create a C4 diagram for an e-commerce system..." |
+| Validation checklist | Step-by-step validation checklist for AI to self-check | LOW | Based on existing validation rules |
+| Common patterns | Pre-built patterns for typical architectures | MEDIUM | Microservices, monolith, event-driven, etc. |
+
+### Anti-Features (What NOT to Do)
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| Verbose prose | AI works better with structured, concise rules | Use tables, lists, code blocks |
+| Ambiguous language | "Usually," "typically," "often" confuse AI | Use "always," "never," "must," "must not" |
+| Missing edge cases | AI will generate edge cases | Document all constraints explicitly |
+| Outdated examples | AI will copy outdated patterns | Keep examples in sync with validator |
+
+### Expected Structure
+
+```
+# C4Drill TOML Language Manual
+
+## Quick Reference
+- Unit types table
+- Link syntax
+- Common patterns
+
+## Schema Reference
+- [properties] section
+- Unit sections (all types)
+- Link objects
+- Inheritance rules
+
+## Validation Rules
+- Reference integrity
+- Type constraints
+- Subunit rules
+
+## Common Patterns
+- Microservices architecture
+- Event-driven architecture
+- Database-per-service
+
+## Examples
+- Minimal working example
+- Full-featured example
+
+## AI Prompt Patterns
+- How to prompt for C4Drill generation
+- Self-check checklist
+```
+
+### Dependencies on Existing Code
+
+| Dependency | How It's Used |
+|------------|---------------|
+| internal/model/unit.go | Source of truth for Unit struct fields |
+| internal/model/properties.go | Properties schema |
+| internal/model/link.go | Link object structure |
+| internal/parser/errors.go | Error messages to document |
+| internal/validator | Validation rules reference |
+| testdata/*.toml | Example source material |
+
+### Complexity Assessment
+
+**Overall: LOW-MEDIUM**
+
+- Documentation task, not implementation
+- Source material already exists in codebase
+- Primary work: organizing and formatting for AI consumption
+- Risk: Keeping documentation in sync with code
+
+---
+
+## Feature 2: All-Expanded Mode
+
+### What It Is
+
+A CLI flag (`--expanded`) that generates a single diagram showing the complete architecture with all nested units expanded inline. This contrasts with the current multi-file drill-down approach where each expanded unit creates a separate diagram file.
+
+### Table Stakes (Expected Behavior)
+
+| Aspect | Expected Behavior | Complexity | Notes |
+|--------|-------------------|------------|-------|
+| CLI flag | `--expanded` flag recognized by CLI | LOW | Standard Cobra flag pattern |
+| Output filename | `{basename}.expanded.{ext}` format | LOW | Simple string manipulation |
+| All units expanded | Every unit with subunits rendered as cluster | MEDIUM | Recursive expansion logic |
+| Cross-level edges | Edges between units at different nesting levels | HIGH | Key complexity area |
+
+### Differentiators (Value-Add)
+
+| Aspect | Value Proposition | Complexity | Notes |
+|--------|-------------------|------------|-------|
+| Single-view completeness | See entire architecture at once | LOW | Primary user value |
+| Cross-level visibility | Edges from component to external system visible | HIGH | Currently requires drill-down |
+| Print/share friendly | One file instead of directory structure | LOW | Easier distribution |
+| AI-friendly output | Complete context for AI analysis | MEDIUM | Enables "describe this architecture" |
+
+### Anti-Features (What NOT to Do)
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| Recursive nesting limits | Arbitrarily limiting depth breaks completeness | Expand all levels, document GraphViz limits |
+| Edge filtering | "Only show same-level edges" defeats purpose | Show ALL edges, let GraphViz handle routing |
+| Separate clusters per level | Creates visual fragmentation | Use nested clusters naturally |
+| Replacing drill-down | Some users prefer focused views | Keep as option, not replacement |
+
+### Technical Approach
+
+**Current Behavior (v1.0):**
+
+```
+TOML → Parse → Validate → Generate Views (per expanded unit) → Build Graphs → Render → Write Multiple Files
+```
+
+**New Behavior (--expanded):**
+
+```
+TOML → Parse → Validate → Generate Single Expanded View → Build Graph with Nested Clusters → Render → Write Single File
+```
+
+### Implementation Components
+
+| Component | Current State | Changes Needed |
+|-----------|---------------|----------------|
+| cmd/c4drill/main.go | No `--expanded` flag | Add flag, conditional logic |
+| internal/view/scope.go | GenerateC1View, GenerateC2View, GenerateC3View | Add GenerateExpandedView() |
+| internal/graph/builder.go | BuildGraph handles single-level expansion | Handle recursive nested clusters |
+| internal/graph/builder.go | buildEdges filters by view scope | Include cross-level edges |
+| internal/output/writer.go | Multi-file output structure | Single-file output for expanded mode |
+
+### Cross-Level Edge Handling
+
+**The Core Challenge:**
+
+Currently, edges are filtered to only show connections between units in the same view. For all-expanded mode, edges between units at different nesting levels must be rendered.
+
+**Example:**
+
+```toml
+[mainapp.api.handlers]
+type = "component"
+linkFrom = { "external.system" = { description = "Calls" } }
+```
+
+In current behavior:
+- C1 view shows: `external.system → mainapp` (collapsed)
+- C2 view shows: `external.system → mainapp.api` (if mainapp expanded)
+- C3 view shows: `external.system → mainapp.api.handlers` (if api expanded)
+
+In all-expanded mode:
+- Single view shows: `external.system → mainapp.api.handlers` (edge crosses cluster boundaries)
+
+**GraphViz Handling:**
+
+GraphViz handles edges crossing cluster boundaries natively. The edge will be drawn from the external node to the deeply nested node, crossing through parent cluster boundaries.
+
+### Dependencies on Existing Code
+
+| Dependency | How It's Used |
+|------------|---------------|
+| internal/view/view.go | Entry type for view representation |
+| internal/view/scope.go | Pattern for view generation |
+| internal/graph/builder.go | Cluster building pattern |
+| internal/graph/graph.go | Graph, Cluster, Node, Edge types |
+| internal/model/unit.go | Recursive Subunits map |
+
+### Output Structure
+
+**Current (without --expanded):**
+```
+output/
+├── architecture.svg           # C1 view
+└── architecture/              # Expanded units
+    ├── mainapp.svg            # C2 for mainapp
+    └── mainapp/
+        └── api.svg            # C3 for mainapp.api
+```
+
+**New (with --expanded):**
+```
+output/
+├── architecture.svg           # C1 view (unchanged)
+├── architecture.expanded.svg  # All-expanded view (NEW)
+└── architecture/              # Expanded units (unchanged)
+    └── ...
+```
+
+### Complexity Assessment
+
+**Overall: MEDIUM-HIGH**
+
+| Aspect | Complexity | Reason |
+|--------|------------|--------|
+| CLI flag | LOW | Standard Cobra pattern |
+| Output filename | LOW | String formatting |
+| Recursive expansion | MEDIUM | Tree traversal, already done for nested TOML |
+| Nested clusters | MEDIUM | GraphViz supports, but need to test layout quality |
+| Cross-level edges | HIGH | Must include edges currently filtered out |
+| Edge routing | MEDIUM | GraphViz handles, but may produce cluttered diagrams |
+
+### Risks and Mitigations
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| Diagram too cluttered | HIGH | MEDIUM | Document that all-expanded works best for small/medium architectures |
+| GraphViz layout issues | MEDIUM | LOW | Test with various architectures, tune cluster styling |
+| Edge crossings unreadable | MEDIUM | MEDIUM | Use edge routing options (spline, square) |
+| Memory limits for large models | LOW | HIGH | Reuse existing go-graphviz limits documentation |
+
+---
 
 ## Feature Dependencies
 
 ```
-[TOML Parsing]
-    └──requires──> [Unit Type Definitions]
-                       └──requires──> [Validation Rules]
+[CLAUDE.md Creation]
+    └──requires──> [Existing Schema Documentation]
+    └──requires──> [Validation Rules (internal/validator)]
+    └──requires──> [Example Files (testdata/)]
 
-[DOT Generation]
-    └──requires──> [TOML Parsing]
-    └──requires──> [Validation Rules]
-
-[SVG Rendering]
-    └──requires──> [DOT Generation]
-    └──requires──> [go-graphviz library]
-
-[Collapsed/Expanded Views]
-    └──requires──> [DOT Generation]
-    └──requires──> [Subunit Constraint Logic]
-
-[Explore Links]
-    └──requires──> [Collapsed/Expanded Views]
-    └──requires──> [File Structure Convention]
-
-[Themes/Styling]
-    └──enhances──> [DOT Generation]
-    └──requires──> [Property Inheritance]
-
-[Tags/Stereotypes]
-    └──enhances──> [Validation Rules]
-    └──conflicts──> [Simplicity Goal] (adds complexity)
-
-[Legend Generation]
-    └──requires──> [Themes/Styling]
-    └──requires──> [Tags/Stereotypes]
-
-[Sprites/Icons]
-    └──conflicts──> [Single-file Goal] (requires external assets)
-    └──conflicts──> [Simplicity Goal] (complex asset management)
+[All-Expanded Mode]
+    └──requires──> [internal/view/scope.go] (new GenerateExpandedView)
+    └──requires──> [internal/graph/builder.go] (nested cluster support)
+    └──requires──> [internal/output/writer.go] (single-file output)
+    └──requires──> [cmd/c4drill/main.go] (flag parsing)
 ```
 
-### Dependency Notes
+---
 
-- **SVG Rendering requires go-graphviz library:** Native Go implementation, no external graphviz binary dependency
-- **Explore Links requires Collapsed/Expanded Views:** Interactive drill-down only makes sense when there's something to expand
-- **Themes/Styling enhances DOT Generation:** Visual polish without core functionality change
-- **Tags/Stereotypes conflicts with Simplicity Goal:** Adds metadata complexity; defer if not essential
-- **Sprites/Icons conflicts with Single-file Goal:** Requires external image assets, breaks self-contained definition
+## MVP Recommendation
 
-## MVP Definition
+### Must Have (v1.1)
 
-### Launch With (v1)
+1. **CLAUDE.md** — AI-focused TOML manual with:
+   - Complete schema reference
+   - Validation rules
+   - 3-5 working examples
+   - Prompt patterns
 
-Minimum viable product — what's needed to validate the concept.
+2. **All-Expanded Mode** — `--expanded` flag with:
+   - Single-file output (`{basename}.expanded.{ext}`)
+   - All units expanded as nested clusters
+   - Cross-level edges visible
 
-- [x] TOML parsing with nested unit definitions — Core input mechanism
-- [x] C1-C3 layer generation — The fundamental C4 model scope
-- [x] All unit types (person, system, db, queue, external variants, box) — Complete type coverage
-- [x] Link/relationship definitions — Diagrams need connections
-- [x] Validation with clear errors — Prevent silent failures
-- [x] DOT output — Intermediate format, debugging
-- [x] SVG output — Final deliverable format
-- [x] Basic styling (color, border, style inheritance) — Visual distinction
-- [x] Collapsed/expanded views — Core value proposition
-- [x] Explore links — Navigation between levels
-- [x] Single CLI command — Simple workflow
+### Defer (v1.2+)
 
-### Add After Validation (v1.x)
+- **Interactive legend** in expanded view (too complex for v1.1)
+- **Partial expansion** (`--expand=unit1,unit2`) (YAGNI for now)
+- **AI validation workflow** (CLAUDE.md instructs AI to run c4drill to validate)
 
-Features to add once core is working.
-
-- [ ] Tags/stereotypes — When users ask for filtering/grouping
-- [ ] Legend generation — When diagrams get complex
-- [ ] Edge routing options (spline, square, straight) — When layout needs tuning
-- [ ] Property inheritance optimization — DRY improvements
-
-### Future Consideration (v2+)
-
-Features to defer until product-market fit is established.
-
-- [ ] Themes/color schemes — When users want branding
-- [ ] Sprites/icons — When visual distinction becomes critical
-- [ ] Multiple output formats (PNG, PDF) — When distribution needs vary
-- [ ] Watch mode — When iterative workflow becomes painful
-- [ ] JSON error output — When tooling integration is requested
-
-## Feature Prioritization Matrix
-
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| TOML parsing | HIGH | MEDIUM | P1 |
-| C1-C3 generation | HIGH | MEDIUM | P1 |
-| Unit types (all) | HIGH | LOW | P1 |
-| Relationships/links | HIGH | MEDIUM | P1 |
-| Validation | HIGH | MEDIUM | P1 |
-| DOT output | MEDIUM | LOW | P1 |
-| SVG output | HIGH | MEDIUM | P1 |
-| Basic styling | MEDIUM | LOW | P1 |
-| Collapsed/expanded | HIGH | HIGH | P1 |
-| Explore links | HIGH | MEDIUM | P1 |
-| Single command | MEDIUM | LOW | P1 |
-| Tags/stereotypes | MEDIUM | MEDIUM | P2 |
-| Legend generation | LOW | MEDIUM | P2 |
-| Edge routing options | MEDIUM | LOW | P2 |
-| Themes | MEDIUM | LOW | P3 |
-| Sprites/icons | MEDIUM | HIGH | P3 |
-| Watch mode | LOW | MEDIUM | P3 |
-
-**Priority key:**
-- P1: Must have for launch
-- P2: Should have, add when possible
-- P3: Nice to have, future consideration
-
-## Competitor Feature Analysis
-
-| Feature | Structurizr | C4-PlantUML | LikeC4 | C4Drill (Our Approach) |
-|---------|-------------|-------------|--------|------------------------|
-| Definition format | DSL + JSON | PlantUML DSL | YAML-like DSL | TOML |
-| Output formats | Multiple (via exporters) | Multiple (via PlantUML) | SVG, PNG | DOT, SVG |
-| Auto-layout | Yes | Yes (PlantUML) | Yes | Yes (GraphViz) |
-| Interactive nav | Yes (web workspace) | Limited | Yes (live preview) | Yes (explore links) |
-| Themes | Yes (cloud themes) | Yes (includes) | Yes | Planned (v2) |
-| Sprites/icons | Limited | Extensive | Customizable | Not planned |
-| Tags/stereotypes | Yes | Yes | Yes | Planned (v1.x) |
-| Legend | Auto-generated | Manual macros | Auto-generated | Planned (v1.x) |
-| VSCode extension | Yes | Yes | Yes | Not planned |
-| Deployment | SaaS + self-host | CLI + server | CLI | CLI (single binary) |
-| Learning curve | Medium | Low (if know PlantUML) | Medium | Low (TOML is simple) |
+---
 
 ## Sources
 
-- Structurizr DSL documentation (structurizr.com/help/dsl) — HIGH confidence
-- Structurizr themes documentation (structurizr.com/help/themes) — HIGH confidence
-- C4-PlantUML GitHub repository (github.com/plantuml-stdlib/C4-PlantUML) — HIGH confidence
-- LikeC4 documentation (docs.likec4.dev) — HIGH confidence
-- Mermaid C4 documentation (mermaid.js.org/syntax/c4.html) — MEDIUM confidence
-- Project requirements from `.planning/PROJECT.md` — HIGH confidence
+### Primary (HIGH confidence)
+- Project codebase analysis (internal/view, internal/graph, internal/model) — HIGH confidence
+- README.md documentation — HIGH confidence
+- Existing testdata examples — HIGH confidence
+
+### Secondary (MEDIUM confidence)
+- GraphViz documentation on nested clusters and edge routing — MEDIUM confidence
+- Cobra CLI flag patterns — HIGH confidence (well-established)
+
+### Tertiary (LOW confidence)
+- AI prompt file best practices — LOW confidence (web search rate-limited, based on general knowledge)
+- Similar tools' all-expanded modes — LOW confidence (web search rate-limited)
 
 ---
-*Feature research for: C4 Architecture Diagram Generation Tools*
-*Researched: 2026-03-09*
+
+## Confidence Assessment
+
+| Area | Confidence | Notes |
+|------|------------|-------|
+| CLAUDE.md structure | MEDIUM | Based on existing documentation patterns, not empirical AI testing |
+| All-Expanded Mode approach | HIGH | Based on codebase analysis, GraphViz capabilities |
+| Cross-level edges | MEDIUM | GraphViz supports, but layout quality unknown without testing |
+| User value | HIGH | Both features directly address real user needs |
+
+**Overall confidence:** MEDIUM-HIGH
+
+---
+
+## Gaps to Address
+
+- **CLAUDE.md effectiveness:** Test with actual AI assistants to validate structure works
+- **All-Expanded layout quality:** Test with various architectures to assess GraphViz output
+- **Performance limits:** Test expanded mode with deeply nested, highly connected models
+
+---
+
+*Research for: C4Drill v1.1 AI-Ready Milestone*
+*Researched: 2026-03-10*
+*Focus: TOML Language Manual + All-Expanded Mode*

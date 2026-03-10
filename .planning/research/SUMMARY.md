@@ -1,177 +1,165 @@
 # Project Research Summary
 
-**Project:** C4Drill
-**Domain:** Go CLI for C4 Architecture Diagram Generation
-**Researched:** 2026-03-09
-**Confidence:** HIGH
+**Project:** C4Drill v1.1 AI-Ready
+**Domain:** C4 Diagram Generation CLI (Milestone: AI Documentation + All-Expanded Mode)
+**Researched:** 2026-03-10
+**Confidence:** MEDIUM-HIGH
 
 ## Executive Summary
 
-C4Drill is a single-purpose Go CLI tool that transforms TOML architecture definitions into C4 model diagrams (C1-C3 levels) using GraphViz auto-layout. The recommended approach follows a classic compiler-style pipeline: parse TOML, validate semantic integrity, generate filtered views by scope, construct graph structures, and render to DOT/SVG formats using the pure-Go goccy/go-graphviz library.
+C4Drill v1.1 adds two targeted features to an existing, stable v1.0 codebase (9,624 LOC Go). The TOML Language Manual (CLAUDE.md) enables AI assistants to generate valid C4Drill TOML files through structured documentation with examples and validation rules. The All-Expanded Mode (`--expanded` flag) renders the complete architecture in a single diagram with all nested units expanded and cross-level edges visible, outputting to `{basename}.expanded.{ext}`.
 
-The key differentiator for C4Drill is interactive drill-down navigation via collapsed/expanded views and explore links between diagram levels. Critical risks include GraphViz layout non-determinism (outputs may vary across runs), go-graphviz memory limitations for large diagrams (WASM constraints), and the complexity of collapsed/expanded state inheritance. All three must be addressed early to avoid rework.
+The recommended approach is to implement these as independent parallel tracks with no shared code changes. CLAUDE.md is purely documentation work requiring no code modifications. All-Expanded mode adds a new `GenerateAllExpandedView()` function without modifying existing view generation, ensuring zero regression risk. The existing stack (Go 1.26, go-toml v2, go-graphviz, Cobra) fully supports both features with no new dependencies.
+
+Key risks are: (1) AI documentation drift from code reality - mitigated by CI validation of examples; (2) Cross-level edge visual explosion in all-expanded mode - mitigated by GraphViz native cluster edge handling and documented expectations; (3) Layout quality for deeply nested structures - requires empirical testing with real architectures.
 
 ## Key Findings
 
 ### Recommended Stack
 
-Go 1.24+ with Cobra for CLI structure, BurntSushi/toml for configuration parsing, and goccy/go-graphviz for pure-Go DOT/SVG rendering without external binary dependencies. This stack prioritizes portable single-binary distribution and aligns with Go ecosystem best practices.
+**No new dependencies required.** The existing stack is at latest stable versions and fully supports v1.1 features:
 
-**Core technologies:**
-- **Go 1.24+** — Runtime with Swiss Tables optimization, required for modern Go patterns
-- **Cobra v1.9+** — CLI framework used by Kubernetes/Docker, provides help generation and shell completions
-- **BurntSushi/toml v1.6.0** — Most widely adopted TOML library (15k+ stars), supports TOML v1.1.0
-- **goccy/go-graphviz v0.2.9** — Pure Go GraphViz via WASM, no external binary dependency, critical for portability
-- **stretchr/testify v1.10+** — Testing assertions and mocks for comprehensive test coverage
+- **Go 1.26.1**: Runtime - already current
+- **go-toml v2.2.4**: TOML parsing - used for CLAUDE.md example validation
+- **go-graphviz v0.2.10**: DOT/SVG rendering - handles nested clusters and cross-level edges natively
+- **Cobra v1.10.2**: CLI framework - standard flag pattern for `--expanded`
+
+**Implementation footprint:** ~300 lines new code, ~50 lines modified across 4 files. CLAUDE.md adds ~200 lines of documentation.
 
 ### Expected Features
 
-All v1 features center on the core workflow: TOML input, C4 model validation, multi-level view generation, and DOT/SVG output. Collapsed/expanded views and explore links are the primary differentiators versus competitors.
+**Must have (v1.1 MVP):**
 
-**Must have (table stakes):**
-- TOML parsing with nested unit definitions — core input mechanism
-- C1-C3 layer generation — fundamental C4 model scope
-- All unit types (person, system, db, queue, external variants, box) — complete notation
-- Link/relationship definitions — diagrams need connections
-- Validation with clear error messages — prevent silent failures
-- DOT and SVG output — intermediate and final formats
+| Feature | Description | Complexity |
+|---------|-------------|------------|
+| CLAUDE.md | AI-focused TOML manual with schema, examples, validation rules, prompt patterns | LOW (documentation) |
+| `--expanded` flag | CLI flag recognized, triggers all-expanded rendering path | LOW |
+| All-expanded view | Single view with all units expanded as nested clusters | MEDIUM |
+| Cross-level edges | Edges between units at different nesting levels visible | HIGH |
+| Output naming | `{basename}.expanded.{ext}` format | LOW |
 
-**Should have (differentiators):**
-- Collapsed/expanded views — drill-down navigation without separate files
-- Explore links — click-through navigation between diagram levels
-- Basic styling with inheritance — visual distinction via properties
-- Single CLI command — simple workflow, no subcommand complexity
+**Defer (v1.2+):**
 
-**Defer (v2+):**
-- Tags/stereotypes — adds metadata complexity
-- Themes/color schemes — branding is secondary to core functionality
-- Sprites/icons — requires external assets, breaks single-file goal
-- Watch mode — file watching adds edge case complexity
+- Interactive legend in expanded view
+- Partial expansion (`--expand=unit1,unit2`)
+- AI validation workflow integration
+- Edge filtering/aggregation options for cluttered diagrams
 
 ### Architecture Approach
 
-Pipeline architecture with clear stage separation: parse → validate → view → graph → render → output. The model is the single source of truth; views are projections filtered by scope (C1/C2/C3) and expansion state. This pattern is well-established in tools like Structurizr and enables clean testing at each stage.
+The existing pipeline architecture (Parse -> Validate -> Generate Views -> Build Graphs -> Render -> Write) extends naturally for all-expanded mode. A new view type is added alongside existing C1/C2/C3 generators.
 
-**Major components:**
-1. **CLI Interface (cmd/c4drill/)** — Cobra-based command parsing, pipeline orchestration
-2. **Model (internal/model/)** — Domain types: Workspace, Unit, Link, Properties — no external dependencies
-3. **Parser (internal/parser/)** — TOML parsing with BurntSushi/toml, custom unmarshaling for nested structures
-4. **Validator (internal/validate/)** — Reference integrity, type constraints, subunit rules
-5. **View Generator (internal/view/)** — Scope filtering (C1/C2/C3), expansion handling
-6. **Graph Builder (internal/graph/)** — Node/edge/cluster construction from views
-7. **Renderer (internal/render/)** — DOT generation and SVG rendering via go-graphviz
-8. **Output (internal/output/)** — File writing, path resolution for drill-down file structures
+**Major components affected:**
+
+1. **cmd/c4drill/root.go** - Add `--expanded` flag, conditional view generation call
+2. **internal/view/scope.go** - Add `GenerateAllExpandedView()` (new function, no modifications to existing)
+3. **internal/graph/builder.go** - Extend edge building for cross-level edges
+4. **internal/output/writer.go** - Add method for expanded output naming
+5. **CLAUDE.md** - Root-level documentation file (no code integration)
+
+**Critical architectural decision:** Implement all-expanded as a completely separate code path. Do NOT modify `GenerateC1View`, `GenerateC2View`, or `GenerateC3View`. This prevents regression and allows independent testing.
 
 ### Critical Pitfalls
 
-1. **GraphViz Layout Non-Determinism** — Same input produces different layouts across runs. Prevention: document variability, generate DOT as primary artifact (deterministic), SVG as secondary. Test by running generation 3x on same input.
+1. **AI Documentation Drift (Pitfall A2)** - CLAUDE.md examples become out of sync with parser/validator. **Prevention:** CI check that parses all CLAUDE.md TOML blocks with actual parser, fails on mismatch. Add version stamp to CLAUDE.md.
 
-2. **TOML Reference Integrity Violations** — Links to non-existent units, circular references, or referencing container units directly. Prevention: two-pass parsing (syntax then semantic), build reference graph, detect cycles, validate leaf-node references only. Comprehensive validation test suite required.
+2. **Cross-Level Edge Explosion (Pitfall A3)** - All-expanded diagrams become unreadable "hairballs" with too many edges crossing cluster boundaries. **Prevention:** Document that all-expanded prioritizes completeness over aesthetics. GraphViz handles cluster-crossing edges natively. Consider edge aggregation for v1.2 if needed.
 
-3. **go-graphviz Memory/Segfault Issues** — WASM-embedded GraphViz has constrained memory. Prevention: document limits, graceful error handling, stress testing to find breaking points, provide DOT-only fallback.
+3. **Breaking Existing View Logic (Pitfall A4)** - Changes to view generation inadvertently affect C1/C2/C3 output. **Prevention:** Implement `GenerateAllExpandedView()` as separate function. Add comprehensive regression tests before implementation. Require all existing tests to pass.
 
-4. **Collapsed/Expanded State Inconsistency** — Inheritance rules between global default and per-unit overrides create complex interactions. Prevention: explicit inheritance resolution before rendering, test matrix for all combinations, validate expanded units have subunits.
+4. **Output File Naming Collision (Pitfall A5)** - `{basename}.expanded.{ext}` conflicts with user's system named "expanded". **Prevention:** Use explicit naming convention. Check for existing file before writing. Consider `{basename}.all-expanded.{ext}` for clarity.
 
-5. **SVG Interactive Link Generation Failures** — Explore links break when diagrams moved or hosted differently. Prevention: consistent relative paths, test in multiple contexts (file://, localhost, hosted), document expected hosting setup.
+5. **GraphViz Layout Issues (Pitfall A6)** - Deep nesting + cross-edges cause poor arrangements. **Prevention:** Test with realistic complex models. Set expectations in documentation. Consider layout algorithm options.
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure:
+Based on research, suggested phase structure for v1.1:
 
-### Phase 1: Core Model and Parser
-**Rationale:** Model types have zero dependencies and enable all downstream work. Parser validates the input layer early.
-**Delivers:** Domain types, TOML parsing, basic validation
-**Addresses:** Unit types, TOML parsing, basic validation from FEATURES.md
-**Avoids:** Pitfall 2 (reference integrity) — validation starts here
+### Phase 1: AI Documentation (CLAUDE.md)
 
-### Phase 2: Validator and Core Pipeline
-**Rationale:** Complete validation before any rendering. Establish error handling patterns early.
-**Delivers:** Full reference integrity validation, type constraints, clear error messages with line numbers
-**Uses:** BurntSushi/toml, go-playground/validator
-**Implements:** Validator component from ARCHITECTURE.md
-**Avoids:** Pitfalls 1, 2, 3 — deterministic baseline, validation foundation, error handling
+**Rationale:** Documentation task with no code dependencies. Can be completed in parallel with Phase 2. Establishes AI usability foundation.
 
-### Phase 3: View Generator and Graph Builder
-**Rationale:** Scope filtering and graph construction are intermediate stages between model and output.
-**Delivers:** C1/C2/C3 view generation, graph representation with nodes/edges/clusters
-**Uses:** Internal model and view types
-**Implements:** View Generator and Graph Builder components
+**Delivers:** CLAUDE.md file in repository root with complete schema reference, validation rules, 3-5 working examples (minimal, medium, complex), prompt patterns, and edge case coverage (external types, deep nesting, bidirectional links).
 
-### Phase 4: DOT and SVG Rendering
-**Rationale:** Output generation completes the core pipeline. Start with DOT, add SVG via go-graphviz.
-**Delivers:** DOT output, SVG rendering, file writing
-**Uses:** goccy/go-graphviz
-**Implements:** Renderer and Output components
-**Avoids:** Pitfall 3 (memory issues) — test limits here
+**Addresses:** Feature 1 (TOML Language Manual)
 
-### Phase 5: Collapsed/Expanded Views and Explore Links
-**Rationale:** This is the primary differentiator. Requires all core pipeline stages working first.
-**Delivers:** Interactive drill-down navigation, multi-file output structure
-**Uses:** View expansion logic, relative path handling
-**Avoids:** Pitfalls 4, 5 (state inconsistency, broken links) — focused testing here
+**Avoids:** Pitfall A1 (context overload), Pitfall A2 (documentation drift), Pitfall A7 (missing edge cases)
 
-### Phase 6: CLI Polish and Styling
-**Rationale:** Final UX improvements after core functionality proven.
-**Delivers:** Cobra CLI with flags, help text, basic styling/inheritance, error message formatting
-**Uses:** Cobra, fatih/color
-**Implements:** CLI Interface component
+**Estimated effort:** LOW (~200 lines documentation)
+
+### Phase 2: All-Expanded Mode
+
+**Rationale:** Code implementation requiring changes to 4 files. Builds on existing architecture patterns. Independent of Phase 1.
+
+**Delivers:** `--expanded` CLI flag, `GenerateAllExpandedView()` function, cross-level edge handling, `{basename}.expanded.{ext}` output.
+
+**Uses:** Cobra for flag parsing, existing view/graph patterns, go-graphviz for nested cluster rendering
+
+**Implements:** Feature 2 (All-Expanded Mode)
+
+**Avoids:** Pitfall A3 (edge explosion - via GraphViz native handling), Pitfall A4 (breaks views - via separate code path), Pitfall A5 (naming collision - via explicit naming), Pitfall A6 (layout - via testing), Pitfall A8 (performance - via benchmarking)
+
+**Estimated effort:** MEDIUM (~300 lines new code, ~50 lines modified)
 
 ### Phase Ordering Rationale
 
-- **Model first:** Domain types have no dependencies; everything else builds on them
-- **Validation before rendering:** Invalid models produce confusing errors downstream; fail fast
-- **DOT before SVG:** DOT is deterministic and debuggable; SVG adds WASM complexity
-- **Core views before expansion:** C1-C3 basic generation must work before collapsed/expanded complexity
-- **Explore links last:** Requires complete file structure and path handling
+- **Phase 1 and Phase 2 are independent** - can run in parallel or either order
+- **No shared code changes** between phases - zero merge conflict risk
+- **Phase 1 is documentation-only** - no test requirements
+- **Phase 2 requires regression testing** - establish baseline tests before changes
 
 ### Research Flags
 
 Phases likely needing deeper research during planning:
-- **Phase 4:** goccy/go-graphviz API specifics for SVG rendering, memory limits characterization
-- **Phase 5:** Relative path handling across platforms, SVG link syntax specifics
+
+- **Phase 2 (All-Expanded Mode):** Cross-level edge rendering behavior needs empirical testing with real architectures. GraphViz layout quality for deep nesting is unknown without experimentation.
 
 Phases with standard patterns (skip research-phase):
-- **Phase 1:** Go struct definitions are straightforward
-- **Phase 2:** Validation patterns well-documented in Go ecosystem
-- **Phase 3:** View filtering is domain logic, not library integration
-- **Phase 6:** Cobra CLI patterns are well-established
+
+- **Phase 1 (AI Documentation):** Well-established documentation patterns. Existing model/types define schema. Test examples provide source material.
+- **Phase 2 CLI flag:** Standard Cobra pattern, existing code shows exact approach.
+- **Phase 2 output naming:** Simple string formatting, existing writer shows pattern.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All libraries are mature, actively maintained, with official documentation verified |
-| Features | MEDIUM | Based on competitor analysis and C4 model principles, but user validation needed |
-| Architecture | HIGH | Pipeline pattern is standard for compiler-style tools; Structurizr is proven reference |
-| Pitfalls | MEDIUM | Based on go-graphviz issues and general parsing experience; empirical testing needed for limits |
+| Stack | HIGH | Verified existing stack covers all needs, no new dependencies |
+| Features | MEDIUM-HIGH | Clear scope, based on codebase analysis |
+| Architecture | HIGH | Existing patterns directly applicable, separate code path reduces risk |
+| Pitfalls | MEDIUM | AI documentation pitfalls inferred from patterns, all-expanded rendering needs empirical validation |
 
-**Overall confidence:** HIGH
+**Overall confidence:** MEDIUM-HIGH
 
 ### Gaps to Address
 
-- **go-graphviz determinism:** Research explicitly whether deterministic layout is possible; document findings before Phase 4
-- **Performance limits:** Empirical testing needed to establish max nodes/edges/nesting depth before memory issues
-- **TOML schema finalization:** Exact structure of nested units and link objects needs validation during Phase 1 implementation
+- **CLAUDE.md effectiveness:** Test with actual AI assistants (Claude, GPT-4) to validate structure works. Run AI-generated TOML through validator.
+- **All-Expanded layout quality:** Test with various architectures (microservices, event-driven, monolith) to assess GraphViz output. May require layout tuning.
+- **Performance limits:** Benchmark all-expanded mode with 50+ unit models. Document acceptable limits.
+- **Edge routing behavior:** Verify GraphViz handles cross-level edges as expected. Test with deeply nested structures.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- pkg.go.dev/github.com/goccy/go-graphviz — API reference, v0.2.9
-- pkg.go.dev/github.com/BurntSushi/toml — TOML v1.1.0 support, v1.6.0
-- pkg.go.dev/github.com/spf13/cobra — CLI framework, v1.9.x
-- structurizr.com/help/model — C4 model building blocks
-- structurizr.com/help/views — View types and scoping
-- c4model.com — C4 model specification
+
+- Project codebase analysis (internal/view, internal/graph, internal/model, cmd/c4drill) - HIGH confidence
+- go.mod verified versions - HIGH confidence
+- Existing testdata examples - HIGH confidence
+- GraphViz documentation on nested clusters - HIGH confidence
 
 ### Secondary (MEDIUM confidence)
-- github.com/goccy/go-graphviz/issues — Common rendering problems, memory issues
-- github.com/plantuml-stdlib/C4-PlantUML — Feature comparison reference
-- docs.likec4.dev — Feature comparison reference
-- mermaid.js.org/syntax/c4.html — Feature comparison reference
+
+- Cobra CLI flag patterns - HIGH confidence (well-established)
+- C4 Model specification (c4model.com) - HIGH confidence
+- go-graphviz library documentation - MEDIUM confidence
+- Structurizr reference implementation - MEDIUM confidence
 
 ### Tertiary (LOW confidence)
-- Performance limit estimates — Need empirical validation during implementation
+
+- AI prompt file best practices - LOW confidence (inferred from patterns, not empirical testing)
+- Cross-level edge rendering at scale - LOW confidence (needs empirical validation)
 
 ---
-*Research completed: 2026-03-09*
+*Research completed: 2026-03-10*
 *Ready for roadmap: yes*
+*Focus: v1.1 AI-Ready Milestone (TOML Language Manual + All-Expanded Mode)*

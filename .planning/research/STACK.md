@@ -1,118 +1,133 @@
-# Stack Research
+# Technology Stack — v1.1 AI-Ready Milestone
 
-**Domain:** Go CLI for C4 Architecture Diagram Generation
-**Researched:** 2026-03-09
+**Project:** C4Drill
+**Milestone:** v1.1 AI-Ready (AI documentation + All-Expanded mode)
+**Researched:** 2026-03-10
 **Confidence:** HIGH
 
-## Recommended Stack
+## Executive Summary
 
-### Core Technologies
+For the v1.1 milestone features (TOML Language Manual and All-Expanded rendering mode), **NO new external dependencies are required**. The existing stack fully supports both features through internal code additions only.
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| Go | 1.24+ | Runtime and build system | Latest stable (Feb 2025) with Swiss Tables maps optimization, improved garbage collector, and better type inference. Required for modern Go development patterns. |
-| Cobra | v1.9+ | CLI framework | Industry standard used by Kubernetes, Hugo, GitHub CLI, Docker. Provides command structure, flag parsing, help generation, and shell completions out of the box. Single-command tools benefit from its mature ecosystem and documentation. |
-| BurntSushi/toml | v1.6.0 | TOML parsing | Most widely adopted TOML library in Go ecosystem (15k+ stars). Supports TOML v1.1.0 spec, handles nested structures cleanly, and provides both strict and lenient parsing modes. Ideal for configuration-heavy CLI tools. |
-| goccy/go-graphviz | v0.2.9 | GraphViz DOT/SVG generation | Pure Go implementation with WASM-embedded GraphViz - no external binary dependency. Generates DOT and renders SVG directly. Critical for portable CLI distribution. |
+## Existing Stack (Verified Current)
 
-### Supporting Libraries
+These dependencies are already at their latest stable versions:
 
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| stretchr/testify | v1.10+ | Testing assertions | For all unit tests - provides assertions, mocks, and suite patterns |
-| go-playground/validator | v10+ | Struct validation | For validating TOML input against schema rules (reference integrity, type constraints) |
-| fatih/color | v1.18+ | Terminal coloring | For CLI output formatting (errors, warnings, success messages) |
+| Technology | Version | Purpose | Status |
+|------------|---------|---------|--------|
+| Go | 1.26.1 | Runtime | Latest |
+| go-toml v2 | v2.2.4 | TOML parsing | Latest (verified: `go list -m -versions`) |
+| go-graphviz | v0.2.10 | DOT/SVG rendering | Latest (verified: `go list -m -versions`) |
+| cobra | v1.10.2 | CLI framework | Latest (verified: `go list -m -versions`) |
+| testify | v1.11.1 | Testing | Latest |
 
-### Development Tools
+## New Stack Requirements
 
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| golangci-lint | Static analysis | Use with `.golangci.yml` - enables errcheck, staticcheck, govet, ineffassign |
-| go test | Unit testing | Built-in, use with `-race -cover` flags |
-| goreleaser | Release automation | For building cross-platform binaries (Linux, macOS, Windows) |
+### Feature 1: TOML Language Manual (CLAUDE.md + Human Reference)
 
-## Installation
+**Dependencies Required:** NONE
 
-```bash
-# Core
-go get github.com/spf13/cobra@latest
-go get github.com/BurntSushi/toml@latest
-go get github.com/goccy/go-graphviz@latest
+The CLAUDE.md file is a static documentation file placed in the repository root. It contains:
+- TOML schema reference
+- Example snippets
+- Validation rules
+- AI prompt guidance
 
-# Supporting
-go get github.com/stretchr/testify@latest
-go get github.com/go-playground/validator/v10@latest
-go get github.com/fatih/color@latest
+**Implementation approach:**
+- Manual authoring in Markdown
+- No tooling required
+- Existing model/types already define the schema
 
-# Development
-go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-go install github.com/goreleaser/goreleaser/v2@latest
-```
+**Integration points:**
+- Reference `internal/model/unit.go` for type definitions
+- Reference `internal/model/properties.go` for root properties
+- Reference `internal/parser/parser.go` for parsing behavior
+- Reference `internal/validator/rules.go` for validation rules
 
-## Alternatives Considered
+### Feature 2: All-Expanded Rendering Mode (`--expanded` flag)
 
-| Recommended | Alternative | When to Use Alternative |
-|-------------|-------------|-------------------------|
-| Cobra | urfave/cli v3 | When you need ultra-simple single-command CLIs without subcommands. urfave/cli has cleaner API for basic cases but less ecosystem support. |
-| BurntSushi/toml | pelletier/go-toml v2 | When you need TOML mutation/writing or strict ordering preservation. pelletier supports round-trip editing; BurntSushi is read-optimized. |
-| goccy/go-graphviz | skaldebane/graphviz | When WASM size is critical (skaldebane is smaller). goccy has better documentation and more active maintenance. |
-| Go 1.24 | Go 1.21+ | Only if you must support older environments. PROJECT.md specifies 1.21+ minimum; 1.24 recommended for performance gains. |
+**Dependencies Required:** NONE
 
-## What NOT to Use
+The `--expanded` flag is a CLI addition that triggers a different rendering path. All required capabilities exist:
 
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| flag stdlib | Limited features, no subcommands, poor help generation | Cobra - production-grade CLI needs more than stdlib offers |
-| graphviz binary via exec | Requires external dependency, breaks portability | goccy/go-graphviz - pure Go, no system dependencies |
-| XML/JSON for config | Project specifies TOML; TOML is more human-readable for nested config | BurntSushi/toml - as specified in requirements |
-| go-dot | Abandoned, no SVG rendering, DOT output only | goccy/go-graphviz - actively maintained, full rendering |
+| Capability | Existing Module | How to Use |
+|------------|-----------------|------------|
+| CLI flag parsing | `spf13/cobra` | Add `PersistentFlags().Bool` in `cmd/c4drill/root.go` |
+| View generation | `internal/view/scope.go` | Create new `GenerateAllExpandedView()` function |
+| Graph building | `internal/graph/builder.go` | Extend to handle recursive expansion |
+| Edge rendering | `internal/graph/builder.go` | Extend `buildEdges()` for cross-level edges |
+| Output naming | `internal/output/writer.go` | Add method for `{basename}.expanded.{ext}` |
 
-## Stack Patterns by Variant
+**Integration points:**
+1. `cmd/c4drill/root.go`:
+   - Add `expanded bool` flag variable
+   - Modify `runRoot()` to check flag and call different view generation
 
-**If targeting minimal binary size:**
-- Use urfave/cli v3 instead of Cobra (saves ~500KB)
-- Strip debug symbols with `-ldflags="-s -w"`
-- Because Cobra's feature richness adds binary weight
+2. `internal/view/scope.go`:
+   - Add `GenerateAllExpandedView(m *parser.Model) *View`
+   - Recursively expand all systems/boxes
+   - Collect all units at all levels into single flat view
 
-**If needing TOML writing/modification:**
-- Consider pelletier/go-toml v2 alongside or instead
-- Because pelletier has better mutation support
-- BurntSushi is optimized for reading only
+3. `internal/graph/builder.go`:
+   - Modify edge building to include cross-level edges
+   - Handle edges between units at different hierarchy depths
 
-**If CI/CD integration is priority:**
-- Use goreleaser for automated releases
-- Configure `.goreleaser.yml` for multi-platform builds
-- Because manual release process is error-prone
+4. `internal/output/writer.go`:
+   - Add `WriteExpanded(basename, format string, data []byte)` method
+   - Output to `{basename}.expanded.{ext}` instead of hierarchy
 
-## Version Compatibility
+## What NOT to Add
 
-| Package A | Compatible With | Notes |
-|-----------|-----------------|-------|
-| go-graphviz v0.2.9 | Go 1.21+ | Requires CGO for some features; pure Go mode available |
-| Cobra v1.9 | Go 1.21+ | No breaking changes from v1.8, safe upgrade |
-| BurntSushi/toml v1.6 | Go 1.21+ | API stable since v1.0, backward compatible |
-| testify v1.10 | Go 1.21+ | Works with Go modules without issue |
+| Avoid | Why | Reasoning |
+|-------|-----|-----------|
+| Additional CLI frameworks | Cobra already installed | No need for urfave/cli or others |
+| Template engines (text/template, etc.) | CLAUDE.md is static | Hand-authored documentation, not generated |
+| Schema validation libraries | Already have custom validator | `internal/validator/` handles all rules |
+| Markdown generators | CLAUDE.md written manually | Direct authoring gives better control |
+| Graph layout libraries | go-graphviz handles layout | No need for dagre, d3-hierarchy, etc. |
+
+## Implementation Complexity Assessment
+
+| Feature | New Code | Modified Code | Complexity |
+|---------|----------|---------------|------------|
+| CLAUDE.md documentation | ~200 lines | None | LOW (documentation only) |
+| `--expanded` CLI flag | ~5 lines | `root.go` | LOW |
+| All-expanded view generation | ~50 lines | `scope.go` | MEDIUM (recursive traversal) |
+| Cross-level edge handling | ~30 lines | `builder.go` | MEDIUM (edge path resolution) |
+| Expanded output naming | ~10 lines | `writer.go` | LOW |
+
+**Total estimated new code:** ~300 lines
+**Total estimated modified code:** ~50 lines across 4 files
+
+## Testing Strategy
+
+No new testing libraries required. Use existing `stretchr/testify`:
+
+1. **CLAUDE.md**: Manual review, no automated tests needed
+2. **All-Expanded mode**:
+   - Unit tests in `view/scope_test.go` for `GenerateAllExpandedView()`
+   - Integration test verifying `{basename}.expanded.svg` output
+   - Test case: TOML with nested systems/boxes, verify all appear in single diagram
 
 ## Confidence Assessment
 
-| Component | Confidence | Reason |
-|-----------|------------|--------|
-| Go 1.24 | HIGH | Official release, stable since Feb 2025 |
-| Cobra | HIGH | Industry standard, verified via pkg.go.dev and GitHub |
-| BurntSushi/toml | HIGH | Most adopted library, active maintenance confirmed |
-| goccy/go-graphviz | MEDIUM | Best pure-Go option but smaller ecosystem than alternatives requiring binary |
-| Development tools | HIGH | Standard Go ecosystem tooling |
+| Area | Confidence | Reason |
+|------|------------|--------|
+| No new dependencies | HIGH | Verified existing stack covers all needs |
+| CLI flag integration | HIGH | Cobra well-documented, existing pattern in root.go |
+| View generation | HIGH | Existing `GenerateC1View/C2View/C3View` provide clear patterns |
+| Cross-level edges | MEDIUM | Requires careful path resolution, but model supports it |
+| Output naming | HIGH | Simple string manipulation in existing writer |
 
 ## Sources
 
-- pkg.go.dev/github.com/goccy/go-graphviz — Version v0.2.9, documentation, API reference (HIGH confidence)
-- github.com/goccy/go-graphviz — Active maintenance, WASM-embedded GraphViz (HIGH confidence)
-- pkg.go.dev/github.com/BurntSushi/toml — Version v1.6.0, TOML v1.1.0 support (HIGH confidence)
-- github.com/spf13/cobra — Industry adoption, documentation (HIGH confidence)
-- pkg.go.dev/github.com/spf13/cobra — Latest v1.9.x versions (HIGH confidence)
-- go.dev/doc/go1.24 — Go 1.24 release notes, Swiss Tables optimization (HIGH confidence)
-- github.com/urfave/cli — Alternative CLI framework, v3.x development (MEDIUM confidence)
+- `go.mod` — Verified actual dependency versions (HIGH confidence)
+- `go list -m -versions` — Verified latest available versions (HIGH confidence)
+- `cmd/c4drill/root.go` — CLI flag pattern analysis (HIGH confidence)
+- `internal/view/scope.go` — View generation patterns (HIGH confidence)
+- `internal/graph/builder.go` — Graph building patterns (HIGH confidence)
+- `internal/output/writer.go` — Output file naming patterns (HIGH confidence)
 
 ---
-*Stack research for: Go C4 Diagram CLI*
-*Researched: 2026-03-09*
+*Stack research for: C4Drill v1.1 AI-Ready milestone*
+*Researched: 2026-03-10*

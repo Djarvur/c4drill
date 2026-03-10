@@ -1,186 +1,372 @@
 # Domain Pitfalls
 
 **Domain:** C4 Diagram Generation (Go CLI)
-**Researched:** 2026-03-09
-**Confidence:** MEDIUM (based on web research and go-graphviz issue analysis; no direct production experience with this specific stack)
+**Researched:** 2026-03-10
+**Updated for:** v1.1 AI-Ready Milestone
+**Confidence:** MEDIUM (based on codebase analysis, GraphViz patterns, and AI documentation best practices; limited direct experience with cross-level edge rendering at scale)
 
-## Critical Pitfalls
+---
+
+## v1.1-Specific Pitfalls (AI-Ready Milestone)
+
+These pitfalls are specific to adding AI documentation and all-expanded rendering mode to the existing C4Drill v1.0 codebase.
+
+### Pitfall A1: AI Prompt File Context Overload
+
+**What goes wrong:**
+CLAUDE.md (or similar AI prompt file) contains too much or too little information, making AI assistants either hallucinate features or miss critical constraints.
+
+**Why it happens:**
+Developers either dump entire documentation (overwhelming context window) or write vague high-level descriptions (insufficient specificity). The AI cannot infer implicit rules from incomplete documentation.
+
+**Consequences:**
+- AI generates invalid TOML that fails validation
+- AI suggests patterns that violate C4 model constraints (e.g., linking to units with subunits)
+- AI outputs syntax that doesn't match the actual schema
+- Users frustrated when "AI knows the tool" but produces broken diagrams
+
+**Prevention:**
+- Include complete TOML schema with all unit types and their constraints
+- Provide 2-3 complete, valid example TOML files (minimal, medium, complex)
+- Document validation rules explicitly (reference integrity, subunit constraints)
+- Include edge cases: empty files, single-unit systems, deeply nested structures
+- Keep examples in sync with actual parser behavior (test AI outputs against validator)
+
+**Detection:**
+- Have AI generate TOML files, run through validator
+- Track validation errors from AI-generated inputs
+- Compare AI understanding against actual schema quarterly
+
+**Phase to address:** Phase 1 (AI Documentation) - must be correct from the start
+
+---
+
+### Pitfall A2: AI Documentation Drift from Code Reality
+
+**What goes wrong:**
+CLAUDE.md describes behavior that doesn't match actual implementation. Schema changes, new features, or bug fixes aren't reflected in the AI documentation.
+
+**Why it happens:**
+Documentation is maintained separately from code. No automated check ensures AI docs match actual parser/validator behavior. Developers forget to update CLAUDE.md when modifying schema.
+
+**Consequences:**
+- AI generates syntactically correct but semantically wrong TOML
+- Users trust AI suggestions that don't work
+- Support burden increases as users report "AI said this should work"
+- Documentation credibility erodes
+
+**Prevention:**
+- Add CI check: parse CLAUDE.md examples with actual parser, validate they pass
+- Include version stamp in CLAUDE.md matching code version
+- Treat CLAUDE.md as code: require update in same PR as schema changes
+- Add "Last verified against version X.X" header
+
+**Detection:**
+- Automated: CI pipeline parses all CLAUDE.md examples
+- Manual: Periodic review against actual behavior
+- User reports of AI-generated TOML failing validation
+
+**Phase to address:** Phase 1 (AI Documentation) - establish CI pattern early
+
+---
+
+### Pitfall A3: All-Expanded Mode Cross-Level Edge Explosion
+
+**What goes wrong:**
+When rendering all units expanded simultaneously, cross-level edges (e.g., C3 component to C1 external system) create visual chaos. Too many edges crossing cluster boundaries makes diagrams unreadable.
+
+**Why it happens:**
+Normal C4 model assumes one level of detail at a time. All-expanded mode violates this assumption by showing C1, C2, and C3 simultaneously. Every C3 component that links to an external system now has an edge crossing two cluster levels.
+
+**Consequences:**
+- Diagrams become "hairball" - visually incomprehensible
+- GraphViz layout algorithm struggles, produces poor arrangements
+- Edges overlap and become untraceable
+- SVG files become huge (performance impact)
+- Feature perceived as useless despite being technically correct
+
+**Prevention:**
+- Implement edge filtering: option to hide cross-level edges beyond N levels
+- Aggregate edges: show single edge from cluster boundary instead of each internal edge
+- Add visual indicators for "edges go to external" without drawing all
+- Consider hybrid approach: expand one branch at a time, not all simultaneously
+- Document that all-expanded is for export/review, not interactive viewing
+
+**Detection:**
+- Test with real-world TOML files (10+ systems, each with 5+ containers)
+- Count edges in all-expanded vs per-level views
+- Visual inspection: can humans trace edge paths?
+- Performance: measure SVG file size growth
+
+**Phase to address:** Phase 2 (All-Expanded Mode) - requires iteration on edge rendering
+
+---
+
+### Pitfall A4: All-Expanded Mode Breaks Existing View Logic
+
+**What goes wrong:**
+Adding `--expanded` flag requires changes to view generation that inadvertently break existing collapsed/expanded behavior. C1, C2, C3 views start producing incorrect output.
+
+**Why it happens:**
+Current view generation (`GenerateC1View`, `GenerateC2View`, `GenerateC3View`) assumes specific scope boundaries. All-expanded mode requires different scope handling. Changes to shared code paths affect existing functionality.
+
+**Consequences:**
+- Regression: existing diagrams change unexpectedly
+- Validation errors on previously valid TOML files
+- User trust erodes as "stable" features break
+- Difficult to isolate bug to all-expanded changes
+
+**Prevention:**
+- Implement all-expanded as separate view type (`GenerateAllExpandedView`)
+- Do NOT modify existing view generation functions
+- Add comprehensive regression tests before implementing new mode
+- Use feature flag or separate code path initially
+- Require all existing tests to pass before merging all-expanded changes
+
+**Detection:**
+- Run full test suite before/after each change
+- Visual diff: compare SVG output for existing examples
+- Integration tests: all-expanded should not affect non-expanded output
+
+**Phase to address:** Phase 2 (All-Expanded Mode) - establish regression tests first
+
+---
+
+### Pitfall A5: All-Expanded Output File Naming Collision
+
+**What goes wrong:**
+All-expanded output file (`{basename}.expanded.{ext}`) overwrites or conflicts with existing output files. User runs `--expanded` and loses their C1 context diagram.
+
+**Why it happens:**
+Current output structure uses `{basename}.{ext}` for C1 and `{basename}/{unit}.{ext}` for C2/C3. Adding `{basename}.expanded.{ext}` looks safe but edge cases exist:
+- User has a system named "expanded" - creates collision
+- Overwrite protection not triggered because different flag
+
+**Consequences:**
+- Data loss: user's existing diagrams overwritten
+- Confusion: which diagram shows what?
+- File management complexity for users
+
+**Prevention:**
+- Use clear naming: `{basename}.all-expanded.{ext}` (more explicit)
+- Check for existing file before writing, warn or error
+- Consider subdirectory: `{basename}/_all-expanded.{ext}`
+- Document naming convention prominently
+- Add `--list-output` flag to show what files will be created
+
+**Detection:**
+- Test with system named "expanded" in TOML
+- Test with existing `{basename}.expanded.svg` file present
+- Verify overwrite behavior matches user expectations
+
+**Phase to address:** Phase 2 (All-Expanded Mode) - determine naming early
+
+---
+
+### Pitfall A6: GraphViz Layout Algorithm Unprepared for Deep Nesting + Cross-Edges
+
+**What goes wrong:**
+All-expanded mode with deeply nested structures (C3 components) and cross-level edges causes GraphViz `dot` layout to produce poor arrangements: nodes stacked oddly, edges routing through nodes, excessive whitespace.
+
+**Why it happens:**
+GraphViz `dot` algorithm optimizes for hierarchical directed graphs. Deeply nested clusters with cross-level edges violate its assumptions. The algorithm makes local decisions that compound into global poor layout.
+
+**Consequences:**
+- Professional-looking diagrams become amateurish in all-expanded mode
+- Users blame tool quality rather than understanding the inherent complexity
+- Support requests for "fix the layout" that have no good solution
+
+**Prevention:**
+- Test with maximum realistic nesting (C3 with 20+ components per container)
+- Consider alternative layouts for all-expanded: `fdp`, `neato`, or custom
+- Allow user to specify layout algorithm for all-expanded mode
+- Set expectations in documentation: "all-expanded prioritizes completeness over aesthetics"
+- Implement layout hints: increased `ranksep`, `nodesep` for all-expanded
+
+**Detection:**
+- Visual inspection of complex all-expanded diagrams
+- User feedback on layout quality
+- Compare against professional C4 tools' all-expanded output
+
+**Phase to address:** Phase 2 (All-Expanded Mode) - may require experimentation
+
+---
+
+### Pitfall A7: AI Prompt File Missing Edge Case Examples
+
+**What goes wrong:**
+CLAUDE.md includes only "happy path" examples. AI generates TOML that works for simple cases but fails on edge cases: external units, deeply nested structures, bidirectional links, self-referential units.
+
+**Why it happens:**
+Documentation writers focus on common cases. Edge cases feel like "advanced topics" to add later. AI has no training on how to handle unusual but valid TOML structures.
+
+**Consequences:**
+- AI-generated TOML works for demos but fails on real architectures
+- Users discover limitations only after investing time
+- Perception that "AI support" is incomplete
+
+**Prevention:**
+- Include explicit examples for:
+  - External units (`personExternal`, `systemExternal`, `dbExternal`, `queueExternal`)
+  - Bidirectional links (`link` + `linkFrom` patterns)
+  - Three-level nesting (system -> container -> component)
+  - Multiple systems with cross-links
+  - Single-unit TOML (minimal valid file)
+  - Styling overrides (colors, borders, edge styles)
+- Add "Anti-patterns" section showing what NOT to do with explanations
+- Test AI with edge case prompts specifically
+
+**Detection:**
+- Prompt AI to generate each edge case type
+- Run generated TOML through validator
+- Track which edge cases AI handles correctly
+
+**Phase to address:** Phase 1 (AI Documentation) - completeness from start
+
+---
+
+### Pitfall A8: All-Expanded Mode Memory/Performance Regression
+
+**What goes wrong:**
+All-expanded mode requires rendering the entire model as a single graph, consuming significantly more memory and time than per-level rendering. Large models cause crashes or unacceptable delays.
+
+**Why it happens:**
+Per-level rendering creates small graphs (C1, then C2 per system, then C3 per container). All-expanded creates one massive graph with all units simultaneously. GraphViz memory and time scale non-linearly with graph complexity.
+
+**Consequences:**
+- CLI hangs on large models (bad UX)
+- OOM crashes (worse UX)
+- Users avoid using all-expanded mode
+- Feature perceived as broken
+
+**Prevention:**
+- Benchmark memory/time for progressively larger models
+- Set and document maximum model size for all-expanded mode
+- Implement graceful degradation: error message suggesting per-level rendering
+- Consider progress indicator for long-running all-expanded generation
+- Profile and optimize hot paths before release
+
+**Detection:**
+- Performance tests with generated large TOML files
+- Memory profiling during all-expanded rendering
+- User reports of slowness or crashes
+
+**Phase to address:** Phase 2 (All-Expanded Mode) - establish limits early
+
+---
+
+## Existing v1.0 Pitfalls (Still Relevant)
+
+These pitfalls from v1.0 remain relevant for v1.1 development.
 
 ### Pitfall 1: GraphViz Layout Non-Determinism
 
 **What goes wrong:**
-Same input TOML produces different visual layouts across runs. Diagrams look different on different machines or even on the same machine between invocations. Node positions shift, edge routing changes, making version control diffing impossible.
+Same input TOML produces different visual layouts across runs. Diagrams look different on different machines or even on the same machine between invocations.
 
 **Why it happens:**
-GraphViz uses non-deterministic algorithms by default. Without explicit seed or deterministic settings, layout varies based on memory addresses, hash ordering, and other environmental factors. go-graphviz inherits this behavior from the underlying WASM-embedded GraphViz.
+GraphViz uses non-deterministic algorithms by default. Without explicit seed or deterministic settings, layout varies based on memory addresses, hash ordering, and other environmental factors.
 
 **Consequences:**
 - Documentation diffs become noise (SVG changes even when architecture unchanged)
 - Users cannot reproduce identical diagrams
 - CI/CD pipelines generate inconsistent artifacts
-- Collaboration breaks (team members see different outputs)
 
 **Prevention:**
-- Investigate go-graphviz for deterministic layout options
-- If not available, document that outputs may vary
-- Consider pinning go-graphviz version tightly
 - Generate DOT as primary artifact (deterministic), SVG as secondary
+- Document that outputs may vary
+- Pin go-graphviz version tightly
 
 **Detection:**
 - Run generation 3 times on same input, compare outputs
-- Check if go-graphviz exposes any seed/determinism settings
 - Monitor SVG output in version control for spurious changes
 
-**Phase to address:** Phase 1 (Core Generation) - establish deterministic baseline early
+**Status:** Mitigated in v1.0 by treating DOT as primary artifact
 
 ---
 
 ### Pitfall 2: TOML Reference Integrity Violations
 
 **What goes wrong:**
-Links reference non-existent units, circular references create infinite loops, or units with subunits are incorrectly referenced directly. Validation passes but rendering produces broken diagrams or crashes.
+Links reference non-existent units, circular references create infinite loops, or units with subunits are incorrectly referenced directly.
 
 **Why it happens:**
-TOML parsing is separate from semantic validation. Developers implement basic syntax checking but miss edge cases:
-- Forward references (unit defined after link to it)
-- Circular dependencies between units
-- Referencing a container unit directly when it has subunits (violates C4 model)
-- Typos in unit names that pass syntax but fail semantics
+TOML parsing is separate from semantic validation. Forward references, circular dependencies, and constraint violations pass syntax but fail semantics.
 
 **Consequences:**
 - Silent failures: diagram renders but is incomplete
 - Confusing error messages point to wrong location
-- Users frustrated debugging their TOML files
-- Invalid C4 model output (violates C4 principles)
+- Invalid C4 model output
 
 **Prevention:**
-- Implement two-pass parsing: syntax then semantic validation
+- Two-pass parsing: syntax then semantic validation
 - Build reference graph and detect cycles before rendering
-- Validate that referenced units exist and are leaf nodes (no subunits)
-- Provide clear error messages with line numbers and unit names
-- Create comprehensive validation test suite with edge cases
+- Validate that referenced units exist and are leaf nodes
+- Clear error messages with line numbers and suggestions
 
-**Detection:**
-- Unit tests for each validation rule
-- Fuzz testing with malformed TOML
-- Integration tests with intentionally broken references
-
-**Phase to address:** Phase 1 (Core Generation) - validation is foundational
+**Status:** Implemented in v1.0 validator
 
 ---
 
 ### Pitfall 3: go-graphviz Memory/Segfault Issues
 
 **What goes wrong:**
-Large or complex diagrams cause segfaults, panics, or out-of-memory errors. The WASM-embedded GraphViz has limits that native GraphViz doesn't encounter.
+Large or complex diagrams cause segfaults, panics, or out-of-memory errors. WASM-embedded GraphViz has limits that native GraphViz doesn't encounter.
 
 **Why it happens:**
-go-graphviz embeds GraphViz compiled to WASM, which has constrained memory compared to native binaries. Complex graphs with many nodes, edges, or deeply nested clusters can exhaust WASM memory or trigger bugs in the WASM runtime.
+go-graphviz embeds GraphViz compiled to WASM, which has constrained memory. Complex graphs can exhaust WASM memory or trigger runtime bugs.
 
 **Consequences:**
 - CLI crashes on legitimate inputs
 - No graceful degradation for large diagrams
-- Users hit invisible limits with no guidance
 - Unreliable tool drives users to alternatives
 
 **Prevention:**
 - Document known limits (max nodes, max edges, max nesting depth)
 - Implement graceful error handling with actionable messages
-- Consider splitting very large diagrams automatically
-- Test with progressively larger inputs to find breaking points
-- Provide fallback to native GraphViz DOT generation (skip SVG rendering)
+- Provide fallback to DOT-only output
 
-**Detection:**
-- Stress testing with large generated TOML files
-- Memory profiling during rendering
-- Monitor crash reports from users
-
-**Phase to address:** Phase 1 (Core Generation) - establish error handling patterns early
+**Status:** Documented limits in v1.0; more critical for all-expanded mode
 
 ---
 
 ### Pitfall 4: Collapsed/Expanded State Inconsistency
 
 **What goes wrong:**
-Expanded units list doesn't match actual rendering. Some units show as expanded when they shouldn't, or explore links point to non-existent drill-down files. The `expanded` property in TOML doesn't propagate correctly through nesting levels.
+Expanded units list doesn't match actual rendering. Some units show as expanded when they shouldn't, or explore links point to non-existent drill-down files.
 
 **Why it happens:**
-The `expanded` property has complex inheritance rules:
-- Global default in `[properties]`
-- Per-unit overrides
-- Nested units can have their own expanded settings
-- Edge routing (`edges`) also inherits and affects cluster rendering
-
-Developers miss the interaction between these settings and create inconsistent state.
+The `expanded` property has complex inheritance rules across global defaults, per-unit overrides, and nested units.
 
 **Consequences:**
 - Diagrams don't match user intent
 - Explore links broken (404s)
 - Confusion about what "expanded" means at each level
-- Output file structure doesn't match expectations
 
 **Prevention:**
-- Implement explicit inheritance resolution before rendering
+- Explicit inheritance resolution before rendering
 - Validate that expanded units actually have subunits
-- Generate drill-down files only for units that are expanded
 - Test all combinations of global/local expanded settings
-- Document inheritance rules clearly
 
-**Detection:**
-- Test matrix: global expanded + local expanded for various nesting levels
-- Verify file structure matches expanded state
-- Check that all explore links resolve
-
-**Phase to address:** Phase 2 (Views & Styling) - after basic rendering works
-
----
-
-### Pitfall 5: SVG Interactive Link Generation Failures
-
-**What goes wrong:**
-Explore links in SVG don't work, point to wrong files, or break when diagrams are moved. Relative vs absolute path handling is inconsistent. Links work locally but break when hosted on web servers.
-
-**Why it happens:**
-SVG links (`<a>` elements with `xlink:href`) have subtle path resolution rules. The tool generates links at render time but doesn't know where the SVG will be hosted. Relative paths work in some contexts but not others.
-
-**Consequences:**
-- "Drill-down" functionality broken in practice
-- Diagrams only work in specific hosting contexts
-- User frustration when links don't work as expected
-- Tool feels incomplete despite core functionality working
-
-**Prevention:**
-- Use relative paths consistently
-- Generate links relative to output directory structure
-- Document expected hosting setup
-- Consider making link path style configurable (relative/absolute/root-relative)
-- Test links in multiple contexts (file://, http://localhost, hosted)
-
-**Detection:**
-- Test generated SVGs in browser
-- Verify links work from both root and nested diagrams
-- Test with different output directory structures
-
-**Phase to address:** Phase 2 (Views & Styling) - links are core to drill-down UX
+**Status:** Implemented in v1.0; all-expanded mode adds new complexity
 
 ---
 
 ## Moderate Pitfalls
 
-### Pitfall 6: Font Rendering Inconsistency
+### Pitfall M1: Font Rendering Inconsistency
 
 **What goes wrong:**
-Text in diagrams renders with wrong fonts, missing characters, or inconsistent sizing across platforms. Special characters (Unicode) don't display correctly.
+Text in diagrams renders with wrong fonts, missing characters, or inconsistent sizing across platforms. Unicode characters don't display correctly.
 
 **Prevention:**
 - Specify font explicitly in generated DOT
 - Use widely available fonts (Arial, Helvetica, sans-serif)
 - Test with Unicode characters early
-- Document font requirements
 
 ---
 
-### Pitfall 7: Edge Routing Style Ignorance
+### Pitfall M2: Edge Routing Style Ignorance
 
 **What goes wrong:**
 `edges` property (straight, spline, square) doesn't produce expected results. Splines look messy, straight edges overlap, square edges don't respect clusters.
@@ -188,11 +374,11 @@ Text in diagrams renders with wrong fonts, missing characters, or inconsistent s
 **Prevention:**
 - Map `edges` values to correct GraphViz `splines` attribute
 - Test each edge style with various graph topologies
-- Document what each style actually does (vs what users expect)
+- Document what each style actually does
 
 ---
 
-### Pitfall 8: Color Value Validation Gaps
+### Pitfall M3: Color Value Validation Gaps
 
 **What goes wrong:**
 Invalid color values cause rendering failures or are silently ignored. Named colors, hex codes, and transparency handling inconsistent.
@@ -200,149 +386,77 @@ Invalid color values cause rendering failures or are silently ignored. Named col
 **Prevention:**
 - Validate color values before rendering
 - Support common formats (hex, RGB, named colors)
-- Provide clear error for unsupported formats
 - Default gracefully when colors invalid
 
 ---
 
-## Minor Pitfalls
+## Phase-Specific Warnings for v1.1
 
-### Pitfall 9: Missing Input File Error UX
-
-**What goes wrong:**
-When input TOML file doesn't exist, error message is generic Go file-not-found rather than helpful context.
-
-**Prevention:**
-- Wrap file operations with context-aware error messages
-- Include file path in error output
-- Suggest common fixes (typo in filename, wrong directory)
-
----
-
-### Pitfall 10: Output Directory Creation Failure
-
-**What goes wrong:**
-Tool fails when output directory doesn't exist, rather than creating it.
-
-**Prevention:**
-- Create output directory structure if it doesn't exist
-- Handle permission errors gracefully
-- Document required permissions
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| AI Documentation (CLAUDE.md) | Context overload, missing edge cases | Start with minimal viable examples, expand based on validation failures |
+| AI Documentation | Drift from code reality | CI check that parses CLAUDE.md examples |
+| All-Expanded Rendering | Cross-level edge explosion | Edge aggregation, filtering, visual simplification |
+| All-Expanded Rendering | Breaks existing view logic | Separate code path, comprehensive regression tests |
+| All-Expanded Output | File naming collision | Use explicit naming, collision detection |
+| All-Expanded Layout | Poor GraphViz arrangements | Layout algorithm options, increased spacing |
+| All-Expanded Performance | Memory/time regression | Benchmark, document limits, graceful degradation |
 
 ---
 
-## Technical Debt Patterns
-
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Skip validation for simple diagrams | Faster initial development | Broken edge cases accumulate, hard to add validation later | Never - validation is core |
-| Use string matching for TOML parsing | Avoid dependency on TOML library | Fragile, breaks on edge cases, hard to extend | Never - use proper TOML library |
-| Generate SVG without DOT intermediate | Simpler code path | Harder to debug, no fallback, can't inspect intermediate | Never - always generate DOT |
-| Hardcode graphviz layout settings | Faster to implement | Users can't tune layouts, tool inflexible | MVP only - make configurable in Phase 2 |
-| Ignore cluster depth limits | Simpler rendering code | Crashes on deeply nested structures | MVP only - add limits and validation |
-
----
-
-## Integration Gotchas
+## Integration Pitfalls (v1.1 Specific)
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| go-graphviz | Assuming it behaves like native GraphViz | Test thoroughly, document differences, expect WASM limitations |
-| TOML library | Using default struct tag mapping | Implement custom unmarshalling for nested unit types and link objects |
-| File system | Assuming UTF-8 everywhere | Handle encoding explicitly, test with non-ASCII paths |
-| SVG browser rendering | Assuming consistent viewBox handling | Test in multiple browsers, validate SVG structure |
+| CLAUDE.md <-> Parser | Examples that don't match actual schema | CI parses all examples, fails on mismatch |
+| All-Expanded <-> View | Modifying existing view functions | Separate `GenerateAllExpandedView` function |
+| All-Expanded <-> Graph | Using same edge building logic | Custom edge handling for cross-level edges |
+| All-Expanded <-> Output | Assuming file naming is trivial | Explicit naming convention, collision checks |
 
 ---
 
-## Performance Traps
+## "Looks Done But Isn't" Checklist (v1.1)
 
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| Unbounded graph size | OOM, crashes, infinite render time | Enforce max nodes/edges, fail fast with clear message | 500+ nodes (estimate, test to confirm) |
-| Deep nesting | Stack overflow in traversal, cluster rendering failures | Limit nesting depth, validate before rendering | 5+ levels (estimate) |
-| Many edges between same nodes | Overlapping edges unreadable, rendering slow | Aggregate edges, use edge labels, limit edge count | 10+ edges same pair |
-| Large labels | Text overflow, broken layout | Truncate long labels, validate label length | Labels > 100 chars |
-
----
-
-## Security Mistakes
-
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| Arbitrary file paths in TOML | Path traversal, overwriting sensitive files | Validate paths stay within output directory, sanitize inputs |
-| Unbounded input file size | DoS via memory exhaustion | Enforce max file size, stream parsing if possible |
-| Executing embedded code | Arbitrary code execution | Never execute content from TOML, treat as pure data |
+- [ ] **AI Documentation:** Examples parse without errors - verify all CLAUDE.md TOML blocks with actual parser
+- [ ] **AI Documentation:** Examples validate without errors - verify all examples pass validator
+- [ ] **AI Documentation:** Edge cases covered - verify external types, deep nesting, bidirectional links
+- [ ] **All-Expanded:** Existing output unchanged - verify C1/C2/C3 output identical before/after
+- [ ] **All-Expanded:** Cross-level edges visible - verify edges between C3 components and C1 systems render
+- [ ] **All-Expanded:** File naming collision-safe - verify with unit named "expanded"
+- [ ] **All-Expanded:** Performance acceptable - verify memory/time for 50+ unit model
+- [ ] **All-Expanded:** Layout readable - visual inspection of complex all-expanded diagram
 
 ---
 
-## UX Pitfalls
-
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| Cryptic validation errors | Users can't fix their TOML files | Error messages with line numbers, examples, and suggestions |
-| Silent output overwriting | Users lose previous work | Warn before overwriting, require --force flag |
-| No preview of what will be generated | Users iterate blindly | Dry-run mode showing what files will be created |
-| Inconsistent CLI flags | Users can't predict behavior | Follow standard CLI conventions, consistent flag naming |
-
----
-
-## "Looks Done But Isn't" Checklist
-
-- [ ] **Validation:** Often missing forward reference detection - verify links resolve after full parse
-- [ ] **Validation:** Often missing circular reference detection - verify no cycles in reference graph
-- [ ] **Validation:** Often missing subunit reference rule - verify units with subunits aren't directly linked
-- [ ] **Collapsed/Expanded:** Often missing inheritance validation - verify global + local expanded settings interact correctly
-- [ ] **File Output:** Often missing directory creation - verify output directories created if missing
-- [ ] **Error Messages:** Often missing line numbers - verify errors point to specific TOML locations
-- [ ] **Edge Cases:** Often missing empty input handling - verify graceful handling of empty/minimal TOML
-- [ ] **Links:** Often missing broken link detection - verify all explore links resolve to actual files
-
----
-
-## Recovery Strategies
+## Recovery Strategies (v1.1)
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Non-deterministic layout | LOW | Regenerate with same input; if persistent, investigate go-graphviz settings |
-| Reference integrity violations | MEDIUM | Fix TOML file; tool should provide clear error location |
-| go-graphviz crashes | HIGH | Reduce diagram complexity; use DOT-only output; consider native GraphViz |
-| Broken explore links | LOW | Fix expanded state; regenerate; verify file structure |
-| Font rendering issues | LOW | Specify font explicitly in TOML or tool defaults |
-
----
-
-## Pitfall-to-Phase Mapping
-
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| GraphViz Layout Non-Determinism | Phase 1 (Core Generation) | Run generation multiple times, compare outputs |
-| TOML Reference Integrity | Phase 1 (Core Generation) | Unit tests for all validation rules, edge case tests |
-| go-graphviz Memory Issues | Phase 1 (Core Generation) | Stress testing, memory profiling, documented limits |
-| Collapsed/Expanded Inconsistency | Phase 2 (Views & Styling) | Test matrix for all expanded combinations |
-| SVG Link Generation | Phase 2 (Views & Styling) | Test links in browser, multiple hosting contexts |
-| Font Rendering | Phase 2 (Views & Styling) | Test on multiple platforms, Unicode characters |
-| Edge Routing | Phase 2 (Views & Styling) | Visual inspection of each edge style |
-| Color Validation | Phase 1 or 2 | Tests for each supported format |
-| Error Message UX | Phase 1 (Core Generation) | User testing with intentional errors |
-| Output Directory Handling | Phase 1 (Core Generation) | Test with missing directories |
+| AI documentation drift | LOW | Update CLAUDE.md, verify examples |
+| AI missing edge cases | LOW | Add examples, verify AI generates correctly |
+| All-expanded breaks views | MEDIUM | Revert, implement separate code path |
+| All-expanded edge explosion | MEDIUM | Implement edge filtering/aggregation |
+| All-expanded layout issues | HIGH | May require layout algorithm experimentation |
+| All-expanded performance | HIGH | May require model size limits or optimization |
 
 ---
 
 ## Sources
 
 - C4 Model Official Site (c4model.com) - Core diagram principles
-- go-graphviz GitHub Repository and Issues - Common rendering problems, segfaults, font issues
-- Structurizr Documentation (docs.structurizr.com) - C4 model validation patterns
-- GraphViz Documentation - Layout algorithms, edge routing options
+- go-graphviz GitHub Repository and Issues - Rendering problems, performance limits
+- GraphViz Documentation - Layout algorithms, cluster handling, cross-level edges
 - TOML Specification - Parsing and validation considerations
+- Claude Code Documentation patterns - AI prompt file best practices
+- Existing C4Drill codebase analysis - View generation, graph building, edge handling
 
 **Confidence Assessment:**
-- go-graphviz issues: HIGH (direct from repository issues)
-- C4 model pitfalls: MEDIUM (inferred from model principles, no production experience)
-- TOML validation pitfalls: MEDIUM (general parsing experience, not specific to this schema)
-- Performance limits: LOW (estimated, need empirical testing)
+- Existing v1.0 pitfalls: HIGH (from codebase analysis and existing documentation)
+- AI documentation pitfalls: MEDIUM (inferred from AI prompt patterns, not direct experience with this codebase)
+- All-expanded rendering pitfalls: MEDIUM (inferred from GraphViz behavior and C4 model principles, empirical testing needed for cross-level edge handling)
+- Performance limits: LOW (estimated, need empirical testing with large models)
 
 ---
 
-*Pitfalls research for: C4 Diagram Generation CLI*
-*Researched: 2026-03-09*
+*Pitfalls research for: C4 Diagram Generation CLI (v1.1 AI-Ready Milestone)*
+*Researched: 2026-03-10*
