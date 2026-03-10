@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2: Validation** - Reference integrity, type constraints, clear error messages
 - [ ] **Phase 3: Views & Graphs** - C1/C2/C3 view generation, graph construction with nodes/edges/clusters
 - [ ] **Phase 4: Rendering & Output** - DOT generation, SVG rendering, file output structure
-- [ ] **Phase 5: Navigation** - Collapsed/expanded views, explore links, drill-down file structure
+- [x] **Phase 5: Navigation** - Collapsed/expanded views, explore links, drill-down file structure (completed 2026-03-10)
 - [ ] **Phase 6: CLI & Polish** - Cobra CLI, flags, help text, final integration
 
 ## Phase Details
@@ -160,7 +160,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. Validation | 2/3 | Done | 2026-03-09 |
 | 3. Views & Graphs | 3/3 | Done | 2026-03-09 |
 | 4. Rendering & Output | 3/3 | Done | 2026-03-10 |
-| 5. Navigation | 3/3 | Done | 2026-03-10 |
+| 5. Navigation | 3/3 | Complete    | 2026-03-10 |
 | 6. CLI & Polish | 0/TBD | Not started | - |
 
 ---
