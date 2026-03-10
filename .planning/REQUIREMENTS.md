@@ -23,6 +23,11 @@ Requirements for AI-Ready milestone. Each maps to roadmap phases.
 - [ ] **EXPD-04**: Output saved to `{basename}.expanded.{ext}` format (dot/svg)
 - [ ] **EXPD-05**: Existing C1/C2/C3 view generation remains unchanged (zero regression)
 
+### Validation Enhancement
+
+- [ ] **VAL-01**: Validator rejects TOML files with unlinked (orphan) units - all units must have at least one incoming or outgoing link
+- [ ] **VAL-02**: Validation error message clearly identifies which units are unlinked
+
 ## v1.0 Requirements (Shipped)
 
 Completed in v1.0 Initial Release (2026-03-10). See `.planning/milestones/v1.0-REQUIREMENTS.md` for archive.
@@ -60,10 +65,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXPD-03 | Phase 8 | Pending |
 | EXPD-04 | Phase 8 | Pending |
 | EXPD-05 | Phase 8 | Pending |
+| VAL-01 | Phase 9 | Pending |
+| VAL-02 | Phase 9 | Pending |
 
 **Coverage:**
-- v1.1 requirements: 10 total
-- Mapped to phases: 10
+- v1.1 requirements: 12 total
+- Mapped to phases: 12
 - Unmapped: 0 ✓
 
 ---

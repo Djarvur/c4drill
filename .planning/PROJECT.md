@@ -26,16 +26,18 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 - [ ] TOML Language Manual for AI-assisted diagram generation
 - [ ] All-Expanded rendering mode with cross-level edges
+- [ ] No-orphan-units validation rule
 
 ## Current Milestone: v1.1 AI-Ready
 
-**Goal:** Make C4Drill AI-friendly with documentation and single-view expanded diagrams
+**Goal:** Make C4Drill AI-friendly with documentation, single-view expanded diagrams, and stricter validation
 
 **Target features:**
 
 - AI-focused prompt file (CLAUDE.md) + human reference for TOML authoring
 - `--expanded` CLI flag to render all units expanded with all cross-level edges
 - Output saved to `{basename}.expanded.{ext}`
+- Validation rule rejecting unlinked (orphan) units
 
 ### Out of Scope
 

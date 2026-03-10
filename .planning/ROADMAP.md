@@ -7,7 +7,7 @@ C4Drill transforms TOML architecture definitions into professional C4 diagrams t
 ## Milestones
 
 - ✅ **v1.0 Initial Release** — Phases 1-6 (shipped 2026-03-10)
-- 🚧 **v1.1 AI-Ready** — Phases 7-8 (in progress)
+- 🚧 **v1.1 AI-Ready** — Phases 7-9 (in progress)
 - 📋 **v2.0** — Future features (planned)
 
 ## Phases
@@ -28,10 +28,11 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 
 ### 🚧 v1.1 AI-Ready (In Progress)
 
-**Milestone Goal:** Make C4Drill AI-friendly with documentation and single-view expanded diagrams
+**Milestone Goal:** Make C4Drill AI-friendly with documentation, single-view expanded diagrams, and stricter validation
 
 - [ ] **Phase 7: AI Documentation** — TOML language manual for AI assistants
 - [ ] **Phase 8: All-Expanded Mode** — Single-view expanded rendering with cross-level edges
+- [ ] **Phase 9: No Orphan Units** — Validation rule requiring all units to be linked
 
 ---
 
@@ -61,12 +62,22 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
   5. Existing C1/C2/C3 view generation produces identical output when `--expanded` is not used
 **Plans**: TBD
 
+### Phase 9: No Orphan Units
+**Goal**: All units in the architecture must be connected via links (no isolated units)
+**Depends on**: Nothing (independent, can run in parallel)
+**Requirements**: VAL-01, VAL-02
+**Success Criteria** (what must be TRUE):
+  1. Validator rejects TOML files containing units with no incoming or outgoing links
+  2. Error message clearly lists all unlinked (orphan) units by name
+  3. Existing valid TOML files continue to validate successfully
+**Plans**: TBD
+
 ---
 
 ## Progress
 
 **Execution Order:**
-Phases 7 and 8 are independent and can run in parallel.
+Phases 7, 8, and 9 are independent and can run in parallel.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -78,6 +89,7 @@ Phases 7 and 8 are independent and can run in parallel.
 | 6. CLI & Polish | v1.0 | 2/2 | Complete | 2026-03-10 |
 | 7. AI Documentation | v1.1 | 0/TBD | Not started | - |
 | 8. All-Expanded Mode | v1.1 | 0/TBD | Not started | - |
+| 9. No Orphan Units | v1.1 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-03-09*
