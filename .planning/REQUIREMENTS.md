@@ -67,10 +67,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Output
 
-- [ ] **OUTP-01**: Context level renders to {basename}.{format}
-- [ ] **OUTP-02**: Expanded units render to {basename}/{unit-name}.{format}
+- [x] **OUTP-01**: Context level renders to {basename}.{format}
+- [x] **OUTP-02**: Expanded units render to {basename}/{unit-name}.{format}
 - [ ] **OUTP-03**: Output directory controlled by --output flag (default: current directory)
-- [ ] **OUTP-04**: Directory structure created recursively as needed
+- [x] **OUTP-04**: Directory structure created recursively as needed
 - [ ] **OUTP-05**: Relative paths used for explore and back links
 
 ### CLI
@@ -178,9 +178,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REND-01 | Phase 4 | Pending |
 | REND-02 | Phase 4 | Pending |
 | REND-03 | Phase 4 | Pending |
-| OUTP-01 | Phase 4 | Pending |
-| OUTP-02 | Phase 4 | Pending |
-| OUTP-04 | Phase 4 | Pending |
+| OUTP-01 | Phase 4 | Complete |
+| OUTP-02 | Phase 4 | Complete |
+| OUTP-04 | Phase 4 | Complete |
 | REND-04 | Phase 5 | Pending |
 | REND-05 | Phase 5 | Pending |
 | REND-06 | Phase 5 | Pending |
