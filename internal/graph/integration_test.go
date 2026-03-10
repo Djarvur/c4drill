@@ -453,3 +453,225 @@ func TestIntegrationGraphWithAllUnitTypes(t *testing.T) {
 		assert.Equal(t, "dashed", nodeMap[id].Style.BorderStyle, "%s should have dashed border", id)
 	}
 }
+
+// ============================================================================
+// Navigation Integration Tests (05-03)
+// ============================================================================
+
+// TestIntegration_Navigation_C1NoBackLink tests that C1 view has no navigation (root level).
+func TestIntegration_Navigation_C1NoBackLink(t *testing.T) {
+	t.Parallel()
+
+	// C1 view should have no navigation (root level)
+	m := buildTestModelWithExpandableSystem()
+	v := view.GenerateC1View(m)
+	g := graph.BuildGraphWithPath(v, "", "test", "svg")
+
+	require.NotNil(t, g)
+	assert.Nil(t, g.Navigation, "C1 should have no navigation")
+}
+
+// TestIntegration_Navigation_C2BackLink tests that C2 view has back-link to C1.
+func TestIntegration_Navigation_C2BackLink(t *testing.T) {
+	t.Parallel()
+
+	// C2 view should have back-link to C1
+	m := buildTestModelWithExpandableSystem()
+	v := view.GenerateC2View(m, "mainsystem")
+	g := graph.BuildGraphWithPath(v, "mainsystem", "test", "svg")
+
+	require.NotNil(t, g)
+	require.NotNil(t, g.Navigation, "C2 should have navigation")
+	require.NotNil(t, g.Navigation.BackLink, "C2 should have back-link")
+	assert.Equal(t, "../test.svg", g.Navigation.BackLink.URL)
+}
+
+// TestIntegration_Navigation_C3Breadcrumbs tests that C3 view has breadcrumbs showing path.
+func TestIntegration_Navigation_C3Breadcrumbs(t *testing.T) {
+	t.Parallel()
+
+	// C3 view should have breadcrumbs showing path
+	m := buildTestModelWithNestedStructure()
+	v := view.GenerateC3View(m, "mainsystem.api")
+	g := graph.BuildGraphWithPath(v, "mainsystem.api", "test", "svg")
+
+	require.NotNil(t, g)
+	require.NotNil(t, g.Navigation, "C3 should have navigation")
+	assert.Greater(t, len(g.Navigation.Breadcrumbs), 1, "C3 should have multiple breadcrumb items")
+
+	// Last item should have no URL (current level)
+	lastIdx := len(g.Navigation.Breadcrumbs) - 1
+	assert.Empty(t, g.Navigation.Breadcrumbs[lastIdx].URL, "Current level should have no URL")
+}
+
+// TestIntegration_ExploreURL_CollapsedSystem tests collapsed system with subunits has explore URL.
+func TestIntegration_ExploreURL_CollapsedSystem(t *testing.T) {
+	t.Parallel()
+
+	// Collapsed system with subunits should have explore URL
+	m := buildTestModelWithExpandableSystem()
+	v := view.GenerateC1View(m)
+	g := graph.BuildGraphWithPath(v, "", "test", "svg")
+
+	// Find the collapsed system node
+	var collapsedNode *graph.Node
+
+	for _, node := range g.Nodes {
+		if node.ID == "mainsystem" {
+			collapsedNode = node
+
+			break
+		}
+	}
+
+	require.NotNil(t, collapsedNode, "Should find mainsystem node")
+	assert.NotEmpty(t, collapsedNode.ExploreURL, "Collapsed system should have explore URL")
+	assert.Contains(t, collapsedNode.ExploreURL, ".svg")
+}
+
+// TestIntegration_ExploreURL_ExpandedSystem tests that fully expanded system becomes a cluster.
+func TestIntegration_ExploreURL_ExpandedSystem(t *testing.T) {
+	t.Parallel()
+
+	// When a system's children are expanded, it still appears as a node in C1
+	// but with its children shown inside (as a cluster)
+	m := buildTestModelPreExpanded()
+	v := view.GenerateC1View(m)
+	g := graph.BuildGraphWithPath(v, "", "test", "svg")
+
+	// The system should be a cluster (expanded), not a standalone node
+	var mainsystemInNodes bool
+	for _, node := range g.Nodes {
+		if node.ID == "mainsystem" {
+			mainsystemInNodes = true
+
+			break
+		}
+	}
+
+	// mainsystem should be in clusters (expanded), not in top-level nodes
+	assert.False(t, mainsystemInNodes, "Fully expanded system should be in clusters, not nodes")
+
+	// Verify it's in clusters
+	var mainsystemCluster *graph.Cluster
+	for _, cluster := range g.Clusters {
+		if cluster.ID == "cluster_mainsystem" {
+			mainsystemCluster = cluster
+
+			break
+		}
+	}
+
+	require.NotNil(t, mainsystemCluster, "Expanded system should be a cluster")
+}
+
+// TestIntegration_ExploreURL_NonExpandableTypes tests person/db/queue never have explore URLs.
+func TestIntegration_ExploreURL_NonExpandableTypes(t *testing.T) {
+	t.Parallel()
+
+	// Person, db, queue should never have explore URLs
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"user":  {Type: model.TypePerson, Name: "User"},
+			"db":    {Type: model.TypeDb, Name: "Database"},
+			"queue": {Type: model.TypeQueue, Name: "Queue"},
+		},
+	}
+	v := view.GenerateC1View(m)
+	g := graph.BuildGraphWithPath(v, "", "test", "svg")
+
+	for _, node := range g.Nodes {
+		assert.Empty(t, node.ExploreURL, "Non-expandable types should not have explore URL: %s", node.ID)
+	}
+}
+
+// TestIntegration_Navigation_BackLinkName tests back-link uses parent name.
+func TestIntegration_Navigation_BackLinkName(t *testing.T) {
+	t.Parallel()
+
+	m := buildTestModelWithExpandableSystem()
+	v := view.GenerateC2View(m, "mainsystem")
+	g := graph.BuildGraphWithPath(v, "mainsystem", "test", "svg")
+
+	require.NotNil(t, g)
+	require.NotNil(t, g.Navigation)
+	require.NotNil(t, g.Navigation.BackLink)
+	// The back-link name should be derived from the parent context
+	assert.NotEmpty(t, g.Navigation.BackLink.Name)
+}
+
+// TestIntegration_Navigation_BreadcrumbAncestorsClickable tests breadcrumb ancestors are clickable.
+func TestIntegration_Navigation_BreadcrumbAncestorsClickable(t *testing.T) {
+	t.Parallel()
+
+	m := buildTestModelWithNestedStructure()
+	v := view.GenerateC3View(m, "mainsystem.api")
+	g := graph.BuildGraphWithPath(v, "mainsystem.api", "test", "svg")
+
+	require.NotNil(t, g)
+	require.NotNil(t, g.Navigation)
+	require.Greater(t, len(g.Navigation.Breadcrumbs), 1, "C3 should have multiple breadcrumbs")
+
+	// All items except the last should have URLs (be clickable)
+	for i, item := range g.Navigation.Breadcrumbs {
+		if i < len(g.Navigation.Breadcrumbs)-1 {
+			assert.NotEmpty(t, item.URL, "Breadcrumb ancestor %d should have URL", i)
+		}
+	}
+}
+
+// ============================================================================
+// Helper functions for navigation tests
+// ============================================================================
+
+// buildTestModelWithExpandableSystem creates a model with an expandable system.
+func buildTestModelWithExpandableSystem() *parser.Model {
+	return &parser.Model{
+		Properties: model.Properties{Name: "Test System"},
+		Units: map[string]*model.Unit{
+			"mainsystem": {
+				Type: model.TypeSystem,
+				Name: "Main System",
+				Subunits: map[string]*model.Unit{
+					"api": {Type: model.TypeSystem, Name: "API"},
+					"web": {Type: model.TypeSystem, Name: "Web App"},
+				},
+			},
+		},
+	}
+}
+
+// buildTestModelWithNestedStructure creates a model with nested structure for C3 tests.
+func buildTestModelWithNestedStructure() *parser.Model {
+	return &parser.Model{
+		Properties: model.Properties{Name: "Test System"},
+		Units: map[string]*model.Unit{
+			"mainsystem": {
+				Type:     model.TypeSystem,
+				Name:     "Main System",
+				Expanded: []string{"api"},
+				Subunits: map[string]*model.Unit{
+					"api": {
+						Type: model.TypeSystem,
+						Name: "API Container",
+						Subunits: map[string]*model.Unit{
+							"auth":  {Type: model.TypeSystem, Name: "Auth Service"},
+							"users": {Type: model.TypeSystem, Name: "User Service"},
+						},
+					},
+					"web": {Type: model.TypeSystem, Name: "Web App"},
+				},
+			},
+		},
+	}
+}
+
+// buildTestModelPreExpanded creates a model with pre-expanded system.
+func buildTestModelPreExpanded() *parser.Model {
+	m := buildTestModelWithExpandableSystem()
+	// To expand the mainsystem itself, add "mainsystem" to its Expanded list
+	m.Units["mainsystem"].Expanded = []string{"mainsystem"}
+
+	return m
+}
