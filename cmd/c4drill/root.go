@@ -2,6 +2,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -16,6 +17,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Static errors for better error handling.
+var (
+	errInvalidFormat    = errors.New("invalid format: must be dot or svg")
+	errValidationFailed = errors.New("validation failed")
+	errGenerateView     = errors.New("failed to generate view")
+	errBuildGraph       = errors.New("failed to build graph")
+)
+
+//nolint:gochecknoglobals // Cobra flags require package-level variables for PersistentFlags registration
 var (
 	format    string
 	outputDir string
@@ -42,9 +52,9 @@ Output:
   - C1 diagram: {basename}.{format}
   - C2 diagrams: {basename}/{system}.{format}
   - C3 diagrams: {basename}/{system}/{container}.{format}`,
-		Version:     version,
-		Args:        cobra.ExactArgs(1),
-		RunE:        runRoot,
+		Version:      version,
+		Args:         cobra.ExactArgs(1),
+		RunE:         runRoot,
 		SilenceUsage: true,
 	}
 
@@ -61,7 +71,7 @@ Output:
 func runRoot(cmd *cobra.Command, args []string) error {
 	// Validate flags early (before file I/O)
 	if format != "dot" && format != "svg" {
-		return fmt.Errorf("invalid format %q: must be dot or svg", format)
+		return fmt.Errorf("%w: %q", errInvalidFormat, format)
 	}
 
 	inputPath := args[0]
@@ -73,10 +83,11 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	}
 
 	// Stage 2: Validate
-	errors := validator.Validate(m)
-	if len(errors) > 0 {
-		validator.ReportErrors(errors, cmd.OutOrStderr())
-		return fmt.Errorf("validation failed")
+	valErrors := validator.Validate(m)
+	if len(valErrors) > 0 {
+		validator.ReportErrors(valErrors, cmd.OutOrStderr())
+
+		return errValidationFailed
 	}
 
 	// Derive basename from input file
@@ -104,7 +115,9 @@ func runRoot(cmd *cobra.Command, args []string) error {
 // collectExpandedPaths returns all unit paths that need diagrams.
 // Always includes "" for C1, plus paths for expanded systems/containers.
 func collectExpandedPaths(m *parser.Model) []string {
-	paths := []string{""} // Always include C1
+	// Preallocate with capacity for C1 + expanded units
+	paths := make([]string, 0, 1+len(m.Units))
+	paths = append(paths, "") // Always include C1
 
 	// Recursively find expanded units
 	for name, unit := range m.Units {
@@ -126,6 +139,7 @@ func collectExpandedUnitPaths(parentPath string, unit *model.Unit) []string {
 		for _, expanded := range unit.Expanded {
 			if expanded == parentPath || expanded == "" {
 				paths = append(paths, parentPath)
+
 				break
 			}
 		}
@@ -144,22 +158,24 @@ func collectExpandedUnitPaths(parentPath string, unit *model.Unit) []string {
 func processView(m *parser.Model, unitPath, basename string, writer *output.Writer) error {
 	// Generate appropriate view based on path
 	var v *view.View
-	if unitPath == "" {
+
+	switch {
+	case unitPath == "":
 		v = view.GenerateC1View(m)
-	} else if isC2Path(unitPath) {
+	case isC2Path(unitPath):
 		v = view.GenerateC2View(m, unitPath)
-	} else {
+	default:
 		v = view.GenerateC3View(m, unitPath)
 	}
 
 	if v == nil {
-		return fmt.Errorf("failed to generate view for %q", unitPath)
+		return fmt.Errorf("%w: %q", errGenerateView, unitPath)
 	}
 
 	// Build graph with navigation
 	g := graph.BuildGraphWithPath(v, unitPath, basename, format)
 	if g == nil {
-		return fmt.Errorf("failed to build graph for %q", unitPath)
+		return fmt.Errorf("%w: %q", errBuildGraph, unitPath)
 	}
 
 	// Render

@@ -10,9 +10,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 // TestHelpText verifies that help shows usage examples and flag descriptions (CLII-04).
 func TestHelpText(t *testing.T) {
 	cmd := NewRootCmd()
+
 	var buf bytes.Buffer
 	cmd.SetOut(&buf)
 	cmd.SetArgs([]string{"--help"})
@@ -30,9 +32,11 @@ func TestHelpText(t *testing.T) {
 	assert.Contains(t, output, "dot|svg", "Help should show available formats")
 }
 
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 // TestHelpSubcommand verifies that help subcommand shows same content as --help.
 func TestHelpSubcommand(t *testing.T) {
 	cmd := NewRootCmd()
+
 	var buf bytes.Buffer
 	cmd.SetOut(&buf)
 	cmd.SetArgs([]string{"--help"})
@@ -44,6 +48,7 @@ func TestHelpSubcommand(t *testing.T) {
 
 	// Test help subcommand
 	cmd2 := NewRootCmd()
+
 	var buf2 bytes.Buffer
 	cmd2.SetOut(&buf2)
 	cmd2.SetArgs([]string{"help"})
@@ -57,6 +62,7 @@ func TestHelpSubcommand(t *testing.T) {
 	assert.Contains(t, helpOutput, "c4drill <input.toml>")
 }
 
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestNewRootCmd(t *testing.T) {
 	cmd := NewRootCmd()
 
@@ -69,6 +75,7 @@ func TestNewRootCmd(t *testing.T) {
 	assert.NotNil(t, cmd.Args)
 }
 
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestFormatFlag(t *testing.T) {
 	cmd := NewRootCmd()
 
@@ -78,6 +85,7 @@ func TestFormatFlag(t *testing.T) {
 	assert.Equal(t, "f", formatFlag.Shorthand)
 }
 
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestOutputFlag(t *testing.T) {
 	cmd := NewRootCmd()
 
@@ -87,6 +95,7 @@ func TestOutputFlag(t *testing.T) {
 	assert.Equal(t, "o", outputFlag.Shorthand)
 }
 
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestFlagValidation(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -121,7 +130,7 @@ func TestFlagValidation(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) { //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 			cmd := NewRootCmd()
 			buf := &bytes.Buffer{}
 			cmd.SetOut(buf)
@@ -139,12 +148,10 @@ func TestFlagValidation(t *testing.T) {
 
 			if tt.expectError {
 				assert.Error(t, err)
-			} else {
+			} else if err != nil {
 				// For valid formats, the command will fail at file reading stage
 				// but not at format validation
-				if err != nil {
-					assert.NotContains(t, err.Error(), "invalid format")
-				}
+				assert.NotContains(t, err.Error(), "invalid format")
 			}
 		})
 	}
@@ -354,6 +361,7 @@ technology = "Go"
 // Tests using test fixtures from testdata/ directory
 // =============================================================================
 
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 // TestExitCode_Success verifies exit code 0 for successful execution.
 func TestExitCode_Success(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -369,9 +377,11 @@ func TestExitCode_Success(t *testing.T) {
 	assert.NoError(t, err, "Expected exit code 0 (no error)")
 }
 
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 // TestExitCode_NonexistentFile verifies exit code 1 for nonexistent file.
 func TestExitCode_NonexistentFile(t *testing.T) {
 	cmd := NewRootCmd()
+
 	var stderr bytes.Buffer
 	cmd.SetErr(&stderr)
 	cmd.SetArgs([]string{"nonexistent.toml"})
@@ -380,9 +390,11 @@ func TestExitCode_NonexistentFile(t *testing.T) {
 	assert.Error(t, err, "Expected exit code 1 (error)")
 }
 
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 // TestExitCode_InvalidTOML verifies exit code 1 for invalid TOML syntax.
 func TestExitCode_InvalidTOML(t *testing.T) {
 	cmd := NewRootCmd()
+
 	var stderr bytes.Buffer
 	cmd.SetErr(&stderr)
 	cmd.SetArgs([]string{filepath.Join("testdata", "invalid.toml")})
@@ -391,9 +403,11 @@ func TestExitCode_InvalidTOML(t *testing.T) {
 	assert.Error(t, err, "Expected exit code 1 (error)")
 }
 
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 // TestStderrOutput verifies errors go to stderr, not stdout (CLII-06).
 func TestStderrOutput(t *testing.T) {
 	cmd := NewRootCmd()
+
 	var stdout, stderr bytes.Buffer
 	cmd.SetOut(&stdout)
 	cmd.SetErr(&stderr)
@@ -407,11 +421,13 @@ func TestStderrOutput(t *testing.T) {
 	assert.Empty(t, stdout.String(), "stdout should be empty on error")
 }
 
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 // TestSilentOnSuccess verifies no stdout output on successful execution.
 func TestSilentOnSuccess(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	cmd := NewRootCmd()
+
 	var stdout bytes.Buffer
 	cmd.SetOut(&stdout)
 	cmd.SetArgs([]string{
@@ -424,6 +440,7 @@ func TestSilentOnSuccess(t *testing.T) {
 	assert.Empty(t, stdout.String(), "stdout should be empty on success (silent)")
 }
 
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 // TestExpandedUnits verifies C2/C3 diagrams generated for expanded units.
 func TestExpandedUnits(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -440,17 +457,18 @@ func TestExpandedUnits(t *testing.T) {
 
 	// Verify C1 file exists
 	_, err = os.Stat(filepath.Join(tmpDir, "expanded.svg"))
-	assert.NoError(t, err, "C1 diagram should exist")
+	require.NoError(t, err, "C1 diagram should exist")
 
 	// Verify C2 file exists (mainsystem expanded)
 	_, err = os.Stat(filepath.Join(tmpDir, "expanded", "mainsystem.svg"))
-	assert.NoError(t, err, "C2 diagram for mainsystem should exist")
+	require.NoError(t, err, "C2 diagram for mainsystem should exist")
 
 	// Verify C3 file exists (webapp nested system expanded)
 	_, err = os.Stat(filepath.Join(tmpDir, "expanded", "mainsystem", "webapp.svg"))
-	assert.NoError(t, err, "C3 diagram for mainsystem.webapp should exist")
+	require.NoError(t, err, "C3 diagram for mainsystem.webapp should exist")
 }
 
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 // TestFormatFlag_Dot verifies DOT format output using test fixture.
 func TestFormatFlag_Dot(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -467,5 +485,5 @@ func TestFormatFlag_Dot(t *testing.T) {
 
 	// Verify .dot file was created
 	_, err = os.Stat(filepath.Join(tmpDir, "valid.dot"))
-	assert.NoError(t, err, "DOT file should be created")
+	require.NoError(t, err, "DOT file should be created")
 }
