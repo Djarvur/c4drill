@@ -279,3 +279,189 @@ func TestBuildGraphMultipleLinks(t *testing.T) {
 	// bidirectional: app->db and db->app
 	require.Len(t, g.Edges, 2)
 }
+
+//nolint:funlen // Test functions with model setup are naturally longer
+func TestBuildGraphWithPathSetsExploreURL(t *testing.T) {
+	t.Parallel()
+
+	// Test 1: BuildGraphWithPath sets ExploreURL on collapsed nodes with subunits
+	t.Run("sets explore URL on collapsed system with subunits", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"mainsystem": {
+					Type: model.TypeSystem,
+					Name: "Main System",
+					Subunits: map[string]*model.Unit{
+						"api": {
+							Type: model.TypeContainer,
+							Name: "API",
+						},
+					},
+				},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraphWithPath(v, "", "diagram", "svg")
+
+		require.Len(t, g.Nodes, 1)
+		// Node should have explore URL since it has subunits and is not expanded
+		assert.Equal(t, "./mainsystem.svg", g.Nodes[0].ExploreURL)
+	})
+
+	// Test 5: Only system/box types get explore links (not person/db/queue)
+	t.Run("only system and box types get explore links", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"system": {
+					Type: model.TypeSystem,
+					Name: "System",
+					Subunits: map[string]*model.Unit{
+						"sub": {Type: model.TypeContainer, Name: "Sub"},
+					},
+				},
+				"box": {
+					Type: model.TypeBox,
+					Name: "Box",
+					Subunits: map[string]*model.Unit{
+						"sub": {Type: model.TypeContainer, Name: "Sub"},
+					},
+				},
+				"db": {
+					Type: model.TypeDb,
+					Name: "Database",
+					Subunits: map[string]*model.Unit{
+						"table": {Type: model.TypeComponent, Name: "Table"},
+					},
+				},
+				"person": {
+					Type: model.TypePerson,
+					Name: "User",
+					Subunits: map[string]*model.Unit{
+						"role": {Type: model.TypeComponent, Name: "Role"},
+					},
+				},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraphWithPath(v, "", "diagram", "svg")
+
+		require.Len(t, g.Nodes, 4)
+
+		// Find nodes by ID and check explore URLs
+		nodeMap := make(map[string]*graph.Node)
+		for _, node := range g.Nodes {
+			nodeMap[node.ID] = node
+		}
+
+		// System and box should have explore URLs
+		assert.NotEmpty(t, nodeMap["system"].ExploreURL, "system should have explore URL")
+		assert.NotEmpty(t, nodeMap["box"].ExploreURL, "box should have explore URL")
+
+		// Db and person should NOT have explore URLs
+		assert.Empty(t, nodeMap["db"].ExploreURL, "db should NOT have explore URL")
+		assert.Empty(t, nodeMap["person"].ExploreURL, "person should NOT have explore URL")
+	})
+}
+
+//nolint:funlen // Test functions with model setup are naturally longer
+func TestBuildGraphWithPathSetsNavigation(t *testing.T) {
+	t.Parallel()
+
+	// Test 2: BuildGraphWithPath sets Navigation on C2/C3 graphs (nil for C1)
+	t.Run("C1 view has no navigation", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {Type: model.TypeSystem, Name: "App"},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraphWithPath(v, "", "diagram", "svg")
+
+		assert.Nil(t, g.Navigation)
+	})
+
+	// Test 3: BuildGraphWithPath computes correct back-link URL
+	t.Run("C2 view has navigation with back-link", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"mainsystem": {
+					Type: model.TypeSystem,
+					Name: "Main System",
+					Subunits: map[string]*model.Unit{
+						"api": {Type: model.TypeContainer, Name: "API"},
+						"web": {Type: model.TypeContainer, Name: "Web"},
+					},
+				},
+			},
+		}
+
+		v := view.GenerateC2View(m, "mainsystem")
+		require.NotNil(t, v)
+
+		g := graph.BuildGraphWithPath(v, "mainsystem", "diagram", "svg")
+
+		require.NotNil(t, g.Navigation)
+		require.NotNil(t, g.Navigation.BackLink)
+		assert.Equal(t, "../diagram.svg", g.Navigation.BackLink.URL)
+	})
+
+	// Test 4: BuildGraphWithPath builds breadcrumb trail with correct URLs
+	t.Run("C3 view has navigation with breadcrumbs", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"mainsystem": {
+					Type: model.TypeSystem,
+					Name: "Main System",
+					Subunits: map[string]*model.Unit{
+						"api": {
+							Type: model.TypeContainer,
+							Name: "API",
+							Subunits: map[string]*model.Unit{
+								"auth": {Type: model.TypeComponent, Name: "Auth"},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		v := view.GenerateC3View(m, "mainsystem.api")
+		require.NotNil(t, v)
+
+		g := graph.BuildGraphWithPath(v, "mainsystem.api", "diagram", "svg")
+
+		require.NotNil(t, g.Navigation)
+		// Should have breadcrumbs: mainsystem > api
+		require.Len(t, g.Navigation.Breadcrumbs, 2)
+
+		// First breadcrumb (mainsystem) should have URL
+		assert.Equal(t, "mainsystem", g.Navigation.Breadcrumbs[0].Name)
+		assert.NotEmpty(t, g.Navigation.Breadcrumbs[0].URL)
+
+		// Second breadcrumb (api - current) should NOT have URL
+		assert.Equal(t, "api", g.Navigation.Breadcrumbs[1].Name)
+		assert.Empty(t, g.Navigation.Breadcrumbs[1].URL)
+
+		// Back-link should go to parent (mainsystem)
+		require.NotNil(t, g.Navigation.BackLink)
+		assert.Equal(t, "../mainsystem.svg", g.Navigation.BackLink.URL)
+	})
+}

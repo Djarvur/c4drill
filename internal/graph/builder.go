@@ -2,6 +2,7 @@ package graph
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/Djarvur/c4drill/internal/model"
 	"github.com/Djarvur/c4drill/internal/view"
@@ -216,4 +217,93 @@ func markSeen(seen map[string]bool, edgeKey string) bool {
 	seen[edgeKey] = true
 
 	return true
+}
+
+// BuildGraphWithPath constructs a graph with navigation paths.
+// currentPath is the dotted path of the current diagram (empty for C1).
+// basename is the output base filename.
+// format is the output format (svg or dot).
+func BuildGraphWithPath(v *view.View, currentPath, basename, format string) *Graph {
+	g := BuildGraph(v)
+	if g == nil {
+		return nil
+	}
+
+	// Add explore URLs to collapsed nodes with subunits
+	for _, node := range g.Nodes {
+		if shouldHaveExploreLink(node, v) {
+			node.ExploreURL = ComputeExploreURL(currentPath, node.ID, basename, format)
+		}
+	}
+
+	// Add explore URLs to cluster nodes (if collapsed representation needed)
+	for _, cluster := range g.Clusters {
+		// Clusters are expanded units, their children might need explore links
+		for _, node := range cluster.Nodes {
+			if shouldHaveExploreLink(node, v) {
+				node.ExploreURL = ComputeExploreURL(currentPath, node.ID, basename, format)
+			}
+		}
+	}
+
+	// Add navigation for C2/C3 views
+	if v.Level != view.LevelC1 && v.ExpandedUnit != "" {
+		g.Navigation = buildNavigation(v, currentPath, basename, format)
+	}
+
+	return g
+}
+
+// shouldHaveExploreLink determines if a node should have an explore link.
+// Only systems and boxes that have subunits and are collapsed get explore links.
+func shouldHaveExploreLink(node *Node, v *view.View) bool {
+	entry, exists := v.Units[node.ID]
+	if !exists {
+		return false
+	}
+
+	// Only system and box types can be expanded
+	if entry.Unit.Type != model.TypeSystem && entry.Unit.Type != model.TypeBox {
+		return false
+	}
+
+	// Must have subunits to explore
+	return entry.HasSubunits && !entry.IsExpanded
+}
+
+// buildNavigation creates the Navigation struct for C2/C3 views.
+func buildNavigation(v *view.View, currentPath, basename, format string) *Navigation {
+	nav := &Navigation{}
+
+	// Back-link to parent
+	nav.BackLink = &BackLink{
+		Name: extractParentName(v, currentPath),
+		URL:  ComputeBackLinkURL(currentPath, basename, format),
+	}
+
+	// Build breadcrumbs from the expanded unit path
+	nav.Breadcrumbs = buildBreadcrumbs(v, basename, format)
+
+	return nav
+}
+
+// extractParentName gets the display name of the parent unit.
+func extractParentName(v *view.View, _ string) string {
+	// Use the view's expanded unit path to determine parent name
+	if v.ExpandedUnit != "" {
+		parts := strings.Split(v.ExpandedUnit, ".")
+		if len(parts) > 1 {
+			// Return the parent part (second to last)
+			return parts[len(parts)-2]
+		}
+		// Single part means C2, parent is the root
+		return v.ExpandedUnit
+	}
+
+	return v.Title
+}
+
+// buildBreadcrumbs creates breadcrumb items from the view.
+func buildBreadcrumbs(v *view.View, basename, format string) []BreadcrumbItem {
+	return BuildBreadcrumbPath(v.ExpandedUnit, basename, format)
 }
