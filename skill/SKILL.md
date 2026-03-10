@@ -123,6 +123,7 @@ name = "Database"
 
 **`box` can be used at any nesting level** to create logical groupings:
 
+**C2: Box grouping containers (inside system)**
 ```toml
 [mainapp]                       # C1: System
 type = "system"
@@ -139,6 +140,29 @@ name = "User Service"
 [mainapp.services.order]        # C2: Another container
 type = "container"
 name = "Order Service"
+```
+
+**C3: Box grouping components (inside container)**
+```toml
+[mainapp]
+type = "system"
+name = "Main App"
+
+[mainapp.api]
+type = "container"
+name = "API Service"
+
+[mainapp.api.domain]            # C3: Box grouping components
+type = "box"
+name = "Domain Layer"
+
+[mainapp.api.domain.repo]       # C3: Component inside box
+type = "component"
+name = "Repository"
+
+[mainapp.api.domain.service]    # C3: Another component
+type = "component"
+name = "Service"
 ```
 
 ### Link Syntax
