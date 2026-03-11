@@ -28,6 +28,11 @@ Requirements for AI-Ready milestone. Each maps to roadmap phases.
 - [x] **VAL-01**: Validator rejects TOML files with unlinked (orphan) units - all units must have at least one incoming or outgoing link
 - [x] **VAL-02**: Validation error message clearly identifies which units are unlinked
 
+### Parent Links
+
+- [x] **PLNK-01**: A unit with subunits can have Links field without validation error
+- [x] **PLNK-02**: A unit with subunits can have LinksFrom field without validation error
+
 ## v1.0 Requirements (Shipped)
 
 Completed in v1.0 Initial Release (2026-03-10). See `.planning/milestones/v1.0-REQUIREMENTS.md` for archive.
@@ -67,12 +72,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXPD-05 | Phase 8 | Complete |
 | VAL-01 | Phase 9 | Complete |
 | VAL-02 | Phase 9 | Complete |
+| PLNK-01 | Phase 10 | Complete |
+| PLNK-02 | Phase 10 | Complete |
 
 **Coverage:**
-- v1.1 requirements: 12 total
-- Mapped to phases: 12
+- v1.1 requirements: 14 total
+- Mapped to phases: 14
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-10*
-*Last updated: 2026-03-10 after v1.1 milestone started*
+*Last updated: 2026-03-11 after Phase 10 plan 01*

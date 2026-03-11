@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: AI-Ready
 current_plan: 02
 status: executing
-stopped_at: Phase 10 context gathered
-last_updated: "2026-03-11T09:55:31.443Z"
+stopped_at: Completed 10-allow-parent-links-01-PLAN.md
+last_updated: "2026-03-11T10:30:33.309Z"
 last_activity: 2026-03-11
 progress:
   total_phases: 4
-  completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
+  completed_phases: 4
+  total_plans: 6
+  completed_plans: 6
   percent: 89
 ---
 
@@ -55,6 +55,7 @@ Progress: [█████████░] 89%
 | Phase 08-all-expanded-mode P01 | 4 min | 3 tasks | 5 files |
 | Phase 08-all-expanded-mode P02 | 19 min | 2 tasks | 2 files |
 | Phase 09-no-orphan-units P01 | 4 min | 2 tasks | 4 files |
+| Phase 10-allow-parent-links P01 | 4 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -70,6 +71,7 @@ Recent decisions affecting v1.1:
 - [Phase 08-all-expanded-mode]: External boundary nodes scanned recursively from all nested subunits — addExternalBoundaryNodesRecursive traverses all subunits to find links, not just top-level units
 - [Phase 08-all-expanded-mode]: BuildExpandedGraph uses dotted path IDs (cluster_mainapp.api) to avoid naming conflicts
 - [Phase 09-no-orphan-units]: Orphan definition: unit has no Links AND no LinksFrom AND no Subunits — LinksFrom field required for bidirectional connectivity in test data
+- [Phase 10-allow-parent-links]: ValidateLinkRules simplified to no-op for future extensibility rather than complete removal
 
 ### Pending Todos
 
@@ -81,9 +83,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-11T09:55:31.435Z
-Stopped at: Phase 10 context gathered
-Resume file: .planning/phases/10-allow-parent-links/10-CONTEXT.md
+Last session: 2026-03-11T10:30:33.299Z
+Stopped at: Completed 10-allow-parent-links-01-PLAN.md
+Resume file: None
 
 ## v1.0 Summary
 
