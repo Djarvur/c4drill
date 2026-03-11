@@ -2,16 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI-Ready
-current_plan: null
-status: complete
-stopped_at: Milestone complete
-last_updated: "2026-03-11T10:45:00.000Z"
+status: Milestone shipped
+last_updated: "2026-03-11T19:58:06.657Z"
 last_activity: 2026-03-11
 progress:
-  total_phases: 3
+  total_phases: 4
   completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 8
+  completed_plans: 6
   percent: 100
 ---
 
@@ -53,6 +51,7 @@ Progress: [██████████] 100%
 - Phase 08-all-expanded-mode P01: 4 min, 3 tasks, 5 files
 - Phase 08-all-expanded-mode P02: 19 min, 2 tasks, 2 files
 - Phase 09-no-orphan-units P01: 4 min, 2 tasks, 4 files
+| Phase 10-link-list-format P01 | 4 min | 4 tasks | 20 files |
 
 ## Accumulated Context
 
@@ -68,6 +67,10 @@ Recent decisions affecting v1.1:
 - [Phase 08-all-expanded-mode]: External boundary nodes scanned recursively from all nested subunits
 - [Phase 08-all-expanded-mode]: BuildExpandedGraph uses dotted path IDs (cluster_mainapp.api)
 - [Phase 09-no-orphan-units]: Orphan definition: unit has no Links AND no LinksFrom AND no Subunits
+- [Phase 10-link-list-format]: Use slice []Link instead of map[string]Link to enable multiple links to same peer
+- [Phase 10-link-list-format]: Add explicit Peer field instead of deriving from map key for clarity
+- [Phase 10-link-list-format]: TOML syntax changes to [[unit.link]] array format for consistency
+- [Phase 10-link-list-format]: Add FindLinkByPeer helper function for slice-based lookups
 
 ### Pending Todos
 
@@ -79,7 +82,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-11
+Last session: 2026-03-11T19:58:06.649Z
 Status: v1.1 milestone complete
 Next: Define v2.0 milestone
 

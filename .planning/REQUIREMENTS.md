@@ -35,9 +35,9 @@ Requirements for AI-Ready milestone. Each maps to roadmap phases.
 
 ### Link List Format
 
-- [ ] **LLIST-01**: Link struct has `Peer` field instead of `Target`, with `toml:"peer"` tag
-- [ ] **LLIST-02**: Unit.Links and Unit.LinksFrom are `[]Link` slices instead of `map[string]Link`
-- [ ] **LLIST-03**: Parser, validator, view, and graph code updated to iterate slices using `link.Peer`
+- [x] **LLIST-01**: Link struct has `Peer` field instead of `Target`, with `toml:"peer"` tag
+- [x] **LLIST-02**: Unit.Links and Unit.LinksFrom are `[]Link` slices instead of `map[string]Link`
+- [x] **LLIST-03**: Parser, validator, view, and graph code updated to iterate slices using `link.Peer`
 - [ ] **LLIST-04**: All documentation and examples updated to use `[[link]]`/`[[linkFrom]]` array syntax with `peer` field
 
 ## v1.0 Requirements (Shipped)
@@ -81,9 +81,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VAL-02 | Phase 9 | Complete |
 | PLNK-01 | Phase 9 | Complete |
 | PLNK-02 | Phase 9 | Complete |
-| LLIST-01 | Phase 10 | Pending |
-| LLIST-02 | Phase 10 | Pending |
-| LLIST-03 | Phase 10 | Pending |
+| LLIST-01 | Phase 10 | Complete |
+| LLIST-02 | Phase 10 | Complete |
+| LLIST-03 | Phase 10 | Complete |
 | LLIST-04 | Phase 10 | Pending |
 
 **Coverage:**
