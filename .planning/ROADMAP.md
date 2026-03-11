@@ -85,16 +85,21 @@ Plans:
 - [x] 09-01-PLAN.md — Add ValidateOrphanUnits rule with tests and integration
 
 ### Phase 10: Link List Format
-**Goal**: Change Links and LinksFrom from maps to lists with explicit target/source fields
+**Goal**: Change Links and LinksFrom from maps to lists with explicit peer field
 **Depends on**: Nothing (breaking change, independent)
 **Requirements**: LLIST-01, LLIST-02, LLIST-03, LLIST-04
 **Success Criteria** (what must be TRUE):
-  1. Links is a list of Link objects with explicit `target` field
-  2. LinksFrom is a list of Link objects with explicit `source` field (required)
-  3. Multiple links to the same target are supported
+  1. Links is a list of Link objects with explicit `peer` field (the target)
+  2. LinksFrom is a list of Link objects with explicit `peer` field (the source)
+  3. Multiple links to the same peer are supported
   4. All existing TOML examples updated to new syntax
   5. Parser, validator, graph builder, and all tests updated
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 10-01-PLAN.md — Model + Parser + testdata + parser tests
+- [ ] 10-02-PLAN.md — Documentation (SKILL.md + examples)
+- [ ] 10-03-PLAN.md — Validator + View + Graph + their tests
 
 ---
 
@@ -114,7 +119,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 7. AI Documentation | v1.1 | 0/2 | Ready to execute | - |
 | 8. All-Expanded Mode | v1.1 | Complete    | 2026-03-10 | - |
 | 9. No Orphan Units | v1.1 | Complete    | 2026-03-11 | - |
-| 10. Link List Format | v1.1 | 0/TBD | Not started | - |
+| 10. Link List Format | v1.1 | 0/3 | Ready to execute | - |
 
 ---
 

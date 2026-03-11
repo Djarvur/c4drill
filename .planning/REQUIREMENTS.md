@@ -33,6 +33,13 @@ Requirements for AI-Ready milestone. Each maps to roadmap phases.
 - [x] **PLNK-01**: A unit with subunits can have Links field without validation error
 - [x] **PLNK-02**: A unit with subunits can have LinksFrom field without validation error
 
+### Link List Format
+
+- [ ] **LLIST-01**: Link struct has `Peer` field instead of `Target`, with `toml:"peer"` tag
+- [ ] **LLIST-02**: Unit.Links and Unit.LinksFrom are `[]Link` slices instead of `map[string]Link`
+- [ ] **LLIST-03**: Parser, validator, view, and graph code updated to iterate slices using `link.Peer`
+- [ ] **LLIST-04**: All documentation and examples updated to use `[[link]]`/`[[linkFrom]]` array syntax with `peer` field
+
 ## v1.0 Requirements (Shipped)
 
 Completed in v1.0 Initial Release (2026-03-10). See `.planning/milestones/v1.0-REQUIREMENTS.md` for archive.
@@ -72,12 +79,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXPD-05 | Phase 8 | Complete |
 | VAL-01 | Phase 9 | Complete |
 | VAL-02 | Phase 9 | Complete |
-| PLNK-01 | Phase 10 | Complete |
-| PLNK-02 | Phase 10 | Complete |
+| PLNK-01 | Phase 9 | Complete |
+| PLNK-02 | Phase 9 | Complete |
+| LLIST-01 | Phase 10 | Pending |
+| LLIST-02 | Phase 10 | Pending |
+| LLIST-03 | Phase 10 | Pending |
+| LLIST-04 | Phase 10 | Pending |
 
 **Coverage:**
-- v1.1 requirements: 14 total
-- Mapped to phases: 14
+- v1.1 requirements: 18 total
+- Mapped to phases: 18
 - Unmapped: 0 ✓
 
 ---
