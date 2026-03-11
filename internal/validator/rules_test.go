@@ -258,7 +258,7 @@ func TestValidateSubunitRules_NoSubunits(t *testing.T) {
 	}
 }
 
-func TestValidateLinkRules_RejectsLinksOnParent(t *testing.T) {
+func TestValidateLinkRules_AllowsLinksOnParent(t *testing.T) {
 	t.Parallel()
 
 	units := map[string]*model.Unit{
@@ -277,17 +277,12 @@ func TestValidateLinkRules_RejectsLinksOnParent(t *testing.T) {
 	index := validator.BuildIndex(units, "")
 	errors := validator.ValidateLinkRules(index)
 
-	if len(errors) != 1 {
-		t.Fatalf("expected 1 error, got %d", len(errors))
-	}
-
-	expectedMsg := `unit "system" has subunits and cannot have direct links`
-	if errors[0].Message != expectedMsg {
-		t.Errorf("expected message %q, got %q", expectedMsg, errors[0].Message)
+	if len(errors) != 0 {
+		t.Errorf("expected no errors, got %d: %v", len(errors), errors)
 	}
 }
 
-func TestValidateLinkRules_RejectsLinksFromOnParent(t *testing.T) {
+func TestValidateLinkRules_AllowsLinksFromOnParent(t *testing.T) {
 	t.Parallel()
 
 	units := map[string]*model.Unit{
@@ -306,17 +301,12 @@ func TestValidateLinkRules_RejectsLinksFromOnParent(t *testing.T) {
 	index := validator.BuildIndex(units, "")
 	errors := validator.ValidateLinkRules(index)
 
-	if len(errors) != 1 {
-		t.Fatalf("expected 1 error, got %d", len(errors))
-	}
-
-	expectedMsg := `unit "system" has subunits and cannot have direct links`
-	if errors[0].Message != expectedMsg {
-		t.Errorf("expected message %q, got %q", expectedMsg, errors[0].Message)
+	if len(errors) != 0 {
+		t.Errorf("expected no errors, got %d: %v", len(errors), errors)
 	}
 }
 
-func TestValidateLinkRules_RejectsTargetWithSubunits(t *testing.T) {
+func TestValidateLinkRules_AllowsTargetWithSubunits(t *testing.T) {
 	t.Parallel()
 
 	units := map[string]*model.Unit{
@@ -337,13 +327,8 @@ func TestValidateLinkRules_RejectsTargetWithSubunits(t *testing.T) {
 	index := validator.BuildIndex(units, "")
 	errors := validator.ValidateLinkRules(index)
 
-	if len(errors) != 1 {
-		t.Fatalf("expected 1 error, got %d", len(errors))
-	}
-
-	expectedMsg := `unit "system" has subunits and cannot be linked to directly`
-	if errors[0].Message != expectedMsg {
-		t.Errorf("expected message %q, got %q", expectedMsg, errors[0].Message)
+	if len(errors) != 0 {
+		t.Errorf("expected no errors, got %d: %v", len(errors), errors)
 	}
 }
 
@@ -368,7 +353,7 @@ func TestValidateLinkRules_AllowsValidLinks(t *testing.T) {
 	}
 }
 
-func TestValidateLinkRules_CollectsAllViolations(t *testing.T) {
+func TestValidateLinkRules_NoViolationsForParentLinks(t *testing.T) {
 	t.Parallel()
 
 	units := map[string]*model.Unit{
@@ -392,9 +377,9 @@ func TestValidateLinkRules_CollectsAllViolations(t *testing.T) {
 	index := validator.BuildIndex(units, "")
 	errors := validator.ValidateLinkRules(index)
 
-	// Should have 2 errors: system has links, system is targeted
-	if len(errors) != 2 {
-		t.Errorf("expected 2 errors, got %d: %v", len(errors), errors)
+	// No errors: units with subunits can have links and be linked to
+	if len(errors) != 0 {
+		t.Errorf("expected no errors, got %d: %v", len(errors), errors)
 	}
 }
 
