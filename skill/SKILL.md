@@ -106,8 +106,8 @@ edges = "spline"                # Optional: Edge style (cascades to subunits)
 width = 300                     # Optional: Explicit width (0=auto)
 height = 200                    # Optional: Explicit height (0=auto)
 expanded = ["subunit1"]         # Optional: Subunits expanded by default
-link = { ... }                  # Optional: Outgoing links
-linkFrom = { ... }              # Optional: Incoming links
+[[unit.link]]                   # Optional: Outgoing links (array of tables)
+[[unit.linkFrom]]               # Optional: Incoming links (array of tables)
 ```
 
 **Type defaults** (when `type` is omitted):
@@ -213,14 +213,18 @@ name = "Service"
 
 ### Link Syntax
 
-Define relationships using `link` (outgoing) or `linkFrom` (incoming):
+Define relationships using `[[link]]` (outgoing) or `[[linkFrom]]` (incoming):
 
 **Outgoing link (defined on source):**
 ```toml
 [user]
 type = "person"
 name = "User"
-link = { "webapp" = { technology = "HTTPS", description = "Browses" } }
+
+[[user.link]]
+peer = "webapp"
+technology = "HTTPS"
+description = "Browses"
 ```
 
 **Incoming link (defined on target):**
@@ -228,21 +232,31 @@ link = { "webapp" = { technology = "HTTPS", description = "Browses" } }
 [api]
 type = "system"
 name = "API Service"
-linkFrom = { "webapp" = { technology = "REST", description = "Calls" } }
+
+[[api.linkFrom]]
+peer = "webapp"
+technology = "REST"
+description = "Calls"
 ```
 
-**Multiple links:**
+**Multiple links (including to same peer):**
 ```toml
-link = {
-  "webapp" = { technology = "HTTPS", description = "Browses" },
-  "mobile" = { technology = "HTTPS", description = "Uses app" }
-}
+[[api.link]]
+peer = "webapp"
+technology = "HTTPS"
+description = "Browses"
+
+[[api.link]]
+peer = "webapp"
+technology = "WebSockets"
+description = "Real-time updates"
 ```
 
 ### Link Attributes
 
 | Attribute | Values | Description |
 |-----------|--------|-------------|
+| `peer` | `"unit_name"` | **Required:** Target unit identifier |
 | `arrow` | `forward` (default), `reverse`, `bidirectional`, `none` | Arrow direction |
 | `rank` | `forward`, `reverse`, `equal` | Layout ranking hint |
 | `color` | `"blue"`, `"#FF5733"` | Edge color |
@@ -259,13 +273,21 @@ link = {
 ```toml
 # ❌ INVALID: "api" unit not defined
 [user]
-link = { "api" = { description = "Calls" } }
+type = "person"
+name = "User"
+
+[[user.link]]
+peer = "api"
+description = "Calls"
 
 # ✅ VALID: Both units defined
 [user]
 type = "person"
 name = "User"
-link = { "api" = { description = "Calls" } }
+
+[[user.link]]
+peer = "api"
+description = "Calls"
 
 [api]
 type = "system"
@@ -277,7 +299,10 @@ name = "API"
 # ❌ INVALID: mainapp has subunits but also has links
 [mainapp]
 type = "system"
-link = { "external" = { description = "Calls" } }
+
+[[mainapp.link]]
+peer = "external"
+description = "Calls"
 
 [mainapp.api]
 type = "container"
@@ -288,14 +313,22 @@ type = "system"
 
 [mainapp.api]
 type = "container"
-link = { "external" = { description = "Calls" } }
+
+[[mainapp.api.link]]
+peer = "external"
+description = "Calls"
 ```
 
 **Rule 3: Cannot link to units with subunits**
 ```toml
 # ❌ INVALID: Linking to mainapp which has subunits
 [user]
-link = { "mainapp" = { description = "Uses" } }
+type = "person"
+name = "User"
+
+[[user.link]]
+peer = "mainapp"
+description = "Uses"
 
 [mainapp]
 type = "system"
@@ -305,7 +338,12 @@ type = "container"
 
 # ✅ VALID: Link to specific subunit
 [user]
-link = { "mainapp.api" = { description = "Uses" } }
+type = "person"
+name = "User"
+
+[[user.link]]
+peer = "mainapp.api"
+description = "Uses"
 ```
 
 **Rule 4: Subunits only for system, systemExternal, box, and container types**
@@ -405,10 +443,11 @@ When generating TOML:
 2. **Always include `type` and `name` for each unit** - Required fields
 3. **Use descriptive section names** - They become identifiers (e.g., `user_service` not `svc1`)
 4. **Use dotted notation for nesting** - `parent.child` pattern
-5. **Prefer `link` over `linkFrom`** - More natural (source → target)
-6. **Include `technology` for systems/databases** - Shows tech stack in diagram
-7. **Use `external` suffix for external units** - `systemExternal`, `dbExternal`
-8. **Validate before committing** - Run `c4drill <file.toml>` to check
+5. **Prefer `[[link]]` over `[[linkFrom]]`** - More natural (source → target)
+6. **Include `peer` field in every link** - Required field specifies target unit
+7. **Include `technology` for systems/databases** - Shows tech stack in diagram
+8. **Use `external` suffix for external units** - `systemExternal`, `dbExternal`
+9. **Validate before committing** - Run `c4drill <file.toml>` to check
 
 ---
 
@@ -432,7 +471,11 @@ name = "User"
 **❌ Linking to parent unit:**
 ```toml
 [user]
-link = { "mainapp" = {} }
+type = "person"
+name = "User"
+
+[[user.link]]
+peer = "mainapp"
 
 [mainapp]
 type = "system"
@@ -444,7 +487,11 @@ type = "container"
 **✅ Link to specific subunit:**
 ```toml
 [user]
-link = { "mainapp.api" = {} }
+type = "person"
+name = "User"
+
+[[user.link]]
+peer = "mainapp.api"
 
 [mainapp]
 type = "system"
