@@ -92,7 +92,10 @@ Plans:
   2. Units with subunits can have their own Links and LinksFrom
   3. Existing valid TOML files continue to validate successfully
   4. Orphan detection still works correctly (units with Links/LinksFrom are not orphans)
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 10-01-PLAN.md — Remove link restrictions and update tests
 
 ---
 
@@ -112,7 +115,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 7. AI Documentation | v1.1 | 0/2 | Ready to execute | - |
 | 8. All-Expanded Mode | v1.1 | Complete    | 2026-03-10 | - |
 | 9. No Orphan Units | v1.1 | Complete    | 2026-03-11 | - |
-| 10. allow Parent Links | v1.1 | 0/TBD | Not started | - |
+| 10. Allow Parent Links | v1.1 | 0/1 | Ready to execute | - |
 
 ---
 
