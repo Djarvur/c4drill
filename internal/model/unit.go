@@ -59,10 +59,10 @@ type Unit struct {
 	Height float64 `toml:"height"`
 	// Expanded lists subunits that should be expanded by default.
 	Expanded []string `toml:"expanded"`
-	// Links contains outgoing relationships keyed by target name.
-	Links map[string]Link `toml:"link"`
-	// LinksFrom contains incoming relationships keyed by source name.
-	LinksFrom map[string]Link `toml:"linkFrom"`
+	// Links contains outgoing relationships as a slice of Link structs.
+	Links []Link `toml:"link"`
+	// LinksFrom contains incoming relationships as a slice of Link structs.
+	LinksFrom []Link `toml:"linkFrom"`
 	// Subunits contains nested units within this unit.
 	Subunits map[string]*Unit `toml:",inline"`
 }

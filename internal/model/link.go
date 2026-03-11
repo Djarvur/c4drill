@@ -41,8 +41,8 @@ const (
 
 // Link represents a relationship between two units.
 type Link struct {
-	// Target is the name of the target unit (set from map key, not TOML field).
-	Target string `toml:"-"`
+	// Peer is the name of the linked unit (explicitly set via TOML peer field).
+	Peer string `toml:"peer"`
 	// Arrow indicates the arrow direction on the link.
 	Arrow ArrowDirection `toml:"arrow"`
 	// Rank indicates the ranking direction for layout.
