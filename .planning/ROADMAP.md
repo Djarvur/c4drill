@@ -115,7 +115,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 7. AI Documentation | v1.1 | 0/2 | Ready to execute | - |
 | 8. All-Expanded Mode | v1.1 | Complete    | 2026-03-10 | - |
 | 9. No Orphan Units | v1.1 | Complete    | 2026-03-11 | - |
-| 10. Allow Parent Links | 1/1 | Complete   | 2026-03-11 | - |
+| 10. Allow Parent Links | 1/1 | Complete    | 2026-03-11 | - |
 
 ---
 
