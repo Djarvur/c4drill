@@ -32,7 +32,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 
 - [ ] **Phase 7: AI Documentation** — TOML language manual for AI assistants
 - [x] **Phase 8: All-Expanded Mode** — Single-view expanded rendering with cross-level edges (completed 2026-03-10)
-- [ ] **Phase 9: No Orphan Units** — Validation rule requiring all units to be linked
+- [x] **Phase 9: No Orphan Units** — Validation rule requiring all units to be linked (completed 2026-03-11)
 
 ---
 
@@ -78,7 +78,7 @@ Plans:
   1. Validator rejects TOML files containing units with no incoming or outgoing links
   2. Error message clearly lists all unlinked (orphan) units by name
   3. Existing valid TOML files continue to validate successfully
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 09-01-PLAN.md — Add ValidateOrphanUnits rule with tests and integration
@@ -100,7 +100,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 6. CLI & Polish | v1.0 | 2/2 | Complete | 2026-03-10 |
 | 7. AI Documentation | v1.1 | 0/2 | Ready to execute | - |
 | 8. All-Expanded Mode | v1.1 | Complete    | 2026-03-10 | - |
-| 9. No Orphan Units | v1.1 | 0/1 | Ready to execute | - |
+| 9. No Orphan Units | v1.1 | Complete    | 2026-03-11 | - |
 
 ---
 *Roadmap created: 2026-03-09*
