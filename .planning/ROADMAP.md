@@ -81,7 +81,18 @@ Plans:
 **Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 09-01-PLAN.md — Add ValidateOrphanUnits rule with tests and integration
+- [x] 09-01-PLAN.md — Add ValidateOrphanUnits rule with tests and integration
+
+### Phase 10: Allow Parent Links
+**Goal**: Units with subunits can be linked to directly (remove validation restriction)
+**Depends on**: Phase 9 (builds on orphan detection logic)
+**Requirements**: PLNK-01, PLNK-02
+**Success Criteria** (what must be TRUE):
+  1. Users can link to units that have subunits without validation errors
+  2. Units with subunits can have their own Links and LinksFrom
+  3. Existing valid TOML files continue to validate successfully
+  4. Orphan detection still works correctly (units with Links/LinksFrom are not orphans)
+**Plans**: TBD
 
 ---
 
@@ -101,7 +112,9 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 7. AI Documentation | v1.1 | 0/2 | Ready to execute | - |
 | 8. All-Expanded Mode | v1.1 | Complete    | 2026-03-10 | - |
 | 9. No Orphan Units | v1.1 | Complete    | 2026-03-11 | - |
+| 10. allow Parent Links | v1.1 | 0/TBD | Not started | - |
 
 ---
+
 *Roadmap created: 2026-03-09*
-*Last updated: 2026-03-11 - Phase 8 planned (2 plans)*
+*Last updated: 2026-03-11 - Phase 10 added (allow parent links)*
