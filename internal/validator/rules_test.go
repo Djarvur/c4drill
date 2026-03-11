@@ -13,8 +13,8 @@ func TestValidateReferences_ValidModel(t *testing.T) {
 	units := map[string]*model.Unit{
 		"api": {
 			Type: model.TypeSystem,
-			Links: map[string]model.Link{
-				"db": {Target: "db"},
+			Links: []model.Link{
+								{Peer: "db"},
 			},
 		},
 		"db": {
@@ -36,8 +36,8 @@ func TestValidateReferences_UndefinedLinksTarget(t *testing.T) {
 	units := map[string]*model.Unit{
 		"api": {
 			Type: model.TypeSystem,
-			Links: map[string]model.Link{
-				"undefined": {Target: "undefined"},
+			Links: []model.Link{
+								{Peer: "undefined"},
 			},
 		},
 	}
@@ -61,8 +61,8 @@ func TestValidateReferences_UndefinedLinksFromSource(t *testing.T) {
 	units := map[string]*model.Unit{
 		"api": {
 			Type: model.TypeSystem,
-			LinksFrom: map[string]model.Link{
-				"undefined": {Target: "undefined"},
+			LinksFrom: []model.Link{
+								{Peer: "undefined"},
 			},
 		},
 	}
@@ -86,8 +86,8 @@ func TestValidateReferences_WithSuggestion(t *testing.T) {
 	units := map[string]*model.Unit{
 		"api": {
 			Type: model.TypeSystem,
-			Links: map[string]model.Link{
-				"dbb": {Target: "dbb"}, // typo for "db"
+			Links: []model.Link{
+								{Peer: "dbb"}, // typo for "db"
 			},
 		},
 		"db": {
@@ -117,8 +117,8 @@ func TestValidateReferences_NestedUnits(t *testing.T) {
 			Subunits: map[string]*model.Unit{
 				"api": {
 					Type: model.TypeContainer,
-					Links: map[string]model.Link{
-						"undefined": {Target: "undefined"},
+					Links: []model.Link{
+										{Peer: "undefined"},
 					},
 				},
 			},
@@ -144,9 +144,9 @@ func TestValidateReferences_CollectsAllErrors(t *testing.T) {
 	units := map[string]*model.Unit{
 		"api": {
 			Type: model.TypeSystem,
-			Links: map[string]model.Link{
-				"undef1": {Target: "undef1"},
-				"undef2": {Target: "undef2"},
+			Links: []model.Link{
+								{Peer: "undef1"},
+								{Peer: "undef2"},
 			},
 		},
 	}
@@ -264,8 +264,8 @@ func TestValidateLinkRules_RejectsLinksOnParent(t *testing.T) {
 	units := map[string]*model.Unit{
 		"system": {
 			Type: model.TypeSystem,
-			Links: map[string]model.Link{
-				"other": {Target: "other"},
+			Links: []model.Link{
+				{Peer: "other"},
 			},
 			Subunits: map[string]*model.Unit{
 				"api": {Type: model.TypeContainer},
@@ -293,8 +293,8 @@ func TestValidateLinkRules_RejectsLinksFromOnParent(t *testing.T) {
 	units := map[string]*model.Unit{
 		"system": {
 			Type: model.TypeSystem,
-			LinksFrom: map[string]model.Link{
-				"other": {Target: "other"},
+			LinksFrom: []model.Link{
+				{Peer: "other"},
 			},
 			Subunits: map[string]*model.Unit{
 				"api": {Type: model.TypeContainer},
@@ -328,8 +328,8 @@ func TestValidateLinkRules_RejectsTargetWithSubunits(t *testing.T) {
 		},
 		"other": {
 			Type: model.TypeSystem,
-			Links: map[string]model.Link{
-				"system": {Target: "system"},
+			Links: []model.Link{
+				{Peer: "system"},
 			},
 		},
 	}
@@ -353,8 +353,8 @@ func TestValidateLinkRules_AllowsValidLinks(t *testing.T) {
 	units := map[string]*model.Unit{
 		"api": {
 			Type: model.TypeSystem,
-			Links: map[string]model.Link{
-				"db": {Target: "db"},
+			Links: []model.Link{
+								{Peer: "db"},
 			},
 		},
 		"db": {Type: model.TypeDb},
@@ -374,8 +374,8 @@ func TestValidateLinkRules_CollectsAllViolations(t *testing.T) {
 	units := map[string]*model.Unit{
 		"system": {
 			Type: model.TypeSystem,
-			Links: map[string]model.Link{
-				"other": {Target: "other"},
+			Links: []model.Link{
+				{Peer: "other"},
 			},
 			Subunits: map[string]*model.Unit{
 				"api": {Type: model.TypeContainer},
@@ -383,8 +383,8 @@ func TestValidateLinkRules_CollectsAllViolations(t *testing.T) {
 		},
 		"other": {
 			Type: model.TypeSystem,
-			Links: map[string]model.Link{
-				"system": {Target: "system"},
+			Links: []model.Link{
+				{Peer: "system"},
 			},
 		},
 	}
@@ -404,14 +404,14 @@ func TestValidateOrphanUnits_NoOrphans(t *testing.T) {
 	units := map[string]*model.Unit{
 		"api": {
 			Type: model.TypeSystem,
-			Links: map[string]model.Link{
-				"db": {Target: "db"},
+			Links: []model.Link{
+								{Peer: "db"},
 			},
 		},
 		"db": {
 			Type: model.TypeDb,
-			LinksFrom: map[string]model.Link{
-				"api": {Target: "api"},
+			LinksFrom: []model.Link{
+				{Peer: "api"},
 			},
 		},
 	}
@@ -431,14 +431,14 @@ func TestValidateOrphanUnits_SingleOrphan(t *testing.T) {
 		"orphan": {Type: model.TypeSystem}, // No Links, LinksFrom, or Subunits
 		"connected": {
 			Type: model.TypeSystem,
-			Links: map[string]model.Link{
-				"other": {Target: "other"},
+			Links: []model.Link{
+				{Peer: "other"},
 			},
 		},
 		"other": {
 			Type: model.TypeSystem,
-			LinksFrom: map[string]model.Link{
-				"connected": {Target: "connected"},
+			LinksFrom: []model.Link{
+				{Peer: "connected"},
 			},
 		},
 	}
@@ -464,14 +464,14 @@ func TestValidateOrphanUnits_MultipleOrphans(t *testing.T) {
 		"orphan2": {Type: model.TypeDb},
 		"connected": {
 			Type: model.TypeSystem,
-			Links: map[string]model.Link{
-				"other": {Target: "other"},
+			Links: []model.Link{
+				{Peer: "other"},
 			},
 		},
 		"other": {
 			Type: model.TypeSystem,
-			LinksFrom: map[string]model.Link{
-				"connected": {Target: "connected"},
+			LinksFrom: []model.Link{
+				{Peer: "connected"},
 			},
 		},
 	}
@@ -493,16 +493,16 @@ func TestValidateOrphanUnits_UnitWithSubunits(t *testing.T) {
 			Subunits: map[string]*model.Unit{
 				"api": {
 					Type: model.TypeContainer,
-					Links: map[string]model.Link{
-						"db": {Target: "db"},
+					Links: []model.Link{
+				{Peer: "db"},
 					},
 				},
 			},
 		},
 		"db": {
 			Type: model.TypeDb,
-			LinksFrom: map[string]model.Link{
-				"system.api": {Target: "system.api"},
+			LinksFrom: []model.Link{
+				{Peer: "system.api"},
 			},
 		},
 	}
@@ -524,14 +524,14 @@ func TestValidateOrphanUnits_UnitWithLinksFrom(t *testing.T) {
 	units := map[string]*model.Unit{
 		"api": {
 			Type: model.TypeSystem,
-			Links: map[string]model.Link{
-				"db": {Target: "db"},
+			Links: []model.Link{
+								{Peer: "db"},
 			},
 		},
 		"db": {
 			Type: model.TypeDb,
-			LinksFrom: map[string]model.Link{
-				"api": {Target: "api"},
+			LinksFrom: []model.Link{
+				{Peer: "api"},
 			},
 		},
 	}
@@ -554,8 +554,8 @@ func TestValidateOrphanUnits_NestedOrphan(t *testing.T) {
 			Subunits: map[string]*model.Unit{
 				"api": {
 					Type: model.TypeContainer,
-					Links: map[string]model.Link{
-						"db": {Target: "db"},
+					Links: []model.Link{
+				{Peer: "db"},
 					},
 				},
 				"orphan": {Type: model.TypeContainer}, // No links
@@ -563,8 +563,8 @@ func TestValidateOrphanUnits_NestedOrphan(t *testing.T) {
 		},
 		"db": {
 			Type: model.TypeDb,
-			LinksFrom: map[string]model.Link{
-				"system.api": {Target: "system.api"},
+			LinksFrom: []model.Link{
+				{Peer: "system.api"},
 			},
 		},
 	}

@@ -19,22 +19,22 @@ func ValidateReferences(index map[string]*UnitInfo) ValidationErrors {
 
 	for path, info := range index {
 		// Check Links references
-		for target := range info.Unit.Links {
-			if _, exists := index[target]; !exists {
-				suggestion := FormatSuggestion(target, allNames)
+		for _, link := range info.Unit.Links {
+			if _, exists := index[link.Peer]; !exists {
+				suggestion := FormatSuggestion(link.Peer, allNames)
 				errors = append(errors, &ValidationError{
-					Message: fmt.Sprintf(`undefined unit "%s" referenced from "%s"%s`, target, path, suggestion),
+					Message: fmt.Sprintf(`undefined unit "%s" referenced from "%s"%s`, link.Peer, path, suggestion),
 					Path:    path,
 				})
 			}
 		}
 
 		// Check LinksFrom references
-		for source := range info.Unit.LinksFrom {
-			if _, exists := index[source]; !exists {
-				suggestion := FormatSuggestion(source, allNames)
+		for _, link := range info.Unit.LinksFrom {
+			if _, exists := index[link.Peer]; !exists {
+				suggestion := FormatSuggestion(link.Peer, allNames)
 				errors = append(errors, &ValidationError{
-					Message: fmt.Sprintf(`undefined unit "%s" referenced in linkFrom from "%s"%s`, source, path, suggestion),
+					Message: fmt.Sprintf(`undefined unit "%s" referenced in linkFrom from "%s"%s`, link.Peer, path, suggestion),
 					Path:    path,
 				})
 			}
@@ -105,10 +105,10 @@ func ValidateLinkRules(index map[string]*UnitInfo) ValidationErrors {
 		}
 
 		// Check if links target units with subunits
-		for target := range info.Unit.Links {
-			if hasSubunits[target] {
+		for _, link := range info.Unit.Links {
+			if hasSubunits[link.Peer] {
 				errors = append(errors, &ValidationError{
-					Message: fmt.Sprintf(`unit "%s" has subunits and cannot be linked to directly`, target),
+					Message: fmt.Sprintf(`unit "%s" has subunits and cannot be linked to directly`, link.Peer),
 					Path:    path,
 				})
 			}
