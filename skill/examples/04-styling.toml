@@ -16,6 +16,10 @@ description = "System admin"
 color = "#FFF9C4"  # Light yellow
 border = "#F9A825"  # Dark yellow
 
+[[admin.linkFrom]]
+peer = "dashboard"
+description = "Manages"
+
 # System with custom colors
 [dashboard]
 type = "system"
@@ -25,7 +29,8 @@ technology = "React, Material-UI"
 color = "#E3F2FD"  # Light blue
 border = "#1565C0"  # Dark blue
 
-[dashboard.link.admin]
+[[dashboard.link]]
+peer = "admin"
 technology = "HTTPS"
 description = "Manages"
 color = "#1565C0"
@@ -40,7 +45,8 @@ color = "#F3E5F5"  # Light purple
 border = "#7B1FA2"  # Dark purple
 style = "filled,dashed"
 
-[monitoring.link.dashboard]
+[[monitoring.link]]
+peer = "dashboard"
 technology = "API"
 description = "Sends metrics"
 color = "#7B1FA2"
@@ -55,7 +61,8 @@ technology = "PostgreSQL"
 color = "#E8F5E9"  # Light green
 border = "#2E7D32"  # Dark green
 
-[auditdb.link.dashboard]
+[[auditdb.link]]
+peer = "dashboard"
 technology = "SQL"
 description = "Logs actions"
 color = "#2E7D32"
@@ -77,12 +84,14 @@ technology = "Node.js, JWT"
 color = "#FFECB3"  # Light amber
 border = "#FF8F00"  # Dark amber
 
-[internal.auth.link.dashboard]
+[[internal.auth.link]]
+peer = "dashboard"
 technology = "gRPC"
 description = "Validates tokens"
 color = "#FF8F00"
 
-[internal.auth.link.auditdb]
+[[internal.auth.link]]
+peer = "auditdb"
 technology = "SQL"
 description = "Writes audit logs"
 color = "#2E7D32"
@@ -97,7 +106,8 @@ technology = "Go, Etcd"
 color = "#FFECB3"  # Light amber
 border = "#FF8F00"  # Dark amber
 
-[internal.config.link.dashboard]
+[[internal.config.link]]
+peer = "dashboard"
 technology = "HTTP"
 description = "Fetches config"
 color = "#FF8F00"

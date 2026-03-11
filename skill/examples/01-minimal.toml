@@ -8,7 +8,14 @@ name = "Minimal Architecture"
 type = "person"
 name = "User"
 
+[[user.linkFrom]]
+peer = "webapp"
+description = "Uses"
+
 [webapp]
 type = "system"
 name = "Web Application"
-link = { "user" = { description = "Uses" } }
+
+[[webapp.link]]
+peer = "user"
+description = "Uses"

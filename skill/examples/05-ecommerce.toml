@@ -13,7 +13,11 @@ expanded = ["inventory"]
 type = "person"
 name = "Customer"
 description = "Online shopper"
-link = { "webapp" = { technology = "HTTPS", description = "Browses and orders" } }
+
+[[customer.link]]
+peer = "webapp"
+technology = "HTTPS"
+description = "Browses and orders"
 
 [admin]
 type = "person"
@@ -21,7 +25,11 @@ name = "Admin"
 description = "System administrator"
 color = "#FFF9C4"
 border = "#F9A825"
-link = { "admin-panel" = { technology = "HTTPS", description = "Manages system" } }
+
+[[admin.link]]
+peer = "admin-panel"
+technology = "HTTPS"
+description = "Manages system"
 
 [support]
 type = "person"
@@ -29,7 +37,11 @@ name = "Support Agent"
 description = "Customer support"
 color = "#FFF9C4"
 border = "#F9A825"
-link = { "support-tool" = { technology = "HTTPS", description = "Handles tickets" } }
+
+[[support.link]]
+peer = "support-tool"
+technology = "HTTPS"
+description = "Handles tickets"
 
 # ===== EXTERNAL SERVICES =====
 
@@ -41,6 +53,10 @@ technology = "Stripe API"
 color = "#E3F2FD"
 border = "#1976D2"
 
+[[stripe.link]]
+peer = "payment-service"
+description = "Webhooks"
+
 [sendgrid]
 type = "systemExternal"
 name = "SendGrid"
@@ -49,6 +65,10 @@ technology = "SendGrid API"
 color = "#E3F2FD"
 border = "#1976D2"
 
+[[sendgrid.link]]
+peer = "notification-service"
+description = "Delivery status"
+
 [segment]
 type = "systemExternal"
 name = "Segment"
@@ -56,6 +76,10 @@ description = "Analytics platform"
 technology = "Segment API"
 color = "#E3F2FD"
 border = "#1976D2"
+
+[[segment.link]]
+peer = "event-bus"
+description = "Analytics pipeline"
 
 # ===== MAIN SYSTEM =====
 
@@ -67,6 +91,15 @@ technology = "Next.js, React"
 color = "#E8F5E9"
 border = "#388E3C"
 
+[[webapp.linkFrom]]
+peer = "customer"
+description = "Browses and orders"
+
+[[webapp.link]]
+peer = "api-gateway"
+technology = "REST/JSON"
+description = "Calls"
+
 [api-gateway]
 type = "system"
 name = "API Gateway"
@@ -74,13 +107,19 @@ description = "API routing and rate limiting"
 technology = "Kong, Node.js"
 color = "#E8F5E9"
 border = "#388E3C"
-link = { "webapp" = { technology = "REST/JSON", description = "Serves" } }
 
-[api-gateway.linkFrom."admin-panel"]
+[[api-gateway.linkFrom]]
+peer = "webapp"
+technology = "REST/JSON"
+description = "Serves"
+
+[[api-gateway.linkFrom]]
+peer = "admin-panel"
 technology = "REST/JSON"
 description = "Admin API calls"
 
-[api-gateway.linkFrom."support-tool"]
+[[api-gateway.linkFrom]]
+peer = "support-tool"
 technology = "REST/JSON"
 description = "Support API"
 
@@ -91,20 +130,30 @@ type = "container"
 name = "User Service"
 description = "User management and authentication"
 technology = "Go, gRPC"
-link = { "api-gateway" = { technology = "gRPC", description = "Authenticates" } }
+
+[[user-service.link]]
+peer = "api-gateway"
+technology = "gRPC"
+description = "Authenticates"
 
 [order-service]
 type = "container"
 name = "Order Service"
 description = "Order processing and management"
 technology = "Go, gRPC"
-link = { "api-gateway" = { technology = "gRPC", description = "Handles orders" } }
 
-[order-service.linkFrom."payment-service"]
+[[order-service.link]]
+peer = "api-gateway"
+technology = "gRPC"
+description = "Handles orders"
+
+[[order-service.linkFrom]]
+peer = "payment-service"
 technology = "gRPC"
 description = "Payment confirmation"
 
-[order-service.linkFrom."inventory-service"]
+[[order-service.linkFrom]]
+peer = "inventory-service"
 technology = "gRPC"
 description = "Stock check"
 
@@ -113,8 +162,16 @@ type = "container"
 name = "Inventory Service"
 description = "Product catalog and stock management"
 technology = "Go, gRPC"
-link = { "api-gateway" = { technology = "gRPC", description = "Product queries" } }
-linkFrom = { "order-service" = { technology = "gRPC", description = "Stock check" } }
+
+[[inventory-service.link]]
+peer = "api-gateway"
+technology = "gRPC"
+description = "Product queries"
+
+[[inventory-service.linkFrom]]
+peer = "order-service"
+technology = "gRPC"
+description = "Stock check"
 
 [payment-service]
 type = "container"
@@ -124,17 +181,20 @@ technology = "Go, gRPC"
 color = "#FFEBEE"
 border = "#C62828"
 
-[payment-service.link."order-service"]
+[[payment-service.link]]
+peer = "order-service"
 technology = "gRPC"
 description = "Processes payments"
 
-[payment-service.link.stripe]
+[[payment-service.link]]
+peer = "stripe"
 technology = "Stripe API"
 description = "Processes payments"
 color = "#1976D2"
 style = "dashed"
 
-[payment-service.linkFrom.stripe]
+[[payment-service.linkFrom]]
+peer = "stripe"
 technology = "Webhook"
 description = "Payment events"
 color = "#1976D2"
@@ -144,13 +204,21 @@ type = "container"
 name = "Notification Service"
 description = "Email and push notifications"
 technology = "Node.js, Redis"
-link = { "sendgrid" = { technology = "SendGrid API", description = "Sends emails", color = "#1976D2", style = "dashed" } }
 
-[notification-service.linkFrom."order-service"]
+[[notification-service.link]]
+peer = "sendgrid"
+technology = "SendGrid API"
+description = "Sends emails"
+color = "#1976D2"
+style = "dashed"
+
+[[notification-service.linkFrom]]
+peer = "order-service"
 technology = "Kafka"
 description = "Order events"
 
-[notification-service.linkFrom.sendgrid]
+[[notification-service.linkFrom]]
+peer = "sendgrid"
 technology = "Webhook"
 description = "Delivery status"
 color = "#1976D2"
@@ -162,21 +230,36 @@ type = "containerDb"
 name = "User Database"
 description = "User profiles and sessions"
 technology = "PostgreSQL"
-link = { "user-service" = { technology = "SQL", description = "Queries", color = "#4CAF50" } }
+
+[[user-db.link]]
+peer = "user-service"
+technology = "SQL"
+description = "Queries"
+color = "#4CAF50"
 
 [order-db]
 type = "containerDb"
 name = "Order Database"
 description = "Orders and transactions"
 technology = "PostgreSQL"
-link = { "order-service" = { technology = "SQL", description = "Queries", color = "#4CAF50" } }
+
+[[order-db.link]]
+peer = "order-service"
+technology = "SQL"
+description = "Queries"
+color = "#4CAF50"
 
 [inventory-db]
 type = "containerDb"
 name = "Inventory Database"
 description = "Products and stock levels"
 technology = "PostgreSQL"
-link = { "inventory-service" = { technology = "SQL", description = "Queries", color = "#4CAF50" } }
+
+[[inventory-db.link]]
+peer = "inventory-service"
+technology = "SQL"
+description = "Queries"
+color = "#4CAF50"
 
 # ===== QUEUES =====
 
@@ -187,14 +270,21 @@ description = "Async event processing"
 technology = "Kafka"
 color = "#FCE4EC"
 border = "#C2185B"
-linkFrom = { "order-service" = { technology = "Kafka Protocol", description = "Publishes events", color = "#C2185B" } }
 
-[event-bus.link."notification-service"]
+[[event-bus.linkFrom]]
+peer = "order-service"
+technology = "Kafka Protocol"
+description = "Publishes events"
+color = "#C2185B"
+
+[[event-bus.link]]
+peer = "notification-service"
 technology = "Kafka Protocol"
 description = "Consumes events"
 color = "#C2185B"
 
-[event-bus.link.segment]
+[[event-bus.link]]
+peer = "segment"
 technology = "Kafka Connect"
 description = "Analytics pipeline"
 color = "#C2185B"
@@ -210,12 +300,14 @@ technology = "Redis"
 color = "#FFF3E0"
 border = "#E65100"
 
-[cache.linkFrom."user-service"]
+[[cache.linkFrom]]
+peer = "user-service"
 technology = "Redis Protocol"
 description = "Session cache"
 color = "#E65100"
 
-[cache.linkFrom."inventory-service"]
+[[cache.linkFrom]]
+peer = "inventory-service"
 technology = "Redis Protocol"
 description = "Product cache"
 color = "#E65100"
@@ -230,6 +322,11 @@ technology = "React, TypeScript"
 color = "#F3E5F5"
 border = "#7B1FA2"
 
+[[admin-panel.link]]
+peer = "api-gateway"
+technology = "REST/JSON"
+description = "Admin API"
+
 [support-tool]
 type = "system"
 name = "Support Tool"
@@ -237,3 +334,8 @@ description = "Customer support interface"
 technology = "React, TypeScript"
 color = "#F3E5F5"
 border = "#7B1FA2"
+
+[[support-tool.link]]
+peer = "api-gateway"
+technology = "REST/JSON"
+description = "Support API"

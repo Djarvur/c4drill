@@ -8,7 +8,11 @@ description = "System with containers and components"
 [user]
 type = "person"
 name = "Customer"
-link = { "shop.webapp" = { technology = "HTTPS", description = "Browses and orders" } }
+
+[[user.link]]
+peer = "shop.webapp"
+technology = "HTTPS"
+description = "Browses and orders"
 
 # C1 Level: Main System
 [shop]
@@ -23,6 +27,10 @@ name = "Web Application"
 description = "Customer-facing frontend"
 technology = "React, TypeScript"
 
+[[shop.webapp.linkFrom]]
+peer = "user"
+description = "Browses and orders"
+
 # C2 Level: API System with C3 components
 [shop.api]
 type = "system"
@@ -35,26 +43,43 @@ type = "component"
 name = "HTTP Handlers"
 description = "Request routing and validation"
 technology = "Express Router"
-link = { "shop.webapp" = { technology = "REST/JSON", description = "Serves" } }
+
+[[shop.api.handlers.link]]
+peer = "shop.webapp"
+technology = "REST/JSON"
+description = "Serves"
 
 [shop.api.services]
 type = "component"
 name = "Business Services"
 description = "Domain logic and orchestration"
 technology = "TypeScript"
-link = { "shop.api.handlers" = { description = "Called by" } }
+
+[[shop.api.services.link]]
+peer = "shop.api.handlers"
+description = "Called by"
 
 [shop.api.repository]
 type = "component"
 name = "Data Repository"
 description = "Database access layer"
 technology = "Prisma ORM"
-link = { "shop.api.services" = { description = "Used by" } }
-linkFrom = { "shop.database" = { description = "Connects to" } }
+
+[[shop.api.repository.link]]
+peer = "shop.api.services"
+description = "Used by"
+
+[[shop.api.repository.linkFrom]]
+peer = "shop.database"
+description = "Connects to"
 
 [shop.database]
 type = "containerDb"
 name = "Database"
 description = "Persistent storage"
 technology = "PostgreSQL"
-link = { "shop.api.repository" = { technology = "SQL", description = "Queries" } }
+
+[[shop.database.link]]
+peer = "shop.api.repository"
+technology = "SQL"
+description = "Queries"
