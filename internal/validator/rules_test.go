@@ -397,3 +397,162 @@ func TestValidateLinkRules_CollectsAllViolations(t *testing.T) {
 		t.Errorf("expected 2 errors, got %d: %v", len(errors), errors)
 	}
 }
+
+func TestValidateOrphanUnits_NoOrphans(t *testing.T) {
+	t.Parallel()
+
+	units := map[string]*model.Unit{
+		"api": {
+			Type: model.TypeSystem,
+			Links: map[string]model.Link{
+				"db": {Target: "db"},
+			},
+		},
+		"db": {Type: model.TypeDb},
+	}
+
+	index := validator.BuildIndex(units, "")
+	errors := validator.ValidateOrphanUnits(index)
+
+	if len(errors) != 0 {
+		t.Errorf("expected no errors, got %d: %v", len(errors), errors)
+	}
+}
+
+func TestValidateOrphanUnits_SingleOrphan(t *testing.T) {
+	t.Parallel()
+
+	units := map[string]*model.Unit{
+		"orphan": {Type: model.TypeSystem}, // No Links, LinksFrom, or Subunits
+		"connected": {
+			Type: model.TypeSystem,
+			Links: map[string]model.Link{
+				"other": {Target: "other"},
+			},
+		},
+		"other": {Type: model.TypeSystem},
+	}
+
+	index := validator.BuildIndex(units, "")
+	errors := validator.ValidateOrphanUnits(index)
+
+	if len(errors) != 1 {
+		t.Fatalf("expected 1 error, got %d", len(errors))
+	}
+
+	expectedMsg := `unit "orphan" has no incoming or outgoing links`
+	if errors[0].Message != expectedMsg {
+		t.Errorf("expected message %q, got %q", expectedMsg, errors[0].Message)
+	}
+}
+
+func TestValidateOrphanUnits_MultipleOrphans(t *testing.T) {
+	t.Parallel()
+
+	units := map[string]*model.Unit{
+		"orphan1": {Type: model.TypeSystem},
+		"orphan2": {Type: model.TypeDb},
+		"connected": {
+			Type: model.TypeSystem,
+			Links: map[string]model.Link{
+				"other": {Target: "other"},
+			},
+		},
+		"other": {Type: model.TypeSystem},
+	}
+
+	index := validator.BuildIndex(units, "")
+	errors := validator.ValidateOrphanUnits(index)
+
+	if len(errors) != 2 {
+		t.Errorf("expected 2 errors, got %d: %v", len(errors), errors)
+	}
+}
+
+func TestValidateOrphanUnits_UnitWithSubunits(t *testing.T) {
+	t.Parallel()
+
+	units := map[string]*model.Unit{
+		"system": {
+			Type: model.TypeSystem,
+			Subunits: map[string]*model.Unit{
+				"api": {
+					Type: model.TypeContainer,
+					Links: map[string]model.Link{
+						"db": {Target: "db"},
+					},
+				},
+			},
+		},
+		"db": {Type: model.TypeDb},
+	}
+
+	index := validator.BuildIndex(units, "")
+	errors := validator.ValidateOrphanUnits(index)
+
+	// System has subunits, so it's not an orphan
+	// api has links, so it's not an orphan
+	// db has no links/linksfrom/subunits but receives link from api
+	if len(errors) != 0 {
+		t.Errorf("expected no errors, got %d: %v", len(errors), errors)
+	}
+}
+
+func TestValidateOrphanUnits_UnitWithLinksFrom(t *testing.T) {
+	t.Parallel()
+
+	units := map[string]*model.Unit{
+		"api": {
+			Type: model.TypeSystem,
+			Links: map[string]model.Link{
+				"db": {Target: "db"},
+			},
+		},
+		"db": {
+			Type: model.TypeDb,
+			LinksFrom: map[string]model.Link{
+				"api": {Target: "api"},
+			},
+		},
+	}
+
+	index := validator.BuildIndex(units, "")
+	errors := validator.ValidateOrphanUnits(index)
+
+	// db has LinksFrom, so it's not an orphan
+	if len(errors) != 0 {
+		t.Errorf("expected no errors, got %d: %v", len(errors), errors)
+	}
+}
+
+func TestValidateOrphanUnits_NestedOrphan(t *testing.T) {
+	t.Parallel()
+
+	units := map[string]*model.Unit{
+		"system": {
+			Type: model.TypeSystem,
+			Subunits: map[string]*model.Unit{
+				"api": {
+					Type: model.TypeContainer,
+					Links: map[string]model.Link{
+						"db": {Target: "db"},
+					},
+				},
+				"orphan": {Type: model.TypeContainer}, // No links
+			},
+		},
+		"db": {Type: model.TypeDb},
+	}
+
+	index := validator.BuildIndex(units, "")
+	errors := validator.ValidateOrphanUnits(index)
+
+	if len(errors) != 1 {
+		t.Fatalf("expected 1 error, got %d", len(errors))
+	}
+
+	expectedMsg := `unit "system.orphan" has no incoming or outgoing links`
+	if errors[0].Message != expectedMsg {
+		t.Errorf("expected message %q, got %q", expectedMsg, errors[0].Message)
+	}
+}
