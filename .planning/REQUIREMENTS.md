@@ -25,8 +25,8 @@ Requirements for AI-Ready milestone. Each maps to roadmap phases.
 
 ### Validation Enhancement
 
-- [ ] **VAL-01**: Validator rejects TOML files with unlinked (orphan) units - all units must have at least one incoming or outgoing link
-- [ ] **VAL-02**: Validation error message clearly identifies which units are unlinked
+- [x] **VAL-01**: Validator rejects TOML files with unlinked (orphan) units - all units must have at least one incoming or outgoing link
+- [x] **VAL-02**: Validation error message clearly identifies which units are unlinked
 
 ## v1.0 Requirements (Shipped)
 
@@ -65,8 +65,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXPD-03 | Phase 8 | Complete |
 | EXPD-04 | Phase 8 | Complete |
 | EXPD-05 | Phase 8 | Complete |
-| VAL-01 | Phase 9 | Pending |
-| VAL-02 | Phase 9 | Pending |
+| VAL-01 | Phase 9 | Complete |
+| VAL-02 | Phase 9 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 12 total
