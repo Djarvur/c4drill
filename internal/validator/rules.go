@@ -75,12 +75,47 @@ func ValidateSubunitRules(index map[string]*UnitInfo) ValidationErrors {
 	return errors
 }
 
-// ValidateLinkRules validates link-related rules.
-// Currently a no-op placeholder for future link validation rules.
-// Previous restrictions on links for units with subunits have been removed
-// to allow more flexible architecture diagrams.
+// ValidateLinkRules checks link restrictions on units with subunits.
+// - Units with subunits cannot have Links (VALD-02)
+// - Units with subunits cannot have LinksFrom (VALD-02)
+// - Links cannot target units with subunits (VALD-03)
+// Returns all errors found (not fail-fast).
 func ValidateLinkRules(index map[string]*UnitInfo) ValidationErrors {
-	return nil
+	var errors ValidationErrors
+
+	// First pass: identify all units with subunits
+	hasSubunits := make(map[string]bool)
+
+	for path, info := range index {
+		if len(info.Unit.Subunits) > 0 {
+			hasSubunits[path] = true
+		}
+	}
+
+	for path, info := range index {
+		// Check if this unit has subunits
+		if hasSubunits[path] {
+			// Units with subunits cannot have Links or LinksFrom
+			if len(info.Unit.Links) > 0 || len(info.Unit.LinksFrom) > 0 {
+				errors = append(errors, &ValidationError{
+					Message: fmt.Sprintf(`unit "%s" has subunits and cannot have direct links`, path),
+					Path:    path,
+				})
+			}
+		}
+
+		// Check if links target units with subunits
+		for target := range info.Unit.Links {
+			if hasSubunits[target] {
+				errors = append(errors, &ValidationError{
+					Message: fmt.Sprintf(`unit "%s" has subunits and cannot be linked to directly`, target),
+					Path:    path,
+				})
+			}
+		}
+	}
+
+	return errors
 }
 
 // ValidateOrphanUnits checks that all units have connectivity.
