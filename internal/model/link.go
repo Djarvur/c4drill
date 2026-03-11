@@ -58,3 +58,14 @@ type Link struct {
 	// LabelPosition indicates where the label appears on the link.
 	LabelPosition LabelPosition `toml:"labelPosition"`
 }
+
+// FindLinkByPeer searches a slice of links for one with the given peer name.
+// Returns the link and true if found, or nil and false if not found.
+func FindLinkByPeer(links []Link, peer string) (*Link, bool) {
+	for i := range links {
+		if links[i].Peer == peer {
+			return &links[i], true
+		}
+	}
+	return nil, false
+}
