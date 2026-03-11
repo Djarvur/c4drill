@@ -6,30 +6,40 @@
 <domain>
 ## Phase Boundary
 
-Remove the validation restriction that prevents linking to units with subunits. Users must be able to link to parent units (units with subunits) without validation errors.
+Remove the validation restriction that prevents linking to units with subunits. The rule must be: **Links and LinksFrom must NOT be considered as subunits**. Units having Links and LinksFrom sections can be linked from other units without validation errors.
 
-This is a modification to the existing `ValidateLinkRules` function, not a new phase.
+This is a modification to the existing `ValidateLinkRules` function.
 
 </domain>
 
 <decisions>
 ## Implementation Decisions
 
-### Validation rule change
-- Remove the check that prevents linking to units with subunits (lines 108-115 in rules.go)
-- Remove the check that prevents units with subunits from having their own Links/LinksFrom (lines 96-105 in rules.go)
+### Validation rule change (REQUIRED)
+- **Remove the check that prevents linking to units with subunits** (lines 107-115 in rules.go)
+- **Remove the check that prevents units with subunits from having Links/LinksFrom** (lines 96-105 in rules.go)
 - Keep orphan detection unchanged (units with Links/LinksFrom are not orphans)
 
-### Claude's Discretion
-- Exact implementation of the modified `ValidateLinkRules` function
-- Whether to split the function or keep backward compatibility
+### What changes
+Current validation rejects:
+```
+error: unit "mainapp" has subunits and cannot be linked to directly
+error: unit "mainapp" has subunits and cannot have direct links
+```
+
+After Phase 10:
+- These errors are removed
+- Units with subunits CAN have Links and LinksFrom
+- Units with subunits CAN be linked to by other units
 
 </decisions>
 
 <specifics>
 ## Specific Ideas
 
-- This enables linking to the parent container in an architecture,- Useful for all-expanded diagrams where you want to show connections between high-level units
+- This enables linking to parent containers in architectures
+- Useful for all-expanded diagrams showing connections between high-level units
+- Allows bidirectional linking between any units regardless of subunit status
 
 </specifics>
 
