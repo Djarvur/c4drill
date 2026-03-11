@@ -146,8 +146,9 @@ func TestBuildGraphEdges(t *testing.T) {
 			"app": {
 				Type: model.TypeSystem,
 				Name: "App",
-				Links: map[string]model.Link{
-					"db": {
+				Links: []model.Link{
+					{
+						Peer:        "db",
 						Technology:  "SQL",
 						Description: "Queries data",
 					},
@@ -184,8 +185,8 @@ func TestBuildGraphEdgeDefaults(t *testing.T) {
 			"app": {
 				Type: model.TypeSystem,
 				Name: "App",
-				Links: map[string]model.Link{
-					"db": {}, // No style or position specified
+				Links: []model.Link{
+					{Peer: "db"}, // No style or position specified
 				},
 			},
 			"db": {
@@ -254,13 +255,15 @@ func TestBuildGraphMultipleLinks(t *testing.T) {
 			"app": {
 				Type: model.TypeSystem,
 				Name: "App",
-				Links: map[string]model.Link{
-					"db": {
+				Links: []model.Link{
+					{
+						Peer:       "db",
 						Technology: "SQL",
 					},
 				},
-				LinksFrom: map[string]model.Link{
-					"db": {
+				LinksFrom: []model.Link{
+					{
+						Peer:       "db",
 						Technology: "Callback",
 					},
 				},
@@ -600,8 +603,8 @@ func TestBuildExpandedGraph(t *testing.T) {
 						"api": {
 							Type: model.TypeContainer,
 							Name: "API",
-							Links: map[string]model.Link{
-								"db": {Technology: "SQL"},
+							Links: []model.Link{
+								{Peer: "db", Technology: "SQL"},
 							},
 						},
 					},

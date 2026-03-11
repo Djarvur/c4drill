@@ -209,19 +209,19 @@ func buildEdges(v *view.View) []*Edge {
 // processOutgoingLinks processes outgoing links from a unit.
 func processOutgoingLinks(
 	path string,
-	links map[string]model.Link,
+	links []model.Link,
 	viewUnits map[string]*view.Entry,
 	seen map[string]bool,
 ) []*Edge {
 	edges := make([]*Edge, 0)
 
-	for target, link := range links {
-		if !isTargetInView(viewUnits, target) {
+	for _, link := range links {
+		if !isTargetInView(viewUnits, link.Peer) {
 			continue
 		}
 
-		edge := createEdge(path, target, link)
-		edgeKey := path + "->" + target + ":" + link.Technology + ":" + link.Description
+		edge := createEdge(path, link.Peer, link)
+		edgeKey := path + "->" + link.Peer + ":" + link.Technology + ":" + link.Description
 
 		if markSeen(seen, edgeKey) {
 			edges = append(edges, edge)
@@ -234,19 +234,19 @@ func processOutgoingLinks(
 // processIncomingLinks processes incoming links (linkFrom) to a unit.
 func processIncomingLinks(
 	path string,
-	linksFrom map[string]model.Link,
+	linksFrom []model.Link,
 	viewUnits map[string]*view.Entry,
 	seen map[string]bool,
 ) []*Edge {
 	edges := make([]*Edge, 0)
 
-	for source, link := range linksFrom {
-		if !isTargetInView(viewUnits, source) {
+	for _, link := range linksFrom {
+		if !isTargetInView(viewUnits, link.Peer) {
 			continue
 		}
 
-		edge := createEdge(source, path, link)
-		edgeKey := source + "->" + path + ":" + link.Technology + ":" + link.Description
+		edge := createEdge(link.Peer, path, link)
+		edgeKey := link.Peer + "->" + path + ":" + link.Technology + ":" + link.Description
 
 		if markSeen(seen, edgeKey) {
 			edges = append(edges, edge)

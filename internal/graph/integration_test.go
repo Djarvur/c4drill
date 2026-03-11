@@ -27,9 +27,9 @@ func TestIntegrationBuildGraphFromC1View(t *testing.T) {
 				Name:        "App",
 				Description: "Main app",
 				Technology:  "Go",
-				Links: map[string]model.Link{
-					"db": {
-						Target:      "db",
+				Links: []model.Link{
+					{
+						Peer:        "db",
 						Technology:  "SQL",
 						Description: "Queries",
 					},
@@ -151,9 +151,9 @@ func TestIntegrationBuildGraphExternalBoundaryNodes(t *testing.T) {
 				Type:        model.TypeSystem,
 				Name:        "Internal System",
 				Description: "Our system",
-				Links: map[string]model.Link{
-					"externalapi": {
-						Target:      "externalapi",
+				Links: []model.Link{
+					{
+						Peer:        "externalapi",
 						Technology:  "HTTP",
 						Description: "External call",
 					},
@@ -207,9 +207,9 @@ func TestIntegrationFullPipelineModelToGraph(t *testing.T) {
 				Name:        "System",
 				Description: "Main system",
 				Technology:  "Go",
-				Links: map[string]model.Link{
-					"db": {
-						Target:      "db",
+				Links: []model.Link{
+					{
+						Peer:        "db",
 						Technology:  "SQL",
 						Description: "Queries",
 					},
@@ -258,16 +258,16 @@ func TestIntegrationMultipleLinksBetweenSameUnits(t *testing.T) {
 			"app": {
 				Type: model.TypeSystem,
 				Name: "App",
-				Links: map[string]model.Link{
-					"db": {
-						Target:      "db",
+				Links: []model.Link{
+					{
+						Peer:        "db",
 						Technology:  "SQL",
 						Description: "Reads",
 					},
 				},
-				LinksFrom: map[string]model.Link{
-					"db": {
-						Target:      "app",
+				LinksFrom: []model.Link{
+					{
+						Peer:        "db",
 						Technology:  "Callback",
 						Description: "Notifications",
 					},
