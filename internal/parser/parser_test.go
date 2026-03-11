@@ -182,10 +182,10 @@ func TestParseLinksOutgoing(t *testing.T) {
 	require.True(t, ok, "missing 'webapp' unit")
 	require.Len(t, webapp.Links, 1, "webapp should have 1 link")
 
-	link, ok := webapp.Links["user"]
+	link, ok := model.FindLinkByPeer(webapp.Links, "user")
 	require.True(t, ok, "missing 'user' link in webapp")
 
-	assert.Equal(t, "user", link.Target, "link.Target")
+	assert.Equal(t, "user", link.Peer, "link.Peer")
 	assert.Equal(t, model.ArrowForward, link.Arrow, "link.Arrow")
 	assert.Equal(t, model.RankForward, link.Rank, "link.Rank")
 	assert.Equal(t, "HTTPS", link.Technology, "link.Technology")
@@ -205,10 +205,10 @@ func TestParseLinksIncoming(t *testing.T) {
 	require.True(t, ok, "missing 'api' unit")
 	require.Len(t, api.LinksFrom, 1, "api should have 1 linkFrom")
 
-	linkFrom, ok := api.LinksFrom[webappKey]
+	linkFrom, ok := model.FindLinkByPeer(api.LinksFrom, webappKey)
 	require.True(t, ok, "missing 'webapp' linkFrom in api")
 
-	assert.Equal(t, webappKey, linkFrom.Target, "linkFrom.Target")
+	assert.Equal(t, webappKey, linkFrom.Peer, "linkFrom.Peer")
 	assert.Equal(t, model.ArrowForward, linkFrom.Arrow, "linkFrom.Arrow")
 	assert.Equal(t, "HTTP/JSON", linkFrom.Technology, "linkFrom.Technology")
 }
@@ -341,7 +341,11 @@ name = "LinkFrom Test"
 [a]
 type = "system"
 name = "System A"
-linkFrom = { "b" = { arrow = "reverse", technology = "TCP" } }
+
+[[a.linkFrom]]
+peer = "b"
+arrow = "reverse"
+technology = "TCP"
 `)
 
 	got, err := parser.Parse(data)
@@ -351,10 +355,10 @@ linkFrom = { "b" = { arrow = "reverse", technology = "TCP" } }
 	require.True(t, ok, "missing 'a' unit")
 	require.Len(t, unitA.LinksFrom, 1, "unitA should have 1 linkFrom")
 
-	linkFrom, ok := unitA.LinksFrom["b"]
+	linkFrom, ok := model.FindLinkByPeer(unitA.LinksFrom, "b")
 	require.True(t, ok, "missing 'b' linkFrom in a")
 
-	assert.Equal(t, "b", linkFrom.Target, "linkFrom.Target")
+	assert.Equal(t, "b", linkFrom.Peer, "linkFrom.Peer")
 	assert.Equal(t, model.ArrowReverse, linkFrom.Arrow, "linkFrom.Arrow")
 	assert.Equal(t, "TCP", linkFrom.Technology, "linkFrom.Technology")
 }
@@ -477,7 +481,8 @@ name = "Link Fields Test"
 type = "system"
 name = "A"
 
-[a.link.b]
+[[a.link]]
+peer = "b"
 arrow = "bidirectional"
 rank = "equal"
 color = "red"
@@ -493,10 +498,10 @@ labelPosition = "head"
 	unitA, ok := got.Units["a"]
 	require.True(t, ok, "missing 'a' unit")
 
-	link, ok := unitA.Links["b"]
+	link, ok := model.FindLinkByPeer(unitA.Links, "b")
 	require.True(t, ok, "missing 'b' link in a")
 
-	assert.Equal(t, "b", link.Target, "link.Target")
+	assert.Equal(t, "b", link.Peer, "link.Peer")
 	assert.Equal(t, model.ArrowBidirectional, link.Arrow, "link.Arrow")
 	assert.Equal(t, model.RankEqual, link.Rank, "link.Rank")
 	assert.Equal(t, "red", link.Color, "link.Color")
@@ -514,7 +519,8 @@ name = "Link Fields Test"
 type = "system"
 name = "A"
 
-[a.link.b]
+[[a.link]]
+peer = "b"
 technology = "gRPC"
 description = "syncs data"
 labelPosition = "head"
@@ -523,8 +529,8 @@ labelPosition = "head"
 	got, err := parser.Parse(data)
 	require.NoError(t, err, "Parse() should not error")
 
-	link := got.Units["a"].Links["b"]
-	require.NotNil(t, link, "missing 'b' link")
+	link, ok := model.FindLinkByPeer(got.Units["a"].Links, "b")
+	require.True(t, ok, "missing 'b' link")
 
 	assert.Equal(t, "gRPC", link.Technology, "link.Technology")
 	assert.Equal(t, "syncs data", link.Description, "link.Description")
@@ -546,8 +552,9 @@ name = "Parent"
 type = "container"
 name = "Child"
 
-[parent.child.link]
-other = { technology = "HTTP" }
+[[parent.child.link]]
+peer = "other"
+technology = "HTTP"
 `)
 
 	got, err := parser.Parse(data)
@@ -560,10 +567,10 @@ other = { technology = "HTTP" }
 	require.True(t, ok, "missing 'parent.child' subunit")
 	require.Len(t, child.Links, 1, "child should have 1 link")
 
-	link, ok := child.Links["other"]
+	link, ok := model.FindLinkByPeer(child.Links, "other")
 	require.True(t, ok, "missing 'other' link in child")
 
-	assert.Equal(t, "other", link.Target, "link.Target")
+	assert.Equal(t, "other", link.Peer, "link.Peer")
 }
 
 func TestParseFile(t *testing.T) {
