@@ -7,7 +7,7 @@ C4Drill transforms TOML architecture definitions into professional C4 diagrams t
 ## Milestones
 
 - ✅ **v1.0 Initial Release** — Phases 1-6 (shipped 2026-03-10)
-- ✅ **v1.1 AI-Ready** — Phases 7-9 (completed 2026-03-11)
+- 🚧 **v1.1 AI-Ready** — Phases 7-10 (in progress)
 - 📋 **v2.0** — Future features (planned)
 
 ## Phases
@@ -33,6 +33,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 - [ ] **Phase 7: AI Documentation** — TOML language manual for AI assistants
 - [x] **Phase 8: All-Expanded Mode** — Single-view expanded rendering with cross-level edges (completed 2026-03-10)
 - [x] **Phase 9: No Orphan Units** — Validation rule requiring all units to be linked (completed 2026-03-11)
+- [ ] **Phase 10: Link List Format** — Change Links/LinksFrom from maps to lists with explicit target/source
 
 ---
 
@@ -83,6 +84,18 @@ Plans:
 Plans:
 - [x] 09-01-PLAN.md — Add ValidateOrphanUnits rule with tests and integration
 
+### Phase 10: Link List Format
+**Goal**: Change Links and LinksFrom from maps to lists with explicit target/source fields
+**Depends on**: Nothing (breaking change, independent)
+**Requirements**: LLIST-01, LLIST-02, LLIST-03, LLIST-04
+**Success Criteria** (what must be TRUE):
+  1. Links is a list of Link objects with explicit `target` field
+  2. LinksFrom is a list of Link objects with explicit `source` field (required)
+  3. Multiple links to the same target are supported
+  4. All existing TOML examples updated to new syntax
+  5. Parser, validator, graph builder, and all tests updated
+**Plans:** TBD
+
 ---
 
 ## Progress
@@ -101,8 +114,9 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 7. AI Documentation | v1.1 | 0/2 | Ready to execute | - |
 | 8. All-Expanded Mode | v1.1 | Complete    | 2026-03-10 | - |
 | 9. No Orphan Units | v1.1 | Complete    | 2026-03-11 | - |
+| 10. Link List Format | v1.1 | 0/TBD | Not started | - |
 
 ---
 
 *Roadmap created: 2026-03-09*
-*Last updated: 2026-03-11 - v1.1 complete, Phase 10 removed*
+*Last updated: 2026-03-11 - Phase 10 added (link list format)*
