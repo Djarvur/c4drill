@@ -32,6 +32,9 @@ func TestValidate_ValidModel(t *testing.T) {
 			},
 			"db": {
 				Type: model.TypeDb,
+				LinksFrom: map[string]model.Link{
+					"api": {Target: "api"},
+				},
 			},
 		},
 	}
