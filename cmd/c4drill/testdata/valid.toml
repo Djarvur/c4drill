@@ -7,6 +7,10 @@ type = "person"
 name = "User"
 description = "End user"
 
+[[user.link]]
+peer = "app.db"
+technology = "HTTPS"
+
 [app]
 type = "system"
 name = "Application"
@@ -16,3 +20,7 @@ description = "Main application"
 type = "db"
 name = "Database"
 description = "Data storage"
+
+[[app.db.linkFrom]]
+peer = "user"
+technology = "HTTPS"

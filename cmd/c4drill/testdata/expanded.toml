@@ -19,17 +19,33 @@ type = "component"
 name = "Handler"
 description = "HTTP handlers"
 
+[[mainsystem.webapp.handler.link]]
+peer = "mainsystem.webapp.service"
+technology = "internal"
+
 [mainsystem.webapp.service]
 type = "component"
 name = "Service"
 description = "Business logic"
+
+[[mainsystem.webapp.service.linkFrom]]
+peer = "mainsystem.webapp.handler"
+technology = "internal"
 
 [mainsystem.api]
 type = "system"
 name = "API"
 description = "Backend API"
 
+[[mainsystem.api.link]]
+peer = "external"
+technology = "HTTPS"
+
 [external]
 type = "systemExternal"
 name = "External System"
 description = "External dependency"
+
+[[external.linkFrom]]
+peer = "mainsystem.api"
+technology = "HTTPS"

@@ -206,7 +206,9 @@ name = "Test"
 [user]
 type = "person"
 name = "User"
-link = { "nonexistent" = {} }
+
+[[user.link]]
+peer = "nonexistent"
 `
 	err := os.WriteFile(invalidPath, []byte(content), 0o600)
 	require.NoError(t, err)
@@ -237,11 +239,19 @@ type = "person"
 name = "User"
 description = "End user of the system"
 
+[[user.link]]
+peer = "webapp"
+technology = "HTTPS"
+
 [webapp]
 type = "system"
 name = "Web Application"
 description = "Main web application"
 technology = "Go, React"
+
+[[webapp.linkFrom]]
+peer = "user"
+technology = "HTTPS"
 `
 	err := os.WriteFile(validPath, []byte(content), 0o600)
 	require.NoError(t, err)
@@ -282,9 +292,17 @@ name = "Test System"
 type = "person"
 name = "User"
 
+[[user.link]]
+peer = "webapp"
+technology = "HTTPS"
+
 [webapp]
 type = "system"
 name = "Web Application"
+
+[[webapp.linkFrom]]
+peer = "user"
+technology = "HTTPS"
 `
 	err := os.WriteFile(validPath, []byte(content), 0o600)
 	require.NoError(t, err)
@@ -333,6 +351,18 @@ expanded = ["mainapp"]
 type = "container"
 name = "API"
 technology = "Go"
+
+[[mainapp.api.link]]
+peer = "external"
+technology = "HTTPS"
+
+[external]
+type = "systemExternal"
+name = "External API"
+
+[[external.linkFrom]]
+peer = "mainapp.api"
+technology = "HTTPS"
 `
 	err := os.WriteFile(testPath, []byte(content), 0o600)
 	require.NoError(t, err)
