@@ -2,72 +2,75 @@
 
 **Gathered:** 2026-03-11
 **Status:** Ready for planning
+**Source:** User clarification
 
 <domain>
 ## Phase Boundary
 
-Remove the validation restriction that prevents linking to units with subunits. The rule must be: **Links and LinksFrom must NOT be considered as subunits**. Units having Links and LinksFrom sections can be linked from other units without validation errors.
+Remove validation restrictions that prevent linking to/from units with subunits.
 
-This is a modification to the existing `ValidateLinkRules` function.
+**Current behavior (to be removed):**
+```
+error: unit "X" has subunits and cannot be linked to directly
+error: unit "X" has subunits and cannot have direct links
+```
+
+**Desired behavior:**
+```
+✓ Links to units with subunits allowed
+✓ Units with subunits can have Links/LinksFrom
+✓ Orphan detection unchanged (units with Links/LinksFrom are not orphans)
+```
+
+This is a code removal task in `ValidateLinkRules` function.
 
 </domain>
 
 <decisions>
 ## Implementation Decisions
 
-### Validation rule change (REQUIRED)
-- **Remove the check that prevents linking to units with subunits** (lines 107-115 in rules.go)
-- **Remove the check that prevents units with subunits from having Links/LinksFrom** (lines 96-105 in rules.go)
-- Keep orphan detection unchanged (units with Links/LinksFrom are not orphans)
+### What to remove
+- Lines 107-115 in rules.go: Check preventing linking to units with subunits
+- Lines 96-105 in rules.go: Check preventing units with subunits from having Links/LinksFrom
 
-### What changes
-Current validation rejects:
-```
-error: unit "mainapp" has subunits and cannot be linked to directly
-error: unit "mainapp" has subunits and cannot have direct links
-```
+### What stays the same
+- `ValidateReferences` - unchanged
+- `ValidateSubunitRules` - unchanged
+- `ValidateOrphanUnits` - unchanged (units with Links/LinksFrom are not orphans)
 
-After Phase 10:
-- These errors are removed
-- Units with subunits CAN have Links and LinksFrom
-- Units with subunits CAN be linked to by other units
+### Claude's Discretion
+- Exact code cleanup approach
 
 </decisions>
 
 <specifics>
-## Specific Ideas
+## Use Cases
 
-- This enables linking to parent containers in architectures
-- Useful for all-expanded diagrams showing connections between high-level units
-- Allows bidirectional linking between any units regardless of subunit status
+- Link to a parent container from external systems
+- Link from a parent container to external systems
+- Bidirectional links between any units regardless of subunit status
+- All-expanded diagrams showing connections at all levels
 
 </specifics>
 
 <code_context>
-## Existing Code Insights
+## Existing Code
 
-### Reusable Assets
-- **ValidateLinkRules**: Current function that needs modification (internal/validator/rules.go)
-- **UnitInfo struct**: Provides unit data including Links, LinksFrom, Subunits
+### File to modify
+`internal/validator/rules.go` — `ValidateLinkRules` function (lines 78-119)
 
-### Established Patterns
-- **Validation rule pattern**: `ValidateXxx(index map[string]*UnitInfo) ValidationErrors`
-- **Error collection**: Not fail-fast, collect all errors
-
-### Integration Points
-- **internal/validator/rules.go**: Modify `ValidateLinkRules` function
-- **internal/validator/validator.go**: No changes needed (calls all validation rules)
+### Pattern toValidation rules follow `ValidateXxx(index) ValidationErrors` pattern
 
 </code_context>
 
 <deferred>
 ## Deferred Ideas
 
-None — discussion stayed within phase scope.
+None — straightforward code removal.
 
 </deferred>
 
 ---
 
 *Phase: 10-allow-parent-links*
-*Context gathered: 2026-03-11*
+*Context gathered: 2026-03-11 (updated with clarification)*
