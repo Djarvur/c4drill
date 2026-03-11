@@ -99,18 +99,18 @@ func addExternalBoundaryNodes(v *View, m *parser.Model) {
 // and adds boundary nodes for referenced units not in the view.
 func addExternalBoundaryNodesRecursive(v *View, path string, unit *model.Unit) {
 	// Check outgoing links
-	for target := range unit.Links {
-		if _, exists := v.Units[target]; !exists {
+	for _, link := range unit.Links {
+		if _, exists := v.Units[link.Peer]; !exists {
 			// Create external boundary node
-			v.Units[target] = createExternalBoundaryNode(target, path)
+			v.Units[link.Peer] = createExternalBoundaryNode(link.Peer, path)
 		}
 	}
 
 	// Check incoming links (LinksFrom)
-	for source := range unit.LinksFrom {
-		if _, exists := v.Units[source]; !exists {
+	for _, link := range unit.LinksFrom {
+		if _, exists := v.Units[link.Peer]; !exists {
 			// Create external boundary node
-			v.Units[source] = createExternalBoundaryNode(source, path)
+			v.Units[link.Peer] = createExternalBoundaryNode(link.Peer, path)
 		}
 	}
 
@@ -269,18 +269,18 @@ func findUnitByPath(m *parser.Model, path string) *model.Unit {
 func addExternalBoundaryNodesForSubunits(v *View, subunits map[string]*model.Unit, parentPath string) {
 	for _, unit := range subunits {
 		// Check outgoing links
-		for target := range unit.Links {
-			if _, exists := v.Units[target]; !exists {
+		for _, link := range unit.Links {
+			if _, exists := v.Units[link.Peer]; !exists {
 				// Create external boundary node
-				v.Units[target] = createExternalBoundaryNode(target, parentPath)
+				v.Units[link.Peer] = createExternalBoundaryNode(link.Peer, parentPath)
 			}
 		}
 
 		// Check incoming links (LinksFrom)
-		for source := range unit.LinksFrom {
-			if _, exists := v.Units[source]; !exists {
+		for _, link := range unit.LinksFrom {
+			if _, exists := v.Units[link.Peer]; !exists {
 				// Create external boundary node
-				v.Units[source] = createExternalBoundaryNode(source, parentPath)
+				v.Units[link.Peer] = createExternalBoundaryNode(link.Peer, parentPath)
 			}
 		}
 	}

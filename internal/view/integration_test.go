@@ -199,9 +199,9 @@ func TestIntegrationExternalBoundaryNodes(t *testing.T) {
 			"internal": {
 				Type: model.TypeSystem,
 				Name: "Internal System",
-				Links: map[string]model.Link{
-					"externalapi": {
-						Target:      "externalapi",
+				Links: []model.Link{
+					{
+						Peer:        "externalapi",
 						Technology:  "HTTP",
 						Description: "Calls external API",
 					},
@@ -228,9 +228,9 @@ func TestIntegrationViewRespectsExpandedAttribute(t *testing.T) {
 		Properties: model.Properties{Name: "Test"},
 		Units: map[string]*model.Unit{
 			"expanded_system": {
-				Type:        model.TypeSystem,
-				Name:        "Expanded System",
-				Expanded:    []string{"expanded_system"}, // This unit is expanded
+				Type:     model.TypeSystem,
+				Name:     "Expanded System",
+				Expanded: []string{"expanded_system"}, // This unit is expanded
 				Subunits: map[string]*model.Unit{
 					"container": {
 						Type: model.TypeContainer,
@@ -239,8 +239,8 @@ func TestIntegrationViewRespectsExpandedAttribute(t *testing.T) {
 				},
 			},
 			"collapsed_system": {
-				Type:        model.TypeSystem,
-				Name:        "Collapsed System",
+				Type: model.TypeSystem,
+				Name: "Collapsed System",
 				// No Expanded attribute - should be collapsed
 				Subunits: map[string]*model.Unit{
 					"container": {
@@ -320,9 +320,9 @@ func TestIntegrationLinksWithExternalBoundary(t *testing.T) {
 					"container": {
 						Type: model.TypeContainer,
 						Name: "Container",
-						Links: map[string]model.Link{
-							"externalservice": {
-								Target:      "externalservice",
+						Links: []model.Link{
+							{
+								Peer:        "externalservice",
 								Technology:  "HTTP",
 								Description: "External call",
 							},

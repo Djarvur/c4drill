@@ -166,8 +166,8 @@ func TestGenerateC1View_ExternalBoundaryNodesForReferencedUnits(t *testing.T) {
 			"api": {
 				Type: model.TypeSystem,
 				Name: "API",
-				Links: map[string]model.Link{
-					"externaldb": {Target: "externaldb"},
+				Links: []model.Link{
+					{Peer: "externaldb"},
 				},
 			},
 		},
@@ -194,8 +194,8 @@ func TestGenerateC1View_ExternalBoundaryFromLinksFrom(t *testing.T) {
 			"api": {
 				Type: model.TypeSystem,
 				Name: "API",
-				LinksFrom: map[string]model.Link{
-					"externaluser": {Target: "externaluser"},
+				LinksFrom: []model.Link{
+					{Peer: "externaluser"},
 				},
 			},
 		},
@@ -217,15 +217,15 @@ func TestGenerateC1View_NoDuplicateExternalBoundaryNodes(t *testing.T) {
 			"api": {
 				Type: model.TypeSystem,
 				Name: "API",
-				Links: map[string]model.Link{
-					"externaldb": {Target: "externaldb"},
+				Links: []model.Link{
+					{Peer: "externaldb"},
 				},
 			},
 			"web": {
 				Type: model.TypeSystem,
 				Name: "Web",
-				Links: map[string]model.Link{
-					"externaldb": {Target: "externaldb"},
+				Links: []model.Link{
+					{Peer: "externaldb"},
 				},
 			},
 		},
@@ -553,8 +553,8 @@ func TestGenerateC3View_ExternalBoundaryFromSubunitLinks(t *testing.T) {
 							"handler": {
 								Type: model.TypeComponent,
 								Name: "Handler",
-								Links: map[string]model.Link{
-									"externalservice": {Target: "externalservice"},
+								Links: []model.Link{
+									{Peer: "externalservice"},
 								},
 							},
 						},
@@ -633,8 +633,8 @@ func TestGenerateC2View_ExternalBoundaryFromSubunitLinks(t *testing.T) {
 					"api": {
 						Type: model.TypeContainer,
 						Name: "API",
-						Links: map[string]model.Link{
-							"externaldb": {Target: "externaldb"},
+						Links: []model.Link{
+							{Peer: "externaldb"},
 						},
 					},
 				},
@@ -795,8 +795,8 @@ func TestGenerateExpandedView_AddsExternalBoundaryNodesForLinkedUnits(t *testing
 					"handler": {
 						Type: model.TypeComponent,
 						Name: "Handler",
-						Links: map[string]model.Link{
-							"cloudstorage": {Target: "cloudstorage"},
+						Links: []model.Link{
+							{Peer: "cloudstorage"},
 						},
 					},
 				},
