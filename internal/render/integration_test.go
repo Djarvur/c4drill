@@ -49,8 +49,9 @@ func buildTestModelWithLinks() *parser.Model {
 				Type:        model.TypePerson,
 				Name:        "User",
 				Description: "A system user",
-				Links: map[string]model.Link{
-					"system": {
+				Links: []model.Link{
+					{
+						Peer:        "system",
 						Technology:  "HTTP",
 						Description: "Uses",
 					},
