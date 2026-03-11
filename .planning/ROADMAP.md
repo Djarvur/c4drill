@@ -94,7 +94,7 @@ Plans:
   3. Multiple links to the same peer are supported
   4. All existing TOML examples updated to new syntax
   5. Parser, validator, graph builder, and all tests updated
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 - [ ] 10-01-PLAN.md — Model + Parser + testdata + parser tests
@@ -119,7 +119,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 7. AI Documentation | v1.1 | 0/2 | Ready to execute | - |
 | 8. All-Expanded Mode | v1.1 | Complete    | 2026-03-10 | - |
 | 9. No Orphan Units | v1.1 | Complete    | 2026-03-11 | - |
-| 10. Link List Format | 1/3 | In Progress|  | - |
+| 10. Link List Format | 2/3 | In Progress|  | - |
 
 ---
 

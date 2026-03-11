@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI-Ready
 status: Milestone shipped
-last_updated: "2026-03-11T19:58:06.657Z"
+last_updated: "2026-03-11T20:04:30.650Z"
 last_activity: 2026-03-11
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 8
-  completed_plans: 6
+  completed_plans: 7
   percent: 100
 ---
 
@@ -52,6 +52,7 @@ Progress: [██████████] 100%
 - Phase 08-all-expanded-mode P02: 19 min, 2 tasks, 2 files
 - Phase 09-no-orphan-units P01: 4 min, 2 tasks, 4 files
 | Phase 10-link-list-format P01 | 4 min | 4 tasks | 20 files |
+| Phase 10-link-list-format P02 | 5 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,7 @@ Recent decisions affecting v1.1:
 - [Phase 10-link-list-format]: Add explicit Peer field instead of deriving from map key for clarity
 - [Phase 10-link-list-format]: TOML syntax changes to [[unit.link]] array format for consistency
 - [Phase 10-link-list-format]: Add FindLinkByPeer helper function for slice-based lookups
+- [Phase 10-link-list-format]: Added linkFrom declarations to fix orphan validation (units must have Links/LinksFrom/Subunits) — Examples with only incoming links failed validation; added linkFrom to ensure every unit has connectivity defined.
 
 ### Pending Todos
 
@@ -82,7 +84,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-11T19:58:06.649Z
+Last session: 2026-03-11T20:04:30.642Z
 Status: v1.1 milestone complete
 Next: Define v2.0 milestone
 
