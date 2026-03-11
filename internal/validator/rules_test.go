@@ -408,7 +408,12 @@ func TestValidateOrphanUnits_NoOrphans(t *testing.T) {
 				"db": {Target: "db"},
 			},
 		},
-		"db": {Type: model.TypeDb},
+		"db": {
+			Type: model.TypeDb,
+			LinksFrom: map[string]model.Link{
+				"api": {Target: "api"},
+			},
+		},
 	}
 
 	index := validator.BuildIndex(units, "")
@@ -430,7 +435,12 @@ func TestValidateOrphanUnits_SingleOrphan(t *testing.T) {
 				"other": {Target: "other"},
 			},
 		},
-		"other": {Type: model.TypeSystem},
+		"other": {
+			Type: model.TypeSystem,
+			LinksFrom: map[string]model.Link{
+				"connected": {Target: "connected"},
+			},
+		},
 	}
 
 	index := validator.BuildIndex(units, "")
@@ -458,7 +468,12 @@ func TestValidateOrphanUnits_MultipleOrphans(t *testing.T) {
 				"other": {Target: "other"},
 			},
 		},
-		"other": {Type: model.TypeSystem},
+		"other": {
+			Type: model.TypeSystem,
+			LinksFrom: map[string]model.Link{
+				"connected": {Target: "connected"},
+			},
+		},
 	}
 
 	index := validator.BuildIndex(units, "")
@@ -484,7 +499,12 @@ func TestValidateOrphanUnits_UnitWithSubunits(t *testing.T) {
 				},
 			},
 		},
-		"db": {Type: model.TypeDb},
+		"db": {
+			Type: model.TypeDb,
+			LinksFrom: map[string]model.Link{
+				"system.api": {Target: "system.api"},
+			},
+		},
 	}
 
 	index := validator.BuildIndex(units, "")
@@ -492,7 +512,7 @@ func TestValidateOrphanUnits_UnitWithSubunits(t *testing.T) {
 
 	// System has subunits, so it's not an orphan
 	// api has links, so it's not an orphan
-	// db has no links/linksfrom/subunits but receives link from api
+	// db has LinksFrom, so it's not an orphan
 	if len(errors) != 0 {
 		t.Errorf("expected no errors, got %d: %v", len(errors), errors)
 	}
@@ -541,7 +561,12 @@ func TestValidateOrphanUnits_NestedOrphan(t *testing.T) {
 				"orphan": {Type: model.TypeContainer}, // No links
 			},
 		},
-		"db": {Type: model.TypeDb},
+		"db": {
+			Type: model.TypeDb,
+			LinksFrom: map[string]model.Link{
+				"system.api": {Target: "system.api"},
+			},
+		},
 	}
 
 	index := validator.BuildIndex(units, "")

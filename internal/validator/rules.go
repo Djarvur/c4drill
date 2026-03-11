@@ -117,3 +117,25 @@ func ValidateLinkRules(index map[string]*UnitInfo) ValidationErrors {
 
 	return errors
 }
+
+// ValidateOrphanUnits checks that all units have connectivity.
+// A unit is an orphan if it has no Links, no LinksFrom, and no Subunits.
+// Returns all errors found (not fail-fast).
+func ValidateOrphanUnits(index map[string]*UnitInfo) ValidationErrors {
+	var errors ValidationErrors
+
+	for path, info := range index {
+		hasLinks := len(info.Unit.Links) > 0
+		hasLinksFrom := len(info.Unit.LinksFrom) > 0
+		hasSubunits := len(info.Unit.Subunits) > 0
+
+		if !hasLinks && !hasLinksFrom && !hasSubunits {
+			errors = append(errors, &ValidationError{
+				Message: fmt.Sprintf(`unit "%s" has no incoming or outgoing links`, path),
+				Path:    path,
+			})
+		}
+	}
+
+	return errors
+}
