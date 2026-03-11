@@ -7,7 +7,7 @@
 <domain>
 ## Phase Boundary
 
-Change Links and LinksFrom from map structures to list structures with explicit `peer` field. This is a breaking TOML syntax change that affects parser, model, validator, graph builder, and all existing TOML examples.
+Change Links and LinksFrom from map structures to list structures with explicit `peer` field. This is a breaking TOML syntax change that affects parser, model, validator, graph builder, all existing TOML examples, and documentation (including skill package).
 
 **Current (maps):**
 ```toml
@@ -76,6 +76,11 @@ LinksFrom []Link // each has explicit Peer (the source)
   technology = "HTTP"
   ```
 
+### Documentation updates
+- **skill/SKILL.md** — Update link syntax documentation to reflect `[[link]]` and `[[linkFrom]]` with `peer` field
+- **skill/examples/*.toml** — Convert all example files to new syntax
+- **CLAUDE.md** — Update any link syntax examples if present
+
 ### Claude's Discretion
 - Order of fields in Link struct definition
 - Error message wording for missing peer
@@ -88,20 +93,25 @@ LinksFrom []Link // each has explicit Peer (the source)
 
 - "The link attribute will not be a table but list of the link objects with same attributes plus peer (mean the target)"
 - "The linkFrom attribute will not be a table but list of the link objects with same attributes plus peer (mean source)"
+- "Documentation and skill must also be updated"
 
 </specifics>
 
 <code_context>
 ## Existing Code Insights
 
-### Files to modify
+### Code files to modify
 - `internal/model/link.go` — Rename `Target` field to `Peer`, update TOML tag
 - `internal/model/unit.go` — Change `Links` and `LinksFrom` from `map[string]Link` to `[]Link`
 - `internal/parser/parser.go` — Remove `populateLinkTargets` logic, handle array parsing
 - `internal/validator/*.go` — Update all code that iterates Links/LinksFrom, change `Target` to `Peer`
 - `internal/graph/*.go` — Update all code that iterates Links/LinksFrom, change `Target` to `Peer`
-- `skill/examples/*.toml` — Convert all examples to new `[[link]]`/`[[linkFrom]]` syntax with `peer`
 - All `*_test.go` files — Update test data structures, change `Target` to `Peer`
+
+### Documentation files to modify
+- `skill/SKILL.md` — Update link syntax section with new `[[link]]`/`[[linkFrom]]` format and `peer` field
+- `skill/examples/*.toml` — Convert all examples from `[unit.link.target]` to `[[unit.link]]` + `peer = "target"`
+- `CLAUDE.md` — Update link examples if any
 
 ### Established Patterns
 - go-toml/v2 handles `[[array]]` syntax automatically for slice fields
