@@ -29,7 +29,7 @@ type Model struct {
 }
 
 // Parse parses TOML data into a Model.
-// It unmarshals the TOML content and populates Link.Target fields from map keys.
+// It unmarshals the TOML content, with links automatically parsed from [[link]] arrays.
 func Parse(data []byte) (*Model, error) {
 	// First pass: unmarshal the entire document to a raw map
 	var rawMap map[string]any
@@ -67,11 +67,6 @@ func Parse(data []byte) (*Model, error) {
 		}
 
 		m.Units[name] = unit
-	}
-
-	// Populate Link.Target from map keys for all units
-	if m.Units != nil {
-		populateLinkTargets(m.Units)
 	}
 
 	return m, nil
@@ -173,31 +168,4 @@ func ParseFile(path string) (*Model, error) {
 	}
 
 	return Parse(data)
-}
-
-// populateLinkTargets recursively populates the Target field in Link structs
-// from their map keys. This handles nested units at any depth.
-func populateLinkTargets(units map[string]*model.Unit) {
-	for _, unit := range units {
-		if unit == nil {
-			continue
-		}
-
-		// Populate Links map keys into Target field
-		for target, link := range unit.Links {
-			link.Target = target
-			unit.Links[target] = link
-		}
-
-		// Populate LinksFrom map keys into Target field
-		for source, link := range unit.LinksFrom {
-			link.Target = source
-			unit.LinksFrom[source] = link
-		}
-
-		// Recurse into subunits
-		if unit.Subunits != nil {
-			populateLinkTargets(unit.Subunits)
-		}
-	}
 }
