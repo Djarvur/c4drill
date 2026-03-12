@@ -121,6 +121,16 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 9. No Orphan Units | v1.1 | Complete    | 2026-03-11 | - |
 | 10. Link List Format | 2/3 | Complete    | 2026-03-11 | - |
 
+### Phase 11: links bug
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 10
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 11 to break down)
+
 ---
 
 *Roadmap created: 2026-03-09*

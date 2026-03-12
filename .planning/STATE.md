@@ -74,6 +74,10 @@ Recent decisions affecting v1.1:
 - [Phase 10-link-list-format]: Add FindLinkByPeer helper function for slice-based lookups
 - [Phase 10-link-list-format]: Added linkFrom declarations to fix orphan validation (units must have Links/LinksFrom/Subunits) — Examples with only incoming links failed validation; added linkFrom to ensure every unit has connectivity defined.
 
+### Roadmap Evolution
+
+- Phase 11 added: links bug
+
 ### Pending Todos
 
 None.
