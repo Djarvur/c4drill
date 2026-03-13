@@ -2,29 +2,65 @@
 phase: 13
 slug: refined-html-labels
 created: 2026-03-13
+updated: 2026-03-13
 status: ready
 ---
 
 # Phase 13: Refined HTML Labels - Context
 
 **Gathered:** 2026-03-13
+**Updated:** 2026-03-13
 **Status:** Ready for planning
 
 <domain>
 ## Phase Boundary
 
-Refine HTML labels from Phase 12 with:
-1. All units: `shape=box, style=rounded` (instead of `shape=none`)
+This phase has TWO parts:
+
+**Part A: Bug Fixes (Critical)**
+Fix bugs in expanded view graph generation where nested containers are missing:
+1. `server.pam` cluster not rendered
+2. `server.pam.unix` and `server.pam.cyp` components missing
+3. Links to/from nested components not rendered
+
+**Part B: Label Refinements**
+1. All units: `shape=box, style=rounded`
 2. Table attributes: `border="0" cellpadding="0" cellspacing="0"`
 3. Cluster labels use HTML format (same as corresponding unit)
 4. Cluster labels use unit type coloring
-
-This phase covers both node labels AND cluster (subgraph) labels.
 
 </domain>
 
 <decisions>
 ## Implementation Decisions
+
+### Bug Investigation (BUG-01, BUG-02, BUG-03)
+
+**Bug Report:** Running `go run ./cmd/c4drill ./cyp-auth-infra/cyp-auth-infra.toml --expanded -f dot` produces incomplete output:
+
+**Missing in generated DOT:**
+1. `server.pam` cluster (container with subunits)
+2. `server.pam.unix` component
+3. `server.pam.cyp` component
+4. Link: `server.sshd` → `server.pam.unix`
+5. Link: `server.sshd` → `server.pam.cyp`
+6. Link: `server.pam.unix` → `server.etc`
+7. Link: `server.pam.cyp` → `server.systemd`
+
+**Root cause hypothesis:** The expanded view graph builder in `internal/graph/builder.go` may not be recursively processing nested containers (containers with subunits).
+
+### Automated Testing (TEST-01)
+
+**Requirement:** Add automated tests that:
+1. Generate DOT output from TOML files
+2. Verify all expected nodes are present
+3. Verify all expected edges/links are present
+4. Verify cluster structure is correct
+
+**Test approach:**
+- Use `cyp-auth-infra.toml` as test fixture
+- Parse generated DOT and assert expected elements
+- Test both normal views and `--expanded` mode
 
 ### Shape and Style (REFINED-01)
 
@@ -46,198 +82,64 @@ All HTML tables MUST include:
 **Cluster labels MUST use HTML format** - same as the corresponding unit would have:
 - Person cluster → Person HTML label format
 - DB cluster → DB HTML label format
-- Queue cluster → Queue HTML label format
-- System cluster → System HTML label format (SYS label)
-- Container cluster → Container HTML label format (CONT label)
-- Component cluster → Component HTML label format (COMP label)
+- etc.
 
-**Cluster labels MUST be colored** - same as the corresponding unit would be colored:
-- Border color from `GetStyleForType(unitType, isExternal).BorderColor`
-- Font color from `GetStyleForType(unitType, isExternal).FontColor`
-
-### Claude's Discretion
-
-- Test structure and organization
-- Error handling for missing unit type
+**Cluster labels MUST be colored** - same font/border color as the unit.
 
 </decisions>
-
-<specifics>
-## Specific Ideas
-
-User provided exact HTML templates with refined attributes:
-
-### Person Label (rowspan=2, NO technology)
-
-```html
-<table border="0" cellpadding="0" cellspacing="0">
-  <tr align=center>
-    <td rowspan=2 valign=middle><font size="+4">👤</font></td>
-    <td valign=bottom><b>User name</b></td>
-  </tr>
-  <tr align=center>
-    <td valign=top>Description</td>
-  </tr>
-</table>
-```
-
-### DB Label (rowspan=3)
-
-```html
-<table border="0" cellpadding="0" cellspacing="0">
-  <tr align=center>
-    <td rowspan=3 valign=middle><font size="+4">⛁</font></td>
-    <td valign=bottom><b>DB name</b></td>
-  </tr>
-  <tr align=center>
-    <td valign=middle><i>[technology]</i></td>
-  </tr>
-  <tr align=center>
-    <td valign=top>Description</td>
-  </tr>
-</table>
-```
-
-### Queue Label (NO rowspan - 4 separate rows)
-
-```html
-<table border="0" cellpadding="0" cellspacing="0">
-  <tr align=center>
-    <td valign=middle>═╦╩═╦══</td>
-  </tr>
-  <tr align=center>
-    <td valign=bottom><b>Queue name</b></td>
-  </tr>
-  <tr align=center>
-    <td valign=middle><i>[technology]</i></td>
-  </tr>
-  <tr align=center>
-    <td valign=top>Description</td>
-  </tr>
-</table>
-```
-
-### System Label (rowspan=3, monospace SYS)
-
-```html
-<table border="0" cellpadding="0" cellspacing="0">
-  <tr align=center>
-    <td rowspan=3 valign=middle><font face="monospace">SYS</font></td>
-    <td valign=bottom><b>System name</b></td>
-  </tr>
-  <tr align=center>
-    <td valign=middle><i>[technology]</i></td>
-  </tr>
-  <tr align=center>
-    <td valign=top>Description</td>
-  </tr>
-</table>
-```
-
-### Container Label (rowspan=3, monospace CONT)
-
-```html
-<table border="0" cellpadding="0" cellspacing="0">
-  <tr align=center>
-    <td rowspan=3 valign=middle><font face="monospace">CONT</font></td>
-    <td valign=bottom><b>Container name</b></td>
-  </tr>
-  <tr align=center>
-    <td valign=middle><i>[technology]</i></td>
-  </tr>
-  <tr align=center>
-    <td valign=top>Description</td>
-  </tr>
-</table>
-```
-
-**Note:** Also used for Box type.
-
-### Component Label (rowspan=3, monospace COMP)
-
-```html
-<table border="0" cellpadding="0" cellspacing="0">
-  <tr align=center>
-    <td rowspan=3 valign=middle><font face="monospace">COMP</font></td>
-    <td valign=bottom><b>Component name</b></td>
-  </tr>
-  <tr align=center>
-    <td valign=middle><i>[technology]</i></td>
-  </tr>
-  <tr align=center>
-    <td valign=top>Description</td>
-  </tr>
-</table>
-```
-
-</specifics>
 
 <code_context>
 ## Existing Code Insights
 
-### Reusable Assets
+### Bug Location
 
-- **`internal/render/labels.go`** - 6 HTML label builder functions (buildPersonHTMLLabel, buildDbHTMLLabel, etc.)
-- **`internal/graph/shapes.go`** - Type helper functions (IsDbType, IsQueueType, IsSystemType, IsContainerType, IsComponentType)
-- **`internal/graph/shapes.go:GetStyleForType()`** - Returns NodeStyle with BorderColor, FontColor
+The bug is likely in `internal/graph/builder.go`:
+- `buildNestedCluster()` - handles recursive cluster building
+- `buildCluster()` - handles single-level cluster building
+- `buildEdges()` - handles edge creation
 
-### Established Patterns
+**Key observation:** The TOML has nested structure:
+```
+[server.pam]           # container
+[server.pam.unix]      # component inside container
+[server.pam.cyp]       # component inside container
+```
 
-- **Node HTML labels**: `buildHTMLLabelForType(label, unitType)` dispatches to type-specific builders
-- **HTML string handling**: `graph.StrdupHTML()` for HTML label strings (not `SetLabel()`)
-- **Monospace**: Use `<font face="monospace">` instead of `<tt>` (GraphViz doesn't support `<tt>`)
+But the DOT only shows flat structure under `server` cluster.
 
 ### Integration Points
 
-**Cluster struct needs enhancement:**
-```go
-// internal/graph/graph.go
-type Cluster struct {
-    ID       string
-    Label    *Label
-    Nodes    []*Node
-    Clusters []*Cluster
-    Style    *NodeStyle
-    // NEW: UnitType for HTML label dispatch
-    Type     model.UnitType  // Add this field
-    // NEW: IsExternal for style lookup
-    IsExternal bool          // Add this field
-}
-```
+**Files to modify:**
+1. `internal/graph/builder.go` - Fix nested container processing
+2. `internal/graph/graph.go` - Add `Type`, `IsExternal` to Cluster struct
+3. `internal/render/labels.go` - Add table attributes
+4. `internal/render/converter.go` - Change shape, cluster HTML labels
+5. `internal/render/*_test.go` - Add comprehensive tests
 
-**Cluster builder needs update:**
-```go
-// internal/graph/builder.go
-func buildCluster(entry *view.Entry) *Cluster {
-    cluster := &Cluster{
-        // ...
-        Type:       entry.Unit.Type,      // NEW
-        IsExternal: entry.IsExternal,     // NEW
-    }
-}
-```
+### Test Strategy
 
-**Cluster rendering needs HTML labels:**
+Create integration tests in `internal/render/integration_test.go`:
 ```go
-// internal/render/converter.go
-func createCluster(parent *cgraph.Graph, cluster *graph.Cluster, ...) error {
-    // OLD: subgraph.SetLabel(cluster.Label.Name)
-    // NEW: Use HTML label with coloring
-    htmlLabel := buildHTMLLabelForType(cluster.Label, cluster.Type)
-    htmlStr, _ := cg.StrdupHTML(htmlLabel)
-    subgraph.SetLabel(htmlStr)
-
-    // Set colors from cluster.Style
-    if cluster.Style.FontColor != "" {
-        subgraph.SetFontColor(cluster.Style.FontColor)
-    }
-    if cluster.Style.BorderColor != "" {
-        subgraph.SafeSet("color", cluster.Style.BorderColor, "")
-    }
+func TestExpandedViewGeneratesCompleteGraph(t *testing.T) {
+    // Load cyp-auth-infra.toml
+    // Generate expanded view
+    // Render to DOT
+    // Assert all expected nodes present
+    // Assert all expected edges present
+    // Assert cluster structure correct
 }
 ```
 
 </code_context>
+
+<specifics>
+## Specific Ideas
+
+- Use `cyp-auth-infra.toml` as the primary test fixture
+- Tests should verify DOT output contains expected substrings (node IDs, edge definitions)
+- Consider using a DOT parser library for more robust testing
+
+</specifics>
 
 <deferred>
 ## Deferred Ideas
@@ -250,26 +152,25 @@ None — discussion stayed within phase scope.
 
 ## Files to Modify
 
-1. **`internal/graph/graph.go`** - Add `Type` and `IsExternal` fields to `Cluster` struct
-2. **`internal/graph/builder.go`** - Set `Type` and `IsExternal` in `buildCluster()` and `buildNestedCluster()`
-3. **`internal/render/labels.go`** - Add table attributes to all HTML label builders
-4. **`internal/render/converter.go`**:
-   - Change node shape from `none` to `box` with `style=rounded`
-   - Update `createCluster()` to use HTML labels with coloring
-5. **`internal/render/labels_test.go`** - Update expected outputs
-6. **`internal/graph/graph_test.go`** - Update Cluster test cases
+| File | Change |
+|------|--------|
+| `internal/graph/builder.go` | Fix nested container processing in expanded view |
+| `internal/graph/graph.go` | Add `Type`, `IsExternal` to Cluster struct |
+| `internal/render/labels.go` | Add table attributes to all HTML builders |
+| `internal/render/converter.go` | Shape=box, cluster HTML labels |
+| `internal/render/integration_test.go` | Add comprehensive DOT verification tests |
 
 ---
 
-## Prior Decisions (Phase 12)
+## Success Criteria
 
-Phase 12 implemented HTML labels with:
-- `shape=none` for HTML labels → **Phase 13 changes to `shape=box, style=rounded`**
-- `graph.StrdupHTML()` for HTML label strings → **Keep this**
-- `<font face="monospace">` instead of `<tt>` → **Keep this**
-- Type-specific label builders → **Keep this, add table attributes**
+1. **Bug fixed:** `cyp-auth-infra.toml --expanded` generates complete DOT with all clusters and links
+2. **Tests pass:** Automated tests verify all expected elements in generated DOT
+3. **Labels refined:** All HTML tables have correct attributes, shape=box, style=rounded
+4. **Cluster labels:** HTML format with proper coloring
 
 ---
 
 *Phase: 13-refined-html-labels*
 *Context gathered: 2026-03-13*
+*Context updated: 2026-03-13*
