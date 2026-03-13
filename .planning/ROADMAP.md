@@ -135,7 +135,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 8. All-Expanded Mode | v1.1 | Complete    | 2026-03-10 | - |
 | 9. No Orphan Units | v1.1 | Complete    | 2026-03-11 | - |
 | 10. Link List Format | 3/3 | Complete    | 2026-03-13 | - |
-| 11. Unit Shape and Attributes | 1/1 | Complete   | 2026-03-13 |
+| 11. Unit Shape and Attributes | 1/1 | Complete    | 2026-03-13 |
 
 ---
 
