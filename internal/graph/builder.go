@@ -86,11 +86,13 @@ func BuildExpandedGraph(v *view.View) *Graph {
 // This is used by BuildExpandedGraph to show the complete hierarchy in a single diagram.
 func buildNestedCluster(entry *view.Entry, path string, v *view.View) *Cluster {
 	cluster := &Cluster{
-		ID:       "cluster_" + path,
-		Label:    buildClusterLabel(entry),
-		Nodes:    make([]*Node, 0),
-		Clusters: make([]*Cluster, 0),
-		Style:    GetStyleForType(entry.Unit.Type, entry.IsExternal),
+		ID:         "cluster_" + path,
+		Label:      buildClusterLabel(entry),
+		Nodes:      make([]*Node, 0),
+		Clusters:   make([]*Cluster, 0),
+		Style:      GetStyleForType(entry.Unit.Type, entry.IsExternal),
+		Type:       entry.Unit.Type,
+		IsExternal: entry.IsExternal,
 	}
 
 	// Process subunits
@@ -149,10 +151,12 @@ func buildNode(entry *view.Entry) *Node {
 // buildCluster creates a cluster for an expanded unit.
 func buildCluster(entry *view.Entry) *Cluster {
 	cluster := &Cluster{
-		ID:    "cluster_" + entry.FullPath,
-		Label: buildClusterLabel(entry),
-		Nodes: make([]*Node, 0),
-		Style: GetStyleForType(entry.Unit.Type, entry.IsExternal),
+		ID:         "cluster_" + entry.FullPath,
+		Label:      buildClusterLabel(entry),
+		Nodes:      make([]*Node, 0),
+		Style:      GetStyleForType(entry.Unit.Type, entry.IsExternal),
+		Type:       entry.Unit.Type,
+		IsExternal: entry.IsExternal,
 	}
 
 	// Add child units as nodes inside the cluster

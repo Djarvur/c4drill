@@ -106,6 +106,10 @@ type Cluster struct {
 	Clusters []*Cluster
 	// Style contains cluster styling attributes.
 	Style *NodeStyle
+	// Type is the unit type for HTML label dispatch.
+	Type model.UnitType
+	// IsExternal indicates if this cluster represents an external unit.
+	IsExternal bool
 }
 
 // Label represents a node label with multiple parts.
