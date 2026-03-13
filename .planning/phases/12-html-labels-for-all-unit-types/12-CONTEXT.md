@@ -12,7 +12,7 @@ Change all unit type labels from record-style format to HTML table format with s
 - Person: Uses `{icon}|{name|description}` record format
 - Other units: Uses `{name|technology|description}` record format
 
-**Target state:** All units use HTML tables with exact format per type.
+**Target state:** All units use HTML tables embedded in record labels, with exact format per type.
 
 </domain>
 
@@ -22,13 +22,13 @@ Change all unit type labels from record-style format to HTML table format with s
 ### Label Format by Unit Type
 
 **Person (TypePerson, TypePersonExternal):**
-- HTML table with icon on left, name/description on right
-- Format:
+- HTML table with icon on left (rowspan=2), name/description on right
+- Exact format:
 ```html
 <table>
   <tr align=center>
     <td rowspan=2 valign=middle><font size="+4">👤</font></td>
-    <td valign=bottom><b>Name</b></td>
+    <td valign=bottom><b>User name</b></td>
   </tr>
   <tr align=center>
     <td valign=top>Description</td>
@@ -36,14 +36,14 @@ Change all unit type labels from record-style format to HTML table format with s
 </table>
 ```
 
-**Database (TypeDb, TypeDbExternal):**
-- HTML table with icon, name, technology, description
-- Format:
+**Database (TypeDb, TypeDbExternal, TypeContainerDb, TypeComponentDb):**
+- HTML table with icon (rowspan=3), name bold, technology italic, description
+- Exact format:
 ```html
 <table>
   <tr align=center>
     <td rowspan=3 valign=middle><font size="+4">⛁</font></td>
-    <td valign=bottom><b>DB</b></td>
+    <td valign=bottom><b>DB name</b></td>
   </tr>
   <tr align=center>
     <td valign=middle><i>[technology]</i></td>
@@ -54,16 +54,16 @@ Change all unit type labels from record-style format to HTML table format with s
 </table>
 ```
 
-**Queue (TypeQueue, TypeQueueExternal):**
-- HTML table with icon, name, technology, description
-- Format:
+**Queue (TypeQueue, TypeQueueExternal, TypeContainerQueue, TypeComponentQueue):**
+- HTML table with 4 rows (no rowspan): graphics, name, technology, description
+- Exact format:
 ```html
 <table>
   <tr align=center>
     <td valign=middle>═╦╩═╦══</td>
   </tr>
   <tr align=center>
-    <td valign=bottom><b>Queue</b></td>
+    <td valign=bottom><b>Queue name</b></td>
   </tr>
   <tr align=center>
     <td valign=middle><i>[technology]</i></td>
@@ -74,13 +74,14 @@ Change all unit type labels from record-style format to HTML table format with s
 </table>
 ```
 
-**System, Container, Component (TypeSystem, TypeContainer, TypeComponent, plus External variants):**
-- HTML table with name, technology, description (NO icon)
-- Format:
+**System (TypeSystem, TypeSystemExternal):**
+- HTML table with `SYS` label (rowspan=3), name bold, technology italic, description
+- Exact format:
 ```html
 <table>
   <tr align=center>
-    <td valign=bottom><b>Unit</b></td>
+    <td rowspan=3 valign=middle><tt>SYS</tt></td>
+    <td valign=bottom><b>System name</b></td>
   </tr>
   <tr align=center>
     <td valign=middle><i>[technology]</i></td>
@@ -91,9 +92,49 @@ Change all unit type labels from record-style format to HTML table format with s
 </table>
 ```
 
+**Container (TypeContainer):**
+- HTML table with `CONT` label (rowspan=3), name bold, technology italic, description
+- Exact format:
+```html
+<table>
+  <tr align=center>
+    <td rowspan=3 valign=middle><tt>CONT</tt></td>
+    <td valign=bottom><b>Container name</b></td>
+  </tr>
+  <tr align=center>
+    <td valign=middle><i>[technology]</i></td>
+  </tr>
+  <tr align=center>
+    <td valign=top>Description</td>
+  </tr>
+</table>
+```
+
+**Component (TypeComponent):**
+- HTML table with `COMP` label (rowspan=3), name bold, technology italic, description
+- Exact format:
+```html
+<table>
+  <tr align=center>
+    <td rowspan=3 valign=middle><tt>COMP</tt></td>
+    <td valign=bottom><b>Component name</b></td>
+  </tr>
+  <tr align=center>
+    <td valign=middle><i>[technology]</i></td>
+  </tr>
+  <tr align=center>
+    <td valign=top>Description</td>
+  </tr>
+</table>
+```
+
+**Box (TypeBox):**
+- Same format as Container (use `CONT` label)
+- Box is a grouping container, visually same as Container
+
 ### Shape Requirement
 - All units must use `shape=record` (NOT shape=none)
-- HTML tables are embedded inside record labels
+- HTML tables are embedded inside record labels via `<...>` syntax
 
 ### Optional Fields
 - If technology is empty, omit the technology row
@@ -105,10 +146,12 @@ Change all unit type labels from record-style format to HTML table format with s
 ## Specific Ideas
 
 User provided EXACT HTML format for each unit type:
-- Person: Icon (👤) with rowspan=2, name bold, description below
-- DB: Icon (⛁) with rowspan=3, name bold, [technology] italic, description
-- Queue: Custom graphics (═╦╩═╦══), name bold, [technology] italic, description  
-- System/Container/Component: No icon, name bold, [technology] italic, description
+- **Person**: Icon (👤) with rowspan=2, name bold, description below
+- **DB**: Icon (⛁) with rowspan=3, name bold, [technology] italic, description
+- **Queue**: Custom graphics (═╦╩═╦══) on row 1, name bold on row 2, [technology] italic on row 3, description on row 4 — NO rowspan
+- **System**: `SYS` label (monospace) with rowspan=3, name bold, [technology] italic, description
+- **Container**: `CONT` label (monospace) with rowspan=3, name bold, [technology] italic, description
+- **Component**: `COMP` label (monospace) with rowspan=3, name bold, [technology] italic, description
 
 </specifics>
 
@@ -128,14 +171,19 @@ User provided EXACT HTML format for each unit type:
 ### Integration Points
 - `internal/render/converter.go`: Needs to call new label builders based on unit type
 - `internal/graph/builder.go`: Sets label fields when building nodes
-- Need to add Type field to Label struct if not present
+- Need to add Type field to Label struct if not present, or pass UnitType to label builder
+
+### Key Implementation Notes
+- Current `IconForType()` returns empty string for System/Container/Component — will need new logic for `SYS`/`CONT`/`COMP` labels
+- Queue currently uses `\u255F\n\u2562` as icon — need to change to `═╦╩═╦══` graphics on separate row
+- External variants (TypePersonExternal, etc.) use same label format as internal types
 
 </code_context>
 
 <deferred>
 ## Deferred Ideas
 
-None — all requirements specified.
+None — all requirements specified with exact HTML templates.
 
 </deferred>
 
@@ -143,3 +191,4 @@ None — all requirements specified.
 
 *Phase: 12-html-labels-for-all-unit-types*
 *Context gathered: 2026-03-13*
+*Context updated: 2026-03-13*
