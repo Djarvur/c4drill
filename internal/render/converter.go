@@ -167,13 +167,23 @@ func createNode(cg *cgraph.Graph, node *graph.Node) (*cgraph.Node, error) {
 		return nil, fmt.Errorf("create node by name: %w", err)
 	}
 
-	// All collapsed units use record shape (per Phase 11 requirements)
-	// Person types get a special two-column label format
-	cn.SetShape(cgraph.Shape("record"))
+	// HTML labels require shape=none (not shape=record) for proper rendering.
+	// Record shapes have their own label syntax that conflicts with HTML tables.
+	cn.SetShape(cgraph.NoneShape)
 
 	// Build and set the label using HTML tables
+	// IMPORTANT: Use StrdupHTML to create HTML strings that GraphViz will
+	// recognize as HTML (not quoted strings). Without this, SetLabel wraps
+	// values in quotes which breaks HTML label parsing.
 	if node.Label != nil {
-		cn.SetLabel(buildHTMLLabelForType(node.Label, node.Type))
+		htmlLabel := buildHTMLLabelForType(node.Label, node.Type)
+		if htmlLabel != "" {
+			htmlStr, err := cg.StrdupHTML(htmlLabel)
+			if err != nil {
+				return nil, fmt.Errorf("create HTML label: %w", err)
+			}
+			cn.SetLabel(htmlStr)
+		}
 	}
 
 	// Build combined style string - start with rounded for record shapes

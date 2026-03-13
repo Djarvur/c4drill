@@ -1,0 +1,55 @@
+digraph "" {
+	graph [bb="0,0,422.18,177.2",
+		fontname=Helvetica,
+		fontsize=14,
+		label="<a href=\"../expanded.dot\">Back to mainsystem</a> | mainsystem
+Main System - Containers",
+		labelloc=t,
+		lheight=0.47,
+		lp="211.09,156.4",
+		lwidth=5.64,
+		rankdir=TB
+	];
+	node [color=black,
+		fontcolor=black,
+		label="\N",
+		shape=ellipse
+	];
+	edge [fontsize=14.0,
+		label="\E"
+	];
+	external	[color="#8A8A8A",
+		fontcolor="#8A8A8A",
+		height=0.51389,
+		label="{external}",
+		pos="135.66,18.5",
+		rects="105.12,0.7,166.2,36.5",
+		shape=record,
+		style=rounded,
+		width=0.84838];
+	"mainsystem.webapp"	[URL="./mainsystem/webapp.dot",
+		color="#3C7FC0",
+		fontcolor="#3C7FC0",
+		height=0.70278,
+		label="{Web Application [+]|Frontend}",
+		pos="265.66,110.3",
+		rects="199.29,110.3,332.03,135.1 199.29,85.5,332.03,110.3",
+		shape=record,
+		style=rounded,
+		width=1.8437];
+	"mainsystem.api"	[color="#3C7FC0",
+		fontcolor="#3C7FC0",
+		height=0.70278,
+		label="{API|Backend API}",
+		pos="135.66,110.3",
+		rects="90.143,110.3,181.18,135.1 90.143,85.5,181.18,110.3",
+		shape=record,
+		style=rounded,
+		width=1.2644];
+	"mainsystem.api" -> external	[key="mainsystem.api_to_external",
+		fontsize=10,
+		label="[HTTPS]",
+		lp="154.27,61",
+		pos="e,135.66,36.796 135.66,85.235 135.66,73.78 135.66,59.999 135.66,48.021",
+		style=solid];
+}

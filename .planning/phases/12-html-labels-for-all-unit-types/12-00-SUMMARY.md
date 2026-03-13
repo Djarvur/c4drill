@@ -107,3 +107,9 @@ None - no external service configuration required.
 ---
 *Phase: 12-html-labels-for-all-unit-types*
 *Completed: 2026-03-13*
+
+## Self-Check: PASSED
+
+- [x] internal/render/html_labels_test.go exists
+- [x] internal/render/labels.go modified
+- [x] Commit 5e2607f exists

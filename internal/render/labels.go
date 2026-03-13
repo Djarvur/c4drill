@@ -162,7 +162,7 @@ func buildPersonHTMLLabel(label *graph.Label) string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("<<table>")
+	sb.WriteString("<table>")
 
 	// Calculate rowspan for icon: always 2 (name + description) if description present, else 1
 	rowspan := 1
@@ -191,7 +191,7 @@ func buildPersonHTMLLabel(label *graph.Label) string {
 		sb.WriteString(`</tr>`)
 	}
 
-	sb.WriteString(`</table>>`)
+	sb.WriteString(`</table>`)
 
 	return sb.String()
 }
@@ -205,7 +205,7 @@ func buildDbHTMLLabel(label *graph.Label) string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("<<table>")
+	sb.WriteString("<table>")
 
 	// Calculate rowspan for icon: count of present fields (name always present)
 	rowspan := 1 // name
@@ -246,7 +246,7 @@ func buildDbHTMLLabel(label *graph.Label) string {
 		sb.WriteString(`</tr>`)
 	}
 
-	sb.WriteString(`</table>>`)
+	sb.WriteString(`</table>`)
 
 	return sb.String()
 }
@@ -261,7 +261,7 @@ func buildQueueHTMLLabel(label *graph.Label) string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("<<table>")
+	sb.WriteString("<table>")
 
 	// Row 1: Graphics (NO rowspan - separate row)
 	sb.WriteString(`<tr align="center">`)
@@ -295,7 +295,7 @@ func buildQueueHTMLLabel(label *graph.Label) string {
 		sb.WriteString(`</tr>`)
 	}
 
-	sb.WriteString(`</table>>`)
+	sb.WriteString(`</table>`)
 
 	return sb.String()
 }
@@ -309,7 +309,7 @@ func buildSystemHTMLLabel(label *graph.Label) string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("<<table>")
+	sb.WriteString("<table>")
 
 	// Calculate rowspan for SYS label: count of present fields (name always present)
 	rowspan := 1 // name
@@ -324,7 +324,7 @@ func buildSystemHTMLLabel(label *graph.Label) string {
 	sb.WriteString(`<tr align="center">`)
 	sb.WriteString(`<td rowspan="`)
 	sb.WriteString(strconv.Itoa(rowspan))
-	sb.WriteString(`" valign="middle"><tt>SYS</tt></td>`)
+	sb.WriteString(`" valign="middle"><font face="monospace">SYS</font></td>`)
 	sb.WriteString(`<td valign="bottom"><b>`)
 	sb.WriteString(html.EscapeString(label.Name))
 	sb.WriteString(`</b></td>`)
@@ -348,7 +348,7 @@ func buildSystemHTMLLabel(label *graph.Label) string {
 		sb.WriteString(`</tr>`)
 	}
 
-	sb.WriteString(`</table>>`)
+	sb.WriteString(`</table>`)
 
 	return sb.String()
 }
@@ -362,7 +362,7 @@ func buildContainerHTMLLabel(label *graph.Label) string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("<<table>")
+	sb.WriteString("<table>")
 
 	// Calculate rowspan for CONT label: count of present fields (name always present)
 	rowspan := 1 // name
@@ -377,7 +377,7 @@ func buildContainerHTMLLabel(label *graph.Label) string {
 	sb.WriteString(`<tr align="center">`)
 	sb.WriteString(`<td rowspan="`)
 	sb.WriteString(strconv.Itoa(rowspan))
-	sb.WriteString(`" valign="middle"><tt>CONT</tt></td>`)
+	sb.WriteString(`" valign="middle"><font face="monospace">CONT</font></td>`)
 	sb.WriteString(`<td valign="bottom"><b>`)
 	sb.WriteString(html.EscapeString(label.Name))
 	sb.WriteString(`</b></td>`)
@@ -401,7 +401,7 @@ func buildContainerHTMLLabel(label *graph.Label) string {
 		sb.WriteString(`</tr>`)
 	}
 
-	sb.WriteString(`</table>>`)
+	sb.WriteString(`</table>`)
 
 	return sb.String()
 }
@@ -415,7 +415,7 @@ func buildComponentHTMLLabel(label *graph.Label) string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("<<table>")
+	sb.WriteString("<table>")
 
 	// Calculate rowspan for COMP label: count of present fields (name always present)
 	rowspan := 1 // name
@@ -430,7 +430,7 @@ func buildComponentHTMLLabel(label *graph.Label) string {
 	sb.WriteString(`<tr align="center">`)
 	sb.WriteString(`<td rowspan="`)
 	sb.WriteString(strconv.Itoa(rowspan))
-	sb.WriteString(`" valign="middle"><tt>COMP</tt></td>`)
+	sb.WriteString(`" valign="middle"><font face="monospace">COMP</font></td>`)
 	sb.WriteString(`<td valign="bottom"><b>`)
 	sb.WriteString(html.EscapeString(label.Name))
 	sb.WriteString(`</b></td>`)
@@ -454,7 +454,7 @@ func buildComponentHTMLLabel(label *graph.Label) string {
 		sb.WriteString(`</tr>`)
 	}
 
-	sb.WriteString(`</table>>`)
+	sb.WriteString(`</table>`)
 
 	return sb.String()
 }
