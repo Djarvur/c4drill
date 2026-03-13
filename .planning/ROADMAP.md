@@ -142,7 +142,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 **Goal:** Convert all unit type labels from record-style format to HTML table format with specific layouts per unit type
 **Requirements**: HTML-01, HTML-02
 **Depends on:** Phase 11
-**Plans:** 1 plan (0/1 executed)
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 12-01-PLAN.md -- HTML label builders with type-specific formats (Person icon, DB icon, Queue 4-row, SYS/CONT/COMP labels)

@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: AI-Ready
+milestone: v1.2
+milestone_name: Bug Fixes
 status: executing
-last_updated: "2026-03-13T17:57:36.912Z"
+last_updated: "2026-03-13T18:37:20Z"
 last_activity: 2026-03-13
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 5
-  total_plans: 10
-  completed_plans: 9
-  percent: 100
+  total_plans: 12
+  completed_plans: 10
+  percent: 83
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Milestone: v1.2 Bug Fixes
-Phase: 11-links-bug
-Plan: 01 complete
+Phase: 12-html-labels-for-all-unit-types
+Plan: 00 complete
 Status: In Progress
 Last activity: 2026-03-13
 
-Progress: [██████████] 100% (1/1 plans)
+Progress: [████████░░] 50% (1/2 plans)
 
 ## Performance Metrics
 
@@ -44,9 +44,11 @@ Progress: [██████████] 100% (1/1 plans)
 | Phase | Plans | Completed | Status |
 |-------|-------|-----------|--------|
 | 11. Links Bug | 1 | 1 | Complete |
+| 12. HTML Labels | 2 | 1 | In Progress |
 
 **Recent Executions:**
 - Phase 11-links-bug P01: 8 min, 3 tasks, 5 files
+- Phase 12-html-labels-for-all-unit-types P00: 3 min, 1 task, 2 files
 
 ## Accumulated Context
 
@@ -57,6 +59,8 @@ Recent decisions affecting v1.2:
 - [Phase 11-01]: Collapsed units render with record shape (ShapeRecord) instead of HTML labels
 - [Phase 11-01]: All units have transparent backgrounds (empty FillColor)
 - [Phase 11-01]: Only set style=filled when FillColor is specified (for true transparency)
+- [Phase 12-00]: Use internal test file (package render) to test unexported HTML label builder functions
+- [Phase 12-00]: Add stub implementations that return empty strings - tests fail until Wave 1
 
 ### Roadmap Evolution
 
@@ -73,9 +77,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-13T17:57:36.903Z
-Status: Phase 11-links-bug P01 complete
-Next: Ready for next plan or phase
+Last session: 2026-03-13T18:37:20Z
+Status: Phase 12-html-labels-for-all-unit-types P00 complete
+Next: Plan 12-01 (Wave 1 - implement HTML label builders)
 
 ## v1.0 Summary
 
@@ -98,4 +102,5 @@ Next: Ready for next plan or phase
 
 **In Progress**
 
-- Phase 11: Links bug (unit shape and transparent fills)
+- Phase 11: Links bug (unit shape and transparent fills) - Complete
+- Phase 12: HTML labels for all unit types - In Progress
