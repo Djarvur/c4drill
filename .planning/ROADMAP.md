@@ -6,34 +6,34 @@ C4Drill transforms TOML architecture definitions into professional C4 diagrams t
 
 ## Milestones
 
-- ✅ **v1.0 Initial Release** — Phases 1-6 (shipped 2026-03-10)
-- 🚧 **v1.1 AI-Ready** — Phases 7-11 (in progress)
-- 📋 **v2.0** — Future features (planned)
+- **v1.0 Initial Release** -- Phases 1-6 (shipped 2026-03-10)
+- **v1.1 AI-Ready** -- Phases 7-11 (in progress)
+- **v2.0** -- Future features (planned)
 
 ## Phases
 
 <details>
-<summary>✅ v1.0 Initial Release (Phases 1-6) — SHIPPED 2026-03-10</summary>
+<summary>v1.0 Initial Release (Phases 1-6) -- SHIPPED 2026-03-10</summary>
 
-- [x] Phase 1: Foundation & Model — completed 2026-03-09
-- [x] Phase 2: Validation — completed 2026-03-09
-- [x] Phase 3: Views & Graphs — completed 2026-03-09
-- [x] Phase 4: Rendering & Output — completed 2026-03-10
-- [x] Phase 5: Navigation — completed 2026-03-10
-- [x] Phase 6: CLI & Polish — completed 2026-03-10
+- [x] Phase 1: Foundation & Model -- completed 2026-03-09
+- [x] Phase 2: Validation -- completed 2026-03-09
+- [x] Phase 3: Views & Graphs -- completed 2026-03-09
+- [x] Phase 4: Rendering & Output -- completed 2026-03-10
+- [x] Phase 5: Navigation -- completed 2026-03-10
+- [x] Phase 6: CLI & Polish -- completed 2026-03-10
 
 See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 
 </details>
 
-### 🚧 v1.1 AI-Ready (In Progress)
+### v1.1 AI-Ready (In Progress)
 
 **Milestone Goal:** Make C4Drill AI-friendly with documentation, single-view expanded diagrams, and stricter validation
 
-- [x] **Phase 7: AI Documentation** — TOML language manual for AI assistants
-- [x] **Phase 8: All-Expanded Mode** — Single-view expanded rendering with cross-level edges (completed 2026-03-10)
-- [x] **Phase 9: No Orphan Units** — Validation rule requiring all units to be linked (completed 2026-03-11)
-- [x] **Phase 10: Link List Format** — Change Links/LinksFrom from maps to lists with explicit target/source (completed 2026-03-13)
+- [x] **Phase 7: AI Documentation** -- TOML language manual for AI assistants
+- [x] **Phase 8: All-Expanded Mode** -- Single-view expanded rendering with cross-level edges (completed 2026-03-10)
+- [x] **Phase 9: No Orphan Units** -- Validation rule requiring all units to be linked (completed 2026-03-11)
+- [x] **Phase 10: Link List Format** -- Change Links/LinksFrom from maps to lists with explicit target/source (completed 2026-03-13)
 
 ---
 
@@ -52,8 +52,8 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 **Plans:** 2/2 plans complete
 
 Plans:
-- [x] 07-01-PLAN.md — Create skill package (SKILL.md + examples)
-- [x] 07-02-PLAN.md — Add CI validation for examples
+- [x] 07-01-PLAN.md -- Create skill package (SKILL.md + examples)
+- [x] 07-02-PLAN.md -- Add CI validation for examples
 
 ### Phase 8: All-Expanded Mode
 **Goal**: Users can generate a single diagram showing all units expanded with cross-level edges
@@ -68,8 +68,8 @@ Plans:
 **Plans:** 2/2 plans complete
 
 Plans:
-- [x] 08-01-PLAN.md — Add core data structures and view generation
-- [x] 08-02-PLAN.md — Add CLI flag integration and recursive cluster building
+- [x] 08-01-PLAN.md -- Add core data structures and view generation
+- [x] 08-02-PLAN.md -- Add CLI flag integration and recursive cluster building
 
 ### Phase 9: No Orphan Units
 **Goal**: All units in the architecture must be connected via links (no isolated units)
@@ -82,7 +82,7 @@ Plans:
 **Plans:** 1/1 plans complete
 
 Plans:
-- [x] 09-01-PLAN.md — Add ValidateOrphanUnits rule with tests and integration
+- [x] 09-01-PLAN.md -- Add ValidateOrphanUnits rule with tests and integration
 
 ### Phase 10: Link List Format
 **Goal**: Change Links and LinksFrom from maps to lists with explicit peer field
@@ -97,9 +97,9 @@ Plans:
 **Plans:** 3/3 plans complete
 
 Plans:
-- [x] 10-01-PLAN.md — Model + Parser + testdata + parser tests
-- [x] 10-02-PLAN.md — Documentation (SKILL.md + examples)
-- [x] 10-03-PLAN.md — Validator + View + Graph + their tests
+- [x] 10-01-PLAN.md -- Model + Parser + testdata + parser tests
+- [x] 10-02-PLAN.md -- Documentation (SKILL.md + examples)
+- [x] 10-03-PLAN.md -- Validator + View + Graph + their tests
 
 ### Phase 11: Unit Shape and Attributes
 **Goal**: Fix unit rendering to use record shapes for collapsed units (not HTML) with transparent backgrounds for all units
@@ -114,7 +114,7 @@ Plans:
 **Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 11-01-PLAN.md — Shape logic (ShapeRecord) and fill logic (transparent backgrounds)
+- [x] 11-01-PLAN.md -- Shape logic (ShapeRecord) and fill logic (transparent backgrounds)
 
 ---
 
@@ -132,22 +132,22 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 5. Navigation | v1.0 | 2/2 | Complete | 2026-03-10 |
 | 6. CLI & Polish | v1.0 | 2/2 | Complete | 2026-03-10 |
 | 7. AI Documentation | v1.1 | 2/2 | Complete | 2026-03-10 |
-| 8. All-Expanded Mode | v1.1 | Complete    | 2026-03-10 | - |
-| 9. No Orphan Units | v1.1 | Complete    | 2026-03-11 | - |
-| 10. Link List Format | 3/3 | Complete    | 2026-03-13 | - |
-| 11. Unit Shape and Attributes | 1/1 | Complete    | 2026-03-13 |
+| 8. All-Expanded Mode | v1.1 | 2/2 | Complete | 2026-03-10 |
+| 9. No Orphan Units | v1.1 | 1/1 | Complete | 2026-03-11 |
+| 10. Link List Format | v1.1 | 3/3 | Complete | 2026-03-13 |
+| 11. Unit Shape and Attributes | v1.1 | 1/1 | Complete | 2026-03-13 |
 
 ### Phase 12: HTML labels for all unit types
 
 **Goal:** Convert all unit type labels from record-style format to HTML table format with specific layouts per unit type
 **Requirements**: HTML-01, HTML-02
 **Depends on:** Phase 11
-**Plans:** 0/1 plans executed
+**Plans:** 1 plan (0/1 executed)
 
 Plans:
-- [x] 12-01-PLAN.md — HTML label builders and converter integration
+- [ ] 12-01-PLAN.md -- HTML label builders with type-specific formats (Person icon, DB icon, Queue 4-row, SYS/CONT/COMP labels)
 
 ---
 
 *Roadmap created: 2026-03-09*
-*Last updated: 2026-03-13 - Phase 11 renamed (unit shape and attributes)*
+*Last updated: 2026-03-13 - Phase 12 plan updated with correct CONTEXT.md specifications*
