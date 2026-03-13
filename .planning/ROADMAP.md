@@ -137,6 +137,16 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 10. Link List Format | 3/3 | Complete    | 2026-03-13 | - |
 | 11. Unit Shape and Attributes | 1/1 | Complete    | 2026-03-13 |
 
+### Phase 12: HTML labels for all unit types
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 11
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 12 to break down)
+
 ---
 
 *Roadmap created: 2026-03-09*

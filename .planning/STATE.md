@@ -61,6 +61,7 @@ Recent decisions affecting v1.2:
 ### Roadmap Evolution
 
 - Phase 11 added: links bug (unit shape and transparent fills)
+- Phase 12 added: HTML labels for all unit types
 
 ### Pending Todos
 
