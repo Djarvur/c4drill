@@ -21,7 +21,7 @@ created: 2026-03-13
 | **Config file** | none — standard Go testing |
 | **Quick run command** | `go test ./internal/render/... -v` |
 | **Full suite command** | `go test ./...` |
-| **Estimated runtime** | ~30 seconds |
+| **Estimated runtime** | ~5 seconds |
 
 ---
 
@@ -29,8 +29,8 @@ created: 2026-03-13
 
 - **After every task commit:** Run `go test ./internal/render/... -v`
 - **After every plan wave:** Run `go test ./...`
-- **Before `/gsd-verify-work`:** Full suite must be green
-- **Max feedback latency:** 30 seconds
+- **Before `/gsd:verify-work`:** Full suite must be green
+- **Max feedback latency:** 5 seconds
 
 ---
 
@@ -38,9 +38,9 @@ created: 2026-03-13
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 12-01-01 | 01 | 1 | HTML-01 | unit | `go test ./internal/render/... -run TestBuild` | ✅ | ⬜ pending |
-| 12-01-02 | 01 | 1 | HTML-01, HTML-02 | unit | `go test ./internal/render/... -run TestConvert` | ✅ | ⬜ pending |
-| 12-01-03 | 01 | 1 | HTML-01, HTML-02 | unit | `go test ./...` | ✅ | ⬜ pending |
+| 12-01-01 | 01 | 1 | HTML-01 | unit | `go test ./internal/render/... -v -run TestHTML` | ❌ W0 | ⬜ pending |
+| 12-01-02 | 01 | 1 | HTML-01 | unit | `go test ./internal/render/... -v` | ✅ | ⬜ pending |
+| 12-01-03 | 01 | 1 | HTML-02 | integration | `go test ./... -v` | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -48,10 +48,10 @@ created: 2026-03-13
 
 ## Wave 0 Requirements
 
-- Existing test infrastructure in `internal/render/labels_test.go` covers label building
-- No additional test infrastructure needed
+- [ ] `internal/render/labels_test.go` — add `TestHTML*` test functions for HTML label builders
+- [ ] Test cases for each unit type: Person, DB, Queue, System, Container, Component
 
-*Existing infrastructure covers all phase requirements.*
+*Existing infrastructure covers most requirements; only HTML label unit tests need to be added.*
 
 ---
 
@@ -59,19 +59,19 @@ created: 2026-03-13
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| Visual DOT output | HTML-01, HTML-02 | Requires visual inspection | Run `go run ./cmd/c4drill <file.toml> --expanded -f dot` and inspect label format in output |
+| SVG visual rendering | HTML-02 | GraphViz rendering output requires visual inspection | Generate sample diagram with all unit types, open SVG in browser, verify each label format |
 
-*All phase behaviors have automated verification except visual output inspection.*
+*Automated tests verify label string generation; visual rendering is manual.*
 
 ---
 
 ## Validation Sign-Off
 
-- [x] All tasks have `<automated>` verify or Wave 0 dependencies
-- [x] Sampling continuity: no 3 consecutive tasks without automated verify
-- [x] Wave 0 covers all MISSING references
-- [x] No watch-mode flags
-- [x] Feedback latency < 30s
+- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
+- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
+- [ ] Wave 0 covers all MISSING references
+- [ ] No watch-mode flags
+- [ ] Feedback latency < 5s
 - [ ] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** pending
