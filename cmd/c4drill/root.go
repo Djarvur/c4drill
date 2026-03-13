@@ -61,8 +61,8 @@ Output:
 
 	cmd.PersistentFlags().StringVarP(&format, "format", "f", "svg",
 		"Output format (dot|svg)")
-	cmd.PersistentFlags().StringVarP(&outputDir, "output", "o", ".",
-		"Output directory")
+	cmd.PersistentFlags().StringVarP(&outputDir, "output", "o", "",
+		"Output directory (default: same as input file)")
 	cmd.PersistentFlags().BoolVar(&expanded, "expanded", false,
 		"Generate all-expanded diagram showing all units")
 
@@ -83,6 +83,12 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	}
 
 	inputPath := args[0]
+
+	// Default output directory to input file's directory
+	outDir := outputDir
+	if outDir == "" {
+		outDir = filepath.Dir(inputPath)
+	}
 
 	// Stage 1: Parse
 	m, err := parser.ParseFile(inputPath)
@@ -105,7 +111,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create output writer
-	writer := output.NewWriter(outputDir)
+	writer := output.NewWriter(outDir)
 
 	// Handle --expanded mode (skip normal C1/C2/C3 generation)
 	if expanded {
