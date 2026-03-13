@@ -146,3 +146,67 @@ func buildEdgeLabel(label *graph.EdgeLabel) string {
 
 	return strings.Join(parts, "\n")
 }
+
+// HTML Label Builder Functions (Wave 1 implementation)
+// These stub functions are placeholders that will be implemented in plan 12-01.
+// They return empty strings so tests compile but fail assertions.
+
+// buildPersonHTMLLabel generates an HTML table label for Person-type nodes.
+// Implementation pending in Wave 1 (plan 12-01).
+func buildPersonHTMLLabel(label *graph.Label) string {
+	if label == nil {
+		return ""
+	}
+	// TODO: Implement in Wave 1 (plan 12-01)
+	return ""
+}
+
+// buildDbHTMLLabel generates an HTML table label for Database-type nodes.
+// Implementation pending in Wave 1 (plan 12-01).
+func buildDbHTMLLabel(label *graph.Label) string {
+	if label == nil {
+		return ""
+	}
+	// TODO: Implement in Wave 1 (plan 12-01)
+	return ""
+}
+
+// buildQueueHTMLLabel generates an HTML table label for Queue-type nodes.
+// Implementation pending in Wave 1 (plan 12-01).
+func buildQueueHTMLLabel(label *graph.Label) string {
+	if label == nil {
+		return ""
+	}
+	// TODO: Implement in Wave 1 (plan 12-01)
+	return ""
+}
+
+// buildSystemHTMLLabel generates an HTML table label for System-type nodes.
+// Implementation pending in Wave 1 (plan 12-01).
+func buildSystemHTMLLabel(label *graph.Label) string {
+	if label == nil {
+		return ""
+	}
+	// TODO: Implement in Wave 1 (plan 12-01)
+	return ""
+}
+
+// buildContainerHTMLLabel generates an HTML table label for Container-type nodes.
+// Implementation pending in Wave 1 (plan 12-01).
+func buildContainerHTMLLabel(label *graph.Label) string {
+	if label == nil {
+		return ""
+	}
+	// TODO: Implement in Wave 1 (plan 12-01)
+	return ""
+}
+
+// buildComponentHTMLLabel generates an HTML table label for Component-type nodes.
+// Implementation pending in Wave 1 (plan 12-01).
+func buildComponentHTMLLabel(label *graph.Label) string {
+	if label == nil {
+		return ""
+	}
+	// TODO: Implement in Wave 1 (plan 12-01)
+	return ""
+}
