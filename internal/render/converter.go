@@ -228,9 +228,16 @@ func createCluster(parent *cgraph.Graph, cluster *graph.Cluster, nodeMap map[str
 		return fmt.Errorf("create subgraph: %w", err)
 	}
 
-	// Cluster label
+	// Cluster label - use HTML format for consistent styling with nodes
 	if cluster.Label != nil {
-		subgraph.SetLabel(cluster.Label.Name)
+		htmlLabel := buildHTMLLabelForType(cluster.Label, cluster.Type)
+		if htmlLabel != "" {
+			htmlStr, err := parent.StrdupHTML(htmlLabel)
+			if err != nil {
+				return fmt.Errorf("create HTML cluster label: %w", err)
+			}
+			subgraph.SetLabel(htmlStr)
+		}
 	}
 
 	// Build combined style string - start with rounded for clusters
@@ -264,6 +271,13 @@ func createCluster(parent *cgraph.Graph, cluster *graph.Cluster, nodeMap map[str
 		}
 
 		nodeMap[node.ID] = cn
+	}
+
+	// Create nested clusters recursively
+	for _, nestedCluster := range cluster.Clusters {
+		if err := createCluster(subgraph, nestedCluster, nodeMap); err != nil {
+			return fmt.Errorf("create nested cluster %s: %w", nestedCluster.ID, err)
+		}
 	}
 
 	return nil
