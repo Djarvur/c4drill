@@ -139,13 +139,13 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 
 ### Phase 12: HTML labels for all unit types
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Convert all unit type labels from record-style format to HTML table format with specific layouts per unit type
+**Requirements**: HTML-01, HTML-02
 **Depends on:** Phase 11
-**Plans:** 0 plans
+**Plans:** 1/1 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 12 to break down)
+- [x] 12-01-PLAN.md — HTML label builders and converter integration
 
 ---
 
