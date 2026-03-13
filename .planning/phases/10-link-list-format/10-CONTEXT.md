@@ -86,6 +86,11 @@ LinksFrom []Link // each has explicit Peer (the source)
 - Error message wording for missing peer
 - Whether `Peer` field should be `toml:"peer"` explicitly
 
+### Execution Learnings (from 10-01 and 10-02)
+- **FindLinkByPeer helper**: Added to `internal/model/link.go` for O(n) slice-based lookups. Necessary because slices don't have O(1) map access. Used by tests and downstream code.
+- **Orphan validation interaction**: Units with only incoming links failed Phase 9's orphan validation after migration. Examples needed `linkFrom` declarations to pass. All units must have at least one of: Links, LinksFrom, or Subunits.
+- **Cascading changes**: Model changes (10-01) required auto-fixes across 7 downstream areas: parser, graph builder, validator, view scope, render tests, CLI tests, and testdata files.
+
 </decisions>
 
 <specifics>
@@ -123,6 +128,8 @@ LinksFrom []Link // each has explicit Peer (the source)
 - Parser populates Link.Target from map keys — this logic is removed entirely (TOML unmarshals directly)
 - Validator checks Link.Target references — will check `link.Peer`
 - Graph builder creates edges from Links map — will iterate `unit.Links` slice and use `link.Peer`
+- **NEW: FindLinkByPeer(links []Link, peer string) (Link, bool)** — Helper in internal/model/link.go for finding links by peer name
+- **NEW: Orphan validation impact** — All units must have Links, LinksFrom, or Subunits. This affects testdata files.
 
 </code_context>
 
