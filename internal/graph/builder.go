@@ -140,6 +140,7 @@ func buildNode(entry *view.Entry) *Node {
 		ID:         entry.FullPath,
 		Label:      label,
 		Shape:      ShapeForType(entry.Unit.Type),
+		Type:       entry.Unit.Type,
 		Style:      GetStyleForType(entry.Unit.Type, entry.IsExternal),
 		IsExternal: entry.IsExternal,
 	}

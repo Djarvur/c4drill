@@ -2,6 +2,8 @@
 // from C4 architecture views.
 package graph
 
+import "github.com/Djarvur/c4drill/internal/model"
+
 // Shape represents the visual shape of a node in the graph.
 type Shape string
 
@@ -56,6 +58,8 @@ type Node struct {
 	Label *Label
 	// Shape is the node shape (determined by type).
 	Shape Shape
+	// Type is the unit type (used for special rendering like Person HTML labels).
+	Type model.UnitType
 	// Style contains visual styling attributes.
 	Style *NodeStyle
 	// IsExternal indicates if this is an external boundary node.

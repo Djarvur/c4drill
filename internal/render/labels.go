@@ -39,6 +39,44 @@ func buildRecordLabel(label *graph.Label) string {
 	return "{" + strings.Join(parts, "|") + "}"
 }
 
+// buildPersonRecordLabel generates a record-style label for Person-type nodes.
+// Format: "{icon}|{name|description}" creates a two-column layout with icon
+// spanning the full height on the left, and name/description stacked on the right.
+//
+// Visual layout:
+//
+//	┌──────┬──────────────────┐
+//	│      │ Name             │
+//	│ icon ├──────────────────┤
+//	│      │ Description      │
+//	└──────┴──────────────────┘
+func buildPersonRecordLabel(label *graph.Label) string {
+	if label == nil {
+		return ""
+	}
+
+	var sb strings.Builder
+
+	// Left cell: icon (spans full height)
+	sb.WriteString("{")
+	if label.Icon != "" {
+		sb.WriteString(label.Icon)
+	}
+	sb.WriteString("}|{")
+
+	// Right cells: name over description
+	sb.WriteString(label.Name)
+
+	if label.Description != "" {
+		sb.WriteString("|")
+		sb.WriteString(label.Description)
+	}
+
+	sb.WriteString("}")
+
+	return sb.String()
+}
+
 // buildHTMLLabel generates an HTML table label for a node.
 // Format:
 //

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/Djarvur/c4drill/internal/graph"
+	"github.com/Djarvur/c4drill/internal/model"
 	"github.com/goccy/go-graphviz"
 	"github.com/goccy/go-graphviz/cgraph"
 )
@@ -141,12 +142,18 @@ func createNode(cg *cgraph.Graph, node *graph.Node) (*cgraph.Node, error) {
 		return nil, fmt.Errorf("create node by name: %w", err)
 	}
 
-	// Record shape for collapsed units (per CONTEXT.md decision)
+	// All collapsed units use record shape (per Phase 11 requirements)
+	// Person types get a special two-column label format
 	cn.SetShape(cgraph.Shape("record"))
 
-	// Build and set the record-style label
+	// Build and set the label
 	if node.Label != nil {
-		cn.SetLabel(buildRecordLabel(node.Label))
+		isPerson := node.Type == model.TypePerson || node.Type == model.TypePersonExternal
+		if isPerson {
+			cn.SetLabel(buildPersonRecordLabel(node.Label))
+		} else {
+			cn.SetLabel(buildRecordLabel(node.Label))
+		}
 	}
 
 	// Build combined style string - start with rounded for record shapes
