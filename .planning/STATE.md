@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Milestone: v1.2 Bug Fixes
-Phase: 12-html-labels-for-all-unit-types
-Plan: 01 complete
-Status: Complete
+Phase: 13-refined-html-labels
+Plan: 00 not started
+Status: Not Started
 Last activity: 2026-03-13
 
-Progress: [██████████] 100% (2/2 plans)
+Progress: [----------] 0% (0/1 plans)
 
 ## Performance Metrics
 
@@ -45,6 +45,7 @@ Progress: [██████████] 100% (2/2 plans)
 |-------|-------|-----------|--------|
 | 11. Links Bug | 1 | 1 | Complete |
 | 12. HTML Labels | 2 | 2 | Complete |
+| 13. Refined HTML Labels | 1 | 0 | Not Started |
 
 **Recent Executions:**
 - Phase 11-links-bug P01: 8 min, 3 tasks, 5 files
@@ -70,6 +71,7 @@ Recent decisions affecting v1.2:
 
 - Phase 11 added: links bug (unit shape and transparent fills)
 - Phase 12 added: HTML labels for all unit types
+- Phase 13 added: refined HTML labels with shape=box style=rounded and table attributes
 
 ### Pending Todos
 
@@ -81,9 +83,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-13T18:46:00Z
-Status: Phase 12-html-labels-for-all-unit-types complete
-Next: v1.2 milestone complete
+Last session: 2026-03-13T19:00:00Z
+Status: Phase 13-refined-html-labels added
+Next: Run /gsd:discuss-phase 13 to gather context
 
 ## v1.0 Summary
 
@@ -107,4 +109,5 @@ Next: v1.2 milestone complete
 **In Progress**
 
 - Phase 11: Links bug (unit shape and transparent fills) - Complete
-- Phase 12: HTML labels for all unit types - In Progress
+- Phase 12: HTML labels for all unit types - Complete
+- Phase 13: Refined HTML Labels - Not Started

@@ -136,7 +136,8 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 9. No Orphan Units | v1.1 | 1/1 | Complete | 2026-03-11 |
 | 10. Link List Format | v1.1 | 3/3 | Complete | 2026-03-13 |
 | 11. Unit Shape and Attributes | v1.1 | 1/1 | Complete | 2026-03-13 |
-| 12. HTML labels for all unit types | v1.2 | Complete    | 2026-03-13 | 2026-03-13 |
+| 12. HTML labels for all unit types | v1.2 | 2/2 | Complete | 2026-03-13 |
+| 13. Refined HTML Labels | v1.2 | 0/1 | Not Started | - |
 
 ### Phase 12: HTML labels for all unit types
 
@@ -150,7 +151,117 @@ Plans:
 - [x] 12-00-PLAN.md -- Add test file and stub HTML label builder functions
 - [x] 12-01-PLAN.md -- HTML label builders with type-specific formats (Person icon, DB icon, Queue 4-row, SYS/CONT/COMP labels)
 
+### Phase 13: Refined HTML Labels
+
+**Goal:** Refine HTML labels with shape=box style=rounded and updated table attributes (border="0" cellpadding="0" cellspacing="0")
+**Requirements**: REFINED-01, REFINED-02
+**Depends on:** Phase 12
+**Plans:** 0 plans
+**Status:** Not Started
+
+**HTML Label Specifications:**
+
+All units: `shape=box, style=rounded`
+
+Person label:
+```html
+<table border="0" cellpadding="0" cellspacing="0">
+  <tr align=center>
+    <td rowspan=2 valign=middle><font size="+4">👤</font></td>
+    <td valign=bottom><b>User name</b></td>
+  </tr>
+  <tr align=center>
+    <td valign=top>Description</td>
+  </tr>
+</table>
+```
+
+DB label:
+```html
+<table border="0" cellpadding="0" cellspacing="0">
+  <tr align=center>
+    <td rowspan=3 valign=middle><font size="+4">⛁</font></td>
+    <td valign=bottom><b>DB name</b></td>
+  </tr>
+  <tr align=center>
+    <td valign=middle><i>[technology]</i></td>
+  </tr>
+  <tr align=center>
+    <td valign=top>Description</td>
+  </tr>
+</table>
+```
+
+Queue label:
+```html
+<table border="0" cellpadding="0" cellspacing="0">
+  <tr align=center>
+    <td valign=middle>═╦╩═╦══</td>
+  </tr>
+  <tr align=center>
+    <td valign=bottom><b>Queue name</b></td>
+  </tr>
+  <tr align=center>
+    <td valign=middle><i>[technology]</i></td>
+  </tr>
+  <tr align=center>
+    <td valign=top>Description</td>
+  </tr>
+</table>
+```
+
+System label:
+```html
+<table border="0" cellpadding="0" cellspacing="0">
+  <tr align=center>
+    <td rowspan=3 valign=middle><tt>SYS</tt></td>
+    <td valign=bottom><b>System name</b></td>
+  </tr>
+  <tr align=center>
+    <td valign=middle><i>[technology]</i></td>
+  </tr>
+  <tr align=center>
+    <td valign=top>Description</td>
+  </tr>
+</table>
+```
+
+Container label:
+```html
+<table border="0" cellpadding="0" cellspacing="0">
+  <tr align=center>
+    <td rowspan=3 valign=middle><tt>CONT</tt></td>
+    <td valign=bottom><b>Container name</b></td>
+  </tr>
+  <tr align=center>
+    <td valign=middle><i>[technology]</i></td>
+  </tr>
+  <tr align=center>
+    <td valign=top>Description</td>
+  </tr>
+</table>
+```
+
+Component label:
+```html
+<table border="0" cellpadding="0" cellspacing="0">
+  <tr align=center>
+    <td rowspan=3 valign=middle><tt>COMP</tt></td>
+    <td valign=bottom><b>Component name</b></td>
+  </tr>
+  <tr align=center>
+    <td valign=middle><i>[technology]</i></td>
+  </tr>
+  <tr align=center>
+    <td valign=top>Description</td>
+  </tr>
+</table>
+```
+
+Plans:
+- [ ] TBD (run /gsd:discuss-phase 13 to gather context)
+
 ---
 
 *Roadmap created: 2026-03-09*
-*Last updated: 2026-03-13 - Phase 12 complete, v1.2 milestone complete*
+*Last updated: 2026-03-13 - Phase 13 added for refined HTML labels*
