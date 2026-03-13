@@ -167,9 +167,9 @@ func createNode(cg *cgraph.Graph, node *graph.Node) (*cgraph.Node, error) {
 		return nil, fmt.Errorf("create node by name: %w", err)
 	}
 
-	// HTML labels require shape=none (not shape=record) for proper rendering.
-	// Record shapes have their own label syntax that conflicts with HTML tables.
-	cn.SetShape(cgraph.NoneShape)
+	// HTML labels with shape=box and style=rounded for proper visual appearance.
+	// This combination provides a clean container look that works well with HTML tables.
+	cn.SetShape(cgraph.BoxShape)
 
 	// Build and set the label using HTML tables
 	// IMPORTANT: Use StrdupHTML to create HTML strings that GraphViz will

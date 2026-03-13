@@ -22,7 +22,7 @@ func TestHTMLPersonLabel(t *testing.T) {
 	}
 	result := buildPersonHTMLLabel(label)
 	// Should contain HTML table with icon and name
-	if !strings.Contains(result, "<table>") {
+	if !strings.Contains(result, "<table") {
 		t.Error("Person label should contain HTML table")
 	}
 	if !strings.Contains(result, "Test User") {
@@ -38,7 +38,7 @@ func TestHTMLDbLabel(t *testing.T) {
 		Description: "Test description",
 	}
 	result := buildDbHTMLLabel(label)
-	if !strings.Contains(result, "<table>") {
+	if !strings.Contains(result, "<table") {
 		t.Error("DB label should contain HTML table")
 	}
 	if !strings.Contains(result, "Test DB") {
@@ -54,7 +54,7 @@ func TestHTMLQueueLabel(t *testing.T) {
 		Description: "Test description",
 	}
 	result := buildQueueHTMLLabel(label)
-	if !strings.Contains(result, "<table>") {
+	if !strings.Contains(result, "<table") {
 		t.Error("Queue label should contain HTML table")
 	}
 	// Queue has NO rowspan - 4 separate rows
@@ -71,7 +71,7 @@ func TestHTMLSystemLabel(t *testing.T) {
 		Description: "Test description",
 	}
 	result := buildSystemHTMLLabel(label)
-	if !strings.Contains(result, "<table>") {
+	if !strings.Contains(result, "<table") {
 		t.Error("System label should contain HTML table")
 	}
 	if !strings.Contains(result, "SYS") {
@@ -87,7 +87,7 @@ func TestHTMLContainerLabel(t *testing.T) {
 		Description: "Test description",
 	}
 	result := buildContainerHTMLLabel(label)
-	if !strings.Contains(result, "<table>") {
+	if !strings.Contains(result, "<table") {
 		t.Error("Container label should contain HTML table")
 	}
 	if !strings.Contains(result, "CONT") {
@@ -103,7 +103,7 @@ func TestHTMLComponentLabel(t *testing.T) {
 		Description: "Test description",
 	}
 	result := buildComponentHTMLLabel(label)
-	if !strings.Contains(result, "<table>") {
+	if !strings.Contains(result, "<table") {
 		t.Error("Component label should contain HTML table")
 	}
 	if !strings.Contains(result, "COMP") {

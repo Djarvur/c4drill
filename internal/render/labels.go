@@ -162,7 +162,7 @@ func buildPersonHTMLLabel(label *graph.Label) string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("<table>")
+	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
 
 	// Calculate rowspan for icon: always 2 (name + description) if description present, else 1
 	rowspan := 1
@@ -205,7 +205,7 @@ func buildDbHTMLLabel(label *graph.Label) string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("<table>")
+	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
 
 	// Calculate rowspan for icon: count of present fields (name always present)
 	rowspan := 1 // name
@@ -261,7 +261,7 @@ func buildQueueHTMLLabel(label *graph.Label) string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("<table>")
+	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
 
 	// Row 1: Graphics (NO rowspan - separate row)
 	sb.WriteString(`<tr align="center">`)
@@ -309,7 +309,7 @@ func buildSystemHTMLLabel(label *graph.Label) string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("<table>")
+	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
 
 	// Calculate rowspan for SYS label: count of present fields (name always present)
 	rowspan := 1 // name
@@ -362,7 +362,7 @@ func buildContainerHTMLLabel(label *graph.Label) string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("<table>")
+	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
 
 	// Calculate rowspan for CONT label: count of present fields (name always present)
 	rowspan := 1 // name
@@ -415,7 +415,7 @@ func buildComponentHTMLLabel(label *graph.Label) string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("<table>")
+	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
 
 	// Calculate rowspan for COMP label: count of present fields (name always present)
 	rowspan := 1 // name
