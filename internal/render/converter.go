@@ -10,6 +10,31 @@ import (
 	"github.com/goccy/go-graphviz/cgraph"
 )
 
+// buildHTMLLabelForType returns the appropriate HTML label for a unit type.
+func buildHTMLLabelForType(label *graph.Label, t model.UnitType) string {
+	if label == nil {
+		return ""
+	}
+
+	switch {
+	case graph.IsPersonType(t):
+		return buildPersonHTMLLabel(label)
+	case graph.IsDbType(t):
+		return buildDbHTMLLabel(label)
+	case graph.IsQueueType(t):
+		return buildQueueHTMLLabel(label)
+	case graph.IsSystemType(t):
+		return buildSystemHTMLLabel(label)
+	case graph.IsContainerType(t):
+		return buildContainerHTMLLabel(label)
+	case graph.IsComponentType(t):
+		return buildComponentHTMLLabel(label)
+	default:
+		// Fallback to generic record label for unknown types
+		return buildRecordLabel(label)
+	}
+}
+
 const (
 	// Border style constants.
 	borderStyleDashed = "dashed"
@@ -146,14 +171,9 @@ func createNode(cg *cgraph.Graph, node *graph.Node) (*cgraph.Node, error) {
 	// Person types get a special two-column label format
 	cn.SetShape(cgraph.Shape("record"))
 
-	// Build and set the label
+	// Build and set the label using HTML tables
 	if node.Label != nil {
-		isPerson := node.Type == model.TypePerson || node.Type == model.TypePersonExternal
-		if isPerson {
-			cn.SetLabel(buildPersonRecordLabel(node.Label))
-		} else {
-			cn.SetLabel(buildRecordLabel(node.Label))
-		}
+		cn.SetLabel(buildHTMLLabelForType(node.Label, node.Type))
 	}
 
 	// Build combined style string - start with rounded for record shapes
