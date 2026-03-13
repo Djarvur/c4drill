@@ -102,19 +102,19 @@ Plans:
 - [x] 10-03-PLAN.md — Validator + View + Graph + their tests
 
 ### Phase 11: Unit Shape and Attributes
-**Goal**: Fix unit rendering to use record shapes (not HTML) with transparent backgrounds for all units without subunits
+**Goal**: Fix unit rendering to use record shapes for collapsed units (not HTML) with transparent backgrounds for all units
 **Depends on**: Phase 10
 **Requirements**: SHAPE-01, SHAPE-02
 **Success Criteria** (what must be TRUE):
-  1. Units without subunits render with `shape=record` (not HTML labels)
-  2. Units with subunits render as clusters (subgraphs)
+  1. Collapsed units render with `shape=record` (not HTML labels)
+  2. Expanded units render as clusters (subgraphs)
   3. All units have transparent backgrounds (no fill colors)
   4. Icons and styling remain differentiated by type and level
   5. All tests pass with new shape logic
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 11 to break down)
+- [ ] 11-01-PLAN.md — Shape logic (ShapeRecord) and fill logic (transparent backgrounds)
 
 ---
 
@@ -135,7 +135,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 8. All-Expanded Mode | v1.1 | Complete    | 2026-03-10 | - |
 | 9. No Orphan Units | v1.1 | Complete    | 2026-03-11 | - |
 | 10. Link List Format | 3/3 | Complete    | 2026-03-13 | - |
-| 11. Unit Shape and Attributes | 0/1 | Ready to plan | - |
+| 11. Unit Shape and Attributes | 0/1 | Ready to execute | - |
 
 ---
 
