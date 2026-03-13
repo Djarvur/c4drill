@@ -2,7 +2,7 @@
 phase: 12
 slug: html-labels-for-all-unit-types
 status: draft
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-03-13
 ---
@@ -38,9 +38,11 @@ created: 2026-03-13
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 12-01-01 | 01 | 1 | HTML-01 | unit | `go test ./internal/render/... -v -run TestHTML` | ❌ W0 | ⬜ pending |
-| 12-01-02 | 01 | 1 | HTML-01 | unit | `go test ./internal/render/... -v` | ✅ | ⬜ pending |
-| 12-01-03 | 01 | 1 | HTML-02 | integration | `go test ./... -v` | ✅ | ⬜ pending |
+| 12-00-01 | 00 | 0 | HTML-01 | unit | `go test ./internal/render/... -v -run TestHTML` | ❌ W0 | ⬜ pending |
+| 12-01-01 | 01 | 1 | HTML-01 | unit | `go build ./...` | ✅ | ⬜ pending |
+| 12-01-02 | 01 | 1 | HTML-01 | unit | `go test ./internal/render/... -v -run TestHTML` | ✅ | ⬜ pending |
+| 12-01-03 | 01 | 1 | HTML-02 | unit | `go build ./...` | ✅ | ⬜ pending |
+| 12-01-04 | 01 | 1 | HTML-02 | integration | `go test ./... -v` | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -48,10 +50,11 @@ created: 2026-03-13
 
 ## Wave 0 Requirements
 
-- [ ] `internal/render/labels_test.go` — add `TestHTML*` test functions for HTML label builders
+- [x] **Plan 12-00 created** — Wave 0 test infrastructure plan
+- [ ] `internal/render/labels_test.go` — add `TestHTML*` test functions for HTML label builders (12-00-01)
 - [ ] Test cases for each unit type: Person, DB, Queue, System, Container, Component
 
-*Existing infrastructure covers most requirements; only HTML label unit tests need to be added.*
+*Wave 0 plan (12-00) created. Tests will be implemented before Wave 1.*
 
 ---
 
@@ -67,11 +70,11 @@ created: 2026-03-13
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 5s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 5s
+- [x] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** pending
