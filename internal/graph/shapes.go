@@ -49,6 +49,38 @@ func IsExternalType(t model.UnitType) bool {
 		t == model.TypeQueueExternal
 }
 
+// IsPersonType returns true if the type is a person type (internal or external).
+func IsPersonType(t model.UnitType) bool {
+	return t == model.TypePerson || t == model.TypePersonExternal
+}
+
+// IsDbType returns true if the type is a database type (any level).
+func IsDbType(t model.UnitType) bool {
+	return t == model.TypeDb || t == model.TypeDbExternal ||
+		t == model.TypeContainerDb || t == model.TypeComponentDb
+}
+
+// IsQueueType returns true if the type is a queue type (any level).
+func IsQueueType(t model.UnitType) bool {
+	return t == model.TypeQueue || t == model.TypeQueueExternal ||
+		t == model.TypeContainerQueue || t == model.TypeComponentQueue
+}
+
+// IsSystemType returns true if the type is a system type.
+func IsSystemType(t model.UnitType) bool {
+	return t == model.TypeSystem || t == model.TypeSystemExternal
+}
+
+// IsContainerType returns true if the type is a container or box type.
+func IsContainerType(t model.UnitType) bool {
+	return t == model.TypeContainer || t == model.TypeBox
+}
+
+// IsComponentType returns true if the type is a component type.
+func IsComponentType(t model.UnitType) bool {
+	return t == model.TypeComponent
+}
+
 // LevelForType returns the C4 level (1, 2, or 3) for a unit type.
 func LevelForType(t model.UnitType) int {
 	switch t {
