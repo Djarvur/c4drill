@@ -7,7 +7,7 @@ C4Drill transforms TOML architecture definitions into professional C4 diagrams t
 ## Milestones
 
 - ✅ **v1.0 Initial Release** — Phases 1-6 (shipped 2026-03-10)
-- 🚧 **v1.1 AI-Ready** — Phases 7-10 (in progress)
+- 🚧 **v1.1 AI-Ready** — Phases 7-11 (in progress)
 - 📋 **v2.0** — Future features (planned)
 
 ## Phases
@@ -30,10 +30,10 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 
 **Milestone Goal:** Make C4Drill AI-friendly with documentation, single-view expanded diagrams, and stricter validation
 
-- [ ] **Phase 7: AI Documentation** — TOML language manual for AI assistants
+- [x] **Phase 7: AI Documentation** — TOML language manual for AI assistants
 - [x] **Phase 8: All-Expanded Mode** — Single-view expanded rendering with cross-level edges (completed 2026-03-10)
 - [x] **Phase 9: No Orphan Units** — Validation rule requiring all units to be linked (completed 2026-03-11)
-- [x] **Phase 10: Link List Format** — Change Links/LinksFrom from maps to lists with explicit target/source (completed 2026-03-11)
+- [x] **Phase 10: Link List Format** — Change Links/LinksFrom from maps to lists with explicit target/source (completed 2026-03-13)
 
 ---
 
@@ -49,11 +49,11 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
   3. AI assistants given the skill produce syntactically valid TOML files
   4. All validation rules are documented with clear explanations of what triggers each error
   5. CI validates all TOML examples against the actual parser to prevent drift
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 07-01-PLAN.md — Create skill package (SKILL.md + examples)
-- [ ] 07-02-PLAN.md — Add CI validation for examples
+- [x] 07-01-PLAN.md — Create skill package (SKILL.md + examples)
+- [x] 07-02-PLAN.md — Add CI validation for examples
 
 ### Phase 8: All-Expanded Mode
 **Goal**: Users can generate a single diagram showing all units expanded with cross-level edges
@@ -68,8 +68,8 @@ Plans:
 **Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 08-01-PLAN.md — Add core data structures and view generation
-- [ ] 08-02-PLAN.md — Add CLI flag integration and recursive cluster building
+- [x] 08-01-PLAN.md — Add core data structures and view generation
+- [x] 08-02-PLAN.md — Add CLI flag integration and recursive cluster building
 
 ### Phase 9: No Orphan Units
 **Goal**: All units in the architecture must be connected via links (no isolated units)
@@ -97,9 +97,24 @@ Plans:
 **Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 10-01-PLAN.md — Model + Parser + testdata + parser tests
-- [ ] 10-02-PLAN.md — Documentation (SKILL.md + examples)
-- [ ] 10-03-PLAN.md — Validator + View + Graph + their tests
+- [x] 10-01-PLAN.md — Model + Parser + testdata + parser tests
+- [x] 10-02-PLAN.md — Documentation (SKILL.md + examples)
+- [x] 10-03-PLAN.md — Validator + View + Graph + their tests
+
+### Phase 11: Unit Shape and Attributes
+**Goal**: Fix unit rendering to use record shapes (not HTML) with transparent backgrounds for all units without subunits
+**Depends on**: Phase 10
+**Requirements**: SHAPE-01, SHAPE-02
+**Success Criteria** (what must be TRUE):
+  1. Units without subunits render with `shape=record` (not HTML labels)
+  2. Units with subunits render as clusters (subgraphs)
+  3. All units have transparent backgrounds (no fill colors)
+  4. Icons and styling remain differentiated by type and level
+  5. All tests pass with new shape logic
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 11 to break down)
 
 ---
 
@@ -116,22 +131,13 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 4. Rendering & Output | v1.0 | 3/3 | Complete | 2026-03-10 |
 | 5. Navigation | v1.0 | 2/2 | Complete | 2026-03-10 |
 | 6. CLI & Polish | v1.0 | 2/2 | Complete | 2026-03-10 |
-| 7. AI Documentation | v1.1 | 0/2 | Ready to execute | - |
+| 7. AI Documentation | v1.1 | 2/2 | Complete | 2026-03-10 |
 | 8. All-Expanded Mode | v1.1 | Complete    | 2026-03-10 | - |
 | 9. No Orphan Units | v1.1 | Complete    | 2026-03-11 | - |
-| 10. Link List Format | 2/3 | Complete    | 2026-03-13 | - |
-
-### Phase 11: links bug
-
-**Goal:** [To be planned]
-**Requirements**: TBD
-**Depends on:** Phase 10
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (run /gsd:plan-phase 11 to break down)
+| 10. Link List Format | 3/3 | Complete    | 2026-03-13 | - |
+| 11. Unit Shape and Attributes | 0/1 | Ready to plan | - |
 
 ---
 
 *Roadmap created: 2026-03-09*
-*Last updated: 2026-03-11 - Phase 10 added (link list format)*
+*Last updated: 2026-03-13 - Phase 11 renamed (unit shape and attributes)*
