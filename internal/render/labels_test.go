@@ -14,7 +14,7 @@ import (
 // library uses a WASM-based rendering engine that has concurrency issues.
 
 //nolint:funlen,paralleltest // Table-driven test pattern; go-graphviz WASM concurrency issues
-func TestHTMLLabelGeneration(t *testing.T) {
+func TestRecordLabelGeneration(t *testing.T) {
 	tests := []struct {
 		name        string
 		label       *graph.Label
@@ -22,9 +22,9 @@ func TestHTMLLabelGeneration(t *testing.T) {
 		notContains []string
 	}{
 		{
-			name:     "TABLE with Name row",
+			name:     "Record label with Name",
 			label:    &graph.Label{Name: "My Node"},
-			contains: []string{"My Node", "<TABLE", "</TABLE>"},
+			contains: []string{"My Node", "{", "}"},
 		},
 		{
 			name:     "Icon before Name",
@@ -34,12 +34,12 @@ func TestHTMLLabelGeneration(t *testing.T) {
 		{
 			name:     "Technology row",
 			label:    &graph.Label{Name: "API Server", Technology: "Go"},
-			contains: []string{"API Server", "Go"},
+			contains: []string{"API Server", "Go", "|"},
 		},
 		{
 			name:     "Description row",
 			label:    &graph.Label{Name: "API", Description: "REST API"},
-			contains: []string{"API", "REST API"},
+			contains: []string{"API", "REST API", "|"},
 		},
 		{
 			name: "all fields",
@@ -62,7 +62,7 @@ func TestHTMLLabelGeneration(t *testing.T) {
 					{
 						ID:    "test_node",
 						Label: tt.label,
-						Shape: graph.ShapeHTML,
+						Shape: graph.ShapeRecord,
 						Style: &graph.NodeStyle{FillColor: "#438DD5"},
 					},
 				},
@@ -130,8 +130,8 @@ func TestEdgeLabelGeneration(t *testing.T) {
 				Title:     "Test",
 				Direction: "TB",
 				Nodes: []*graph.Node{
-					{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeHTML},
-					{ID: "b", Label: &graph.Label{Name: "B"}, Shape: graph.ShapeHTML},
+					{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeRecord},
+					{ID: "b", Label: &graph.Label{Name: "B"}, Shape: graph.ShapeRecord},
 				},
 				Edges: []*graph.Edge{
 					{Source: "a", Target: "b", Label: tt.edgeLabel},
@@ -164,7 +164,7 @@ func TestNodeStyles(t *testing.T) {
 				{
 					ID:    "dashed_node",
 					Label: &graph.Label{Name: "Dashed"},
-					Shape: graph.ShapeHTML,
+					Shape: graph.ShapeRecord,
 					Style: &graph.NodeStyle{
 						FillColor:   "#438DD5",
 						BorderStyle: "dashed",
@@ -193,7 +193,7 @@ func TestClusterStyles(t *testing.T) {
 						{
 							ID:    "inner_node",
 							Label: &graph.Label{Name: "Inner"},
-							Shape: graph.ShapeHTML,
+							Shape: graph.ShapeRecord,
 						},
 					},
 					Style: &graph.NodeStyle{
@@ -217,7 +217,7 @@ func TestGraphTitle(t *testing.T) {
 			Title:     "My C4 Diagram",
 			Direction: "TB",
 			Nodes: []*graph.Node{
-				{ID: "test", Label: &graph.Label{Name: "Test"}, Shape: graph.ShapeHTML},
+				{ID: "test", Label: &graph.Label{Name: "Test"}, Shape: graph.ShapeRecord},
 			},
 		}
 

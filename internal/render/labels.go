@@ -6,6 +6,39 @@ import (
 	"github.com/Djarvur/c4drill/internal/graph"
 )
 
+// buildRecordLabel generates a record-style label for a node.
+// Format: "{Name|Technology|Description}" for record shapes.
+// Each field is on a separate row with left alignment.
+func buildRecordLabel(label *graph.Label) string {
+	if label == nil {
+		return ""
+	}
+
+	var parts []string
+
+	// Build name with optional icon
+	var nameBuilder strings.Builder
+	if label.Icon != "" {
+		nameBuilder.WriteString(label.Icon)
+		nameBuilder.WriteString(" ")
+	}
+	nameBuilder.WriteString(label.Name)
+	parts = append(parts, nameBuilder.String())
+
+	// Add technology if present
+	if label.Technology != "" {
+		parts = append(parts, label.Technology)
+	}
+
+	// Add description if present
+	if label.Description != "" {
+		parts = append(parts, label.Description)
+	}
+
+	// Join with | for record format and wrap in {}
+	return "{" + strings.Join(parts, "|") + "}"
+}
+
 // buildHTMLLabel generates an HTML table label for a node.
 // Format:
 //
@@ -14,6 +47,8 @@ import (
 //	  <TR><TD>{technology}</TD></TR>  (if present)
 //	  <TR><TD>{description}</TD></TR> (if present)
 //	</TABLE>>
+//
+// Deprecated: Use buildRecordLabel for record shapes instead.
 func buildHTMLLabel(label *graph.Label) string {
 	if label == nil {
 		return ""

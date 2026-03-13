@@ -183,9 +183,9 @@ func TestIntegrationBuildGraphExternalBoundaryNodes(t *testing.T) {
 	require.NotNil(t, externalNode, "External boundary node should exist")
 	assert.True(t, externalNode.IsExternal)
 
-	// External nodes should have dashed border
+	// External nodes should have solid border
 	require.NotNil(t, externalNode.Style)
-	assert.Equal(t, "dashed", externalNode.Style.BorderStyle)
+	assert.Equal(t, "solid", externalNode.Style.BorderStyle)
 
 	// External nodes should have transparent fill (no background color)
 	assert.Empty(t, externalNode.Style.FillColor)
@@ -447,10 +447,10 @@ func TestIntegrationGraphWithAllUnitTypes(t *testing.T) {
 	assert.Equal(t, "\u255F\n\u2562", nodeMap["queue"].Label.Icon)    // Queue bars
 	assert.Equal(t, "\u255F\n\u2562", nodeMap["queueExt"].Label.Icon) // Queue bars
 
-	// Verify external nodes have dashed border and external colors
+	// Verify external nodes have solid border and external colors
 	for _, id := range []string{"personExt", "systemExt", "dbExt", "queueExt"} {
 		assert.True(t, nodeMap[id].IsExternal, "%s should be external", id)
-		assert.Equal(t, "dashed", nodeMap[id].Style.BorderStyle, "%s should have dashed border", id)
+		assert.Equal(t, "solid", nodeMap[id].Style.BorderStyle, "%s should have solid border", id)
 	}
 }
 

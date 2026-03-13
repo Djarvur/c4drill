@@ -72,7 +72,7 @@ func LevelForType(t model.UnitType) int {
 // GetStyleForType returns styling based on unit type and external status.
 // Per CONTEXT.md decisions:
 // - No inheritance: each unit's style is independent
-// - External nodes: same size, dashed border, external palette colors
+// - External nodes: same size, solid border, external palette colors
 // - Transparent backgrounds: FillColor is empty for all units.
 func GetStyleForType(t model.UnitType, isExternal bool) *NodeStyle {
 	if isExternal {
@@ -91,35 +91,35 @@ func getLevelStyle(t model.UnitType) *NodeStyle {
 		return &NodeStyle{
 			FillColor:   "", // Transparent background
 			BorderColor: model.SystemBorder,
-			FontColor:   model.FontColorC1C2,
+			FontColor:   model.SystemBorder, // Font color matches border color
 			BorderStyle: "solid",
 		}
 	case levelC2:
 		return &NodeStyle{
 			FillColor:   "", // Transparent background
 			BorderColor: model.ContainerBorder,
-			FontColor:   model.FontColorC1C2,
+			FontColor:   model.ContainerBorder, // Font color matches border color
 			BorderStyle: "solid",
 		}
 	case levelC3:
 		return &NodeStyle{
 			FillColor:   "", // Transparent background
 			BorderColor: model.ComponentBorder,
-			FontColor:   model.FontColorC3,
+			FontColor:   model.ComponentBorder, // Font color matches border color
 			BorderStyle: "solid",
 		}
 	default:
 		return &NodeStyle{
 			FillColor:   "", // Transparent background
 			BorderColor: model.SystemBorder,
-			FontColor:   model.FontColorC1C2,
+			FontColor:   model.SystemBorder, // Font color matches border color
 			BorderStyle: "solid",
 		}
 	}
 }
 
 // getExternalStyle returns the style for external boundary nodes.
-// Per CONTEXT.md: dashed border, external palette colors.
+// Per CONTEXT.md: solid border, external palette colors.
 func getExternalStyle(t model.UnitType) *NodeStyle {
 	level := LevelForType(t)
 
@@ -128,29 +128,29 @@ func getExternalStyle(t model.UnitType) *NodeStyle {
 		return &NodeStyle{
 			FillColor:   "", // Transparent background
 			BorderColor: model.SystemExternalBorder,
-			FontColor:   model.FontColorC1C2,
-			BorderStyle: "dashed",
+			FontColor:   model.SystemExternalBorder, // Font color matches border color
+			BorderStyle: "solid",
 		}
 	case levelC2:
 		return &NodeStyle{
 			FillColor:   "", // Transparent background
 			BorderColor: model.ContainerExternalBorder,
-			FontColor:   model.FontColorC1C2,
-			BorderStyle: "dashed",
+			FontColor:   model.ContainerExternalBorder, // Font color matches border color
+			BorderStyle: "solid",
 		}
 	case levelC3:
 		return &NodeStyle{
 			FillColor:   "", // Transparent background
 			BorderColor: model.ComponentExternalBorder,
-			FontColor:   model.FontColorC3,
-			BorderStyle: "dashed",
+			FontColor:   model.ComponentExternalBorder, // Font color matches border color
+			BorderStyle: "solid",
 		}
 	default:
 		return &NodeStyle{
 			FillColor:   "", // Transparent background
 			BorderColor: model.SystemExternalBorder,
-			FontColor:   model.FontColorC1C2,
-			BorderStyle: "dashed",
+			FontColor:   model.SystemExternalBorder, // Font color matches border color
+			BorderStyle: "solid",
 		}
 	}
 }

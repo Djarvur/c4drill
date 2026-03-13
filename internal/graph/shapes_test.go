@@ -115,28 +115,29 @@ func TestGetStyleForType(t *testing.T) {
 	c1Style := graph.GetStyleForType(model.TypeSystem, false)
 	assert.Empty(t, c1Style.FillColor) // Transparent background
 	assert.Equal(t, model.SystemBorder, c1Style.BorderColor)
-	assert.Equal(t, model.FontColorC1C2, c1Style.FontColor)
+	assert.Equal(t, model.SystemBorder, c1Style.FontColor) // Font color matches border color
 	assert.Equal(t, "solid", c1Style.BorderStyle)
 
 	// C2 level
 	c2Style := graph.GetStyleForType(model.TypeContainer, false)
 	assert.Empty(t, c2Style.FillColor) // Transparent background
 	assert.Equal(t, model.ContainerBorder, c2Style.BorderColor)
-	assert.Equal(t, model.FontColorC1C2, c2Style.FontColor)
+	assert.Equal(t, model.ContainerBorder, c2Style.FontColor) // Font color matches border color
 	assert.Equal(t, "solid", c2Style.BorderStyle)
 
 	// C3 level
 	c3Style := graph.GetStyleForType(model.TypeComponent, false)
 	assert.Empty(t, c3Style.FillColor) // Transparent background
 	assert.Equal(t, model.ComponentBorder, c3Style.BorderColor)
-	assert.Equal(t, model.FontColorC3, c3Style.FontColor)
+	assert.Equal(t, model.ComponentBorder, c3Style.FontColor) // Font color matches border color
 	assert.Equal(t, "solid", c3Style.BorderStyle)
 
 	// Test 9: GetStyleForType returns transparent fill for external types
 	extStyle := graph.GetStyleForType(model.TypeSystemExternal, true)
 	assert.Empty(t, extStyle.FillColor) // Transparent background
 	assert.Equal(t, model.SystemExternalBorder, extStyle.BorderColor)
+	assert.Equal(t, model.SystemExternalBorder, extStyle.FontColor) // Font color matches border color
 
-	// Test 10: GetStyleForType returns dashed border style for external nodes
-	assert.Equal(t, "dashed", extStyle.BorderStyle)
+	// Test 10: GetStyleForType returns solid border style for external nodes
+	assert.Equal(t, "solid", extStyle.BorderStyle)
 }

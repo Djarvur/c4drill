@@ -144,16 +144,18 @@ func createNode(cg *cgraph.Graph, node *graph.Node) (*cgraph.Node, error) {
 	// Record shape for collapsed units (per CONTEXT.md decision)
 	cn.SetShape(cgraph.Shape("record"))
 
-	// Build and set the HTML label
+	// Build and set the record-style label
 	if node.Label != nil {
-		cn.SetLabel(buildHTMLLabel(node.Label))
+		cn.SetLabel(buildRecordLabel(node.Label))
 	}
 
-	// Apply styling
+	// Build combined style string - start with rounded for record shapes
+	styles := []string{"rounded"}
+
 	if node.Style != nil {
-		// Only set filled style if FillColor is specified (transparent otherwise)
+		// Add filled style if FillColor is specified
 		if node.Style.FillColor != "" {
-			cn.SetStyle(cgraph.FilledNodeStyle)
+			styles = append(styles, "filled")
 			cn.SetFillColor(node.Style.FillColor)
 		}
 
@@ -161,15 +163,17 @@ func createNode(cg *cgraph.Graph, node *graph.Node) (*cgraph.Node, error) {
 			cn.SetFontColor(node.Style.FontColor)
 		}
 
+		if node.Style.BorderColor != "" {
+			cn.SetColor(node.Style.BorderColor)
+		}
+
 		if node.Style.BorderStyle == borderStyleDashed {
-			cn.SetStyle(cgraph.DashedNodeStyle)
+			styles = append(styles, "dashed")
 		}
 	}
 
-	// External nodes get special styling
-	if node.IsExternal {
-		cn.SetStyle(cgraph.DashedNodeStyle)
-	}
+	// Set combined style using SafeSet (must be called on Node, not Base())
+	cn.SafeSet("style", strings.Join(styles, ","), "")
 
 	// Set URL for clickable nodes (explore links)
 	if node.ExploreURL != "" {
@@ -192,18 +196,28 @@ func createCluster(parent *cgraph.Graph, cluster *graph.Cluster, nodeMap map[str
 		subgraph.SetLabel(cluster.Label.Name)
 	}
 
-	// Cluster styling
-	subgraph.SetStyle(cgraph.FilledGraphStyle)
+	// Build combined style string - start with rounded for clusters
+	styles := []string{"rounded"}
 
 	if cluster.Style != nil {
+		// Add filled style if FillColor is specified
 		if cluster.Style.FillColor != "" {
+			styles = append(styles, "filled")
 			subgraph.SetBackgroundColor(cluster.Style.FillColor)
 		}
 
+		// Set border color (cluster uses 'color' for border)
+		if cluster.Style.BorderColor != "" {
+			subgraph.SafeSet("color", cluster.Style.BorderColor, "")
+		}
+
 		if cluster.Style.BorderStyle == borderStyleDashed {
-			subgraph.SetStyle(cgraph.DashedGraphStyle)
+			styles = append(styles, "dashed")
 		}
 	}
+
+	// Set combined style using SafeSet (called on Graph which embeds Object)
+	subgraph.SafeSet("style", strings.Join(styles, ","), "")
 
 	// Create nodes inside cluster
 	for _, node := range cluster.Nodes {

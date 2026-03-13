@@ -277,7 +277,7 @@ func TestArrowDirections(t *testing.T) {
 
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestExternalNodes(t *testing.T) {
-	t.Run("external nodes get dashed style", func(t *testing.T) {
+	t.Run("external nodes get solid borders", func(t *testing.T) {
 		g := &graph.Graph{
 			Title:     "Test Diagram",
 			Direction: "TB",
@@ -363,5 +363,31 @@ func TestCreateNode_WithExploreURL(t *testing.T) {
 		assert.Contains(t, string(output), "empty_url_node")
 		// Empty URL should not produce a URL attribute
 		assert.NotContains(t, string(output), `URL=""`)
+	})
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestNodeRoundedStyle(t *testing.T) {
+	t.Run("node has rounded style by default", func(t *testing.T) {
+		g := &graph.Graph{
+			Title:     "Test",
+			Direction: "TB",
+			Nodes: []*graph.Node{
+				{
+					ID:    "testnode",
+					Label: &graph.Label{Name: "Test"},
+					Shape: graph.ShapeRecord,
+					Style: &graph.NodeStyle{},
+				},
+			},
+		}
+
+		output, err := render.RenderDOT(g)
+		require.NoError(t, err)
+		dotStr := string(output)
+		t.Logf("DOT output:\n%s", dotStr)
+		// Check for style=rounded attribute (not just the word "rounded")
+		assert.True(t, strings.Contains(dotStr, "style=rounded") || strings.Contains(dotStr, `style="rounded"`),
+			"DOT output should contain style=rounded attribute")
 	})
 }
