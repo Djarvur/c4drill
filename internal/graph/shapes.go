@@ -12,9 +12,10 @@ const (
 )
 
 // ShapeForType returns the appropriate shape for a unit type.
-// Per CONTEXT.md decision: all types use HTML-like labels for proper cell formatting.
+// Per CONTEXT.md decision: collapsed units use record shape.
+// Expanded units are rendered as clusters (subgraphs), not nodes.
 func ShapeForType(_ model.UnitType) Shape {
-	return ShapeHTML
+	return ShapeRecord
 }
 
 // IconForType returns the emoji icon for a unit type.
@@ -71,7 +72,8 @@ func LevelForType(t model.UnitType) int {
 // GetStyleForType returns styling based on unit type and external status.
 // Per CONTEXT.md decisions:
 // - No inheritance: each unit's style is independent
-// - External nodes: same size, dashed border, external palette colors.
+// - External nodes: same size, dashed border, external palette colors
+// - Transparent backgrounds: FillColor is empty for all units.
 func GetStyleForType(t model.UnitType, isExternal bool) *NodeStyle {
 	if isExternal {
 		return getExternalStyle(t)
@@ -87,28 +89,28 @@ func getLevelStyle(t model.UnitType) *NodeStyle {
 	switch level {
 	case levelC1:
 		return &NodeStyle{
-			FillColor:   model.SystemBackground,
+			FillColor:   "", // Transparent background
 			BorderColor: model.SystemBorder,
 			FontColor:   model.FontColorC1C2,
 			BorderStyle: "solid",
 		}
 	case levelC2:
 		return &NodeStyle{
-			FillColor:   model.ContainerBackground,
+			FillColor:   "", // Transparent background
 			BorderColor: model.ContainerBorder,
 			FontColor:   model.FontColorC1C2,
 			BorderStyle: "solid",
 		}
 	case levelC3:
 		return &NodeStyle{
-			FillColor:   model.ComponentBackground,
+			FillColor:   "", // Transparent background
 			BorderColor: model.ComponentBorder,
 			FontColor:   model.FontColorC3,
 			BorderStyle: "solid",
 		}
 	default:
 		return &NodeStyle{
-			FillColor:   model.SystemBackground,
+			FillColor:   "", // Transparent background
 			BorderColor: model.SystemBorder,
 			FontColor:   model.FontColorC1C2,
 			BorderStyle: "solid",
@@ -124,28 +126,28 @@ func getExternalStyle(t model.UnitType) *NodeStyle {
 	switch level {
 	case levelC1:
 		return &NodeStyle{
-			FillColor:   model.SystemExternalBackground,
+			FillColor:   "", // Transparent background
 			BorderColor: model.SystemExternalBorder,
 			FontColor:   model.FontColorC1C2,
 			BorderStyle: "dashed",
 		}
 	case levelC2:
 		return &NodeStyle{
-			FillColor:   model.ContainerExternalBackground,
+			FillColor:   "", // Transparent background
 			BorderColor: model.ContainerExternalBorder,
 			FontColor:   model.FontColorC1C2,
 			BorderStyle: "dashed",
 		}
 	case levelC3:
 		return &NodeStyle{
-			FillColor:   model.ComponentExternalBackground,
+			FillColor:   "", // Transparent background
 			BorderColor: model.ComponentExternalBorder,
 			FontColor:   model.FontColorC3,
 			BorderStyle: "dashed",
 		}
 	default:
 		return &NodeStyle{
-			FillColor:   model.SystemExternalBackground,
+			FillColor:   "", // Transparent background
 			BorderColor: model.SystemExternalBorder,
 			FontColor:   model.FontColorC1C2,
 			BorderStyle: "dashed",
