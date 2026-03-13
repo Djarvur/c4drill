@@ -1,6 +1,8 @@
 package render
 
 import (
+	"html"
+	"strconv"
 	"strings"
 
 	"github.com/Djarvur/c4drill/internal/graph"
@@ -152,61 +154,307 @@ func buildEdgeLabel(label *graph.EdgeLabel) string {
 // They return empty strings so tests compile but fail assertions.
 
 // buildPersonHTMLLabel generates an HTML table label for Person-type nodes.
-// Implementation pending in Wave 1 (plan 12-01).
+// Format: icon (rowspan=2) | name (bold) / description
+// Per CONTEXT.md: Person has NO technology field.
 func buildPersonHTMLLabel(label *graph.Label) string {
 	if label == nil {
 		return ""
 	}
-	// TODO: Implement in Wave 1 (plan 12-01)
-	return ""
+
+	var sb strings.Builder
+	sb.WriteString("<<table>")
+
+	// Calculate rowspan for icon: always 2 (name + description) if description present, else 1
+	rowspan := 1
+	if label.Description != "" {
+		rowspan = 2
+	}
+
+	// Row 1: Icon (rowspan) + Name
+	sb.WriteString(`<tr align="center">`)
+	sb.WriteString(`<td rowspan="`)
+	sb.WriteString(strconv.Itoa(rowspan))
+	sb.WriteString(`" valign="middle"><font point-size="20">`)
+	sb.WriteString("\U0001F464") // person emoji
+	sb.WriteString(`</font></td>`)
+	sb.WriteString(`<td valign="bottom"><b>`)
+	sb.WriteString(html.EscapeString(label.Name))
+	sb.WriteString(`</b></td>`)
+	sb.WriteString(`</tr>`)
+
+	// Row 2: Description (if present)
+	if label.Description != "" {
+		sb.WriteString(`<tr align="center">`)
+		sb.WriteString(`<td valign="top">`)
+		sb.WriteString(html.EscapeString(label.Description))
+		sb.WriteString(`</td>`)
+		sb.WriteString(`</tr>`)
+	}
+
+	sb.WriteString(`</table>>`)
+
+	return sb.String()
 }
 
 // buildDbHTMLLabel generates an HTML table label for Database-type nodes.
-// Implementation pending in Wave 1 (plan 12-01).
+// Format: icon (rowspan) | name (bold) / [technology] italic / description
+// Per CONTEXT.md: icon is U+26C1 (golf flag in hole), used as cylinder proxy.
 func buildDbHTMLLabel(label *graph.Label) string {
 	if label == nil {
 		return ""
 	}
-	// TODO: Implement in Wave 1 (plan 12-01)
-	return ""
+
+	var sb strings.Builder
+	sb.WriteString("<<table>")
+
+	// Calculate rowspan for icon: count of present fields (name always present)
+	rowspan := 1 // name
+	if label.Technology != "" {
+		rowspan++
+	}
+	if label.Description != "" {
+		rowspan++
+	}
+
+	// Row 1: Icon (rowspan) + Name
+	sb.WriteString(`<tr align="center">`)
+	sb.WriteString(`<td rowspan="`)
+	sb.WriteString(strconv.Itoa(rowspan))
+	sb.WriteString(`" valign="middle"><font point-size="20">`)
+	sb.WriteString("\u26C1") // db cylinder icon (using golf flag as proxy)
+	sb.WriteString(`</font></td>`)
+	sb.WriteString(`<td valign="bottom"><b>`)
+	sb.WriteString(html.EscapeString(label.Name))
+	sb.WriteString(`</b></td>`)
+	sb.WriteString(`</tr>`)
+
+	// Row 2: Technology (if present)
+	if label.Technology != "" {
+		sb.WriteString(`<tr align="center">`)
+		sb.WriteString(`<td valign="middle"><i>[`)
+		sb.WriteString(html.EscapeString(label.Technology))
+		sb.WriteString(`]</i></td>`)
+		sb.WriteString(`</tr>`)
+	}
+
+	// Row 3: Description (if present)
+	if label.Description != "" {
+		sb.WriteString(`<tr align="center">`)
+		sb.WriteString(`<td valign="top">`)
+		sb.WriteString(html.EscapeString(label.Description))
+		sb.WriteString(`</td>`)
+		sb.WriteString(`</tr>`)
+	}
+
+	sb.WriteString(`</table>>`)
+
+	return sb.String()
 }
 
 // buildQueueHTMLLabel generates an HTML table label for Queue-type nodes.
-// Implementation pending in Wave 1 (plan 12-01).
+// Format: 4 separate rows (NO rowspan): graphics, name (bold), [technology] italic, description
+// Per CONTEXT.md: Queue has NO rowspan - 4 separate single-cell rows.
+// Graphics: ═╦╩═╦══ (Unicode box drawing characters)
 func buildQueueHTMLLabel(label *graph.Label) string {
 	if label == nil {
 		return ""
 	}
-	// TODO: Implement in Wave 1 (plan 12-01)
-	return ""
+
+	var sb strings.Builder
+	sb.WriteString("<<table>")
+
+	// Row 1: Graphics (NO rowspan - separate row)
+	sb.WriteString(`<tr align="center">`)
+	sb.WriteString(`<td valign="middle">`)
+	sb.WriteString("═╦╩═╦══") // queue graphics
+	sb.WriteString(`</td>`)
+	sb.WriteString(`</tr>`)
+
+	// Row 2: Name (bold)
+	sb.WriteString(`<tr align="center">`)
+	sb.WriteString(`<td valign="bottom"><b>`)
+	sb.WriteString(html.EscapeString(label.Name))
+	sb.WriteString(`</b></td>`)
+	sb.WriteString(`</tr>`)
+
+	// Row 3: Technology (if present)
+	if label.Technology != "" {
+		sb.WriteString(`<tr align="center">`)
+		sb.WriteString(`<td valign="middle"><i>[`)
+		sb.WriteString(html.EscapeString(label.Technology))
+		sb.WriteString(`]</i></td>`)
+		sb.WriteString(`</tr>`)
+	}
+
+	// Row 4: Description (if present)
+	if label.Description != "" {
+		sb.WriteString(`<tr align="center">`)
+		sb.WriteString(`<td valign="top">`)
+		sb.WriteString(html.EscapeString(label.Description))
+		sb.WriteString(`</td>`)
+		sb.WriteString(`</tr>`)
+	}
+
+	sb.WriteString(`</table>>`)
+
+	return sb.String()
 }
 
 // buildSystemHTMLLabel generates an HTML table label for System-type nodes.
-// Implementation pending in Wave 1 (plan 12-01).
+// Format: SYS label (rowspan, monospace) | name (bold) / [technology] italic / description
+// Per CONTEXT.md: SYS label in <tt> tags.
 func buildSystemHTMLLabel(label *graph.Label) string {
 	if label == nil {
 		return ""
 	}
-	// TODO: Implement in Wave 1 (plan 12-01)
-	return ""
+
+	var sb strings.Builder
+	sb.WriteString("<<table>")
+
+	// Calculate rowspan for SYS label: count of present fields (name always present)
+	rowspan := 1 // name
+	if label.Technology != "" {
+		rowspan++
+	}
+	if label.Description != "" {
+		rowspan++
+	}
+
+	// Row 1: SYS (rowspan) + Name
+	sb.WriteString(`<tr align="center">`)
+	sb.WriteString(`<td rowspan="`)
+	sb.WriteString(strconv.Itoa(rowspan))
+	sb.WriteString(`" valign="middle"><tt>SYS</tt></td>`)
+	sb.WriteString(`<td valign="bottom"><b>`)
+	sb.WriteString(html.EscapeString(label.Name))
+	sb.WriteString(`</b></td>`)
+	sb.WriteString(`</tr>`)
+
+	// Row 2: Technology (if present)
+	if label.Technology != "" {
+		sb.WriteString(`<tr align="center">`)
+		sb.WriteString(`<td valign="middle"><i>[`)
+		sb.WriteString(html.EscapeString(label.Technology))
+		sb.WriteString(`]</i></td>`)
+		sb.WriteString(`</tr>`)
+	}
+
+	// Row 3: Description (if present)
+	if label.Description != "" {
+		sb.WriteString(`<tr align="center">`)
+		sb.WriteString(`<td valign="top">`)
+		sb.WriteString(html.EscapeString(label.Description))
+		sb.WriteString(`</td>`)
+		sb.WriteString(`</tr>`)
+	}
+
+	sb.WriteString(`</table>>`)
+
+	return sb.String()
 }
 
 // buildContainerHTMLLabel generates an HTML table label for Container-type nodes.
-// Implementation pending in Wave 1 (plan 12-01).
+// Format: CONT label (rowspan, monospace) | name (bold) / [technology] italic / description
+// Per CONTEXT.md: CONT label in <tt> tags. Also used for Box type.
 func buildContainerHTMLLabel(label *graph.Label) string {
 	if label == nil {
 		return ""
 	}
-	// TODO: Implement in Wave 1 (plan 12-01)
-	return ""
+
+	var sb strings.Builder
+	sb.WriteString("<<table>")
+
+	// Calculate rowspan for CONT label: count of present fields (name always present)
+	rowspan := 1 // name
+	if label.Technology != "" {
+		rowspan++
+	}
+	if label.Description != "" {
+		rowspan++
+	}
+
+	// Row 1: CONT (rowspan) + Name
+	sb.WriteString(`<tr align="center">`)
+	sb.WriteString(`<td rowspan="`)
+	sb.WriteString(strconv.Itoa(rowspan))
+	sb.WriteString(`" valign="middle"><tt>CONT</tt></td>`)
+	sb.WriteString(`<td valign="bottom"><b>`)
+	sb.WriteString(html.EscapeString(label.Name))
+	sb.WriteString(`</b></td>`)
+	sb.WriteString(`</tr>`)
+
+	// Row 2: Technology (if present)
+	if label.Technology != "" {
+		sb.WriteString(`<tr align="center">`)
+		sb.WriteString(`<td valign="middle"><i>[`)
+		sb.WriteString(html.EscapeString(label.Technology))
+		sb.WriteString(`]</i></td>`)
+		sb.WriteString(`</tr>`)
+	}
+
+	// Row 3: Description (if present)
+	if label.Description != "" {
+		sb.WriteString(`<tr align="center">`)
+		sb.WriteString(`<td valign="top">`)
+		sb.WriteString(html.EscapeString(label.Description))
+		sb.WriteString(`</td>`)
+		sb.WriteString(`</tr>`)
+	}
+
+	sb.WriteString(`</table>>`)
+
+	return sb.String()
 }
 
 // buildComponentHTMLLabel generates an HTML table label for Component-type nodes.
-// Implementation pending in Wave 1 (plan 12-01).
+// Format: COMP label (rowspan, monospace) | name (bold) / [technology] italic / description
+// Per CONTEXT.md: COMP label in <tt> tags.
 func buildComponentHTMLLabel(label *graph.Label) string {
 	if label == nil {
 		return ""
 	}
-	// TODO: Implement in Wave 1 (plan 12-01)
-	return ""
+
+	var sb strings.Builder
+	sb.WriteString("<<table>")
+
+	// Calculate rowspan for COMP label: count of present fields (name always present)
+	rowspan := 1 // name
+	if label.Technology != "" {
+		rowspan++
+	}
+	if label.Description != "" {
+		rowspan++
+	}
+
+	// Row 1: COMP (rowspan) + Name
+	sb.WriteString(`<tr align="center">`)
+	sb.WriteString(`<td rowspan="`)
+	sb.WriteString(strconv.Itoa(rowspan))
+	sb.WriteString(`" valign="middle"><tt>COMP</tt></td>`)
+	sb.WriteString(`<td valign="bottom"><b>`)
+	sb.WriteString(html.EscapeString(label.Name))
+	sb.WriteString(`</b></td>`)
+	sb.WriteString(`</tr>`)
+
+	// Row 2: Technology (if present)
+	if label.Technology != "" {
+		sb.WriteString(`<tr align="center">`)
+		sb.WriteString(`<td valign="middle"><i>[`)
+		sb.WriteString(html.EscapeString(label.Technology))
+		sb.WriteString(`]</i></td>`)
+		sb.WriteString(`</tr>`)
+	}
+
+	// Row 3: Description (if present)
+	if label.Description != "" {
+		sb.WriteString(`<tr align="center">`)
+		sb.WriteString(`<td valign="top">`)
+		sb.WriteString(html.EscapeString(label.Description))
+		sb.WriteString(`</td>`)
+		sb.WriteString(`</tr>`)
+	}
+
+	sb.WriteString(`</table>>`)
+
+	return sb.String()
 }
