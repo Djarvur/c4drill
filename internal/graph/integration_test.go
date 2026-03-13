@@ -70,9 +70,9 @@ func TestIntegrationBuildGraphFromC1View(t *testing.T) {
 		nodeMap[node.ID] = node
 	}
 
-	assert.Equal(t, graph.ShapeHTML, nodeMap["app"].Shape)
-	assert.Equal(t, graph.ShapeHTML, nodeMap["db"].Shape)
-	assert.Equal(t, graph.ShapeHTML, nodeMap["user"].Shape)
+	assert.Equal(t, graph.ShapeRecord, nodeMap["app"].Shape)
+	assert.Equal(t, graph.ShapeRecord, nodeMap["db"].Shape)
+	assert.Equal(t, graph.ShapeRecord, nodeMap["user"].Shape)
 
 	// Verify icons
 	assert.Empty(t, nodeMap["app"].Label.Icon)                // System has no icon
@@ -187,8 +187,8 @@ func TestIntegrationBuildGraphExternalBoundaryNodes(t *testing.T) {
 	require.NotNil(t, externalNode.Style)
 	assert.Equal(t, "dashed", externalNode.Style.BorderStyle)
 
-	// External nodes should use external palette colors
-	assert.Equal(t, model.SystemExternalBackground, externalNode.Style.FillColor)
+	// External nodes should have transparent fill (no background color)
+	assert.Empty(t, externalNode.Style.FillColor)
 }
 
 // TestIntegrationFullPipelineModelToGraph tests the full pipeline:

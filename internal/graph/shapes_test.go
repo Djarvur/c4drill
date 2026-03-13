@@ -11,7 +11,7 @@ import (
 func TestShapeForType(t *testing.T) {
 	t.Parallel()
 
-	// Test 1: ShapeForType returns ShapeHTML for all types (all use HTML-like labels)
+	// Test 1: ShapeForType returns ShapeRecord for all types (collapsed units)
 	types := []model.UnitType{
 		model.TypePerson, model.TypePersonExternal,
 		model.TypeSystem, model.TypeSystemExternal,
@@ -23,7 +23,7 @@ func TestShapeForType(t *testing.T) {
 	}
 
 	for _, typ := range types {
-		assert.Equal(t, graph.ShapeHTML, graph.ShapeForType(typ), "ShapeForType(%s)", typ)
+		assert.Equal(t, graph.ShapeRecord, graph.ShapeForType(typ), "ShapeForType(%s)", typ)
 	}
 }
 
@@ -111,30 +111,30 @@ func TestLevelForType(t *testing.T) {
 func TestGetStyleForType(t *testing.T) {
 	t.Parallel()
 
-	// Test 8: GetStyleForType returns correct colors for C1 level internal types
+	// Test 8: GetStyleForType returns transparent fill for C1 level internal types
 	c1Style := graph.GetStyleForType(model.TypeSystem, false)
-	assert.Equal(t, model.SystemBackground, c1Style.FillColor)
+	assert.Empty(t, c1Style.FillColor) // Transparent background
 	assert.Equal(t, model.SystemBorder, c1Style.BorderColor)
 	assert.Equal(t, model.FontColorC1C2, c1Style.FontColor)
 	assert.Equal(t, "solid", c1Style.BorderStyle)
 
 	// C2 level
 	c2Style := graph.GetStyleForType(model.TypeContainer, false)
-	assert.Equal(t, model.ContainerBackground, c2Style.FillColor)
+	assert.Empty(t, c2Style.FillColor) // Transparent background
 	assert.Equal(t, model.ContainerBorder, c2Style.BorderColor)
 	assert.Equal(t, model.FontColorC1C2, c2Style.FontColor)
 	assert.Equal(t, "solid", c2Style.BorderStyle)
 
 	// C3 level
 	c3Style := graph.GetStyleForType(model.TypeComponent, false)
-	assert.Equal(t, model.ComponentBackground, c3Style.FillColor)
+	assert.Empty(t, c3Style.FillColor) // Transparent background
 	assert.Equal(t, model.ComponentBorder, c3Style.BorderColor)
 	assert.Equal(t, model.FontColorC3, c3Style.FontColor)
 	assert.Equal(t, "solid", c3Style.BorderStyle)
 
-	// Test 9: GetStyleForType returns external palette colors for external types
+	// Test 9: GetStyleForType returns transparent fill for external types
 	extStyle := graph.GetStyleForType(model.TypeSystemExternal, true)
-	assert.Equal(t, model.SystemExternalBackground, extStyle.FillColor)
+	assert.Empty(t, extStyle.FillColor) // Transparent background
 	assert.Equal(t, model.SystemExternalBorder, extStyle.BorderColor)
 
 	// Test 10: GetStyleForType returns dashed border style for external nodes

@@ -23,14 +23,14 @@ func TestConverterCreatesNodes(t *testing.T) {
 				{
 					ID:    "node_one",
 					Label: &graph.Label{Name: "Node One"},
-					Shape: graph.ShapeHTML,
-					Style: &graph.NodeStyle{FillColor: "#438DD5"},
+					Shape: graph.ShapeRecord,
+					Style: &graph.NodeStyle{},
 				},
 				{
 					ID:    "node_two",
 					Label: &graph.Label{Name: "Node Two"},
-					Shape: graph.ShapeHTML,
-					Style: &graph.NodeStyle{FillColor: "#438DD5"},
+					Shape: graph.ShapeRecord,
+					Style: &graph.NodeStyle{},
 				},
 			},
 		}
@@ -49,8 +49,8 @@ func TestConverterCreatesEdges(t *testing.T) {
 			Title:     "Test Diagram",
 			Direction: "TB",
 			Nodes: []*graph.Node{
-				{ID: "source_node", Label: &graph.Label{Name: "Source"}, Shape: graph.ShapeHTML},
-				{ID: "target_node", Label: &graph.Label{Name: "Target"}, Shape: graph.ShapeHTML},
+				{ID: "source_node", Label: &graph.Label{Name: "Source"}, Shape: graph.ShapeRecord},
+				{ID: "target_node", Label: &graph.Label{Name: "Target"}, Shape: graph.ShapeRecord},
 			},
 			Edges: []*graph.Edge{
 				{
@@ -81,9 +81,9 @@ func TestConverterCreatesClusters(t *testing.T) {
 					ID:    "mycluster",
 					Label: &graph.Label{Name: "My Cluster"},
 					Nodes: []*graph.Node{
-						{ID: "cluster_node", Label: &graph.Label{Name: "Cluster Node"}, Shape: graph.ShapeHTML},
+						{ID: "cluster_node", Label: &graph.Label{Name: "Cluster Node"}, Shape: graph.ShapeRecord},
 					},
-					Style: &graph.NodeStyle{FillColor: "#E5E5E5"},
+					Style: &graph.NodeStyle{},
 				},
 			},
 		}
@@ -102,7 +102,7 @@ func TestConverterSetsGraphDirection(t *testing.T) {
 		g := &graph.Graph{
 			Title:     "Test Diagram",
 			Direction: "TB",
-			Nodes:     []*graph.Node{{ID: "test", Label: &graph.Label{Name: "Test"}, Shape: graph.ShapeHTML}},
+			Nodes:     []*graph.Node{{ID: "test", Label: &graph.Label{Name: "Test"}, Shape: graph.ShapeRecord}},
 		}
 
 		output, err := render.RenderDOT(g)
@@ -115,7 +115,7 @@ func TestConverterSetsGraphDirection(t *testing.T) {
 		g := &graph.Graph{
 			Title:     "Test Diagram",
 			Direction: "LR",
-			Nodes:     []*graph.Node{{ID: "test", Label: &graph.Label{Name: "Test"}, Shape: graph.ShapeHTML}},
+			Nodes:     []*graph.Node{{ID: "test", Label: &graph.Label{Name: "Test"}, Shape: graph.ShapeRecord}},
 		}
 
 		output, err := render.RenderDOT(g)
@@ -133,8 +133,8 @@ func TestConverterSetsEdgeStyle(t *testing.T) {
 			Direction: "TB",
 			EdgeStyle: "ortho",
 			Nodes: []*graph.Node{
-				{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeHTML},
-				{ID: "b", Label: &graph.Label{Name: "B"}, Shape: graph.ShapeHTML},
+				{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeRecord},
+				{ID: "b", Label: &graph.Label{Name: "B"}, Shape: graph.ShapeRecord},
 			},
 			Edges: []*graph.Edge{
 				{Source: "a", Target: "b"},
@@ -161,12 +161,12 @@ func TestNodesInClusters(t *testing.T) {
 						{
 							ID:          "internal_node",
 							Label:       &graph.Label{Name: "Internal Node"},
-							Shape:       graph.ShapeHTML,
+							Shape:       graph.ShapeRecord,
 							IsInCluster: true,
-							Style:       &graph.NodeStyle{FillColor: "#85BBF0"},
+							Style:       &graph.NodeStyle{},
 						},
 					},
-					Style: &graph.NodeStyle{FillColor: "#438DD5"},
+					Style: &graph.NodeStyle{},
 				},
 			},
 		}
@@ -186,8 +186,8 @@ func TestEdgeStyles(t *testing.T) {
 			Title:     "Test Diagram",
 			Direction: "TB",
 			Nodes: []*graph.Node{
-				{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeHTML},
-				{ID: "b", Label: &graph.Label{Name: "B"}, Shape: graph.ShapeHTML},
+				{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeRecord},
+				{ID: "b", Label: &graph.Label{Name: "B"}, Shape: graph.ShapeRecord},
 			},
 			Edges: []*graph.Edge{
 				{Source: "a", Target: "b", Style: "dashed"},
@@ -204,8 +204,8 @@ func TestEdgeStyles(t *testing.T) {
 			Title:     "Test Diagram",
 			Direction: "TB",
 			Nodes: []*graph.Node{
-				{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeHTML},
-				{ID: "b", Label: &graph.Label{Name: "B"}, Shape: graph.ShapeHTML},
+				{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeRecord},
+				{ID: "b", Label: &graph.Label{Name: "B"}, Shape: graph.ShapeRecord},
 			},
 			Edges: []*graph.Edge{
 				{Source: "a", Target: "b", Style: "dotted"},
@@ -225,8 +225,8 @@ func TestArrowDirections(t *testing.T) {
 			Title:     "Test Diagram",
 			Direction: "TB",
 			Nodes: []*graph.Node{
-				{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeHTML},
-				{ID: "b", Label: &graph.Label{Name: "B"}, Shape: graph.ShapeHTML},
+				{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeRecord},
+				{ID: "b", Label: &graph.Label{Name: "B"}, Shape: graph.ShapeRecord},
 			},
 			Edges: []*graph.Edge{
 				{Source: "a", Target: "b", ArrowHead: graph.ArrowReverse},
@@ -243,8 +243,8 @@ func TestArrowDirections(t *testing.T) {
 			Title:     "Test Diagram",
 			Direction: "TB",
 			Nodes: []*graph.Node{
-				{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeHTML},
-				{ID: "b", Label: &graph.Label{Name: "B"}, Shape: graph.ShapeHTML},
+				{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeRecord},
+				{ID: "b", Label: &graph.Label{Name: "B"}, Shape: graph.ShapeRecord},
 			},
 			Edges: []*graph.Edge{
 				{Source: "a", Target: "b", ArrowHead: graph.ArrowBoth},
@@ -261,8 +261,8 @@ func TestArrowDirections(t *testing.T) {
 			Title:     "Test Diagram",
 			Direction: "TB",
 			Nodes: []*graph.Node{
-				{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeHTML},
-				{ID: "b", Label: &graph.Label{Name: "B"}, Shape: graph.ShapeHTML},
+				{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeRecord},
+				{ID: "b", Label: &graph.Label{Name: "B"}, Shape: graph.ShapeRecord},
 			},
 			Edges: []*graph.Edge{
 				{Source: "a", Target: "b", ArrowHead: graph.ArrowNone},
@@ -285,9 +285,9 @@ func TestExternalNodes(t *testing.T) {
 				{
 					ID:         "external_system",
 					Label:      &graph.Label{Name: "External System"},
-					Shape:      graph.ShapeHTML,
+					Shape:      graph.ShapeRecord,
 					IsExternal: true,
-					Style:      &graph.NodeStyle{FillColor: "#999999"},
+					Style:      &graph.NodeStyle{},
 				},
 			},
 		}
@@ -308,7 +308,7 @@ func TestCreateNode_WithExploreURL(t *testing.T) {
 				{
 					ID:         "expandable_system",
 					Label:      &graph.Label{Name: "Expandable System"},
-					Shape:      graph.ShapeHTML,
+					Shape:      graph.ShapeRecord,
 					ExploreURL: "./expandable_system.svg",
 					Style:      &graph.NodeStyle{FillColor: "#438DD5"},
 				},
@@ -330,8 +330,8 @@ func TestCreateNode_WithExploreURL(t *testing.T) {
 				{
 					ID:    "simple_node",
 					Label: &graph.Label{Name: "Simple Node"},
-					Shape: graph.ShapeHTML,
-					Style: &graph.NodeStyle{FillColor: "#438DD5"},
+					Shape: graph.ShapeRecord,
+					Style: &graph.NodeStyle{},
 				},
 			},
 		}
@@ -351,7 +351,7 @@ func TestCreateNode_WithExploreURL(t *testing.T) {
 				{
 					ID:         "empty_url_node",
 					Label:      &graph.Label{Name: "Empty URL Node"},
-					Shape:      graph.ShapeHTML,
+					Shape:      graph.ShapeRecord,
 					ExploreURL: "",
 					Style:      &graph.NodeStyle{FillColor: "#438DD5"},
 				},
