@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Bug Fixes
 status: executing
-last_updated: "2026-03-13T18:37:20Z"
+last_updated: "2026-03-13T18:46:00Z"
 last_activity: 2026-03-13
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 12
-  completed_plans: 10
-  percent: 83
+  completed_plans: 11
+  percent: 92
 ---
 
 # Project State
@@ -26,29 +26,30 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 
 Milestone: v1.2 Bug Fixes
 Phase: 12-html-labels-for-all-unit-types
-Plan: 00 complete
-Status: In Progress
+Plan: 01 complete
+Status: Complete
 Last activity: 2026-03-13
 
-Progress: [████████░░] 50% (1/2 plans)
+Progress: [██████████] 100% (2/2 plans)
 
 ## Performance Metrics
 
 **Velocity:**
 - Total plans completed (v1.0): 16
 - Total plans completed (v1.1): 5
-- Total plans completed (v1.2): 1
+- Total plans completed (v1.2): 2
 
 **By Phase (v1.2):**
 
 | Phase | Plans | Completed | Status |
 |-------|-------|-----------|--------|
 | 11. Links Bug | 1 | 1 | Complete |
-| 12. HTML Labels | 2 | 1 | In Progress |
+| 12. HTML Labels | 2 | 2 | Complete |
 
 **Recent Executions:**
 - Phase 11-links-bug P01: 8 min, 3 tasks, 5 files
 - Phase 12-html-labels-for-all-unit-types P00: 3 min, 1 task, 2 files
+- Phase 12-html-labels-for-all-unit-types P01: 5 min, 4 tasks, 3 files
 
 ## Accumulated Context
 
@@ -61,6 +62,9 @@ Recent decisions affecting v1.2:
 - [Phase 11-01]: Only set style=filled when FillColor is specified (for true transparency)
 - [Phase 12-00]: Use internal test file (package render) to test unexported HTML label builder functions
 - [Phase 12-00]: Add stub implementations that return empty strings - tests fail until Wave 1
+- [Phase 12-01]: Queue labels use 4 separate rows (NO rowspan) per CONTEXT.md specification
+- [Phase 12-01]: Person labels have NO technology field
+- [Phase 12-01]: Container and Box types share CONT label format
 
 ### Roadmap Evolution
 
@@ -77,9 +81,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-13T18:37:20Z
-Status: Phase 12-html-labels-for-all-unit-types P00 complete
-Next: Plan 12-01 (Wave 1 - implement HTML label builders)
+Last session: 2026-03-13T18:46:00Z
+Status: Phase 12-html-labels-for-all-unit-types complete
+Next: v1.2 milestone complete
 
 ## v1.0 Summary
 

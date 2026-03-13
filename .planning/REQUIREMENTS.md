@@ -48,7 +48,7 @@ Requirements for AI-Ready milestone. Each maps to roadmap phases.
 ### HTML Labels for All Unit Types
 
 - [x] **HTML-01**: All unit types render with HTML table labels inside record shapes
-- [ ] **HTML-02**: Each unit type has specific format: Person (icon+name+desc), Database (icon+name+tech+desc), Queue (graphics+name+tech+desc), System/Container/Component (name+tech+desc)
+- [x] **HTML-02**: Each unit type has specific format: Person (icon+name+desc), Database (icon+name+tech+desc), Queue (graphics+name+tech+desc), System/Container/Component (name+tech+desc)
 
 ## v1.0 Requirements (Shipped)
 
@@ -98,7 +98,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SHAPE-01 | Phase 11 | Complete |
 | SHAPE-02 | Phase 11 | Complete |
 | HTML-01 | Phase 12 | Complete |
-| HTML-02 | Phase 12 | Pending |
+| HTML-02 | Phase 12 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 18 total
@@ -108,4 +108,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-10*
-*Last updated: 2026-03-13 after Phase 11 plan 01*
+*Last updated: 2026-03-13 after Phase 12 plan 01 - v1.2 complete*

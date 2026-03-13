@@ -136,18 +136,21 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 9. No Orphan Units | v1.1 | 1/1 | Complete | 2026-03-11 |
 | 10. Link List Format | v1.1 | 3/3 | Complete | 2026-03-13 |
 | 11. Unit Shape and Attributes | v1.1 | 1/1 | Complete | 2026-03-13 |
+| 12. HTML labels for all unit types | v1.2 | 2/2 | Complete | 2026-03-13 |
 
 ### Phase 12: HTML labels for all unit types
 
 **Goal:** Convert all unit type labels from record-style format to HTML table format with specific layouts per unit type
 **Requirements**: HTML-01, HTML-02
 **Depends on:** Phase 11
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
+**Status:** Complete
 
 Plans:
-- [ ] 12-01-PLAN.md -- HTML label builders with type-specific formats (Person icon, DB icon, Queue 4-row, SYS/CONT/COMP labels)
+- [x] 12-00-PLAN.md -- Add test file and stub HTML label builder functions
+- [x] 12-01-PLAN.md -- HTML label builders with type-specific formats (Person icon, DB icon, Queue 4-row, SYS/CONT/COMP labels)
 
 ---
 
 *Roadmap created: 2026-03-09*
-*Last updated: 2026-03-13 - Phase 12 plan updated with correct CONTEXT.md specifications*
+*Last updated: 2026-03-13 - Phase 12 complete, v1.2 milestone complete*
