@@ -21,6 +21,9 @@ func Validate(m *parser.Model) ValidationErrors {
 	// Build index for O(1) lookup
 	index := BuildIndex(m.Units, "")
 
+	// Populate incoming links from other units' outgoing links
+	populateIncomingLinks(index)
+
 	// Collect all errors from all rules (preallocate for typical case)
 	errors := make(ValidationErrors, 0, typicalErrorCount)
 

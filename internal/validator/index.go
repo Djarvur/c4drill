@@ -44,3 +44,27 @@ func BuildIndex(units map[string]*model.Unit, parentPath string) map[string]*Uni
 
 	return index
 }
+
+// populateIncomingLinks adds LinksFrom entries based on Links from other units.
+// When unit A has a link to unit B, this adds a LinksFrom entry to B pointing to A.
+// This ensures the orphan validation correctly identifies units that are linked to.
+func populateIncomingLinks(index map[string]*UnitInfo) {
+	for sourcePath, sourceInfo := range index {
+		for _, link := range sourceInfo.Unit.Links {
+			targetInfo, exists := index[link.Peer]
+			if !exists {
+				continue // Skip if target doesn't exist (reference validation handles this)
+			}
+
+			// Check if this incoming link already exists
+			if _, found := model.FindLinkByPeer(targetInfo.Unit.LinksFrom, sourcePath); found {
+				continue
+			}
+
+			// Add reverse link entry
+			targetInfo.Unit.LinksFrom = append(targetInfo.Unit.LinksFrom, model.Link{
+				Peer: sourcePath,
+			})
+		}
+	}
+}
