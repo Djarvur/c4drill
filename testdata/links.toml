@@ -6,6 +6,9 @@ edges = "spline"
 type = "person"
 name = "User"
 
+[[user.linkFrom]]
+peer = "webapp"
+
 [webapp]
 type = "system"
 name = "Web App"
