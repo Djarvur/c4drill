@@ -111,7 +111,7 @@ Plans:
   3. All units have transparent backgrounds (no fill colors)
   4. Icons and styling remain differentiated by type and level
   5. All tests pass with new shape logic
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 11-01-PLAN.md — Shape logic (ShapeRecord) and fill logic (transparent backgrounds)
@@ -135,7 +135,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 8. All-Expanded Mode | v1.1 | Complete    | 2026-03-10 | - |
 | 9. No Orphan Units | v1.1 | Complete    | 2026-03-11 | - |
 | 10. Link List Format | 3/3 | Complete    | 2026-03-13 | - |
-| 11. Unit Shape and Attributes | 0/1 | Ready to execute | - |
+| 11. Unit Shape and Attributes | 1/1 | Complete   | 2026-03-13 |
 
 ---
 

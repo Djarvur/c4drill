@@ -40,6 +40,11 @@ Requirements for AI-Ready milestone. Each maps to roadmap phases.
 - [x] **LLIST-03**: Parser, validator, view, and graph code updated to iterate slices using `link.Peer`
 - [x] **LLIST-04**: All documentation and examples updated to use `[[link]]`/`[[linkFrom]]` array syntax with `peer` field
 
+### Unit Shape and Attributes (v1.2)
+
+- [x] **SHAPE-01**: Collapsed units render with record shape (not HTML labels)
+- [x] **SHAPE-02**: All units have transparent backgrounds (no fill colors)
+
 ## v1.0 Requirements (Shipped)
 
 Completed in v1.0 Initial Release (2026-03-10). See `.planning/milestones/v1.0-REQUIREMENTS.md` for archive.
@@ -85,12 +90,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LLIST-02 | Phase 10 | Complete |
 | LLIST-03 | Phase 10 | Complete |
 | LLIST-04 | Phase 10 | Complete |
+| SHAPE-01 | Phase 11 | Complete |
+| SHAPE-02 | Phase 11 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 18 total
-- Mapped to phases: 18
+- v1.2 requirements: 2 total
+- Mapped to phases: 20
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-10*
-*Last updated: 2026-03-11 after Phase 10 plan 01*
+*Last updated: 2026-03-13 after Phase 11 plan 01*

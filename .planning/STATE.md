@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: AI-Ready
-status: Milestone shipped
-last_updated: "2026-03-13T13:49:30.750Z"
-last_activity: 2026-03-11
+milestone: v1.2
+milestone_name: Bug Fixes
+status: In Progress
+last_updated: "2026-03-13T14:59:07Z"
+last_activity: 2026-03-13
 progress:
-  total_phases: 5
-  completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
+  total_phases: 1
+  completed_phases: 0
+  total_plans: 1
+  completed_plans: 1
   percent: 100
 ---
 
@@ -20,65 +20,47 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** v2.0 planning — next milestone not yet defined
+**Current focus:** v1.2 Bug Fixes — fixing rendering issues
 
 ## Current Position
 
-Milestone: v1.1 AI-Ready
-Phase: Complete
-Status: Milestone shipped
-Last activity: 2026-03-11
+Milestone: v1.2 Bug Fixes
+Phase: 11-links-bug
+Plan: 01 complete
+Status: In Progress
+Last activity: 2026-03-13
 
-Progress: [██████████] 100%
+Progress: [██████████] 100% (1/1 plans)
 
 ## Performance Metrics
 
 **Velocity:**
 - Total plans completed (v1.0): 16
 - Total plans completed (v1.1): 5
+- Total plans completed (v1.2): 1
 
-**By Phase (v1.1):**
+**By Phase (v1.2):**
 
 | Phase | Plans | Completed | Status |
 |-------|-------|-----------|--------|
-| 7. AI Documentation | 2 | 2 | Complete |
-| 8. All-Expanded Mode | 2 | 2 | Complete |
-| 9. No Orphan Units | 1 | 1 | Complete |
-| 10. Link List Format | 3 | 3 | Complete |
+| 11. Links Bug | 1 | 1 | Complete |
 
 **Recent Executions:**
-- Phase 07-01 Plan 01: 3 min, 2 tasks, 6 files
-- Phase 07-ai-documentation P02: 1 min, 1 tasks, 1 files
-- Phase 08-all-expanded-mode P01: 4 min, 3 tasks, 5 files
-- Phase 08-all-expanded-mode P02: 19 min, 2 tasks, 2 files
-- Phase 09-no-orphan-units P01: 4 min, 2 tasks, 4 files
-| Phase 10-link-list-format P01 | 4 min | 4 tasks | 20 files |
-| Phase 10-link-list-format P02 | 5 min | 2 tasks | 6 files |
-| Phase 10-link-list-format P03 | 5 min | 1 task | 1 file |
+- Phase 11-links-bug P01: 8 min, 3 tasks, 5 files
 
 ## Accumulated Context
 
 ### Decisions
 
-Recent decisions affecting v1.1:
+Recent decisions affecting v1.2:
 
-- **Phase independence**: Phases 7, 8, and 9 are independent with no shared code changes
-- **Separate code path**: All-expanded mode uses `GenerateAllExpandedView()` as a separate function
-- [Phase 07-01]: Reference-style documentation optimized for AI comprehension
-- [Phase 07-ai-documentation]: Use go-version-file: 'go.mod' to automatically track Go version requirements
-- [Phase 08-all-expanded-mode]: GenerateExpandedView uses LevelC1
-- [Phase 08-all-expanded-mode]: External boundary nodes scanned recursively from all nested subunits
-- [Phase 08-all-expanded-mode]: BuildExpandedGraph uses dotted path IDs (cluster_mainapp.api)
-- [Phase 09-no-orphan-units]: Orphan definition: unit has no Links AND no LinksFrom AND no Subunits
-- [Phase 10-link-list-format]: Use slice []Link instead of map[string]Link to enable multiple links to same peer
-- [Phase 10-link-list-format]: Add explicit Peer field instead of deriving from map key for clarity
-- [Phase 10-link-list-format]: TOML syntax changes to [[unit.link]] array format for consistency
-- [Phase 10-link-list-format]: Add FindLinkByPeer helper function for slice-based lookups
-- [Phase 10-link-list-format]: Added linkFrom declarations to fix orphan validation (units must have Links/LinksFrom/Subunits) — Examples with only incoming links failed validation; added linkFrom to ensure every unit has connectivity defined.
+- [Phase 11-01]: Collapsed units render with record shape (ShapeRecord) instead of HTML labels
+- [Phase 11-01]: All units have transparent backgrounds (empty FillColor)
+- [Phase 11-01]: Only set style=filled when FillColor is specified (for true transparency)
 
 ### Roadmap Evolution
 
-- Phase 11 added: links bug
+- Phase 11 added: links bug (unit shape and transparent fills)
 
 ### Pending Todos
 
@@ -90,9 +72,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-13T13:44:12.000Z
-Status: Phase 10-link-list-format complete
-Next: Ready for Phase 11 links bug
+Last session: 2026-03-13T14:59:07Z
+Status: Phase 11-links-bug P01 complete
+Next: Ready for next plan or phase
 
 ## v1.0 Summary
 
@@ -110,3 +92,9 @@ Next: Ready for Phase 11 links bug
 - AI documentation skill package
 - All-expanded view mode
 - Orphan unit validation
+
+## v1.2 Summary
+
+**In Progress**
+
+- Phase 11: Links bug (unit shape and transparent fills)
