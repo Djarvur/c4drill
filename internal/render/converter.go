@@ -141,8 +141,8 @@ func createNode(cg *cgraph.Graph, node *graph.Node) (*cgraph.Node, error) {
 		return nil, fmt.Errorf("create node by name: %w", err)
 	}
 
-	// HTML labels require shape=plaintext
-	cn.SetShape(cgraph.PlainTextShape)
+	// Record shape for collapsed units (per CONTEXT.md decision)
+	cn.SetShape(cgraph.Shape("record"))
 
 	// Build and set the HTML label
 	if node.Label != nil {
@@ -151,9 +151,9 @@ func createNode(cg *cgraph.Graph, node *graph.Node) (*cgraph.Node, error) {
 
 	// Apply styling
 	if node.Style != nil {
-		cn.SetStyle(cgraph.FilledNodeStyle)
-
+		// Only set filled style if FillColor is specified (transparent otherwise)
 		if node.Style.FillColor != "" {
+			cn.SetStyle(cgraph.FilledNodeStyle)
 			cn.SetFillColor(node.Style.FillColor)
 		}
 
