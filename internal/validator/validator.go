@@ -31,6 +31,7 @@ func Validate(m *parser.Model) ValidationErrors {
 	errors = append(errors, ValidateSubunitRules(index)...)
 	errors = append(errors, ValidateLinkRules(index)...)
 	errors = append(errors, ValidateOrphanUnits(index)...)
+	errors = append(errors, ValidateNestingHierarchy(index)...)
 
 	if len(errors) == 0 {
 		return nil
