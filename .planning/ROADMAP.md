@@ -9,7 +9,7 @@ C4Drill transforms TOML architecture definitions into professional C4 diagrams t
 - **v1.0 Initial Release** -- Phases 1-6 (shipped 2026-03-10)
 - **v1.1 AI-Ready** -- Phases 7-10 (shipped 2026-03-13)
 - **v1.2 Bug Fixes** -- Phases 11-13 (shipped 2026-03-14)
-- **v1.3 Validation Enhancements** -- Phase 14 (in progress)
+- **v1.3 Validation Enhancements** -- Phase 14 (shipped 2026-03-17)
 
 ## Phases
 
@@ -139,7 +139,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 11. Unit Shape and Attributes | v1.1 | 1/1 | Complete | 2026-03-13 |
 | 12. HTML labels for all unit types | v1.2 | 2/2 | Complete | 2026-03-13 |
 | 13. Refined HTML Labels | v1.2 | Complete    | 2026-03-14 | 2026-03-14 |
-| 14. Nesting Validation | v1.3 | 0/1 | Ready | — |
+| 14. Nesting Validation | v1.3 | 1/1 | Complete | 2026-03-17 |
 
 ### Phase 12: HTML labels for all unit types
 
@@ -268,8 +268,8 @@ Plans:
 **Goal:** Enforce C4 model hierarchy by validating that units are nested at the correct level
 **Requirements:** NEST-01, NEST-02, NEST-03
 **Depends on:** Nothing (standalone validation enhancement)
-**Plans:** 0/1 plans complete
-**Status:** Ready
+**Plans:** 1/1 plans complete
+**Status:** Complete
 
 **Nesting Rules:**
 
@@ -279,9 +279,9 @@ Plans:
 - C3 types: No subunits (leaf nodes)
 
 Plans:
-- [ ] 14-01-PLAN.md -- Add ValidateNestingHierarchy rule with tests
+- [x] 14-01-PLAN.md -- Add ValidateNestingHierarchy rule with tests
 
 ---
 
 *Roadmap created: 2026-03-09*
-*Last updated: 2026-03-17 - Phase 14 added*
+*Last updated: 2026-03-17 - Phase 14 complete (v1.3 shipped)*

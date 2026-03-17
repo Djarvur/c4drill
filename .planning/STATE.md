@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: AI-Ready
-status: completed
-last_updated: "2026-03-14T08:42:42.483Z"
-last_activity: 2026-03-14
+milestone: v1.3
+milestone_name: Validation Enhancements
+status: in_progress
+last_updated: "2026-03-17T21:16:11Z"
+last_activity: 2026-03-17
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 12
-  completed_plans: 12
+  total_phases: 1
+  completed_phases: 0
+  total_plans: 1
+  completed_plans: 1
   percent: 100
 ---
 
@@ -20,15 +20,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** v1.2 Bug Fixes — fixing rendering issues
+**Current focus:** v1.3 Validation Enhancements — enforce C4 model nesting hierarchy
 
 ## Current Position
 
-Milestone: v1.2 Bug Fixes
-Phase: 13-refined-html-labels
-Plan: 01 complete
-Status: Complete
-Last activity: 2026-03-14
+Milestone: v1.3 Validation Enhancements
+Phase: 14-nesting-validation
+Plan: 01 (complete)
+Status: Phase complete
+Last activity: 2026-03-17
 
 Progress: [██████████] 100% (1/1 plans)
 
@@ -38,44 +38,29 @@ Progress: [██████████] 100% (1/1 plans)
 - Total plans completed (v1.0): 16
 - Total plans completed (v1.1): 5
 - Total plans completed (v1.2): 3
+- Total plans completed (v1.3): 1
 
-**By Phase (v1.2):**
+**By Phase (v1.3):**
 
 | Phase | Plans | Completed | Status |
 |-------|-------|-----------|--------|
-| 11. Links Bug | 1 | 1 | Complete |
-| 12. HTML Labels | 2 | 2 | Complete |
-| 13. Refined HTML Labels | 1 | 1 | Complete |
-
-**Recent Executions:**
-- Phase 13-refined-html-labels P01: 25 min, 5 tasks, 5 files
-- Phase 11-links-bug P01: 8 min, 3 tasks, 5 files
-- Phase 12-html-labels-for-all-unit-types P00: 3 min, 1 task, 2 files
-- Phase 12-html-labels-for-all-unit-types P01: 5 min, 4 tasks, 3 files
+| 14. Nesting Validation | 1 | 1 | Complete |
 
 ## Accumulated Context
 
 ### Decisions
 
-Recent decisions affecting v1.2:
+Recent decisions affecting v1.3:
 
-- [Phase 11-01]: Collapsed units render with record shape (ShapeRecord) instead of HTML labels
-- [Phase 11-01]: All units have transparent backgrounds (empty FillColor)
-- [Phase 11-01]: Only set style=filled when FillColor is specified (for true transparency)
-- [Phase 12-00]: Use internal test file (package render) to test unexported HTML label builder functions
-- [Phase 12-00]: Add stub implementations that return empty strings - tests fail until Wave 1
-- [Phase 12-01]: Queue labels use 4 separate rows (NO rowspan) per CONTEXT.md specification
-- [Phase 12-01]: Person labels have NO technology field
-- [Phase 12-01]: Container and Box types share CONT label format
-- [Phase 13-01]: Cluster labels use same HTML format as corresponding unit type
-- [Phase 13-01]: All units render with shape=box and style=rounded
-- [Phase 13-01]: HTML tables include border="0" cellpadding="0" cellspacing="0"
+- [Phase 14]: C4 nesting hierarchy must be enforced (C1-C2-C3)
+- [14-01]: C1 container types (system, systemExternal, box) allow C2 children only
+- [14-01]: Container type allows C3 children only
+- [14-01]: External type variants follow same nesting rules as base types
 
 ### Roadmap Evolution
 
-- Phase 11 added: links bug (unit shape and transparent fills)
-- Phase 12 added: HTML labels for all unit types
-- Phase 13 added: refined HTML labels with shape=box style=rounded and table attributes
+- Phase 14 added: Nesting validation to enforce C4 model hierarchy
+- 14-01 complete: ValidateNestingHierarchy function with comprehensive test coverage
 
 ### Pending Todos
 
@@ -85,11 +70,15 @@ None.
 
 None.
 
+### Deferred Items
+
+- TestOutputFlag test failure (pre-existing, out of scope) - see deferred-items.md
+
 ## Session Continuity
 
-Last session: 2026-03-14T00:00:00.000Z
-Status: Phase 13 complete - v1.2 milestone shipped
-Next: v1.3 planning or new features
+Last session: 2026-03-17T21:16:11Z
+Status: Phase 14 complete
+Next: Ready for next milestone or phase
 
 ## v1.0 Summary
 

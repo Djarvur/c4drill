@@ -50,6 +50,16 @@ Requirements for AI-Ready milestone. Each maps to roadmap phases.
 - [x] **HTML-01**: All unit types render with HTML table labels inside record shapes
 - [x] **HTML-02**: Each unit type has specific format: Person (icon+name+desc), Database (icon+name+tech+desc), Queue (graphics+name+tech+desc), System/Container/Component (name+tech+desc)
 
+## v1.3 Requirements
+
+Requirements for Validation Enhancements milestone.
+
+### Nesting Validation
+
+- [x] **NEST-01**: Top-level units must be C1 types (person, system, db, queue, box + external variants); C2/C3 types at top level are rejected with clear error
+- [x] **NEST-02**: Units inside system/systemExternal/box must be C2 types (container, containerDb, containerQueue); C3 types inside system/box are rejected
+- [x] **NEST-03**: Units inside container must be C3 types (component, componentDb, componentQueue); C2 types inside container are rejected
+
 ## v1.0 Requirements (Shipped)
 
 Completed in v1.0 Initial Release (2026-03-10). See `.planning/milestones/v1.0-REQUIREMENTS.md` for archive.
@@ -99,13 +109,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SHAPE-02 | Phase 11 | Complete |
 | HTML-01 | Phase 12 | Complete |
 | HTML-02 | Phase 12 | Complete |
+| NEST-01 | Phase 14 | Complete |
+| NEST-02 | Phase 14 | Complete |
+| NEST-03 | Phase 14 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 18 total
 - v1.2 requirements: 4 total
-- Mapped to phases: 22
+- v1.3 requirements: 3 total
+- Mapped to phases: 25
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-10*
-*Last updated: 2026-03-13 after Phase 12 plan 01 - v1.2 complete*
+*Last updated: 2026-03-17 after Phase 14 plan 01 - v1.3 complete*
