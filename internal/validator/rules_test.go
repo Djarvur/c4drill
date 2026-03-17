@@ -581,3 +581,398 @@ func TestValidateOrphanUnits_NestedOrphan(t *testing.T) {
 		t.Errorf("expected message %q, got %q", expectedMsg, errors[0].Message)
 	}
 }
+
+// TestValidateNestingHierarchy tests the C4 nesting hierarchy validation.
+// C1 types (person, system, db, queue, box + external variants) are top-level only.
+// C2 types (container, containerDb, containerQueue) belong inside system/box.
+// C3 types (component, componentDb, componentQueue) belong inside container.
+
+func TestValidateNestingHierarchy_RejectsC2AtTopLevel(t *testing.T) {
+	t.Parallel()
+
+	c2Types := []struct {
+		name     string
+		unitType model.UnitType
+	}{
+		{"container", model.TypeContainer},
+		{"containerDb", model.TypeContainerDb},
+		{"containerQueue", model.TypeContainerQueue},
+	}
+
+	for _, tc := range c2Types {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			units := map[string]*model.Unit{
+				"unit": {
+					Type: tc.unitType,
+					Links: []model.Link{
+						{Peer: "other"},
+					},
+				},
+				"other": {Type: model.TypeSystem},
+			}
+
+			index := validator.BuildIndex(units, "")
+			errors := validator.ValidateNestingHierarchy(index)
+
+			if len(errors) != 1 {
+				t.Fatalf("expected 1 error, got %d", len(errors))
+			}
+
+			expectedMsg := `unit "unit" has type ` + string(tc.unitType) + ` which is not allowed at top level (C1 types only)`
+			if errors[0].Message != expectedMsg {
+				t.Errorf("expected message %q, got %q", expectedMsg, errors[0].Message)
+			}
+		})
+	}
+}
+
+func TestValidateNestingHierarchy_RejectsC3AtTopLevel(t *testing.T) {
+	t.Parallel()
+
+	c3Types := []struct {
+		name     string
+		unitType model.UnitType
+	}{
+		{"component", model.TypeComponent},
+		{"componentDb", model.TypeComponentDb},
+		{"componentQueue", model.TypeComponentQueue},
+	}
+
+	for _, tc := range c3Types {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			units := map[string]*model.Unit{
+				"unit": {
+					Type: tc.unitType,
+					Links: []model.Link{
+						{Peer: "other"},
+					},
+				},
+				"other": {Type: model.TypeSystem},
+			}
+
+			index := validator.BuildIndex(units, "")
+			errors := validator.ValidateNestingHierarchy(index)
+
+			if len(errors) != 1 {
+				t.Fatalf("expected 1 error, got %d", len(errors))
+			}
+
+			expectedMsg := `unit "unit" has type ` + string(tc.unitType) + ` which is not allowed at top level (C1 types only)`
+			if errors[0].Message != expectedMsg {
+				t.Errorf("expected message %q, got %q", expectedMsg, errors[0].Message)
+			}
+		})
+	}
+}
+
+func TestValidateNestingHierarchy_AllowsC1AtTopLevel(t *testing.T) {
+	t.Parallel()
+
+	c1Types := []struct {
+		name     string
+		unitType model.UnitType
+	}{
+		{"person", model.TypePerson},
+		{"personExternal", model.TypePersonExternal},
+		{"system", model.TypeSystem},
+		{"systemExternal", model.TypeSystemExternal},
+		{"db", model.TypeDb},
+		{"dbExternal", model.TypeDbExternal},
+		{"queue", model.TypeQueue},
+		{"queueExternal", model.TypeQueueExternal},
+		{"box", model.TypeBox},
+	}
+
+	for _, tc := range c1Types {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			units := map[string]*model.Unit{
+				"unit": {
+					Type: tc.unitType,
+					Links: []model.Link{
+						{Peer: "other"},
+					},
+				},
+				"other": {Type: model.TypeSystem},
+			}
+
+			index := validator.BuildIndex(units, "")
+			errors := validator.ValidateNestingHierarchy(index)
+
+			if len(errors) != 0 {
+				t.Errorf("expected no errors for C1 type %s at top level, got %d: %v", tc.name, len(errors), errors)
+			}
+		})
+	}
+}
+
+func TestValidateNestingHierarchy_RejectsC3InSystem(t *testing.T) {
+	t.Parallel()
+
+	c3Types := []struct {
+		name     string
+		unitType model.UnitType
+	}{
+		{"component", model.TypeComponent},
+		{"componentDb", model.TypeComponentDb},
+		{"componentQueue", model.TypeComponentQueue},
+	}
+
+	for _, tc := range c3Types {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			units := map[string]*model.Unit{
+				"system": {
+					Type: model.TypeSystem,
+					Subunits: map[string]*model.Unit{
+						"child": {
+							Type: tc.unitType,
+							Links: []model.Link{
+								{Peer: "other"},
+							},
+						},
+					},
+				},
+				"other": {Type: model.TypeDb},
+			}
+
+			index := validator.BuildIndex(units, "")
+			errors := validator.ValidateNestingHierarchy(index)
+
+			if len(errors) != 1 {
+				t.Fatalf("expected 1 error, got %d", len(errors))
+			}
+
+			expectedMsg := `unit "system.child" has type ` + string(tc.unitType) + ` which must be inside container (C2 types only in system)`
+			if errors[0].Message != expectedMsg {
+				t.Errorf("expected message %q, got %q", expectedMsg, errors[0].Message)
+			}
+		})
+	}
+}
+
+func TestValidateNestingHierarchy_AllowsC2InSystem(t *testing.T) {
+	t.Parallel()
+
+	c2Types := []struct {
+		name     string
+		unitType model.UnitType
+	}{
+		{"container", model.TypeContainer},
+		{"containerDb", model.TypeContainerDb},
+		{"containerQueue", model.TypeContainerQueue},
+	}
+
+	parentTypes := []struct {
+		name     string
+		unitType model.UnitType
+	}{
+		{"system", model.TypeSystem},
+		{"systemExternal", model.TypeSystemExternal},
+		{"box", model.TypeBox},
+	}
+
+	for _, parent := range parentTypes {
+		for _, child := range c2Types {
+			t.Run(parent.name+"_"+child.name, func(t *testing.T) {
+				t.Parallel()
+
+				units := map[string]*model.Unit{
+					"parent": {
+						Type: parent.unitType,
+						Subunits: map[string]*model.Unit{
+							"child": {
+								Type: child.unitType,
+								Links: []model.Link{
+									{Peer: "other"},
+								},
+							},
+						},
+					},
+					"other": {Type: model.TypeDb},
+				}
+
+				index := validator.BuildIndex(units, "")
+				errors := validator.ValidateNestingHierarchy(index)
+
+				if len(errors) != 0 {
+					t.Errorf("expected no errors for C2 type %s inside %s, got %d: %v", child.name, parent.name, len(errors), errors)
+				}
+			})
+		}
+	}
+}
+
+func TestValidateNestingHierarchy_RejectsC2InContainer(t *testing.T) {
+	t.Parallel()
+
+	c2Types := []struct {
+		name     string
+		unitType model.UnitType
+	}{
+		{"container", model.TypeContainer},
+		{"containerDb", model.TypeContainerDb},
+		{"containerQueue", model.TypeContainerQueue},
+	}
+
+	for _, tc := range c2Types {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			units := map[string]*model.Unit{
+				"system": {
+					Type: model.TypeSystem,
+					Subunits: map[string]*model.Unit{
+						"api": {
+							Type: model.TypeContainer,
+							Subunits: map[string]*model.Unit{
+								"child": {
+									Type: tc.unitType,
+									Links: []model.Link{
+										{Peer: "other"},
+									},
+								},
+							},
+						},
+					},
+				},
+				"other": {Type: model.TypeDb},
+			}
+
+			index := validator.BuildIndex(units, "")
+			errors := validator.ValidateNestingHierarchy(index)
+
+			if len(errors) != 1 {
+				t.Fatalf("expected 1 error, got %d", len(errors))
+			}
+
+			expectedMsg := `unit "system.api.child" has type ` + string(tc.unitType) + ` which must be inside component (C3 types only in container)`
+			if errors[0].Message != expectedMsg {
+				t.Errorf("expected message %q, got %q", expectedMsg, errors[0].Message)
+			}
+		})
+	}
+}
+
+func TestValidateNestingHierarchy_AllowsC3InContainer(t *testing.T) {
+	t.Parallel()
+
+	c3Types := []struct {
+		name     string
+		unitType model.UnitType
+	}{
+		{"component", model.TypeComponent},
+		{"componentDb", model.TypeComponentDb},
+		{"componentQueue", model.TypeComponentQueue},
+	}
+
+	for _, tc := range c3Types {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			units := map[string]*model.Unit{
+				"system": {
+					Type: model.TypeSystem,
+					Subunits: map[string]*model.Unit{
+						"api": {
+							Type: model.TypeContainer,
+							Subunits: map[string]*model.Unit{
+								"child": {
+									Type: tc.unitType,
+									Links: []model.Link{
+										{Peer: "other"},
+									},
+								},
+							},
+						},
+					},
+				},
+				"other": {Type: model.TypeDb},
+			}
+
+			index := validator.BuildIndex(units, "")
+			errors := validator.ValidateNestingHierarchy(index)
+
+			if len(errors) != 0 {
+				t.Errorf("expected no errors for C3 type %s inside container, got %d: %v", tc.name, len(errors), errors)
+			}
+		})
+	}
+}
+
+func TestValidateNestingHierarchy_ValidChain(t *testing.T) {
+	t.Parallel()
+
+	// Valid nesting: system -> container -> component
+	units := map[string]*model.Unit{
+		"system": {
+			Type: model.TypeSystem,
+			Subunits: map[string]*model.Unit{
+				"api": {
+					Type: model.TypeContainer,
+					Subunits: map[string]*model.Unit{
+						"handler": {
+							Type: model.TypeComponent,
+							Links: []model.Link{
+								{Peer: "db"},
+							},
+						},
+					},
+				},
+			},
+		},
+		"db": {Type: model.TypeDb},
+	}
+
+	index := validator.BuildIndex(units, "")
+	errors := validator.ValidateNestingHierarchy(index)
+
+	if len(errors) != 0 {
+		t.Errorf("expected no errors for valid nesting chain, got %d: %v", len(errors), errors)
+	}
+}
+
+func TestValidateNestingHierarchy_CollectsAllErrors(t *testing.T) {
+	t.Parallel()
+
+	// Multiple violations: C2 at top level, C3 at top level, C3 in system
+	units := map[string]*model.Unit{
+		"container": {
+			Type: model.TypeContainer,
+			Links: []model.Link{
+				{Peer: "db"},
+			},
+		},
+		"component": {
+			Type: model.TypeComponent,
+			Links: []model.Link{
+				{Peer: "db"},
+			},
+		},
+		"system": {
+			Type: model.TypeSystem,
+			Subunits: map[string]*model.Unit{
+				"comp": {
+					Type: model.TypeComponent,
+					Links: []model.Link{
+						{Peer: "db"},
+					},
+				},
+			},
+		},
+		"db": {Type: model.TypeDb},
+	}
+
+	index := validator.BuildIndex(units, "")
+	errors := validator.ValidateNestingHierarchy(index)
+
+	if len(errors) != 3 {
+		t.Errorf("expected 3 errors for multiple violations, got %d: %v", len(errors), errors)
+	}
+}
