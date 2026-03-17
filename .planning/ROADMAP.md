@@ -139,7 +139,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 11. Unit Shape and Attributes | v1.1 | 1/1 | Complete | 2026-03-13 |
 | 12. HTML labels for all unit types | v1.2 | 2/2 | Complete | 2026-03-13 |
 | 13. Refined HTML Labels | v1.2 | Complete    | 2026-03-14 | 2026-03-14 |
-| 14. Nesting Validation | v1.3 | 1/1 | Complete | 2026-03-17 |
+| 14. Nesting Validation | v1.3 | Complete    | 2026-03-17 | 2026-03-17 |
 
 ### Phase 12: HTML labels for all unit types
 
