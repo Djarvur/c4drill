@@ -8,7 +8,7 @@ name = "User"
 description = "End user"
 
 [[user.link]]
-peer = "app.db"
+peer = "app.api"
 technology = "HTTPS"
 
 [app]
@@ -16,11 +16,11 @@ type = "system"
 name = "Application"
 description = "Main application"
 
-[app.db]
-type = "db"
-name = "Database"
-description = "Data storage"
+[app.api]
+type = "container"
+name = "API"
+description = "API container"
 
-[[app.db.linkFrom]]
+[[app.api.linkFrom]]
 peer = "user"
 technology = "HTTPS"

@@ -9,7 +9,7 @@ description = "The main system"
 expanded = ["mainsystem"]
 
 [mainsystem.webapp]
-type = "system"
+type = "container"
 name = "Web Application"
 description = "Frontend"
 expanded = ["mainsystem.webapp"]
@@ -33,7 +33,7 @@ peer = "mainsystem.webapp.handler"
 technology = "internal"
 
 [mainsystem.api]
-type = "system"
+type = "container"
 name = "API"
 description = "Backend API"
 
