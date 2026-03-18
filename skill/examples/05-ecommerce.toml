@@ -5,7 +5,7 @@
 name = "E-Commerce Platform"
 description = "Complete online shopping platform"
 edges = "spline"
-expanded = ["inventory"]
+expanded = ["platform"]
 
 # ===== ACTORS =====
 
@@ -15,7 +15,7 @@ name = "Customer"
 description = "Online shopper"
 
 [[customer.link]]
-peer = "webapp"
+peer = "platform.webapp"
 technology = "HTTPS"
 description = "Browses and orders"
 
@@ -27,7 +27,7 @@ color = "#FFF9C4"
 border = "#F9A825"
 
 [[admin.link]]
-peer = "admin-panel"
+peer = "platform.admin-panel"
 technology = "HTTPS"
 description = "Manages system"
 
@@ -39,7 +39,7 @@ color = "#FFF9C4"
 border = "#F9A825"
 
 [[support.link]]
-peer = "support-tool"
+peer = "platform.support-tool"
 technology = "HTTPS"
 description = "Handles tickets"
 
@@ -54,7 +54,7 @@ color = "#E3F2FD"
 border = "#1976D2"
 
 [[stripe.link]]
-peer = "payment-service"
+peer = "platform.payment-service"
 description = "Webhooks"
 
 [sendgrid]
@@ -66,7 +66,7 @@ color = "#E3F2FD"
 border = "#1976D2"
 
 [[sendgrid.link]]
-peer = "notification-service"
+peer = "platform.notification-service"
 description = "Delivery status"
 
 [segment]
@@ -78,102 +78,117 @@ color = "#E3F2FD"
 border = "#1976D2"
 
 [[segment.link]]
-peer = "event-bus"
+peer = "platform.event-bus"
 description = "Analytics pipeline"
 
 # ===== MAIN SYSTEM =====
 
-[webapp]
+[platform]
 type = "system"
+name = "E-Commerce Platform"
+description = "Online shopping platform"
+technology = "Microservices"
+color = "#E8F5E9"
+border = "#388E3C"
+
+# C2: Frontends
+
+[platform.webapp]
+type = "container"
 name = "Web Application"
 description = "Customer-facing frontend"
 technology = "Next.js, React"
-color = "#E8F5E9"
-border = "#388E3C"
 
-[[webapp.linkFrom]]
-peer = "customer"
-description = "Browses and orders"
-
-[[webapp.link]]
-peer = "api-gateway"
+[[platform.webapp.link]]
+peer = "platform.api-gateway"
 technology = "REST/JSON"
 description = "Calls"
 
-[api-gateway]
-type = "system"
-name = "API Gateway"
-description = "API routing and rate limiting"
-technology = "Kong, Node.js"
-color = "#E8F5E9"
-border = "#388E3C"
+[platform.admin-panel]
+type = "container"
+name = "Admin Panel"
+description = "Internal admin interface"
+technology = "React, TypeScript"
+color = "#F3E5F5"
+border = "#7B1FA2"
 
-[[api-gateway.linkFrom]]
-peer = "webapp"
+[[platform.admin-panel.link]]
+peer = "platform.api-gateway"
 technology = "REST/JSON"
-description = "Serves"
+description = "Admin API"
 
-[[api-gateway.linkFrom]]
-peer = "admin-panel"
-technology = "REST/JSON"
-description = "Admin API calls"
+[platform.support-tool]
+type = "container"
+name = "Support Tool"
+description = "Customer support interface"
+technology = "React, TypeScript"
+color = "#F3E5F5"
+border = "#7B1FA2"
 
-[[api-gateway.linkFrom]]
-peer = "support-tool"
+[[platform.support-tool.link]]
+peer = "platform.api-gateway"
 technology = "REST/JSON"
 description = "Support API"
 
-# ===== MICROSERVICES =====
+# C2: API Gateway
 
-[user-service]
+[platform.api-gateway]
+type = "container"
+name = "API Gateway"
+description = "API routing and rate limiting"
+technology = "Kong, Node.js"
+
+# C2: Microservices
+
+[platform.user-service]
 type = "container"
 name = "User Service"
 description = "User management and authentication"
 technology = "Go, gRPC"
 
-[[user-service.link]]
-peer = "api-gateway"
+[[platform.user-service.link]]
+peer = "platform.api-gateway"
 technology = "gRPC"
 description = "Authenticates"
 
-[order-service]
+[platform.order-service]
 type = "container"
 name = "Order Service"
 description = "Order processing and management"
 technology = "Go, gRPC"
 
-[[order-service.link]]
-peer = "api-gateway"
+[[platform.order-service.link]]
+peer = "platform.api-gateway"
 technology = "gRPC"
 description = "Handles orders"
 
-[[order-service.linkFrom]]
-peer = "payment-service"
+[[platform.order-service.linkFrom]]
+peer = "platform.payment-service"
 technology = "gRPC"
 description = "Payment confirmation"
 
-[[order-service.linkFrom]]
-peer = "inventory-service"
+[[platform.order-service.linkFrom]]
+peer = "platform.inventory-service"
 technology = "gRPC"
 description = "Stock check"
 
-[inventory-service]
+[platform.inventory-service]
 type = "container"
 name = "Inventory Service"
 description = "Product catalog and stock management"
 technology = "Go, gRPC"
 
-[[inventory-service.link]]
-peer = "api-gateway"
+[[platform.inventory-service.link]]
+peer = "platform.api-gateway"
 technology = "gRPC"
 description = "Product queries"
 
-[[inventory-service.linkFrom]]
-peer = "order-service"
+[[platform.inventory-service.linkFrom]]
+peer = "platform.order-service"
 technology = "gRPC"
 description = "Stock check"
 
-[payment-service]
+[platform.payment-service]
 type = "container"
 name = "Payment Service"
 description = "Payment processing"
@@ -181,89 +196,89 @@ technology = "Go, gRPC"
 color = "#FFEBEE"
 border = "#C62828"
 
-[[payment-service.link]]
-peer = "order-service"
+[[platform.payment-service.link]]
+peer = "platform.order-service"
 technology = "gRPC"
 description = "Processes payments"
 
-[[payment-service.link]]
+[[platform.payment-service.link]]
 peer = "stripe"
 technology = "Stripe API"
 description = "Processes payments"
 color = "#1976D2"
 style = "dashed"
 
-[[payment-service.linkFrom]]
+[[platform.payment-service.linkFrom]]
 peer = "stripe"
 technology = "Webhook"
 description = "Payment events"
 color = "#1976D2"
 
-[notification-service]
+[platform.notification-service]
 type = "container"
 name = "Notification Service"
 description = "Email and push notifications"
 technology = "Node.js, Redis"
 
-[[notification-service.link]]
+[[platform.notification-service.link]]
 peer = "sendgrid"
 technology = "SendGrid API"
 description = "Sends emails"
 color = "#1976D2"
 style = "dashed"
 
-[[notification-service.linkFrom]]
-peer = "order-service"
+[[platform.notification-service.linkFrom]]
+peer = "platform.order-service"
 technology = "Kafka"
 description = "Order events"
 
-[[notification-service.linkFrom]]
+[[platform.notification-service.linkFrom]]
 peer = "sendgrid"
 technology = "Webhook"
 description = "Delivery status"
 color = "#1976D2"
 
-# ===== DATABASES =====
+# C2: Databases
 
-[user-db]
+[platform.user-db]
 type = "containerDb"
 name = "User Database"
 description = "User profiles and sessions"
 technology = "PostgreSQL"
 
-[[user-db.link]]
-peer = "user-service"
+[[platform.user-db.link]]
+peer = "platform.user-service"
 technology = "SQL"
 description = "Queries"
 color = "#4CAF50"
 
-[order-db]
+[platform.order-db]
 type = "containerDb"
 name = "Order Database"
 description = "Orders and transactions"
 technology = "PostgreSQL"
 
-[[order-db.link]]
-peer = "order-service"
+[[platform.order-db.link]]
+peer = "platform.order-service"
 technology = "SQL"
 description = "Queries"
 color = "#4CAF50"
 
-[inventory-db]
+[platform.inventory-db]
 type = "containerDb"
 name = "Inventory Database"
 description = "Products and stock levels"
 technology = "PostgreSQL"
 
-[[inventory-db.link]]
-peer = "inventory-service"
+[[platform.inventory-db.link]]
+peer = "platform.inventory-service"
 technology = "SQL"
 description = "Queries"
 color = "#4CAF50"
 
-# ===== QUEUES =====
+# C2: Event Bus
 
-[event-bus]
+[platform.event-bus]
 type = "containerQueue"
 name = "Event Bus"
 description = "Async event processing"
@@ -271,28 +286,28 @@ technology = "Kafka"
 color = "#FCE4EC"
 border = "#C2185B"
 
-[[event-bus.linkFrom]]
-peer = "order-service"
+[[platform.event-bus.linkFrom]]
+peer = "platform.order-service"
 technology = "Kafka Protocol"
 description = "Publishes events"
 color = "#C2185B"
 
-[[event-bus.link]]
-peer = "notification-service"
+[[platform.event-bus.link]]
+peer = "platform.notification-service"
 technology = "Kafka Protocol"
 description = "Consumes events"
 color = "#C2185B"
 
-[[event-bus.link]]
+[[platform.event-bus.link]]
 peer = "segment"
 technology = "Kafka Connect"
 description = "Analytics pipeline"
 color = "#C2185B"
 style = "dashed"
 
-# ===== CACHING =====
+# C2: Caching
 
-[cache]
+[platform.cache]
 type = "containerDb"
 name = "Cache Layer"
 description = "Session and data caching"
@@ -300,42 +315,14 @@ technology = "Redis"
 color = "#FFF3E0"
 border = "#E65100"
 
-[[cache.linkFrom]]
-peer = "user-service"
+[[platform.cache.linkFrom]]
+peer = "platform.user-service"
 technology = "Redis Protocol"
 description = "Session cache"
 color = "#E65100"
 
-[[cache.linkFrom]]
-peer = "inventory-service"
+[[platform.cache.linkFrom]]
+peer = "platform.inventory-service"
 technology = "Redis Protocol"
 description = "Product cache"
 color = "#E65100"
-
-# ===== ADMIN TOOLS =====
-
-[admin-panel]
-type = "system"
-name = "Admin Panel"
-description = "Internal admin interface"
-technology = "React, TypeScript"
-color = "#F3E5F5"
-border = "#7B1FA2"
-
-[[admin-panel.link]]
-peer = "api-gateway"
-technology = "REST/JSON"
-description = "Admin API"
-
-[support-tool]
-type = "system"
-name = "Support Tool"
-description = "Customer support interface"
-technology = "React, TypeScript"
-color = "#F3E5F5"
-border = "#7B1FA2"
-
-[[support-tool.link]]
-peer = "api-gateway"
-technology = "REST/JSON"
-description = "Support API"
