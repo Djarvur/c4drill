@@ -3,6 +3,7 @@ package render
 import (
 	"fmt"
 	"strings"
+	"unicode"
 
 	"github.com/Djarvur/c4drill/internal/graph"
 	"github.com/Djarvur/c4drill/internal/model"
@@ -250,6 +251,11 @@ func createCluster(parent *cgraph.Graph, cluster *graph.Cluster, nodeMap map[str
 			subgraph.SetBackgroundColor(cluster.Style.FillColor)
 		}
 
+		// Set font color for cluster label
+		if cluster.Style.FontColor != "" {
+			subgraph.SafeSet("fontcolor", cluster.Style.FontColor, "")
+		}
+
 		// Set border color (cluster uses 'color' for border)
 		if cluster.Style.BorderColor != "" {
 			subgraph.SafeSet("color", cluster.Style.BorderColor, "")
@@ -285,7 +291,12 @@ func createCluster(parent *cgraph.Graph, cluster *graph.Cluster, nodeMap map[str
 
 // createEdge creates a cgraph.Edge from a graph.Edge.
 func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge) error {
-	e, err := cg.CreateEdgeByName(edge.Source+"_to_"+edge.Target, source, target)
+	// Include description in edge name to allow multiple edges between same nodes
+	edgeName := edge.Source + "_to_" + edge.Target
+	if edge.Label != nil && edge.Label.Description != "" {
+		edgeName += "_" + sanitizeForName(edge.Label.Description)
+	}
+	e, err := cg.CreateEdgeByName(edgeName, source, target)
 	if err != nil {
 		return fmt.Errorf("create edge by name: %w", err)
 	}
@@ -319,4 +330,18 @@ func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge)
 	}
 
 	return nil
+}
+
+// sanitizeForName converts a string to a safe identifier for use in edge/node names.
+// Replaces spaces and special characters with underscores.
+func sanitizeForName(s string) string {
+	var result strings.Builder
+	for _, r := range s {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			result.WriteRune(r)
+		} else {
+			result.WriteRune('_')
+		}
+	}
+	return result.String()
 }
