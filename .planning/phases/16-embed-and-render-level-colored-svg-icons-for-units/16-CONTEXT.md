@@ -11,7 +11,7 @@ Replace text-based Unicode icons (emojis like `\U0001F464`, `\u26C1`) with embed
 **Scope includes:**
 1. Move SVG icons from `data/` to embeddable location in renderer
 2. Apply C4 level colors (C1/C2/C3) to icon strokes dynamically
-3. Support custom color overrides with `type-{hexcolor}.svg` naming
+3. All icons use consistent `type-{hexcolor}.svg` naming (e.g., `person-3C7FC0.svg`)
 4. Extract icons on-demand during rendering
 5. Reference icons via `<img>` tags with relative paths
 
@@ -40,12 +40,14 @@ Replace text-based Unicode icons (emojis like `\U0001F464`, `\u26C1`) with embed
 - **D-03:** Dynamic `currentColor` replacement at render time
 - Template SVGs use `currentColor` placeholder
 - Replace `currentColor` with actual hex color based on unit's C4 level
-- Standard level colors: use `type-c1.svg`, `type-c2.svg`, `type-c3.svg` naming
-- Custom colors: use `type-{hexcolor}.svg` naming (e.g., `db-FF0000.svg`)
+- **Consistent naming:** Always `type-{hexcolor}.svg` format
+  - Standard colors: `person-3C7FC0.svg`, `db-3C7FC0.svg`, `pipe-78A8D8.svg`
+  - Custom colors: `person-FF0000.svg`, `db-00FF00.svg`
+  - No special naming for standard vs custom — always use hex color
 
 ### Image Reference in HTML Labels
 - **D-04:** Use `<img src='...'>` tags in HTML table labels
-- Path is relative to rendered SVG file: `.icons/person-c1.svg`
+- Path is relative to rendered SVG file: `.icons/person-3C7FC0.svg`
 - GraphViz supports `<img>` in HTML labels
 
 ### Icon Size and Placement
