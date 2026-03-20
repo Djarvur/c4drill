@@ -1,16 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: AI-Ready
+milestone: v1.4
+milestone_name: Edge Coloring
 status: completed
-last_updated: "2026-03-17T21:20:48.557Z"
-last_activity: 2026-03-17
+last_updated: "2026-03-20T20:15:00.000Z"
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 13
-  completed_plans: 13
-  percent: 100
+  total_phases: 10
+  completed_phases: 9
+  total_plans: 15
+  completed_plans: 14
 ---
 
 # Project State
@@ -20,47 +18,46 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** v1.3 Validation Enhancements — enforce C4 model nesting hierarchy
+**Current focus:** Ready for next phase or milestone
 
 ## Current Position
 
-Milestone: v1.3 Validation Enhancements
-Phase: 14-nesting-validation
-Plan: 01 (complete)
-Status: Phase complete
-Last activity: 2026-03-17
-
-Progress: [██████████] 100% (1/1 plans)
+Phase: 15 (the-edge-must-be-the-same-color-as-the-source-unit) — COMPLETED
+Plan: 1 of 1
 
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed (v1.0): 16
 - Total plans completed (v1.1): 5
 - Total plans completed (v1.2): 3
 - Total plans completed (v1.3): 1
+- Total plans completed (v1.4): 1
 
-**By Phase (v1.3):**
+**By Phase (v1.4):**
 
-| Phase | Plans | Completed | Status |
-|-------|-------|-----------|--------|
-| 14. Nesting Validation | 1 | 1 | Complete |
+| Phase                  | Plans | Completed | Status    |
+|------------------------|-------|-----------|-----------|
+| 14. Nesting Validation | 1     | 1         | Complete  |
+| 15. Edge Coloring      | 1     | 1         | Complete  |
 
 ## Accumulated Context
 
 ### Decisions
 
-Recent decisions affecting v1.3:
+Recent decisions affecting v1.4:
 
-- [Phase 14]: C4 nesting hierarchy must be enforced (C1-C2-C3)
-- [14-01]: C1 container types (system, systemExternal, box) allow C2 children only
-- [14-01]: Container type allows C3 children only
-- [14-01]: External type variants follow same nesting rules as base types
+- [Phase 15]: Edge color matches source unit's border color
+- [15-01]: Color computed using GetStyleForType(), applied via SetColor/SetFontColor
+- [15-01]: Explicit link.color in TOML overrides computed color
 
 ### Roadmap Evolution
 
 - Phase 14 added: Nesting validation to enforce C4 model hierarchy
 - 14-01 complete: ValidateNestingHierarchy function with comprehensive test coverage
+- Phase 15 added: Edge coloring from source unit border
+- 15-01 complete: Edge struct Color field, builder color computation, converter color application
 
 ### Pending Todos
 
@@ -76,7 +73,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-17T21:16:11Z
+Last session: 2026-03-20T18:57:29.410Z
 Status: Phase 14 complete
 Next: Ready for next milestone or phase
 

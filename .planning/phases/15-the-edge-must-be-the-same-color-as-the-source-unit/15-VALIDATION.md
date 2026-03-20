@@ -1,7 +1,7 @@
 ---
 phase: 15
 slug: the-edge-must-be-the-same-color-as-the-source-unit
-status: draft
+status: complete
 nyquist_compliant: true
 wave_0_complete: true
 created: 2026-03-20
@@ -38,9 +38,9 @@ created: 2026-03-20
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 15-01-01 | 01 | 1 | D-01, D-03 | unit | `go test ./internal/graph/... -run TestEdgeColor -v` | ❌ W0 | ⬜ pending |
-| 15-01-02 | 01 | 1 | D-02 | unit | `go test ./internal/render/... -run TestEdgeLabelColor -v` | ❌ W0 | ⬜ pending |
-| 15-01-03 | 01 | 1 | Integration | integration | `go test ./internal/render/... -run TestEdgeColorRendering -v` | ❌ W0 | ⬜ pending |
+| 15-01-01 | 01 | 1 | D-01, D-03 | unit | `go test ./internal/graph/... -run TestEdgeColor -v` | ✅ | ✅ green |
+| 15-01-02 | 01 | 1 | D-02 | unit | `go test ./internal/render/... -run TestEdgeLabelColor -v` | ✅ | ✅ green |
+| 15-01-03 | 01 | 1 | Integration | integration | `go test ./internal/render/... -run TestEdgeColorRendering -v` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -48,9 +48,9 @@ created: 2026-03-20
 
 ## Wave 0 Requirements
 
-- [ ] `internal/graph/builder_test.go` — add TestEdgeColorFromSource tests
-- [ ] `internal/render/converter_test.go` — add TestEdgeColorRendering tests
-- [ ] No framework install needed — existing test infrastructure
+- [x] `internal/graph/builder_test.go` — add TestEdgeColorFromSource tests
+- [x] `internal/render/converter_test.go` — add TestEdgeColorRendering tests
+- [x] No framework install needed — existing test infrastructure
 
 ---
 
@@ -69,6 +69,6 @@ created: 2026-03-20
 - [x] Wave 0 covers all MISSING references
 - [x] No watch-mode flags
 - [x] Feedback latency < 5s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** complete
