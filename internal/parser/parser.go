@@ -19,6 +19,14 @@ const (
 	defaultTypeC3 = model.TypeComponent
 )
 
+// Generic types that can be auto-transformed based on nesting level:
+// - db at C1 -> db, at C2 -> containerDb, at C3 -> componentDb
+// - queue at C1 -> queue, at C2 -> containerQueue, at C3 -> componentQueue
+var genericDbTypes = map[model.UnitType]bool{
+	model.TypeDb:    true,
+	model.TypeQueue: true,
+}
+
 // Model represents the root of a parsed TOML document.
 // It contains the properties section and all top-level units.
 type Model struct {
@@ -100,6 +108,9 @@ func parseUnit(name string, value any, parentType model.UnitType) (*model.Unit, 
 		unit.Type = defaultTypeForParent(parentType)
 	}
 
+	// Infer level-specific type for generic types (db, queue)
+	unit.Type = inferGenericType(unit.Type, parentType)
+
 	// Handle nested subunits (sections like [parent.child])
 	for key, val := range unitMap {
 		// Skip fields that are already in the Unit struct
@@ -141,6 +152,42 @@ func defaultTypeForParent(parentType model.UnitType) model.UnitType {
 		// For other parent types (db, queue, etc.), default to C2
 		return defaultTypeC2
 	}
+}
+
+// inferGenericType transforms generic types (db, queue) to level-specific types
+// based on the nesting level determined by parent type.
+// - C1 (no parent): db -> db, queue -> queue
+// - C2 (inside system/systemExternal/box): db -> containerDb, queue -> containerQueue
+// - C3 (inside container): db -> componentDb, queue -> componentQueue
+func inferGenericType(unitType model.UnitType, parentType model.UnitType) model.UnitType {
+	if !genericDbTypes[unitType] {
+		return unitType // Not a generic type, return as-is
+	}
+
+	// Determine the nesting level and transform type accordingly
+	switch parentType {
+	case "": // C1 level (root)
+		return unitType // db stays db, queue stays queue
+	case model.TypeSystem,
+		model.TypeSystemExternal,
+		model.TypeBox: // C2 level
+		switch unitType {
+		case model.TypeDb:
+			return model.TypeContainerDb
+		case model.TypeQueue:
+			return model.TypeContainerQueue
+		}
+	case model.TypeContainer: // C3 level
+		switch unitType {
+		case model.TypeDb:
+			return model.TypeComponentDb
+		case model.TypeQueue:
+			return model.TypeComponentQueue
+		}
+	}
+
+	// For other parent types, keep as-is (shouldn't happen in valid nesting)
+	return unitType
 }
 
 // isBuiltinField returns true if the key is a known Unit struct field.

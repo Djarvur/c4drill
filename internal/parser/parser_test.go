@@ -581,3 +581,255 @@ func TestParseFile(t *testing.T) {
 
 	assert.Equal(t, "Test System", got.Properties.Name, "Properties.Name")
 }
+
+// TestParseGenericTypeInference tests that generic types (db, queue) are
+// automatically transformed to level-specific types based on nesting depth.
+func TestParseGenericTypeInference_DbAtC1(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Generic Type Test"
+
+[mydb]
+type = "db"
+name = "Database"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	mydb, ok := got.Units["mydb"]
+	require.True(t, ok, "missing 'mydb' unit")
+	assert.Equal(t, model.TypeDb, mydb.Type, "db at C1 should stay as db")
+}
+
+func TestParseGenericTypeInference_DbAtC2(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Generic Type Test"
+
+[system]
+type = "system"
+name = "System"
+
+[system.mydb]
+type = "db"
+name = "Database"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	system, ok := got.Units["system"]
+	require.True(t, ok, "missing 'system' unit")
+
+	mydb, ok := system.Subunits["mydb"]
+	require.True(t, ok, "missing 'system.mydb' subunit")
+	assert.Equal(t, model.TypeContainerDb, mydb.Type, "db at C2 should become containerDb")
+}
+
+func TestParseGenericTypeInference_DbAtC3(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Generic Type Test"
+
+[system]
+type = "system"
+name = "System"
+
+[system.api]
+type = "container"
+name = "API"
+
+[system.api.mydb]
+type = "db"
+name = "Database"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	system := got.Units["system"]
+	require.NotNil(t, system, "missing 'system' unit")
+
+	api := system.Subunits["api"]
+	require.NotNil(t, api, "missing 'system.api' subunit")
+
+	mydb, ok := api.Subunits["mydb"]
+	require.True(t, ok, "missing 'system.api.mydb' subunit")
+	assert.Equal(t, model.TypeComponentDb, mydb.Type, "db at C3 should become componentDb")
+}
+
+func TestParseGenericTypeInference_QueueAtC1(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Generic Type Test"
+
+[myqueue]
+type = "queue"
+name = "Queue"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	myqueue, ok := got.Units["myqueue"]
+	require.True(t, ok, "missing 'myqueue' unit")
+	assert.Equal(t, model.TypeQueue, myqueue.Type, "queue at C1 should stay as queue")
+}
+
+func TestParseGenericTypeInference_QueueAtC2(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Generic Type Test"
+
+[system]
+type = "system"
+name = "System"
+
+[system.myqueue]
+type = "queue"
+name = "Queue"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	system, ok := got.Units["system"]
+	require.True(t, ok, "missing 'system' unit")
+
+	myqueue, ok := system.Subunits["myqueue"]
+	require.True(t, ok, "missing 'system.myqueue' subunit")
+	assert.Equal(t, model.TypeContainerQueue, myqueue.Type, "queue at C2 should become containerQueue")
+}
+
+func TestParseGenericTypeInference_QueueAtC3(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Generic Type Test"
+
+[system]
+type = "system"
+name = "System"
+
+[system.api]
+type = "container"
+name = "API"
+
+[system.api.myqueue]
+type = "queue"
+name = "Queue"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	system := got.Units["system"]
+	require.NotNil(t, system, "missing 'system' unit")
+
+	api := system.Subunits["api"]
+	require.NotNil(t, api, "missing 'system.api' subunit")
+
+	myqueue, ok := api.Subunits["myqueue"]
+	require.True(t, ok, "missing 'system.api.myqueue' subunit")
+	assert.Equal(t, model.TypeComponentQueue, myqueue.Type, "queue at C3 should become componentQueue")
+}
+
+func TestParseGenericTypeInference_InBox(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Generic Type Test"
+
+[mybox]
+type = "box"
+name = "Box"
+
+[mybox.mydb]
+type = "db"
+name = "Database"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	mybox, ok := got.Units["mybox"]
+	require.True(t, ok, "missing 'mybox' unit")
+
+	mydb, ok := mybox.Subunits["mydb"]
+	require.True(t, ok, "missing 'mybox.mydb' subunit")
+	assert.Equal(t, model.TypeContainerDb, mydb.Type, "db inside box should become containerDb")
+}
+
+func TestParseGenericTypeInference_InSystemExternal(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Generic Type Test"
+
+[external]
+type = "systemExternal"
+name = "External"
+
+[external.myqueue]
+type = "queue"
+name = "Queue"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	external, ok := got.Units["external"]
+	require.True(t, ok, "missing 'external' unit")
+
+	myqueue, ok := external.Subunits["myqueue"]
+	require.True(t, ok, "missing 'external.myqueue' subunit")
+	assert.Equal(t, model.TypeContainerQueue, myqueue.Type, "queue inside systemExternal should become containerQueue")
+}
+
+func TestParseGenericTypeInference_ExplicitTypesUnchanged(t *testing.T) {
+	t.Parallel()
+
+	// Explicit level-specific types should remain unchanged
+	data := []byte(`
+[properties]
+name = "Explicit Type Test"
+
+[system]
+type = "system"
+
+[system.containerdb]
+type = "containerDb"
+
+[system.containerqueue]
+type = "containerQueue"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	system := got.Units["system"]
+	require.NotNil(t, system, "missing 'system' unit")
+
+	containerdb := system.Subunits["containerdb"]
+	require.NotNil(t, containerdb, "missing 'system.containerdb' subunit")
+	assert.Equal(t, model.TypeContainerDb, containerdb.Type, "explicit containerDb should stay as containerDb")
+
+	containerqueue := system.Subunits["containerqueue"]
+	require.NotNil(t, containerqueue, "missing 'system.containerqueue' subunit")
+	assert.Equal(t, model.TypeContainerQueue, containerqueue.Type, "explicit containerQueue should stay as containerQueue")
+}
+
