@@ -281,7 +281,23 @@ Plans:
 Plans:
 - [x] 14-01-PLAN.md -- Add ValidateNestingHierarchy rule with tests
 
+### Phase 15: the edge must be the same color as the source unit
+
+**Goal:** Edges render with color matching the source unit's border color
+**Requirements:** EDGE-01, EDGE-02, EDGE-03
+**Depends on:** Phase 14
+**Plans:** 1 plan
+
+**Edge Coloring Rules:**
+
+- D-01: Edge color comes from the source unit's border color
+- D-02: Edge labels (technology, description) match the edge color
+- D-03: If link.color is explicitly set in TOML, it overrides source border color
+
+Plans:
+- [ ] 15-01-PLAN.md -- Add Color field to Edge struct and apply color in converter
+
 ---
 
 *Roadmap created: 2026-03-09*
-*Last updated: 2026-03-17 - Phase 14 complete (v1.3 shipped)*
+*Last updated: 2026-03-20 - Phase 15 planning*
