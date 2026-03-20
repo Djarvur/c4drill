@@ -297,7 +297,27 @@ Plans:
 Plans:
 - [ ] 15-01-PLAN.md -- Add Color field to Edge struct and apply color in converter
 
+### Phase 16: Embed and render level-colored SVG icons for units
+
+**Goal:** Replace text-based Unicode icons with embedded SVG images that match each unit's C4 level colors
+**Requirements:** ICON-01, ICON-02, ICON-03, ICON-04, ICON-05, ICON-06
+**Depends on:** Phase 15
+**Plans:** 1 plan
+
+**Icon System Design:**
+
+- D-01: Use Go's embed.FS to embed SVG icons in renderer package
+- D-02: Extract icons on-demand per diagram type to {output-base}/.icons/
+- D-03: Dynamic currentColor replacement, naming: type-{hexcolor}.svg
+- D-04: Use `<img src='...'>` tags in HTML table labels
+- D-05: Icons at 32x32 pixels
+- D-06: Icon column with rowspan (same pattern as SYS/CONT/COMP text labels)
+- D-07: All 6 unit types get icons: person, db, pipe, system, container, component
+
+Plans:
+- [ ] 16-01-PLAN.md -- Create icons package, IconExtractor, update HTML labels, integrate with converter
+
 ---
 
 *Roadmap created: 2026-03-09*
-*Last updated: 2026-03-20 - Phase 15 planning*
+*Last updated: 2026-03-20 - Phase 16 planning*
