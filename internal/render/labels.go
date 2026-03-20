@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/Djarvur/c4drill/internal/graph"
+	"github.com/Djarvur/c4drill/internal/model"
+	"github.com/Djarvur/c4drill/internal/render/icons"
 )
 
 // buildRecordLabel generates a record-style label for a node.
@@ -149,6 +151,27 @@ func buildEdgeLabel(label *graph.EdgeLabel) string {
 	return strings.Join(parts, "\n")
 }
 
+// iconTypeForUnit maps unit types to icon names.
+// Per D-07: All 6 types get icons, Box uses container icon.
+func iconTypeForUnit(t model.UnitType) string {
+	switch {
+	case graph.IsPersonType(t):
+		return icons.TypePerson
+	case graph.IsDbType(t):
+		return icons.TypeDb
+	case graph.IsQueueType(t):
+		return icons.TypePipe
+	case graph.IsSystemType(t):
+		return icons.TypeSystem
+	case graph.IsContainerType(t), t == model.TypeBox:
+		return icons.TypeContainer
+	case graph.IsComponentType(t):
+		return icons.TypeComponent
+	default:
+		return icons.TypeContainer // Fallback
+	}
+}
+
 // HTML Label Builder Functions (Wave 1 implementation)
 // These stub functions are placeholders that will be implemented in plan 12-01.
 // They return empty strings so tests compile but fail assertions.
@@ -156,7 +179,7 @@ func buildEdgeLabel(label *graph.EdgeLabel) string {
 // buildPersonHTMLLabel generates an HTML table label for Person-type nodes.
 // Format: icon (rowspan=2) | name (bold) / description
 // Per CONTEXT.md: Person has NO technology field.
-func buildPersonHTMLLabel(label *graph.Label) string {
+func buildPersonHTMLLabel(label *graph.Label, iconRelPath string) string {
 	if label == nil {
 		return ""
 	}
@@ -172,11 +195,15 @@ func buildPersonHTMLLabel(label *graph.Label) string {
 
 	// Row 1: Icon (rowspan) + Name
 	sb.WriteString(`<tr align="center">`)
-	sb.WriteString(`<td rowspan="`)
-	sb.WriteString(strconv.Itoa(rowspan))
-	sb.WriteString(`" valign="middle"><font point-size="20">`)
-	sb.WriteString("\U0001F464") // person emoji
-	sb.WriteString(`</font></td>`)
+	if iconRelPath != "" {
+		sb.WriteString(`<td rowspan="`)
+		sb.WriteString(strconv.Itoa(rowspan))
+		sb.WriteString(`" valign="middle">`)
+		sb.WriteString(`<img src="`)
+		sb.WriteString(iconRelPath)
+		sb.WriteString(`" width="32" height="32"/>`)
+		sb.WriteString(`</td>`)
+	}
 	sb.WriteString(`<td valign="bottom"><b>`)
 	sb.WriteString(html.EscapeString(label.Name))
 	sb.WriteString(`</b></td>`)
@@ -198,8 +225,8 @@ func buildPersonHTMLLabel(label *graph.Label) string {
 
 // buildDbHTMLLabel generates an HTML table label for Database-type nodes.
 // Format: icon (rowspan) | name (bold) / [technology] italic / description
-// Per CONTEXT.md: icon is U+26C1 (golf flag in hole), used as cylinder proxy.
-func buildDbHTMLLabel(label *graph.Label) string {
+// Per CONTEXT.md: icon is U+26C1 (golf flag in hole). used as cylinder proxy.
+func buildDbHTMLLabel(label *graph.Label, iconRelPath string) string {
 	if label == nil {
 		return ""
 	}
@@ -218,11 +245,15 @@ func buildDbHTMLLabel(label *graph.Label) string {
 
 	// Row 1: Icon (rowspan) + Name
 	sb.WriteString(`<tr align="center">`)
-	sb.WriteString(`<td rowspan="`)
-	sb.WriteString(strconv.Itoa(rowspan))
-	sb.WriteString(`" valign="middle"><font point-size="20">`)
-	sb.WriteString("\u26C1") // db cylinder icon (using golf flag as proxy)
-	sb.WriteString(`</font></td>`)
+	if iconRelPath != "" {
+		sb.WriteString(`<td rowspan="`)
+		sb.WriteString(strconv.Itoa(rowspan))
+		sb.WriteString(`" valign="middle">`)
+		sb.WriteString(`<img src="`)
+		sb.WriteString(iconRelPath)
+		sb.WriteString(`" width="32" height="32"/>`)
+		sb.WriteString(`</td>`)
+	}
 	sb.WriteString(`<td valign="bottom"><b>`)
 	sb.WriteString(html.EscapeString(label.Name))
 	sb.WriteString(`</b></td>`)
@@ -252,10 +283,9 @@ func buildDbHTMLLabel(label *graph.Label) string {
 }
 
 // buildQueueHTMLLabel generates an HTML table label for Queue-type nodes.
-// Format: 4 separate rows (NO rowspan): graphics, name (bold), [technology] italic, description
+// Format: 4 separate rows (NO rowspan): icon, name (bold), [technology] italic, description
 // Per CONTEXT.md: Queue has NO rowspan - 4 separate single-cell rows.
-// Graphics: ═╦╩═╦══ (Unicode box drawing characters)
-func buildQueueHTMLLabel(label *graph.Label) string {
+func buildQueueHTMLLabel(label *graph.Label, iconRelPath string) string {
 	if label == nil {
 		return ""
 	}
@@ -263,10 +293,14 @@ func buildQueueHTMLLabel(label *graph.Label) string {
 	var sb strings.Builder
 	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
 
-	// Row 1: Graphics (NO rowspan - separate row)
+	// Row 1: Icon (NO rowspan - separate row)
 	sb.WriteString(`<tr align="center">`)
 	sb.WriteString(`<td valign="middle">`)
-	sb.WriteString("═╦╩═╦══") // queue graphics
+	if iconRelPath != "" {
+		sb.WriteString(`<img src="`)
+		sb.WriteString(iconRelPath)
+		sb.WriteString(`" width="32" height="32"/>`)
+	}
 	sb.WriteString(`</td>`)
 	sb.WriteString(`</tr>`)
 
@@ -301,9 +335,9 @@ func buildQueueHTMLLabel(label *graph.Label) string {
 }
 
 // buildSystemHTMLLabel generates an HTML table label for System-type nodes.
-// Format: SYS label (rowspan, monospace) | name (bold) / [technology] italic / description
-// Per CONTEXT.md: SYS label in <tt> tags.
-func buildSystemHTMLLabel(label *graph.Label) string {
+// Format: icon (rowspan) | name (bold) / [technology] italic / description
+// Per CONTEXT.md: icon replaces SYS label.
+func buildSystemHTMLLabel(label *graph.Label, iconRelPath string) string {
 	if label == nil {
 		return ""
 	}
@@ -311,7 +345,7 @@ func buildSystemHTMLLabel(label *graph.Label) string {
 	var sb strings.Builder
 	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
 
-	// Calculate rowspan for SYS label: count of present fields (name always present)
+	// Calculate rowspan for icon: count of present fields (name always present)
 	rowspan := 1 // name
 	if label.Technology != "" {
 		rowspan++
@@ -320,11 +354,17 @@ func buildSystemHTMLLabel(label *graph.Label) string {
 		rowspan++
 	}
 
-	// Row 1: SYS (rowspan) + Name
+	// Row 1: Icon (rowspan) + Name
 	sb.WriteString(`<tr align="center">`)
-	sb.WriteString(`<td rowspan="`)
-	sb.WriteString(strconv.Itoa(rowspan))
-	sb.WriteString(`" valign="middle"><font face="monospace">SYS</font></td>`)
+	if iconRelPath != "" {
+		sb.WriteString(`<td rowspan="`)
+		sb.WriteString(strconv.Itoa(rowspan))
+		sb.WriteString(`" valign="middle">`)
+		sb.WriteString(`<img src="`)
+		sb.WriteString(iconRelPath)
+		sb.WriteString(`" width="32" height="32"/>`)
+		sb.WriteString(`</td>`)
+	}
 	sb.WriteString(`<td valign="bottom"><b>`)
 	sb.WriteString(html.EscapeString(label.Name))
 	sb.WriteString(`</b></td>`)
@@ -354,9 +394,9 @@ func buildSystemHTMLLabel(label *graph.Label) string {
 }
 
 // buildContainerHTMLLabel generates an HTML table label for Container-type nodes.
-// Format: CONT label (rowspan, monospace) | name (bold) / [technology] italic / description
-// Per CONTEXT.md: CONT label in <tt> tags. Also used for Box type.
-func buildContainerHTMLLabel(label *graph.Label) string {
+// Format: icon (rowspan) | name (bold) / [technology] italic / description
+// Per CONTEXT.md: icon replaces CONT label. Also used for Box type.
+func buildContainerHTMLLabel(label *graph.Label, iconRelPath string) string {
 	if label == nil {
 		return ""
 	}
@@ -364,7 +404,7 @@ func buildContainerHTMLLabel(label *graph.Label) string {
 	var sb strings.Builder
 	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
 
-	// Calculate rowspan for CONT label: count of present fields (name always present)
+	// Calculate rowspan for icon: count of present fields (name always present)
 	rowspan := 1 // name
 	if label.Technology != "" {
 		rowspan++
@@ -373,11 +413,17 @@ func buildContainerHTMLLabel(label *graph.Label) string {
 		rowspan++
 	}
 
-	// Row 1: CONT (rowspan) + Name
+	// Row 1: Icon (rowspan) + Name
 	sb.WriteString(`<tr align="center">`)
-	sb.WriteString(`<td rowspan="`)
-	sb.WriteString(strconv.Itoa(rowspan))
-	sb.WriteString(`" valign="middle"><font face="monospace">CONT</font></td>`)
+	if iconRelPath != "" {
+		sb.WriteString(`<td rowspan="`)
+		sb.WriteString(strconv.Itoa(rowspan))
+		sb.WriteString(`" valign="middle">`)
+		sb.WriteString(`<img src="`)
+		sb.WriteString(iconRelPath)
+		sb.WriteString(`" width="32" height="32"/>`)
+		sb.WriteString(`</td>`)
+	}
 	sb.WriteString(`<td valign="bottom"><b>`)
 	sb.WriteString(html.EscapeString(label.Name))
 	sb.WriteString(`</b></td>`)
@@ -407,9 +453,9 @@ func buildContainerHTMLLabel(label *graph.Label) string {
 }
 
 // buildComponentHTMLLabel generates an HTML table label for Component-type nodes.
-// Format: COMP label (rowspan, monospace) | name (bold) / [technology] italic / description
-// Per CONTEXT.md: COMP label in <tt> tags.
-func buildComponentHTMLLabel(label *graph.Label) string {
+// Format: icon (rowspan) | name (bold) / [technology] italic / description
+// Per CONTEXT.md: icon replaces COMP label.
+func buildComponentHTMLLabel(label *graph.Label, iconRelPath string) string {
 	if label == nil {
 		return ""
 	}
@@ -417,7 +463,7 @@ func buildComponentHTMLLabel(label *graph.Label) string {
 	var sb strings.Builder
 	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
 
-	// Calculate rowspan for COMP label: count of present fields (name always present)
+	// Calculate rowspan for icon: count of present fields (name always present)
 	rowspan := 1 // name
 	if label.Technology != "" {
 		rowspan++
@@ -426,11 +472,17 @@ func buildComponentHTMLLabel(label *graph.Label) string {
 		rowspan++
 	}
 
-	// Row 1: COMP (rowspan) + Name
+	// Row 1: Icon (rowspan) + Name
 	sb.WriteString(`<tr align="center">`)
-	sb.WriteString(`<td rowspan="`)
-	sb.WriteString(strconv.Itoa(rowspan))
-	sb.WriteString(`" valign="middle"><font face="monospace">COMP</font></td>`)
+	if iconRelPath != "" {
+		sb.WriteString(`<td rowspan="`)
+		sb.WriteString(strconv.Itoa(rowspan))
+		sb.WriteString(`" valign="middle">`)
+		sb.WriteString(`<img src="`)
+		sb.WriteString(iconRelPath)
+		sb.WriteString(`" width="32" height="32"/>`)
+		sb.WriteString(`</td>`)
+	}
 	sb.WriteString(`<td valign="bottom"><b>`)
 	sb.WriteString(html.EscapeString(label.Name))
 	sb.WriteString(`</b></td>`)
