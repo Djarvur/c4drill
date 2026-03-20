@@ -197,8 +197,14 @@ func processView(m *parser.Model, unitPath, basename string, writer *output.Writ
 		return fmt.Errorf("%w: %q", errBuildGraph, unitPath)
 	}
 
-	// Render
-	data, err := render.Render(g, format)
+	// Render with output directory for icon extraction (SVG only)
+	var data []byte
+	var err error
+	if format == "svg" {
+		data, err = render.RenderSVGWithOutput(g, writer.BaseDir())
+	} else {
+		data, err = render.Render(g, format)
+	}
 	if err != nil {
 		return fmt.Errorf("render: %w", err)
 	}
@@ -226,8 +232,14 @@ func processExpandedView(m *parser.Model, basename string, writer *output.Writer
 		return fmt.Errorf("%w: expanded graph", errBuildGraph)
 	}
 
-	// Render
-	data, err := render.Render(g, format)
+	// Render with icon extraction for SVG format
+	var data []byte
+	var err error
+	if format == "svg" {
+		data, err = render.RenderSVGWithOutput(g, writer.BaseDir())
+	} else {
+		data, err = render.Render(g, format)
+	}
 	if err != nil {
 		return fmt.Errorf("render: %w", err)
 	}
