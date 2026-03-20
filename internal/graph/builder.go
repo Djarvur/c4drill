@@ -219,13 +219,14 @@ func processOutgoingLinks(
 	seen map[string]bool,
 ) []*Edge {
 	edges := make([]*Edge, 0)
+	sourceEntry := viewUnits[path] // Get source entry for color lookup
 
 	for _, link := range links {
 		if !isTargetInView(viewUnits, link.Peer) {
 			continue
 		}
 
-		edge := createEdge(path, link.Peer, link)
+		edge := createEdge(path, link.Peer, link, sourceEntry)
 		edgeKey := path + "->" + link.Peer + ":" + link.Technology + ":" + link.Description
 
 		if markSeen(seen, edgeKey) {
@@ -250,7 +251,8 @@ func processIncomingLinks(
 			continue
 		}
 
-		edge := createEdge(link.Peer, path, link)
+		sourceEntry := viewUnits[link.Peer] // Source is link.Peer for incoming links
+		edge := createEdge(link.Peer, path, link, sourceEntry)
 		edgeKey := link.Peer + "->" + path + ":" + link.Technology + ":" + link.Description
 
 		if markSeen(seen, edgeKey) {
@@ -269,7 +271,9 @@ func isTargetInView(units map[string]*view.Entry, target string) bool {
 }
 
 // createEdge creates an edge from a link with defaults applied.
-func createEdge(source, target string, link model.Link) *Edge {
+// Per D-01: Edge color comes from source unit's border color.
+// Per D-03: If link.Color is set, it overrides the source border color.
+func createEdge(source, target string, link model.Link, sourceEntry *view.Entry) *Edge {
 	edge := &Edge{
 		Source: source,
 		Target: target,
@@ -289,6 +293,14 @@ func createEdge(source, target string, link model.Link) *Edge {
 
 	if edge.Label.Position == "" {
 		edge.Label.Position = "middle"
+	}
+
+	// Determine color: explicit override -> source border color (D-01, D-03)
+	if link.Color != "" {
+		edge.Color = link.Color
+	} else if sourceEntry != nil {
+		style := GetStyleForType(sourceEntry.Unit.Type, sourceEntry.IsExternal)
+		edge.Color = style.BorderColor
 	}
 
 	return edge

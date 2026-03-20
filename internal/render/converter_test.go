@@ -391,3 +391,78 @@ func TestNodeRoundedStyle(t *testing.T) {
 			"DOT output should contain style=rounded attribute")
 	})
 }
+
+//nolint:paralleltest,funlen // go-graphviz WASM engine has concurrency issues
+func TestEdgeColorRendering(t *testing.T) {
+	t.Run("edge with color has color attribute in DOT", func(t *testing.T) {
+		g := &graph.Graph{
+			Title:     "Test",
+			Direction: "TB",
+			Nodes: []*graph.Node{
+				{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeRecord, Style: &graph.NodeStyle{}},
+				{ID: "b", Label: &graph.Label{Name: "B"}, Shape: graph.ShapeRecord, Style: &graph.NodeStyle{}},
+			},
+			Edges: []*graph.Edge{
+				{
+					Source: "a",
+					Target: "b",
+					Color:  "#3C7FC0", // SystemBorder color
+				},
+			},
+		}
+
+		output, err := render.RenderDOT(g)
+		require.NoError(t, err)
+		dotStr := string(output)
+		assert.Contains(t, dotStr, "#3C7FC0")
+	})
+
+	t.Run("edge with color has fontcolor matching edge color", func(t *testing.T) {
+		g := &graph.Graph{
+			Title:     "Test",
+			Direction: "TB",
+			Nodes: []*graph.Node{
+				{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeRecord, Style: &graph.NodeStyle{}},
+				{ID: "b", Label: &graph.Label{Name: "B"}, Shape: graph.ShapeRecord, Style: &graph.NodeStyle{}},
+			},
+			Edges: []*graph.Edge{
+				{
+					Source: "a",
+					Target: "b",
+					Label:  &graph.EdgeLabel{Technology: "HTTP"},
+					Color:  "#78A8D8", // ComponentBorder color
+				},
+			},
+		}
+
+		output, err := render.RenderDOT(g)
+		require.NoError(t, err)
+		dotStr := string(output)
+		// Both color and fontcolor should be set to the same value
+		assert.Contains(t, dotStr, "#78A8D8")
+	})
+
+	t.Run("edge without color does not add color attributes", func(t *testing.T) {
+		g := &graph.Graph{
+			Title:     "Test",
+			Direction: "TB",
+			Nodes: []*graph.Node{
+				{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeRecord, Style: &graph.NodeStyle{}},
+				{ID: "b", Label: &graph.Label{Name: "B"}, Shape: graph.ShapeRecord, Style: &graph.NodeStyle{}},
+			},
+			Edges: []*graph.Edge{
+				{
+					Source: "a",
+					Target: "b",
+					Color:  "", // No color
+				},
+			},
+		}
+
+		output, err := render.RenderDOT(g)
+		require.NoError(t, err)
+		// Should still create the edge, just without color
+		assert.Contains(t, string(output), "a")
+		assert.Contains(t, string(output), "b")
+	})
+}

@@ -629,6 +629,192 @@ func TestBuildExpandedGraph(t *testing.T) {
 }
 
 //nolint:funlen // Test functions with model setup are naturally longer
+func TestBuildGraphEdgeColor(t *testing.T) {
+	t.Parallel()
+
+	// Test: Edge color matches source unit border color (internal system -> SystemBorder)
+	t.Run("edge from C1 system has SystemBorder color", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type: model.TypeSystem, // C1 -> SystemBorder = "#3C7FC0"
+					Name: "App",
+					Links: []model.Link{{Peer: "db"}},
+				},
+				"db": {
+					Type: model.TypeDb,
+					Name: "Database",
+				},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Edges, 1)
+		assert.Equal(t, "#3C7FC0", g.Edges[0].Color)
+	})
+
+	// Test: Edge from external system uses external border color
+	t.Run("edge from external system has SystemExternalBorder color", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"ext": {
+					Type: model.TypeSystemExternal, // -> SystemExternalBorder = "#8A8A8A"
+					Name: "External",
+					Links: []model.Link{{Peer: "app"}},
+				},
+				"app": {
+					Type: model.TypeSystem,
+					Name: "App",
+				},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Edges, 1)
+		assert.Equal(t, "#8A8A8A", g.Edges[0].Color)
+	})
+
+	// Test: Explicit link.Color overrides source border color
+	t.Run("edge with explicit color override uses link color", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type: model.TypeSystem,
+					Name: "App",
+					Links: []model.Link{{
+						Peer:  "db",
+						Color: "#FF0000", // Explicit override
+					}},
+				},
+				"db": {
+					Type: model.TypeDb,
+					Name: "Database",
+				},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Edges, 1)
+		assert.Equal(t, "#FF0000", g.Edges[0].Color)
+	})
+
+	// Test: Edge from C2 container has ContainerBorder color
+	t.Run("edge from C2 container has ContainerBorder color", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type: model.TypeSystem,
+					Name: "App",
+					Expanded: []string{"app"},
+					Subunits: map[string]*model.Unit{
+						"api": {
+							Type: model.TypeContainer, // C2 -> ContainerBorder = "#3C7FC0"
+							Name: "API",
+							Links: []model.Link{{Peer: "app.db"}},
+						},
+						"db": {
+							Type: model.TypeContainerDb,
+							Name: "Database",
+						},
+					},
+				},
+			},
+		}
+
+		v := view.GenerateC2View(m, "app")
+		require.NotNil(t, v)
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Edges, 1)
+		assert.Equal(t, "#3C7FC0", g.Edges[0].Color)
+	})
+
+	// Test: Edge from C3 component has ComponentBorder color
+	t.Run("edge from C3 component has ComponentBorder color", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type: model.TypeSystem,
+					Name: "App",
+					Subunits: map[string]*model.Unit{
+						"api": {
+							Type: model.TypeContainer,
+							Name: "API",
+							Expanded: []string{"api"},
+							Subunits: map[string]*model.Unit{
+								"auth": {
+									Type: model.TypeComponent, // C3 -> ComponentBorder = "#78A8D8"
+									Name: "Auth",
+									Links: []model.Link{{Peer: "app.api.store"}},
+								},
+								"store": {
+									Type: model.TypeComponent,
+									Name: "Store",
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		v := view.GenerateC3View(m, "app.api")
+		require.NotNil(t, v)
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Edges, 1)
+		assert.Equal(t, "#78A8D8", g.Edges[0].Color)
+	})
+
+	// Test: linkFrom (incoming links) get color from their source
+	t.Run("linkFrom edge gets color from link source", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type: model.TypeSystem,
+					Name: "App",
+					LinksFrom: []model.Link{{Peer: "ext"}}, // ext -> app, source is ext
+				},
+				"ext": {
+					Type: model.TypeSystemExternal, // -> SystemExternalBorder = "#8A8A8A"
+					Name: "External",
+				},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Edges, 1)
+		assert.Equal(t, "#8A8A8A", g.Edges[0].Color)
+	})
+}
+
+//nolint:funlen // Test functions with model setup are naturally longer
 func TestBuildGraphWithPathSetsNavigation(t *testing.T) {
 	t.Parallel()
 

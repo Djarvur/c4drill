@@ -82,6 +82,8 @@ type Edge struct {
 	Style string
 	// ArrowHead is the arrow direction.
 	ArrowHead ArrowDirection
+	// Color is the edge line and label color (from source unit's border color or explicit override).
+	Color string
 }
 
 // EdgeLabel contains label information for an edge.

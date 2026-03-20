@@ -329,6 +329,12 @@ func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge)
 		e.SetDir(cgraph.NoneDir)
 	}
 
+	// Apply edge color (line and label) per D-01 and D-02
+	if edge.Color != "" {
+		e.SetColor(edge.Color)
+		e.SetFontColor(edge.Color)
+	}
+
 	return nil
 }
 
