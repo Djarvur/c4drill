@@ -12,24 +12,24 @@ import (
 )
 
 // buildHTMLLabelForType returns the appropriate HTML label for a unit type.
-func buildHTMLLabelForType(label *graph.Label, t model.UnitType) string {
+func buildHTMLLabelForType(label *graph.Label, t model.UnitType, iconRelPath string) string {
 	if label == nil {
 		return ""
 	}
 
 	switch {
 	case graph.IsPersonType(t):
-		return buildPersonHTMLLabel(label)
+		return buildPersonHTMLLabel(label, iconRelPath)
 	case graph.IsDbType(t):
-		return buildDbHTMLLabel(label)
+		return buildDbHTMLLabel(label, iconRelPath)
 	case graph.IsQueueType(t):
-		return buildQueueHTMLLabel(label)
+		return buildQueueHTMLLabel(label, iconRelPath)
 	case graph.IsSystemType(t):
-		return buildSystemHTMLLabel(label)
+		return buildSystemHTMLLabel(label, iconRelPath)
 	case graph.IsContainerType(t):
-		return buildContainerHTMLLabel(label)
+		return buildContainerHTMLLabel(label, iconRelPath)
 	case graph.IsComponentType(t):
-		return buildComponentHTMLLabel(label)
+		return buildComponentHTMLLabel(label, iconRelPath)
 	default:
 		// Fallback to generic record label for unknown types
 		return buildRecordLabel(label)
@@ -46,7 +46,8 @@ const (
 )
 
 // buildCgraph converts a graph.Graph to a cgraph.Graph for rendering.
-func buildCgraph(gv *graphviz.Graphviz, g *graph.Graph) (*cgraph.Graph, error) {
+// outputDir is the base directory where the SVG will be written (for icon extraction).
+func buildCgraph(gv *graphviz.Graphviz, g *graph.Graph, outputDir string) (*cgraph.Graph, error) {
 	cg, err := gv.Graph()
 	if err != nil {
 		return nil, fmt.Errorf("create cgraph: %w", err)
@@ -54,6 +55,12 @@ func buildCgraph(gv *graphviz.Graphviz, g *graph.Graph) (*cgraph.Graph, error) {
 
 	// Configure graph-level settings
 	configureGraphSettings(cg, g)
+
+	// Create icon extractor for this render (only if outputDir is provided)
+	var iconExtractor *IconExtractor
+	if outputDir != "" {
+		iconExtractor = NewIconExtractor(outputDir)
+	}
 
 	// Build node lookup map
 	nodeMap := make(map[string]*cgraph.Node)
@@ -64,7 +71,7 @@ func buildCgraph(gv *graphviz.Graphviz, g *graph.Graph) (*cgraph.Graph, error) {
 			continue // Will be created inside cluster
 		}
 
-		cn, err := createNode(cg, node)
+		cn, err := createNode(cg, node, iconExtractor)
 		if err != nil {
 			return nil, fmt.Errorf("create node %s: %w", node.ID, err)
 		}
@@ -74,7 +81,7 @@ func buildCgraph(gv *graphviz.Graphviz, g *graph.Graph) (*cgraph.Graph, error) {
 
 	// Create clusters with their nodes
 	for _, cluster := range g.Clusters {
-		if err := createCluster(cg, cluster, nodeMap); err != nil {
+		if err := createCluster(cg, cluster, nodeMap, iconExtractor); err != nil {
 			return nil, fmt.Errorf("create cluster %s: %w", cluster.ID, err)
 		}
 	}
@@ -162,7 +169,7 @@ func joinLabels(parts []string) string {
 }
 
 // createNode creates a cgraph.Node from a graph.Node.
-func createNode(cg *cgraph.Graph, node *graph.Node) (*cgraph.Node, error) {
+func createNode(cg *cgraph.Graph, node *graph.Node, iconExtractor *IconExtractor) (*cgraph.Node, error) {
 	cn, err := cg.CreateNodeByName(node.ID)
 	if err != nil {
 		return nil, fmt.Errorf("create node by name: %w", err)
@@ -172,12 +179,23 @@ func createNode(cg *cgraph.Graph, node *graph.Node) (*cgraph.Node, error) {
 	// This combination provides a clean container look that works well with HTML tables.
 	cn.SetShape(cgraph.BoxShape)
 
+	// Extract icon and build HTML label
+	iconRelPath := ""
+	if iconExtractor != nil && node.Style != nil && node.Style.BorderColor != "" {
+		iconType := iconTypeForUnit(node.Type)
+		iconRelPath, err = iconExtractor.Extract(iconType, node.Style.BorderColor)
+		if err != nil {
+			// Log warning but continue without icon (graceful degradation)
+			iconRelPath = ""
+		}
+	}
+
 	// Build and set the label using HTML tables
 	// IMPORTANT: Use StrdupHTML to create HTML strings that GraphViz will
 	// recognize as HTML (not quoted strings). Without this, SetLabel wraps
 	// values in quotes which breaks HTML label parsing.
 	if node.Label != nil {
-		htmlLabel := buildHTMLLabelForType(node.Label, node.Type)
+		htmlLabel := buildHTMLLabelForType(node.Label, node.Type, iconRelPath)
 		if htmlLabel != "" {
 			htmlStr, err := cg.StrdupHTML(htmlLabel)
 			if err != nil {
@@ -222,16 +240,27 @@ func createNode(cg *cgraph.Graph, node *graph.Node) (*cgraph.Node, error) {
 }
 
 // createCluster creates a subgraph cluster from a graph.Cluster.
-func createCluster(parent *cgraph.Graph, cluster *graph.Cluster, nodeMap map[string]*cgraph.Node) error {
+func createCluster(parent *cgraph.Graph, cluster *graph.Cluster, nodeMap map[string]*cgraph.Node, iconExtractor *IconExtractor) error {
 	// Name must start with "cluster_" for GraphViz to render as cluster
 	subgraph, err := parent.CreateSubGraphByName("cluster_" + cluster.ID)
 	if err != nil {
 		return fmt.Errorf("create subgraph: %w", err)
 	}
 
+	// Extract icon for cluster label
+	iconRelPath := ""
+	if iconExtractor != nil && cluster.Style != nil && cluster.Style.BorderColor != "" {
+		iconType := iconTypeForUnit(cluster.Type)
+		iconRelPath, err = iconExtractor.Extract(iconType, cluster.Style.BorderColor)
+		if err != nil {
+			// Log warning but continue without icon (graceful degradation)
+			iconRelPath = ""
+		}
+	}
+
 	// Cluster label - use HTML format for consistent styling with nodes
 	if cluster.Label != nil {
-		htmlLabel := buildHTMLLabelForType(cluster.Label, cluster.Type)
+		htmlLabel := buildHTMLLabelForType(cluster.Label, cluster.Type, iconRelPath)
 		if htmlLabel != "" {
 			htmlStr, err := parent.StrdupHTML(htmlLabel)
 			if err != nil {
@@ -271,7 +300,7 @@ func createCluster(parent *cgraph.Graph, cluster *graph.Cluster, nodeMap map[str
 
 	// Create nodes inside cluster
 	for _, node := range cluster.Nodes {
-		cn, err := createNode(subgraph, node)
+		cn, err := createNode(subgraph, node, iconExtractor)
 		if err != nil {
 			return fmt.Errorf("create node %s in cluster: %w", node.ID, err)
 		}
@@ -281,7 +310,7 @@ func createCluster(parent *cgraph.Graph, cluster *graph.Cluster, nodeMap map[str
 
 	// Create nested clusters recursively
 	for _, nestedCluster := range cluster.Clusters {
-		if err := createCluster(subgraph, nestedCluster, nodeMap); err != nil {
+		if err := createCluster(subgraph, nestedCluster, nodeMap, iconExtractor); err != nil {
 			return fmt.Errorf("create nested cluster %s: %w", nestedCluster.ID, err)
 		}
 	}

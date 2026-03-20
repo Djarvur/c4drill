@@ -21,14 +21,20 @@ var (
 //
 //nolint:revive // Function name matches plan specification (04-01-PLAN.md)
 func RenderDOT(g *graph.Graph) ([]byte, error) {
-	return render(g, graphviz.XDOT)
+	return render(g, graphviz.XDOT, "")
 }
 
 // RenderSVG renders a graph to SVG format.
 //
 //nolint:revive // Function name matches plan specification (04-01-PLAN.md)
 func RenderSVG(g *graph.Graph) ([]byte, error) {
-	return render(g, graphviz.SVG)
+	return render(g, graphviz.SVG, "")
+}
+
+// RenderSVGWithOutput renders a graph to SVG format with icon extraction.
+// The outputDir is used as the base directory for the .icons/ subdirectory.
+func RenderSVGWithOutput(g *graph.Graph, outputDir string) ([]byte, error) {
+	return render(g, graphviz.SVG, outputDir)
 }
 
 // Render renders a graph to the specified format ("dot" or "svg").
@@ -45,7 +51,7 @@ func Render(g *graph.Graph, format string) ([]byte, error) {
 }
 
 // render is the internal render function that handles all formats.
-func render(g *graph.Graph, format graphviz.Format) ([]byte, error) {
+func render(g *graph.Graph, format graphviz.Format, outputDir string) ([]byte, error) {
 	if g == nil {
 		return nil, ErrNilGraph
 	}
@@ -58,7 +64,7 @@ func render(g *graph.Graph, format graphviz.Format) ([]byte, error) {
 	}
 	defer gv.Close()
 
-	cg, err := buildCgraph(gv, g)
+	cg, err := buildCgraph(gv, g, outputDir)
 	if err != nil {
 		return nil, fmt.Errorf("build graph: %w", err)
 	}
