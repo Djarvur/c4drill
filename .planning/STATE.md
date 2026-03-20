@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.4
-milestone_name: Edge Coloring
-status: completed
-last_updated: "2026-03-20T20:15:00.000Z"
+milestone: v1.1
+milestone_name: AI-Ready
+status: planning
+last_updated: "2026-03-20T20:56:32.758Z"
 progress:
   total_phases: 10
   completed_phases: 9
@@ -18,11 +18,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** Ready for next phase or milestone
+**Current focus:** Phase 16 — embed-and-render-level-colored-svg-icons-for-units
 
 ## Current Position
 
-Phase: 15 (the-edge-must-be-the-same-color-as-the-source-unit) — COMPLETED
+Phase: 16 (embed-and-render-level-colored-svg-icons-for-units) — EXECUTING
 Plan: 1 of 1
 
 ## Performance Metrics
@@ -34,23 +34,26 @@ Plan: 1 of 1
 - Total plans completed (v1.2): 3
 - Total plans completed (v1.3): 1
 - Total plans completed (v1.4): 1
+- Total plans completed (v1.5): 0 (1 planned)
 
-**By Phase (v1.4):**
+**By Phase (v1.5):**
 
 | Phase                  | Plans | Completed | Status    |
 |------------------------|-------|-----------|-----------|
 | 14. Nesting Validation | 1     | 1         | Complete  |
 | 15. Edge Coloring      | 1     | 1         | Complete  |
+| 16. SVG Icons          | 1     | 0         | Planned   |
 
 ## Accumulated Context
 
 ### Decisions
 
-Recent decisions affecting v1.4:
+Recent decisions affecting v1.5:
 
-- [Phase 15]: Edge color matches source unit's border color
-- [15-01]: Color computed using GetStyleForType(), applied via SetColor/SetFontColor
-- [15-01]: Explicit link.color in TOML overrides computed color
+- [Phase 16]: Use Go embed.FS for SVG icon storage
+- [16-01]: Icons extracted on-demand to {output}/.icons/
+- [16-01]: Icon naming: type-{hexcolor}.svg (e.g., person-3C7FC0.svg)
+- [16-01]: IMG tags at 32x32 pixels in HTML labels with rowspan
 
 ### Roadmap Evolution
 
@@ -58,6 +61,8 @@ Recent decisions affecting v1.4:
 - 14-01 complete: ValidateNestingHierarchy function with comprehensive test coverage
 - Phase 15 added: Edge coloring from source unit border
 - 15-01 complete: Edge struct Color field, builder color computation, converter color application
+- Phase 16 added: Embed and render level-colored SVG icons for units
+- 16-01 planned: icons package, IconExtractor, HTML label IMG tags, converter integration
 
 ### Pending Todos
 
@@ -73,9 +78,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-20T18:57:29.410Z
-Status: Phase 14 complete
-Next: Ready for next milestone or phase
+Last session: 2026-03-20T22:15:00.000Z
+Status: Phase 16 planning complete
+Next: Execute Phase 16 with `/gsd:execute-phase 16`
 
 ## v1.0 Summary
 

@@ -295,7 +295,7 @@ Plans:
 - D-03: If link.color is explicitly set in TOML, it overrides source border color
 
 Plans:
-- [ ] 15-01-PLAN.md -- Add Color field to Edge struct and apply color in converter
+- [x] 15-01-PLAN.md -- Add Color field to Edge struct and apply color in converter
 
 ### Phase 16: Embed and render level-colored SVG icons for units
 
@@ -303,6 +303,7 @@ Plans:
 **Requirements:** ICON-01, ICON-02, ICON-03, ICON-04, ICON-05, ICON-06
 **Depends on:** Phase 15
 **Plans:** 1 plan
+**Status:** Ready for execution
 
 **Icon System Design:**
 
@@ -315,7 +316,7 @@ Plans:
 - D-07: All 6 unit types get icons: person, db, pipe, system, container, component
 
 Plans:
-- [ ] 16-01-PLAN.md -- Create icons package, IconExtractor, update HTML labels, integrate with converter
+- [x] 16-01-PLAN.md -- Create icons package, IconExtractor, update HTML labels, integrate with converter
 
 ---
 
