@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI-Ready
 status: planning
-last_updated: "2026-03-20T21:17:05.823Z"
+last_updated: "2026-03-23T18:36:38.128Z"
 progress:
-  total_phases: 10
+  total_phases: 11
   completed_phases: 10
   total_plans: 15
   completed_plans: 15
@@ -64,6 +64,7 @@ Recent decisions affecting v1.5:
 - 15-01 complete: Edge struct Color field, builder color computation, converter color application
 - Phase 16 added: Embed and render level-colored SVG icons for units
 - 16-01 planned: icons package, IconExtractor, HTML label IMG tags, converter integration
+- Phase 17 added: Units labels cells must be word-wrapped to make the unit shape proportions as close as possible to credit card proportions
 
 ### Pending Todos
 
@@ -79,7 +80,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-20T21:12:26.661Z
+Last session: 2026-03-23T18:36:38.115Z
 Status: Phase 16 planning complete
 Next: Execute Phase 16 with `/gsd:execute-phase 16`
 
