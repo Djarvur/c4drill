@@ -24,10 +24,12 @@ const (
 // The template uses "currentColor" as a placeholder for the stroke color.
 func GetTemplate(iconType string) (string, error) {
 	filename := iconType + ".svg"
+
 	data, err := svgFiles.ReadFile(filename)
 	if err != nil {
 		return "", fmt.Errorf("icon template %s not found: %w", filename, err)
 	}
+
 	return string(data), nil
 }
 

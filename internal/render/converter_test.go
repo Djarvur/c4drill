@@ -384,6 +384,7 @@ func TestNodeRoundedStyle(t *testing.T) {
 
 		output, err := render.RenderDOT(g)
 		require.NoError(t, err)
+
 		dotStr := string(output)
 		t.Logf("DOT output:\n%s", dotStr)
 		// Check for style=rounded attribute (not just the word "rounded")
@@ -413,6 +414,7 @@ func TestEdgeColorRendering(t *testing.T) {
 
 		output, err := render.RenderDOT(g)
 		require.NoError(t, err)
+
 		dotStr := string(output)
 		assert.Contains(t, dotStr, "#3C7FC0")
 	})
@@ -437,6 +439,7 @@ func TestEdgeColorRendering(t *testing.T) {
 
 		output, err := render.RenderDOT(g)
 		require.NoError(t, err)
+
 		dotStr := string(output)
 		// Both color and fontcolor should be set to the same value
 		assert.Contains(t, dotStr, "#78A8D8")

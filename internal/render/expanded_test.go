@@ -33,6 +33,7 @@ func loadCYPAuthInfraModel(t *testing.T) *parser.Model {
 	// If file not found, create a synthetic model matching the structure
 	// This ensures tests can run without the fixture file
 	t.Logf("Creating synthetic model (fixture not found)")
+
 	return createSyntheticCYPModel(t)
 }
 
@@ -144,10 +145,10 @@ func createSyntheticCYPModel(t *testing.T) *parser.Model {
 	return m
 }
 
-// TestExpandedViewNestedClusters tests BUG-01, BUG-02, BUG-03:
-// - BUG-01: server.pam cluster should exist
-// - BUG-02: server.pam.unix and server.pam.cyp nodes should exist
-// - BUG-03: Edges to/from nested components should exist
+// TestExpandedViewNestedClusters tests nested cluster rendering:
+//   - CASE-01: server.pam cluster should exist
+//   - CASE-02: server.pam.unix and server.pam.cyp nodes should exist
+//   - CASE-03: Edges to/from nested components should exist
 //
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestExpandedViewNestedClusters(t *testing.T) {
@@ -167,26 +168,26 @@ func TestExpandedViewNestedClusters(t *testing.T) {
 
 	dotStr := string(output)
 
-	// BUG-01: server.pam cluster should exist
+	// CASE-01: server.pam cluster should exist
 	// The cluster naming follows "cluster_" + path pattern
 	assert.Contains(t, dotStr, "cluster_cluster_server.pam",
-		"DOT should contain nested cluster for server.pam (BUG-01)")
+		"DOT should contain nested cluster for server.pam (CASE-01)")
 
-	// BUG-02: server.pam.unix and server.pam.cyp nodes should exist
+	// CASE-02: server.pam.unix and server.pam.cyp nodes should exist
 	assert.Contains(t, dotStr, `"server.pam.unix"`,
-		"DOT should contain nested component server.pam.unix (BUG-02)")
+		"DOT should contain nested component server.pam.unix (CASE-02)")
 	assert.Contains(t, dotStr, `"server.pam.cyp"`,
-		"DOT should contain nested component server.pam.cyp (BUG-02)")
+		"DOT should contain nested component server.pam.cyp (CASE-02)")
 
-	// BUG-03: Edges to/from nested components should exist
+	// CASE-03: Edges to/from nested components should exist
 	assert.Contains(t, dotStr, `"server.sshd" -> "server.pam.unix"`,
-		"DOT should contain edge from sshd to pam.unix (BUG-03)")
+		"DOT should contain edge from sshd to pam.unix (CASE-03)")
 	assert.Contains(t, dotStr, `"server.sshd" -> "server.pam.cyp"`,
-		"DOT should contain edge from sshd to pam.cyp (BUG-03)")
+		"DOT should contain edge from sshd to pam.cyp (CASE-03)")
 	assert.Contains(t, dotStr, `"server.pam.unix" -> "server.etc"`,
-		"DOT should contain edge from pam.unix to etc (BUG-03)")
+		"DOT should contain edge from pam.unix to etc (CASE-03)")
 	assert.Contains(t, dotStr, `"server.pam.cyp" -> "server.systemd"`,
-		"DOT should contain edge from pam.cyp to systemd (BUG-03)")
+		"DOT should contain edge from pam.cyp to systemd (CASE-03)")
 }
 
 // TestHTMLTableAttributes tests REFINED-02:
@@ -243,13 +244,18 @@ func TestClusterHTMLLabels(t *testing.T) {
 	lines := strings.Split(dotStr, "\n")
 
 	foundClusterPAMWithHTMLLabel := false
+
 	for i, line := range lines {
 		// Look for cluster_server.pam subgraph
-		if strings.Contains(line, "cluster_cluster_server.pam") || strings.Contains(line, "subgraph cluster_cluster_server.pam") {
+		hasCluster := strings.Contains(line, "cluster_cluster_server.pam")
+
+		hasSubgraph := strings.Contains(line, "subgraph cluster_cluster_server.pam")
+		if hasCluster || hasSubgraph {
 			// Check subsequent lines for HTML label
 			for j := i; j < len(lines) && j < i+10; j++ {
 				if strings.Contains(lines[j], "label=<<table") {
 					foundClusterPAMWithHTMLLabel = true
+
 					break
 				}
 			}

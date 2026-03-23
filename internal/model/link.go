@@ -67,5 +67,6 @@ func FindLinkByPeer(links []Link, peer string) (*Link, bool) {
 			return &links[i], true
 		}
 	}
+
 	return nil, false
 }

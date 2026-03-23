@@ -93,7 +93,7 @@ func TestOutputFlag(t *testing.T) {
 
 	outputFlag := cmd.PersistentFlags().Lookup("output")
 	assert.NotNil(t, outputFlag)
-	assert.Equal(t, ".", outputFlag.DefValue)
+	assert.Equal(t, "", outputFlag.DefValue) // Empty default, resolved to input file's directory at runtime
 	assert.Equal(t, "o", outputFlag.Shorthand)
 }
 

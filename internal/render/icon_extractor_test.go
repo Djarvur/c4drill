@@ -10,6 +10,7 @@ import (
 )
 
 func TestIconExtractor_Extract(t *testing.T) {
+	t.Parallel()
 	// Create temp directory for test
 	tmpDir := t.TempDir()
 
@@ -26,12 +27,14 @@ func TestIconExtractor_Extract(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify content has color
+	//nolint:gosec // G304: Test file reading from controlled temp directory
 	content, err := os.ReadFile(fullPath)
 	require.NoError(t, err)
 	assert.Contains(t, string(content), "#3C7FC0")
 }
 
 func TestIconExtractor_ExtractCachesInMemory(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	extractor := NewIconExtractor(tmpDir)
 
@@ -46,6 +49,7 @@ func TestIconExtractor_ExtractCachesInMemory(t *testing.T) {
 }
 
 func TestIconExtractor_ExtractSkipsExistingFiles(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	extractor := NewIconExtractor(tmpDir)
 
@@ -63,6 +67,7 @@ func TestIconExtractor_ExtractSkipsExistingFiles(t *testing.T) {
 }
 
 func TestIconExtractor_HexColorWithAndWithoutHash(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	extractor := NewIconExtractor(tmpDir)
 
@@ -72,12 +77,14 @@ func TestIconExtractor_HexColorWithAndWithoutHash(t *testing.T) {
 
 	// Verify file created
 	fullPath := filepath.Join(tmpDir, ".icons", "component-78A8D8.svg")
+	//nolint:gosec // G304: Test file reading from controlled temp directory
 	content, err := os.ReadFile(fullPath)
 	require.NoError(t, err)
 	assert.Contains(t, string(content), "#78A8D8")
 }
 
 func TestIconExtractor_InvalidIconType(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	extractor := NewIconExtractor(tmpDir)
 

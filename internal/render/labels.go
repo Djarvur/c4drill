@@ -26,6 +26,7 @@ func buildRecordLabel(label *graph.Label) string {
 		nameBuilder.WriteString(label.Icon)
 		nameBuilder.WriteString(" ")
 	}
+
 	nameBuilder.WriteString(label.Name)
 	parts = append(parts, nameBuilder.String())
 
@@ -41,91 +42,6 @@ func buildRecordLabel(label *graph.Label) string {
 
 	// Join with | for record format and wrap in {}
 	return "{" + strings.Join(parts, "|") + "}"
-}
-
-// buildPersonRecordLabel generates a record-style label for Person-type nodes.
-// Format: "{icon}|{name|description}" creates a two-column layout with icon
-// spanning the full height on the left, and name/description stacked on the right.
-//
-// Visual layout:
-//
-//	┌──────┬──────────────────┐
-//	│      │ Name             │
-//	│ icon ├──────────────────┤
-//	│      │ Description      │
-//	└──────┴──────────────────┘
-func buildPersonRecordLabel(label *graph.Label) string {
-	if label == nil {
-		return ""
-	}
-
-	var sb strings.Builder
-
-	// Left cell: icon (spans full height)
-	sb.WriteString("{")
-	if label.Icon != "" {
-		sb.WriteString(label.Icon)
-	}
-	sb.WriteString("}|{")
-
-	// Right cells: name over description
-	sb.WriteString(label.Name)
-
-	if label.Description != "" {
-		sb.WriteString("|")
-		sb.WriteString(label.Description)
-	}
-
-	sb.WriteString("}")
-
-	return sb.String()
-}
-
-// buildHTMLLabel generates an HTML table label for a node.
-// Format:
-//
-//	<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
-//	  <TR><TD>{icon} {name}</TD></TR>
-//	  <TR><TD>{technology}</TD></TR>  (if present)
-//	  <TR><TD>{description}</TD></TR> (if present)
-//	</TABLE>>
-//
-// Deprecated: Use buildRecordLabel for record shapes instead.
-func buildHTMLLabel(label *graph.Label) string {
-	if label == nil {
-		return ""
-	}
-
-	var sb strings.Builder
-	sb.WriteString(`<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">`)
-	sb.WriteString(`<TR><TD>`)
-
-	// Add icon if present
-	if label.Icon != "" {
-		sb.WriteString(label.Icon)
-		sb.WriteString(" ")
-	}
-
-	sb.WriteString(label.Name)
-	sb.WriteString(`</TD></TR>`)
-
-	// Add technology row if present
-	if label.Technology != "" {
-		sb.WriteString(`<TR><TD>`)
-		sb.WriteString(label.Technology)
-		sb.WriteString(`</TD></TR>`)
-	}
-
-	// Add description row if present
-	if label.Description != "" {
-		sb.WriteString(`<TR><TD>`)
-		sb.WriteString(label.Description)
-		sb.WriteString(`</TD></TR>`)
-	}
-
-	sb.WriteString(`</TABLE>>`)
-
-	return sb.String()
 }
 
 // buildEdgeLabel generates a label for an edge.
@@ -195,6 +111,7 @@ func buildPersonHTMLLabel(label *graph.Label, iconRelPath string) string {
 
 	// Row 1: Icon (rowspan) + Name
 	sb.WriteString(`<tr align="center">`)
+
 	if iconRelPath != "" {
 		sb.WriteString(`<td rowspan="`)
 		sb.WriteString(strconv.Itoa(rowspan))
@@ -204,6 +121,7 @@ func buildPersonHTMLLabel(label *graph.Label, iconRelPath string) string {
 		sb.WriteString(`" width="32" height="32"/>`)
 		sb.WriteString(`</td>`)
 	}
+
 	sb.WriteString(`<td valign="bottom"><b>`)
 	sb.WriteString(html.EscapeString(label.Name))
 	sb.WriteString(`</b></td>`)
@@ -239,12 +157,14 @@ func buildDbHTMLLabel(label *graph.Label, iconRelPath string) string {
 	if label.Technology != "" {
 		rowspan++
 	}
+
 	if label.Description != "" {
 		rowspan++
 	}
 
 	// Row 1: Icon (rowspan) + Name
 	sb.WriteString(`<tr align="center">`)
+
 	if iconRelPath != "" {
 		sb.WriteString(`<td rowspan="`)
 		sb.WriteString(strconv.Itoa(rowspan))
@@ -254,6 +174,7 @@ func buildDbHTMLLabel(label *graph.Label, iconRelPath string) string {
 		sb.WriteString(`" width="32" height="32"/>`)
 		sb.WriteString(`</td>`)
 	}
+
 	sb.WriteString(`<td valign="bottom"><b>`)
 	sb.WriteString(html.EscapeString(label.Name))
 	sb.WriteString(`</b></td>`)
@@ -296,11 +217,13 @@ func buildQueueHTMLLabel(label *graph.Label, iconRelPath string) string {
 	// Row 1: Icon (NO rowspan - separate row)
 	sb.WriteString(`<tr align="center">`)
 	sb.WriteString(`<td valign="middle">`)
+
 	if iconRelPath != "" {
 		sb.WriteString(`<img src="`)
 		sb.WriteString(iconRelPath)
 		sb.WriteString(`" width="32" height="32"/>`)
 	}
+
 	sb.WriteString(`</td>`)
 	sb.WriteString(`</tr>`)
 
@@ -350,12 +273,14 @@ func buildSystemHTMLLabel(label *graph.Label, iconRelPath string) string {
 	if label.Technology != "" {
 		rowspan++
 	}
+
 	if label.Description != "" {
 		rowspan++
 	}
 
 	// Row 1: Icon (rowspan) + Name
 	sb.WriteString(`<tr align="center">`)
+
 	if iconRelPath != "" {
 		sb.WriteString(`<td rowspan="`)
 		sb.WriteString(strconv.Itoa(rowspan))
@@ -365,6 +290,7 @@ func buildSystemHTMLLabel(label *graph.Label, iconRelPath string) string {
 		sb.WriteString(`" width="32" height="32"/>`)
 		sb.WriteString(`</td>`)
 	}
+
 	sb.WriteString(`<td valign="bottom"><b>`)
 	sb.WriteString(html.EscapeString(label.Name))
 	sb.WriteString(`</b></td>`)
@@ -409,12 +335,14 @@ func buildContainerHTMLLabel(label *graph.Label, iconRelPath string) string {
 	if label.Technology != "" {
 		rowspan++
 	}
+
 	if label.Description != "" {
 		rowspan++
 	}
 
 	// Row 1: Icon (rowspan) + Name
 	sb.WriteString(`<tr align="center">`)
+
 	if iconRelPath != "" {
 		sb.WriteString(`<td rowspan="`)
 		sb.WriteString(strconv.Itoa(rowspan))
@@ -424,6 +352,7 @@ func buildContainerHTMLLabel(label *graph.Label, iconRelPath string) string {
 		sb.WriteString(`" width="32" height="32"/>`)
 		sb.WriteString(`</td>`)
 	}
+
 	sb.WriteString(`<td valign="bottom"><b>`)
 	sb.WriteString(html.EscapeString(label.Name))
 	sb.WriteString(`</b></td>`)
@@ -468,12 +397,14 @@ func buildComponentHTMLLabel(label *graph.Label, iconRelPath string) string {
 	if label.Technology != "" {
 		rowspan++
 	}
+
 	if label.Description != "" {
 		rowspan++
 	}
 
 	// Row 1: Icon (rowspan) + Name
 	sb.WriteString(`<tr align="center">`)
+
 	if iconRelPath != "" {
 		sb.WriteString(`<td rowspan="`)
 		sb.WriteString(strconv.Itoa(rowspan))
@@ -483,6 +414,7 @@ func buildComponentHTMLLabel(label *graph.Label, iconRelPath string) string {
 		sb.WriteString(`" width="32" height="32"/>`)
 		sb.WriteString(`</td>`)
 	}
+
 	sb.WriteString(`<td valign="bottom"><b>`)
 	sb.WriteString(html.EscapeString(label.Name))
 	sb.WriteString(`</b></td>`)

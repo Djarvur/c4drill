@@ -749,7 +749,8 @@ func TestValidateNestingHierarchy_RejectsC3InSystem(t *testing.T) {
 				t.Fatalf("expected 1 error, got %d", len(errors))
 			}
 
-			expectedMsg := `unit "system.child" has type ` + string(tc.unitType) + ` which must be inside container (C2 types only in system)`
+			expectedMsg := `unit "system.child" has type ` + string(tc.unitType) +
+				` which must be inside container (C2 types only in system)`
 			if errors[0].Message != expectedMsg {
 				t.Errorf("expected message %q, got %q", expectedMsg, errors[0].Message)
 			}
@@ -852,7 +853,8 @@ func TestValidateNestingHierarchy_RejectsC2InContainer(t *testing.T) {
 				t.Fatalf("expected 1 error, got %d", len(errors))
 			}
 
-			expectedMsg := `unit "system.api.child" has type ` + string(tc.unitType) + ` which must be inside component (C3 types only in container)`
+			expectedMsg := `unit "system.api.child" has type ` + string(tc.unitType) +
+				` which must be inside component (C3 types only in container)`
 			if errors[0].Message != expectedMsg {
 				t.Errorf("expected message %q, got %q", expectedMsg, errors[0].Message)
 			}

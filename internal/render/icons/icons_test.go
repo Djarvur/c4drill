@@ -9,11 +9,13 @@ import (
 )
 
 func TestGetTemplate(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
-		name          string
-		iconType      string
-		wantErr       bool
-		wantContains  string
+		name         string
+		iconType     string
+		wantErr      bool
+		wantContains string
 	}{
 		{"person icon", TypePerson, false, "currentColor"},
 		{"db icon", TypeDb, false, "currentColor"},
@@ -26,11 +28,15 @@ func TestGetTemplate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got, err := GetTemplate(tt.iconType)
 			if tt.wantErr {
 				require.Error(t, err)
+
 				return
 			}
+
 			require.NoError(t, err)
 			assert.Contains(t, got, tt.wantContains)
 			assert.Contains(t, got, "svg")
@@ -39,6 +45,8 @@ func TestGetTemplate(t *testing.T) {
 }
 
 func TestColorize(t *testing.T) {
+	t.Parallel()
+
 	template := `<svg><circle stroke="currentColor"/></svg>`
 
 	result := Colorize(template, "#3C7FC0")
@@ -48,6 +56,8 @@ func TestColorize(t *testing.T) {
 }
 
 func TestColorizePreservesStructure(t *testing.T) {
+	t.Parallel()
+
 	template, err := GetTemplate(TypePerson)
 	require.NoError(t, err)
 

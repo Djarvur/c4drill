@@ -59,6 +59,7 @@ func BuildExpandedGraph(v *view.View) *Graph {
 
 	// Find top-level units (those without a dot in their path)
 	topLevelUnits := make(map[string]*view.Entry)
+
 	for path, entry := range v.Units {
 		if !strings.Contains(path, ".") {
 			topLevelUnits[path] = entry
@@ -98,6 +99,7 @@ func buildNestedCluster(entry *view.Entry, path string, v *view.View) *Cluster {
 	// Process subunits
 	for childName, childUnit := range entry.Unit.Subunits {
 		childPath := path + "." + childName
+
 		childEntry, exists := v.Units[childPath]
 		if !exists {
 			// Create entry if not in view (shouldn't happen, but be defensive)

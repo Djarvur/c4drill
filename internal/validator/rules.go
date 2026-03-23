@@ -140,7 +140,7 @@ func ValidateOrphanUnits(index map[string]*UnitInfo) ValidationErrors {
 	return errors
 }
 
-// C1 types - top-level context types
+// C1 types - top-level context types.
 var c1Types = map[model.UnitType]bool{
 	model.TypePerson:         true,
 	model.TypePersonExternal: true,
@@ -153,21 +153,21 @@ var c1Types = map[model.UnitType]bool{
 	model.TypeBox:            true,
 }
 
-// C2 types - container-level types (inside system/box)
+// C2 types - container-level types (inside system/box).
 var c2Types = map[model.UnitType]bool{
 	model.TypeContainer:      true,
 	model.TypeContainerDb:    true,
 	model.TypeContainerQueue: true,
 }
 
-// C3 types - component-level types (inside container)
+// C3 types - component-level types (inside container).
 var c3Types = map[model.UnitType]bool{
 	model.TypeComponent:      true,
 	model.TypeComponentDb:    true,
 	model.TypeComponentQueue: true,
 }
 
-// c1ContainerTypes are C1 types that can contain C2 types
+// c1ContainerTypes are C1 types that can contain C2 types.
 var c1ContainerTypes = map[model.UnitType]bool{
 	model.TypeSystem:         true,
 	model.TypeSystemExternal: true,
@@ -193,6 +193,7 @@ func ValidateNestingHierarchy(index map[string]*UnitInfo) ValidationErrors {
 					Path:    path,
 				})
 			}
+
 			continue
 		}
 
@@ -202,16 +203,19 @@ func ValidateNestingHierarchy(index map[string]*UnitInfo) ValidationErrors {
 			// Orphan references are handled by ValidateReferences
 			continue
 		}
+
 		parentType := parentInfo.Unit.Type
 
 		// If parent is a C1 container type (system/box), children must be C2
 		if c1ContainerTypes[parentType] {
 			if !c2Types[unitType] {
 				errors = append(errors, &ValidationError{
-					Message: fmt.Sprintf(`unit "%s" has type %s which must be inside container (C2 types only in %s)`, path, unitType, parentType),
+					Message: fmt.Sprintf(`unit "%s" has type %s which must be inside container (C2 types only in %s)`,
+						path, unitType, parentType),
 					Path:    path,
 				})
 			}
+
 			continue
 		}
 
@@ -219,10 +223,12 @@ func ValidateNestingHierarchy(index map[string]*UnitInfo) ValidationErrors {
 		if parentType == model.TypeContainer {
 			if !c3Types[unitType] {
 				errors = append(errors, &ValidationError{
-					Message: fmt.Sprintf(`unit "%s" has type %s which must be inside component (C3 types only in container)`, path, unitType),
+					Message: fmt.Sprintf(`unit "%s" has type %s which must be inside component (C3 types only in container)`,
+						path, unitType),
 					Path:    path,
 				})
 			}
+
 			continue
 		}
 

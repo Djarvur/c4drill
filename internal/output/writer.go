@@ -20,14 +20,14 @@ type Writer struct {
 	baseDir string
 }
 
-// BaseDir returns the base output directory.
-func (w *Writer) BaseDir() string {
-	return w.baseDir
-}
-
 // NewWriter creates a new Writer that outputs files to the specified base directory.
 func NewWriter(baseDir string) *Writer {
 	return &Writer{baseDir: baseDir}
+}
+
+// BaseDir returns the base output directory.
+func (w *Writer) BaseDir() string {
+	return w.baseDir
 }
 
 // Write writes rendered data to the appropriate output path.

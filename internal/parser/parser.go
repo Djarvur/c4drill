@@ -12,7 +12,7 @@ import (
 // Default type based on nesting level:
 // - C1 (root level): system
 // - C2 (inside system/box): container
-// - C3 (inside container): component
+// - C3 (inside container): component.
 const (
 	defaultTypeC1 = model.TypeSystem
 	defaultTypeC2 = model.TypeContainer
@@ -21,7 +21,7 @@ const (
 
 // Generic types that can be auto-transformed based on nesting level:
 // - db at C1 -> db, at C2 -> containerDb, at C3 -> componentDb
-// - queue at C1 -> queue, at C2 -> containerQueue, at C3 -> componentQueue
+// - queue at C1 -> queue, at C2 -> containerQueue, at C3 -> componentQueue.
 var genericDbTypes = map[model.UnitType]bool{
 	model.TypeDb:    true,
 	model.TypeQueue: true,
@@ -137,8 +137,9 @@ func parseUnit(name string, value any, parentType model.UnitType) (*model.Unit, 
 // defaultTypeForParent returns the default unit type based on parent type.
 // - No parent (C1 level): system
 // - Parent is system/systemExternal/box (C2 level): container
-// - Parent is container (C3 level): component
+// - Parent is container (C3 level): component.
 func defaultTypeForParent(parentType model.UnitType) model.UnitType {
+	//nolint:exhaustive // Default case handles all remaining types
 	switch parentType {
 	case "": // No parent = C1 level (root)
 		return defaultTypeC1
@@ -158,19 +159,21 @@ func defaultTypeForParent(parentType model.UnitType) model.UnitType {
 // based on the nesting level determined by parent type.
 // - C1 (no parent): db -> db, queue -> queue
 // - C2 (inside system/systemExternal/box): db -> containerDb, queue -> containerQueue
-// - C3 (inside container): db -> componentDb, queue -> componentQueue
+// - C3 (inside container): db -> componentDb, queue -> componentQueue.
 func inferGenericType(unitType model.UnitType, parentType model.UnitType) model.UnitType {
 	if !genericDbTypes[unitType] {
 		return unitType // Not a generic type, return as-is
 	}
 
 	// Determine the nesting level and transform type accordingly
+	//nolint:exhaustive // Default case handles all remaining types
 	switch parentType {
 	case "": // C1 level (root)
 		return unitType // db stays db, queue stays queue
 	case model.TypeSystem,
 		model.TypeSystemExternal,
 		model.TypeBox: // C2 level
+		//nolint:exhaustive // Only db/queue are generic types, handled explicitly
 		switch unitType {
 		case model.TypeDb:
 			return model.TypeContainerDb
@@ -178,6 +181,7 @@ func inferGenericType(unitType model.UnitType, parentType model.UnitType) model.
 			return model.TypeContainerQueue
 		}
 	case model.TypeContainer: // C3 level
+		//nolint:exhaustive // Only db/queue are generic types, handled explicitly
 		switch unitType {
 		case model.TypeDb:
 			return model.TypeComponentDb

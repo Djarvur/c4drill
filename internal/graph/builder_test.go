@@ -486,13 +486,14 @@ func TestBuildExpandedGraph(t *testing.T) {
 		cluster := g.Clusters[0]
 		// Both leaf subunits should be nodes, not clusters
 		assert.Len(t, cluster.Nodes, 2)
-		assert.Len(t, cluster.Clusters, 0)
+		assert.Empty(t, cluster.Clusters)
 
 		// Verify node IDs
 		nodeIDs := make(map[string]bool)
 		for _, node := range cluster.Nodes {
 			nodeIDs[node.ID] = true
 		}
+
 		assert.True(t, nodeIDs["mainapp.api"])
 		assert.True(t, nodeIDs["mainapp.web"])
 	})
@@ -640,8 +641,8 @@ func TestBuildGraphEdgeColor(t *testing.T) {
 			Properties: model.Properties{Name: "Test"},
 			Units: map[string]*model.Unit{
 				"app": {
-					Type: model.TypeSystem, // C1 -> SystemBorder = "#3C7FC0"
-					Name: "App",
+					Type:  model.TypeSystem, // C1 -> SystemBorder = "#3C7FC0"
+					Name:  "App",
 					Links: []model.Link{{Peer: "db"}},
 				},
 				"db": {
@@ -666,8 +667,8 @@ func TestBuildGraphEdgeColor(t *testing.T) {
 			Properties: model.Properties{Name: "Test"},
 			Units: map[string]*model.Unit{
 				"ext": {
-					Type: model.TypeSystemExternal, // -> SystemExternalBorder = "#8A8A8A"
-					Name: "External",
+					Type:  model.TypeSystemExternal, // -> SystemExternalBorder = "#8A8A8A"
+					Name:  "External",
 					Links: []model.Link{{Peer: "app"}},
 				},
 				"app": {
@@ -721,13 +722,13 @@ func TestBuildGraphEdgeColor(t *testing.T) {
 			Properties: model.Properties{Name: "Test"},
 			Units: map[string]*model.Unit{
 				"app": {
-					Type: model.TypeSystem,
-					Name: "App",
+					Type:     model.TypeSystem,
+					Name:     "App",
 					Expanded: []string{"app"},
 					Subunits: map[string]*model.Unit{
 						"api": {
-							Type: model.TypeContainer, // C2 -> ContainerBorder = "#3C7FC0"
-							Name: "API",
+							Type:  model.TypeContainer, // C2 -> ContainerBorder = "#3C7FC0"
+							Name:  "API",
 							Links: []model.Link{{Peer: "app.db"}},
 						},
 						"db": {
@@ -759,13 +760,13 @@ func TestBuildGraphEdgeColor(t *testing.T) {
 					Name: "App",
 					Subunits: map[string]*model.Unit{
 						"api": {
-							Type: model.TypeContainer,
-							Name: "API",
+							Type:     model.TypeContainer,
+							Name:     "API",
 							Expanded: []string{"api"},
 							Subunits: map[string]*model.Unit{
 								"auth": {
-									Type: model.TypeComponent, // C3 -> ComponentBorder = "#78A8D8"
-									Name: "Auth",
+									Type:  model.TypeComponent, // C3 -> ComponentBorder = "#78A8D8"
+									Name:  "Auth",
 									Links: []model.Link{{Peer: "app.api.store"}},
 								},
 								"store": {
@@ -795,8 +796,8 @@ func TestBuildGraphEdgeColor(t *testing.T) {
 			Properties: model.Properties{Name: "Test"},
 			Units: map[string]*model.Unit{
 				"app": {
-					Type: model.TypeSystem,
-					Name: "App",
+					Type:      model.TypeSystem,
+					Name:      "App",
 					LinksFrom: []model.Link{{Peer: "ext"}}, // ext -> app, source is ext
 				},
 				"ext": {

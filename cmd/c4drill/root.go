@@ -25,6 +25,11 @@ var (
 	errBuildGraph       = errors.New("failed to build graph")
 )
 
+const (
+	formatDot = "dot"
+	formatSVG = "svg"
+)
+
 //nolint:gochecknoglobals // Cobra flags require package-level variables for PersistentFlags registration
 var (
 	format    string
@@ -59,7 +64,7 @@ Output:
 		SilenceUsage: true,
 	}
 
-	cmd.PersistentFlags().StringVarP(&format, "format", "f", "svg",
+	cmd.PersistentFlags().StringVarP(&format, "format", "f", formatSVG,
 		"Output format (dot|svg)")
 	cmd.PersistentFlags().StringVarP(&outputDir, "output", "o", "",
 		"Output directory (default: same as input file)")
@@ -74,11 +79,15 @@ Output:
 func runRoot(cmd *cobra.Command, args []string) error {
 	// Show help if no input file provided
 	if len(args) == 0 {
-		return cmd.Help()
+		if err := cmd.Help(); err != nil {
+			return fmt.Errorf("show help: %w", err)
+		}
+
+		return nil
 	}
 
 	// Validate flags early (before file I/O)
-	if format != "dot" && format != "svg" {
+	if format != formatDot && format != formatSVG {
 		return fmt.Errorf("%w: %q", errInvalidFormat, format)
 	}
 
@@ -198,13 +207,17 @@ func processView(m *parser.Model, unitPath, basename string, writer *output.Writ
 	}
 
 	// Render with output directory for icon extraction (SVG only)
-	var data []byte
-	var err error
-	if format == "svg" {
+	var (
+		data []byte
+		err  error
+	)
+
+	if format == formatSVG {
 		data, err = render.RenderSVGWithOutput(g, writer.BaseDir())
 	} else {
 		data, err = render.Render(g, format)
 	}
+
 	if err != nil {
 		return fmt.Errorf("render: %w", err)
 	}
@@ -233,13 +246,17 @@ func processExpandedView(m *parser.Model, basename string, writer *output.Writer
 	}
 
 	// Render with icon extraction for SVG format
-	var data []byte
-	var err error
-	if format == "svg" {
+	var (
+		data []byte
+		err  error
+	)
+
+	if format == formatSVG {
 		data, err = render.RenderSVGWithOutput(g, writer.BaseDir())
 	} else {
 		data, err = render.Render(g, format)
 	}
+
 	if err != nil {
 		return fmt.Errorf("render: %w", err)
 	}

@@ -47,7 +47,8 @@ const (
 
 // buildCgraph converts a graph.Graph to a cgraph.Graph for rendering.
 // outputDir is the base directory where the SVG will be written (for icon extraction).
-func buildCgraph(gv *graphviz.Graphviz, g *graph.Graph, outputDir string) (*cgraph.Graph, error) {
+// useBase64 indicates whether to embed icons as base64 data URIs (needed for WASM graphviz).
+func buildCgraph(gv *graphviz.Graphviz, g *graph.Graph, outputDir string, useBase64 bool) (*cgraph.Graph, error) {
 	cg, err := gv.Graph()
 	if err != nil {
 		return nil, fmt.Errorf("create cgraph: %w", err)
@@ -71,7 +72,7 @@ func buildCgraph(gv *graphviz.Graphviz, g *graph.Graph, outputDir string) (*cgra
 			continue // Will be created inside cluster
 		}
 
-		cn, err := createNode(cg, node, iconExtractor)
+		cn, err := createNode(cg, node, iconExtractor, useBase64)
 		if err != nil {
 			return nil, fmt.Errorf("create node %s: %w", node.ID, err)
 		}
@@ -81,7 +82,7 @@ func buildCgraph(gv *graphviz.Graphviz, g *graph.Graph, outputDir string) (*cgra
 
 	// Create clusters with their nodes
 	for _, cluster := range g.Clusters {
-		if err := createCluster(cg, cluster, nodeMap, iconExtractor); err != nil {
+		if err := createCluster(cg, cluster, nodeMap, iconExtractor, useBase64); err != nil {
 			return nil, fmt.Errorf("create cluster %s: %w", cluster.ID, err)
 		}
 	}
@@ -169,7 +170,8 @@ func joinLabels(parts []string) string {
 }
 
 // createNode creates a cgraph.Node from a graph.Node.
-func createNode(cg *cgraph.Graph, node *graph.Node, iconExtractor *IconExtractor) (*cgraph.Node, error) {
+// useBase64 indicates whether to embed icons as base64 data URIs.
+func createNode(cg *cgraph.Graph, node *graph.Node, iconExtractor *IconExtractor, useBase64 bool) (*cgraph.Node, error) {
 	cn, err := cg.CreateNodeByName(node.ID)
 	if err != nil {
 		return nil, fmt.Errorf("create node by name: %w", err)
@@ -181,9 +183,17 @@ func createNode(cg *cgraph.Graph, node *graph.Node, iconExtractor *IconExtractor
 
 	// Extract icon and build HTML label
 	iconRelPath := ""
+
 	if iconExtractor != nil && node.Style != nil && node.Style.BorderColor != "" {
 		iconType := iconTypeForUnit(node.Type)
-		iconRelPath, err = iconExtractor.Extract(iconType, node.Style.BorderColor)
+		if useBase64 {
+			// Use base64 data URI for WASM graphviz (can't load external files)
+			iconRelPath, err = iconExtractor.ExtractSVGBase64(iconType, node.Style.BorderColor)
+		} else {
+			// Use external file path for native dot command
+			iconRelPath, err = iconExtractor.Extract(iconType, node.Style.BorderColor)
+		}
+
 		if err != nil {
 			// Log warning but continue without icon (graceful degradation)
 			iconRelPath = ""
@@ -201,6 +211,7 @@ func createNode(cg *cgraph.Graph, node *graph.Node, iconExtractor *IconExtractor
 			if err != nil {
 				return nil, fmt.Errorf("create HTML label: %w", err)
 			}
+
 			cn.SetLabel(htmlStr)
 		}
 	}
@@ -212,6 +223,7 @@ func createNode(cg *cgraph.Graph, node *graph.Node, iconExtractor *IconExtractor
 		// Add filled style if FillColor is specified
 		if node.Style.FillColor != "" {
 			styles = append(styles, "filled")
+
 			cn.SetFillColor(node.Style.FillColor)
 		}
 
@@ -229,7 +241,9 @@ func createNode(cg *cgraph.Graph, node *graph.Node, iconExtractor *IconExtractor
 	}
 
 	// Set combined style using SafeSet (must be called on Node, not Base())
-	cn.SafeSet("style", strings.Join(styles, ","), "")
+	if err := cn.SafeSet("style", strings.Join(styles, ","), ""); err != nil {
+		return nil, fmt.Errorf("set node style: %w", err)
+	}
 
 	// Set URL for clickable nodes (explore links)
 	if node.ExploreURL != "" {
@@ -240,7 +254,8 @@ func createNode(cg *cgraph.Graph, node *graph.Node, iconExtractor *IconExtractor
 }
 
 // createCluster creates a subgraph cluster from a graph.Cluster.
-func createCluster(parent *cgraph.Graph, cluster *graph.Cluster, nodeMap map[string]*cgraph.Node, iconExtractor *IconExtractor) error {
+// useBase64 indicates whether to embed icons as base64 data URIs.
+func createCluster(parent *cgraph.Graph, cluster *graph.Cluster, nodeMap map[string]*cgraph.Node, iconExtractor *IconExtractor, useBase64 bool) error {
 	// Name must start with "cluster_" for GraphViz to render as cluster
 	subgraph, err := parent.CreateSubGraphByName("cluster_" + cluster.ID)
 	if err != nil {
@@ -249,9 +264,17 @@ func createCluster(parent *cgraph.Graph, cluster *graph.Cluster, nodeMap map[str
 
 	// Extract icon for cluster label
 	iconRelPath := ""
+
 	if iconExtractor != nil && cluster.Style != nil && cluster.Style.BorderColor != "" {
 		iconType := iconTypeForUnit(cluster.Type)
-		iconRelPath, err = iconExtractor.Extract(iconType, cluster.Style.BorderColor)
+		if useBase64 {
+			// Use SVG base64 data URI for WASM graphviz (can't load external files)
+			iconRelPath, err = iconExtractor.ExtractSVGBase64(iconType, cluster.Style.BorderColor)
+		} else {
+			// Use external file path for native dot command
+			iconRelPath, err = iconExtractor.Extract(iconType, cluster.Style.BorderColor)
+		}
+
 		if err != nil {
 			// Log warning but continue without icon (graceful degradation)
 			iconRelPath = ""
@@ -266,6 +289,7 @@ func createCluster(parent *cgraph.Graph, cluster *graph.Cluster, nodeMap map[str
 			if err != nil {
 				return fmt.Errorf("create HTML cluster label: %w", err)
 			}
+
 			subgraph.SetLabel(htmlStr)
 		}
 	}
@@ -277,17 +301,22 @@ func createCluster(parent *cgraph.Graph, cluster *graph.Cluster, nodeMap map[str
 		// Add filled style if FillColor is specified
 		if cluster.Style.FillColor != "" {
 			styles = append(styles, "filled")
+
 			subgraph.SetBackgroundColor(cluster.Style.FillColor)
 		}
 
 		// Set font color for cluster label
 		if cluster.Style.FontColor != "" {
-			subgraph.SafeSet("fontcolor", cluster.Style.FontColor, "")
+			if err := subgraph.SafeSet("fontcolor", cluster.Style.FontColor, ""); err != nil {
+				return fmt.Errorf("set cluster fontcolor: %w", err)
+			}
 		}
 
 		// Set border color (cluster uses 'color' for border)
 		if cluster.Style.BorderColor != "" {
-			subgraph.SafeSet("color", cluster.Style.BorderColor, "")
+			if err := subgraph.SafeSet("color", cluster.Style.BorderColor, ""); err != nil {
+				return fmt.Errorf("set cluster color: %w", err)
+			}
 		}
 
 		if cluster.Style.BorderStyle == borderStyleDashed {
@@ -296,11 +325,13 @@ func createCluster(parent *cgraph.Graph, cluster *graph.Cluster, nodeMap map[str
 	}
 
 	// Set combined style using SafeSet (called on Graph which embeds Object)
-	subgraph.SafeSet("style", strings.Join(styles, ","), "")
+	if err := subgraph.SafeSet("style", strings.Join(styles, ","), ""); err != nil {
+		return fmt.Errorf("set cluster style: %w", err)
+	}
 
 	// Create nodes inside cluster
 	for _, node := range cluster.Nodes {
-		cn, err := createNode(subgraph, node, iconExtractor)
+		cn, err := createNode(subgraph, node, iconExtractor, useBase64)
 		if err != nil {
 			return fmt.Errorf("create node %s in cluster: %w", node.ID, err)
 		}
@@ -310,7 +341,7 @@ func createCluster(parent *cgraph.Graph, cluster *graph.Cluster, nodeMap map[str
 
 	// Create nested clusters recursively
 	for _, nestedCluster := range cluster.Clusters {
-		if err := createCluster(subgraph, nestedCluster, nodeMap, iconExtractor); err != nil {
+		if err := createCluster(subgraph, nestedCluster, nodeMap, iconExtractor, useBase64); err != nil {
 			return fmt.Errorf("create nested cluster %s: %w", nestedCluster.ID, err)
 		}
 	}
@@ -325,6 +356,7 @@ func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge)
 	if edge.Label != nil && edge.Label.Description != "" {
 		edgeName += "_" + sanitizeForName(edge.Label.Description)
 	}
+
 	e, err := cg.CreateEdgeByName(edgeName, source, target)
 	if err != nil {
 		return fmt.Errorf("create edge by name: %w", err)
@@ -371,6 +403,7 @@ func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge)
 // Replaces spaces and special characters with underscores.
 func sanitizeForName(s string) string {
 	var result strings.Builder
+
 	for _, r := range s {
 		if unicode.IsLetter(r) || unicode.IsDigit(r) {
 			result.WriteRune(r)
@@ -378,5 +411,6 @@ func sanitizeForName(s string) string {
 			result.WriteRune('_')
 		}
 	}
+
 	return result.String()
 }
