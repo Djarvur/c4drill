@@ -24,6 +24,9 @@ linters:
   settings:
     gocognit:
       min-complexity: 15
+    gomoddirectives:
+      replace-allow-list:
+        - github.com/goccy/go-graphviz
   exclusions:
     rules:
       # Exclude errcheck for deferred Close() calls

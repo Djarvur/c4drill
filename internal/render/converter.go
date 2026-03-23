@@ -98,7 +98,13 @@ func buildStyleString(style *styleInfo) []string {
 // useBase64 indicates whether to embed icons as base64 data URIs (needed for WASM graphviz).
 // iconPlaceholder, if non-empty, is used instead of real icon extraction to reserve
 // layout space for post-render icon injection.
-func buildCgraph(gv *graphviz.Graphviz, g *graph.Graph, outputDir string, useBase64 bool, iconPlaceholder string) (*cgraph.Graph, error) {
+func buildCgraph(
+	gv *graphviz.Graphviz,
+	g *graph.Graph,
+	outputDir string,
+	useBase64 bool,
+	iconPlaceholder string,
+) (*cgraph.Graph, error) {
 	cg, err := gv.Graph()
 	if err != nil {
 		return nil, fmt.Errorf("create cgraph: %w", err)
@@ -399,7 +405,12 @@ func createCluster(
 }
 
 // extractClusterIcon extracts the icon path for a cluster.
-func extractClusterIcon(cluster *graph.Cluster, iconExtractor *IconExtractor, useBase64 bool, iconPlaceholder string) string {
+func extractClusterIcon(
+	cluster *graph.Cluster,
+	iconExtractor *IconExtractor,
+	useBase64 bool,
+	iconPlaceholder string,
+) string {
 	if cluster.Style == nil {
 		return ""
 	}
