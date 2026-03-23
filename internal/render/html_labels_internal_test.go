@@ -69,9 +69,9 @@ func TestHTMLQueueLabel(t *testing.T) {
 	if !strings.Contains(result, "<table") {
 		t.Error("Queue label should contain HTML table")
 	}
-	// Queue has NO rowspan - 4 separate rows
-	if strings.Contains(result, "rowspan") {
-		t.Error("Queue label should NOT contain rowspan")
+	// Queue uses rowspan like other unit types
+	if !strings.Contains(result, "rowspan") {
+		t.Error("Queue label should contain rowspan")
 	}
 
 	if !strings.Contains(result, `<img src=".icons/pipe-3C7FC0.svg"`) {

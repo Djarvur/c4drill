@@ -10,6 +10,12 @@ import (
 	"github.com/Djarvur/c4drill/internal/render/icons"
 )
 
+// iconReserve is a sentinel value used as iconRelPath to signal that the icon
+// cell should be allocated (with width="36") but no <img> tag should be emitted.
+// Used for SVG rendering where the layout must reserve space for post-render
+// icon injection.
+const iconReserve = "\x00icon"
+
 // buildRecordLabel generates a record-style label for a node.
 // Format: "{Name|Technology|Description}" for record shapes.
 // Each field is on a separate row with left alignment.
@@ -113,12 +119,16 @@ func buildPersonHTMLLabel(label *graph.Label, iconRelPath string) string {
 	sb.WriteString(`<tr align="center">`)
 
 	if iconRelPath != "" {
-		sb.WriteString(`<td rowspan="`)
+		sb.WriteString(`<td width="36" rowspan="`)
 		sb.WriteString(strconv.Itoa(rowspan))
 		sb.WriteString(`" valign="middle">`)
-		sb.WriteString(`<img src="`)
-		sb.WriteString(iconRelPath)
-		sb.WriteString(`" width="32" height="32"/>`)
+
+		if iconRelPath != iconReserve {
+			sb.WriteString(`<img src="`)
+			sb.WriteString(iconRelPath)
+			sb.WriteString(`" width="32" height="32"/>`)
+		}
+
 		sb.WriteString(`</td>`)
 	}
 
@@ -166,12 +176,16 @@ func buildDbHTMLLabel(label *graph.Label, iconRelPath string) string {
 	sb.WriteString(`<tr align="center">`)
 
 	if iconRelPath != "" {
-		sb.WriteString(`<td rowspan="`)
+		sb.WriteString(`<td width="36" rowspan="`)
 		sb.WriteString(strconv.Itoa(rowspan))
 		sb.WriteString(`" valign="middle">`)
-		sb.WriteString(`<img src="`)
-		sb.WriteString(iconRelPath)
-		sb.WriteString(`" width="32" height="32"/>`)
+
+		if iconRelPath != iconReserve {
+			sb.WriteString(`<img src="`)
+			sb.WriteString(iconRelPath)
+			sb.WriteString(`" width="32" height="32"/>`)
+		}
+
 		sb.WriteString(`</td>`)
 	}
 
@@ -204,8 +218,8 @@ func buildDbHTMLLabel(label *graph.Label, iconRelPath string) string {
 }
 
 // buildQueueHTMLLabel generates an HTML table label for Queue-type nodes.
-// Format: 4 separate rows (NO rowspan): icon, name (bold), [technology] italic, description
-// Per CONTEXT.md: Queue has NO rowspan - 4 separate single-cell rows.
+// Format: icon (rowspan) | name (bold) / [technology] italic / description
+// Same layout as other unit types.
 func buildQueueHTMLLabel(label *graph.Label, iconRelPath string) string {
 	if label == nil {
 		return ""
@@ -214,27 +228,39 @@ func buildQueueHTMLLabel(label *graph.Label, iconRelPath string) string {
 	var sb strings.Builder
 	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
 
-	// Row 1: Icon (NO rowspan - separate row)
-	sb.WriteString(`<tr align="center">`)
-	sb.WriteString(`<td valign="middle">`)
-
-	if iconRelPath != "" {
-		sb.WriteString(`<img src="`)
-		sb.WriteString(iconRelPath)
-		sb.WriteString(`" width="32" height="32"/>`)
+	// Calculate rowspan for icon: count of present fields (name always present)
+	rowspan := 1 // name
+	if label.Technology != "" {
+		rowspan++
 	}
 
-	sb.WriteString(`</td>`)
-	sb.WriteString(`</tr>`)
+	if label.Description != "" {
+		rowspan++
+	}
 
-	// Row 2: Name (bold)
+	// Row 1: Icon (rowspan) + Name
 	sb.WriteString(`<tr align="center">`)
+
+	if iconRelPath != "" {
+		sb.WriteString(`<td width="36" rowspan="`)
+		sb.WriteString(strconv.Itoa(rowspan))
+		sb.WriteString(`" valign="middle">`)
+
+		if iconRelPath != iconReserve {
+			sb.WriteString(`<img src="`)
+			sb.WriteString(iconRelPath)
+			sb.WriteString(`" width="32" height="32"/>`)
+		}
+
+		sb.WriteString(`</td>`)
+	}
+
 	sb.WriteString(`<td valign="bottom"><b>`)
 	sb.WriteString(html.EscapeString(label.Name))
 	sb.WriteString(`</b></td>`)
 	sb.WriteString(`</tr>`)
 
-	// Row 3: Technology (if present)
+	// Row 2: Technology (if present)
 	if label.Technology != "" {
 		sb.WriteString(`<tr align="center">`)
 		sb.WriteString(`<td valign="middle"><i>[`)
@@ -243,7 +269,7 @@ func buildQueueHTMLLabel(label *graph.Label, iconRelPath string) string {
 		sb.WriteString(`</tr>`)
 	}
 
-	// Row 4: Description (if present)
+	// Row 3: Description (if present)
 	if label.Description != "" {
 		sb.WriteString(`<tr align="center">`)
 		sb.WriteString(`<td valign="top">`)
@@ -282,12 +308,16 @@ func buildSystemHTMLLabel(label *graph.Label, iconRelPath string) string {
 	sb.WriteString(`<tr align="center">`)
 
 	if iconRelPath != "" {
-		sb.WriteString(`<td rowspan="`)
+		sb.WriteString(`<td width="36" rowspan="`)
 		sb.WriteString(strconv.Itoa(rowspan))
 		sb.WriteString(`" valign="middle">`)
-		sb.WriteString(`<img src="`)
-		sb.WriteString(iconRelPath)
-		sb.WriteString(`" width="32" height="32"/>`)
+
+		if iconRelPath != iconReserve {
+			sb.WriteString(`<img src="`)
+			sb.WriteString(iconRelPath)
+			sb.WriteString(`" width="32" height="32"/>`)
+		}
+
 		sb.WriteString(`</td>`)
 	}
 
@@ -344,12 +374,16 @@ func buildContainerHTMLLabel(label *graph.Label, iconRelPath string) string {
 	sb.WriteString(`<tr align="center">`)
 
 	if iconRelPath != "" {
-		sb.WriteString(`<td rowspan="`)
+		sb.WriteString(`<td width="36" rowspan="`)
 		sb.WriteString(strconv.Itoa(rowspan))
 		sb.WriteString(`" valign="middle">`)
-		sb.WriteString(`<img src="`)
-		sb.WriteString(iconRelPath)
-		sb.WriteString(`" width="32" height="32"/>`)
+
+		if iconRelPath != iconReserve {
+			sb.WriteString(`<img src="`)
+			sb.WriteString(iconRelPath)
+			sb.WriteString(`" width="32" height="32"/>`)
+		}
+
 		sb.WriteString(`</td>`)
 	}
 
@@ -406,12 +440,16 @@ func buildComponentHTMLLabel(label *graph.Label, iconRelPath string) string {
 	sb.WriteString(`<tr align="center">`)
 
 	if iconRelPath != "" {
-		sb.WriteString(`<td rowspan="`)
+		sb.WriteString(`<td width="36" rowspan="`)
 		sb.WriteString(strconv.Itoa(rowspan))
 		sb.WriteString(`" valign="middle">`)
-		sb.WriteString(`<img src="`)
-		sb.WriteString(iconRelPath)
-		sb.WriteString(`" width="32" height="32"/>`)
+
+		if iconRelPath != iconReserve {
+			sb.WriteString(`<img src="`)
+			sb.WriteString(iconRelPath)
+			sb.WriteString(`" width="32" height="32"/>`)
+		}
+
 		sb.WriteString(`</td>`)
 	}
 

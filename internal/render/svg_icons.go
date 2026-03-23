@@ -1,7 +1,6 @@
 package render
 
 import (
-	"bytes"
 	"fmt"
 	"slices"
 	"strconv"
@@ -11,12 +10,10 @@ import (
 )
 
 const (
-	iconPadding    = 4  // pixels from left edge
-	iconSize       = 32 // width and height of icons
-	dataAttrLength = 3  // length of `d="` attribute prefix
-	halfDivider    = 2  // divide by 2 for centering
-	yAttrLength    = 3  // length of `y="` attribute prefix
-	nodeVPadding   = 2  // vertical pixel padding from node bounds
+	iconColumnPadding = 2  // pixels from left edge to icon (inside the reserved column)
+	iconSize          = 32 // width and height of icons
+	dataAttrLength    = 3  // length of `d="` attribute prefix
+	halfDivider       = 2  // divide by 2 for centering
 )
 
 // InjectSVGIcons post-processes SVG output to inject icons as base64-encoded images.
@@ -112,16 +109,10 @@ func injectNodeIcon(svg string, node *graph.Node, iconExtractor *IconExtractor) 
 		return svg
 	}
 
-	// Find the first text element to align icon with text content
-	textY := extractFirstTextY(svg[titleIdx:])
-	if textY == "" {
-		return svg // Skip if no text found
-	}
-
-	// Position icon on the left edge with small padding
-	// Icon is aligned with the text content, constrained to node bounds
-	x := addPadding(left, iconPadding)
-	y := calculateIconYConstrained(top, bottom, textY, iconSize)
+	// Position icon in the reserved column: left edge + small padding,
+	// vertically centered in the node bounding box
+	x := addPadding(left, iconColumnPadding)
+	y := calculateIconYCentered(top, bottom, iconSize)
 
 	// Create the image element
 	imageEl := fmt.Sprintf(`<image href="%s" x="%s" y="%s" width="32" height="32" preserveAspectRatio="xMidYMid meet"/>`,
@@ -279,71 +270,17 @@ func compareFloats(a, b string) int {
 	return 0
 }
 
-// extractFirstTextY finds the y position of the first text element in the SVG.
-// This is used to align the icon with the text content, not the node center.
-func extractFirstTextY(svg string) string {
-	// Find the first <text element
-	textIdx := strings.Index(svg, `<text`)
-	if textIdx == -1 {
-		return ""
-	}
-
-	// Extract the y attribute from the text element
-	yIdx := strings.Index(svg[textIdx:], `y="`)
-	if yIdx == -1 {
-		return ""
-	}
-
-	// Calculate absolute position of y value
-	// yIdx is relative to svg[textIdx:], so add textIdx to get absolute position
-	yStart := textIdx + yIdx + yAttrLength
-
-	yEnd := strings.Index(svg[yStart:], `"`)
-	if yEnd == -1 {
-		return ""
-	}
-
-	return svg[yStart : yStart+yEnd]
-}
-
-// calculateIconYConstrained calculates the icon y position, aligning with text
-// while ensuring the icon stays within node bounds.
-// top and bottom are the node bounding box y coordinates.
-// textY is the y position of the first text baseline.
-// iconHeight is the height of the icon in pixels.
-func calculateIconYConstrained(top, bottom, textY string, iconHeight int) string {
-	// Parse coordinates
+// calculateIconYCentered calculates the icon y position, centered vertically
+// in the node bounding box.
+func calculateIconYCentered(top, bottom string, iconHeight int) string {
 	topVal, _ := strconv.ParseFloat(top, 64)
 	bottomVal, _ := strconv.ParseFloat(bottom, 64)
-	textYVal, _ := strconv.ParseFloat(textY, 64)
 
-	// Calculate ideal icon position (centered with text)
-	textCenterOffset := 5.0 // Approximate offset from baseline to text visual center
-	iconCenterOffset := float64(iconHeight) / halfDivider
-	idealIconTopY := textYVal - iconCenterOffset - textCenterOffset
-
-	// Calculate node height (in SVG, bottom > top since y increases downward)
 	nodeHeight := bottomVal - topVal
 	iconHeightFloat := float64(iconHeight)
+	y := topVal + (nodeHeight-iconHeightFloat)/halfDivider
 
-	// Constrain icon to stay within node bounds
-	minY := topVal + nodeVPadding
-	maxY := bottomVal - iconHeightFloat - nodeVPadding
-
-	if iconHeightFloat <= nodeHeight {
-		// Icon fits - constrain to node bounds
-		if idealIconTopY < minY {
-			idealIconTopY = minY
-		} else if idealIconTopY > maxY {
-			idealIconTopY = maxY
-		}
-	} else {
-		// Icon doesn't fit - center vertically within node
-		idealIconTopY = topVal + (nodeHeight-iconHeightFloat)/halfDivider
-	}
-
-	// Format result with 2 decimal places
-	return strconv.FormatFloat(idealIconTopY, 'f', 2, 64)
+	return strconv.FormatFloat(y, 'f', 2, 64)
 }
 
 // addPadding adds pixel padding to a coordinate value.
@@ -377,6 +314,3 @@ func clusterHasIcons(c *graph.Cluster) bool {
 
 	return slices.ContainsFunc(c.Clusters, clusterHasIcons)
 }
-
-// Verify the implementation satisfies the interface.
-var _ = bytes.TrimSpace(nil) // Just to ensure bytes is imported if needed

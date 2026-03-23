@@ -96,7 +96,9 @@ func buildStyleString(style *styleInfo) []string {
 // buildCgraph converts a graph.Graph to a cgraph.Graph for rendering.
 // outputDir is the base directory where the SVG will be written (for icon extraction).
 // useBase64 indicates whether to embed icons as base64 data URIs (needed for WASM graphviz).
-func buildCgraph(gv *graphviz.Graphviz, g *graph.Graph, outputDir string, useBase64 bool) (*cgraph.Graph, error) {
+// iconPlaceholder, if non-empty, is used instead of real icon extraction to reserve
+// layout space for post-render icon injection.
+func buildCgraph(gv *graphviz.Graphviz, g *graph.Graph, outputDir string, useBase64 bool, iconPlaceholder string) (*cgraph.Graph, error) {
 	cg, err := gv.Graph()
 	if err != nil {
 		return nil, fmt.Errorf("create cgraph: %w", err)
@@ -115,13 +117,13 @@ func buildCgraph(gv *graphviz.Graphviz, g *graph.Graph, outputDir string, useBas
 	nodeMap := make(map[string]*cgraph.Node)
 
 	// Create top-level nodes (not in clusters)
-	if err := createTopLevelNodes(cg, g.Nodes, nodeMap, iconExtractor, useBase64); err != nil {
+	if err := createTopLevelNodes(cg, g.Nodes, nodeMap, iconExtractor, useBase64, iconPlaceholder); err != nil {
 		return nil, err
 	}
 
 	// Create clusters with their nodes
 	for _, cluster := range g.Clusters {
-		if err := createCluster(cg, cluster, nodeMap, iconExtractor, useBase64); err != nil {
+		if err := createCluster(cg, cluster, nodeMap, iconExtractor, useBase64, iconPlaceholder); err != nil {
 			return nil, fmt.Errorf("create cluster %s: %w", cluster.ID, err)
 		}
 	}
@@ -141,13 +143,14 @@ func createTopLevelNodes(
 	nodeMap map[string]*cgraph.Node,
 	iconExtractor *IconExtractor,
 	useBase64 bool,
+	iconPlaceholder string,
 ) error {
 	for _, node := range nodes {
 		if node.IsInCluster {
 			continue // Will be created inside cluster
 		}
 
-		cn, err := createNode(cg, node, iconExtractor, useBase64)
+		cn, err := createNode(cg, node, iconExtractor, useBase64, iconPlaceholder)
 		if err != nil {
 			return fmt.Errorf("create node %s: %w", node.ID, err)
 		}
@@ -248,6 +251,7 @@ func createNode(
 	node *graph.Node,
 	iconExtractor *IconExtractor,
 	useBase64 bool,
+	iconPlaceholder string,
 ) (*cgraph.Node, error) {
 	cn, err := cg.CreateNodeByName(node.ID)
 	if err != nil {
@@ -258,7 +262,7 @@ func createNode(
 	cn.SetShape(cgraph.BoxShape)
 
 	// Extract icon and build HTML label
-	iconRelPath := extractNodeIcon(node, iconExtractor, useBase64)
+	iconRelPath := extractNodeIcon(node, iconExtractor, useBase64, iconPlaceholder)
 
 	if err := setNodeLabel(cg, cn, node, iconRelPath); err != nil {
 		return nil, err
@@ -276,9 +280,14 @@ func createNode(
 }
 
 // extractNodeIcon extracts the icon path for a node.
-func extractNodeIcon(node *graph.Node, iconExtractor *IconExtractor, useBase64 bool) string {
+func extractNodeIcon(node *graph.Node, iconExtractor *IconExtractor, useBase64 bool, iconPlaceholder string) string {
 	if node.Style == nil {
 		return ""
+	}
+
+	// If placeholder mode, return placeholder for nodes that would have icons
+	if iconPlaceholder != "" && node.Style.BorderColor != "" {
+		return iconPlaceholder
 	}
 
 	return extractIcon(iconExtractor, iconTypeForUnit(node.Type), node.Style.BorderColor, useBase64)
@@ -349,6 +358,7 @@ func createCluster(
 	nodeMap map[string]*cgraph.Node,
 	iconExtractor *IconExtractor,
 	useBase64 bool,
+	iconPlaceholder string,
 ) error {
 	// Name must start with "cluster_" for GraphViz to render as cluster
 	subgraph, err := parent.CreateSubGraphByName("cluster_" + cluster.ID)
@@ -357,7 +367,7 @@ func createCluster(
 	}
 
 	// Extract icon and set label
-	iconRelPath := extractClusterIcon(cluster, iconExtractor, useBase64)
+	iconRelPath := extractClusterIcon(cluster, iconExtractor, useBase64, iconPlaceholder)
 
 	if err := setClusterLabel(parent, subgraph, cluster, iconRelPath); err != nil {
 		return err
@@ -370,7 +380,7 @@ func createCluster(
 
 	// Create nodes inside cluster
 	for _, node := range cluster.Nodes {
-		cn, err := createNode(subgraph, node, iconExtractor, useBase64)
+		cn, err := createNode(subgraph, node, iconExtractor, useBase64, iconPlaceholder)
 		if err != nil {
 			return fmt.Errorf("create node %s in cluster: %w", node.ID, err)
 		}
@@ -380,7 +390,7 @@ func createCluster(
 
 	// Create nested clusters recursively
 	for _, nestedCluster := range cluster.Clusters {
-		if err := createCluster(subgraph, nestedCluster, nodeMap, iconExtractor, useBase64); err != nil {
+		if err := createCluster(subgraph, nestedCluster, nodeMap, iconExtractor, useBase64, iconPlaceholder); err != nil {
 			return fmt.Errorf("create nested cluster %s: %w", nestedCluster.ID, err)
 		}
 	}
@@ -389,9 +399,14 @@ func createCluster(
 }
 
 // extractClusterIcon extracts the icon path for a cluster.
-func extractClusterIcon(cluster *graph.Cluster, iconExtractor *IconExtractor, useBase64 bool) string {
+func extractClusterIcon(cluster *graph.Cluster, iconExtractor *IconExtractor, useBase64 bool, iconPlaceholder string) string {
 	if cluster.Style == nil {
 		return ""
+	}
+
+	// If placeholder mode, return placeholder for clusters that would have icons
+	if iconPlaceholder != "" && cluster.Style.BorderColor != "" {
+		return iconPlaceholder
 	}
 
 	return extractIcon(iconExtractor, iconTypeForUnit(cluster.Type), cluster.Style.BorderColor, useBase64)

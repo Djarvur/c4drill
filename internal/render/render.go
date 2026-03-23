@@ -94,19 +94,25 @@ func render(g *graph.Graph, format graphviz.Format, outputDir string) ([]byte, e
 	defer gv.Close()
 
 	// For DOT with output: embed base64 data URIs in HTML labels
-	// For SVG with output: render WITHOUT icons (useBase64=false, no file paths)
-	// Icons are injected post-render via InjectSVGIcons
+	// For SVG with output: use iconReserve placeholder to reserve layout space,
+	// then inject icons post-render via InjectSVGIcons
 	useBase64 := format == graphviz.XDOT && outputDir != ""
 	needSVGInjection := format == graphviz.SVG && outputDir != ""
 
-	// For SVG, don't pass iconExtractor to avoid embedding external file paths
-	// that WASM cannot load. Icons are injected post-render instead.
+	// For SVG, don't create iconExtractor (no file paths or base64 in labels).
+	// Pass iconReserve as placeholder so labels get <td width="36"> for layout.
 	renderOutputDir := outputDir
+	iconPlaceholder := ""
+
 	if format == graphviz.SVG {
 		renderOutputDir = ""
+
+		if needSVGInjection {
+			iconPlaceholder = iconReserve
+		}
 	}
 
-	cg, err := buildCgraph(gv, g, renderOutputDir, useBase64)
+	cg, err := buildCgraph(gv, g, renderOutputDir, useBase64, iconPlaceholder)
 	if err != nil {
 		return nil, fmt.Errorf("build graph: %w", err)
 	}
