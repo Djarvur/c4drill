@@ -1,7 +1,6 @@
 package render
 
 import (
-	"html"
 	"strconv"
 	"strings"
 
@@ -106,6 +105,14 @@ func buildPersonHTMLLabel(label *graph.Label, iconRelPath string) string {
 		return ""
 	}
 
+	// Calculate max characters for word wrapping
+	rowCount := 1 // name
+	if label.Description != "" {
+		rowCount++
+	}
+
+	maxChars := labelMaxChars(rowCount)
+
 	var sb strings.Builder
 	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
 
@@ -133,7 +140,7 @@ func buildPersonHTMLLabel(label *graph.Label, iconRelPath string) string {
 	}
 
 	sb.WriteString(`<td valign="bottom"><b>`)
-	sb.WriteString(html.EscapeString(label.Name))
+	sb.WriteString(wrapAndEscape(label.Name, maxChars))
 	sb.WriteString(`</b></td>`)
 	sb.WriteString(`</tr>`)
 
@@ -141,7 +148,7 @@ func buildPersonHTMLLabel(label *graph.Label, iconRelPath string) string {
 	if label.Description != "" {
 		sb.WriteString(`<tr align="center">`)
 		sb.WriteString(`<td valign="top">`)
-		sb.WriteString(html.EscapeString(label.Description))
+		sb.WriteString(wrapAndEscape(label.Description, maxChars))
 		sb.WriteString(`</td>`)
 		sb.WriteString(`</tr>`)
 	}
@@ -159,6 +166,18 @@ func buildDbHTMLLabel(label *graph.Label, iconRelPath string) string {
 		return ""
 	}
 
+	// Calculate max characters for word wrapping
+	rowCount := 1 // name
+	if label.Technology != "" {
+		rowCount++
+	}
+
+	if label.Description != "" {
+		rowCount++
+	}
+
+	maxChars := labelMaxChars(rowCount)
+
 	var sb strings.Builder
 	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
 
@@ -190,7 +209,7 @@ func buildDbHTMLLabel(label *graph.Label, iconRelPath string) string {
 	}
 
 	sb.WriteString(`<td valign="bottom"><b>`)
-	sb.WriteString(html.EscapeString(label.Name))
+	sb.WriteString(wrapAndEscape(label.Name, maxChars))
 	sb.WriteString(`</b></td>`)
 	sb.WriteString(`</tr>`)
 
@@ -198,7 +217,7 @@ func buildDbHTMLLabel(label *graph.Label, iconRelPath string) string {
 	if label.Technology != "" {
 		sb.WriteString(`<tr align="center">`)
 		sb.WriteString(`<td valign="middle"><i>[`)
-		sb.WriteString(html.EscapeString(label.Technology))
+		sb.WriteString(wrapAndEscape(label.Technology, maxChars))
 		sb.WriteString(`]</i></td>`)
 		sb.WriteString(`</tr>`)
 	}
@@ -207,7 +226,7 @@ func buildDbHTMLLabel(label *graph.Label, iconRelPath string) string {
 	if label.Description != "" {
 		sb.WriteString(`<tr align="center">`)
 		sb.WriteString(`<td valign="top">`)
-		sb.WriteString(html.EscapeString(label.Description))
+		sb.WriteString(wrapAndEscape(label.Description, maxChars))
 		sb.WriteString(`</td>`)
 		sb.WriteString(`</tr>`)
 	}
@@ -225,6 +244,18 @@ func buildQueueHTMLLabel(label *graph.Label, iconRelPath string) string {
 		return ""
 	}
 
+	// Calculate max characters for word wrapping
+	rowCount := 1 // name
+	if label.Technology != "" {
+		rowCount++
+	}
+
+	if label.Description != "" {
+		rowCount++
+	}
+
+	maxChars := labelMaxChars(rowCount)
+
 	var sb strings.Builder
 	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
 
@@ -256,7 +287,7 @@ func buildQueueHTMLLabel(label *graph.Label, iconRelPath string) string {
 	}
 
 	sb.WriteString(`<td valign="bottom"><b>`)
-	sb.WriteString(html.EscapeString(label.Name))
+	sb.WriteString(wrapAndEscape(label.Name, maxChars))
 	sb.WriteString(`</b></td>`)
 	sb.WriteString(`</tr>`)
 
@@ -264,7 +295,7 @@ func buildQueueHTMLLabel(label *graph.Label, iconRelPath string) string {
 	if label.Technology != "" {
 		sb.WriteString(`<tr align="center">`)
 		sb.WriteString(`<td valign="middle"><i>[`)
-		sb.WriteString(html.EscapeString(label.Technology))
+		sb.WriteString(wrapAndEscape(label.Technology, maxChars))
 		sb.WriteString(`]</i></td>`)
 		sb.WriteString(`</tr>`)
 	}
@@ -273,7 +304,7 @@ func buildQueueHTMLLabel(label *graph.Label, iconRelPath string) string {
 	if label.Description != "" {
 		sb.WriteString(`<tr align="center">`)
 		sb.WriteString(`<td valign="top">`)
-		sb.WriteString(html.EscapeString(label.Description))
+		sb.WriteString(wrapAndEscape(label.Description, maxChars))
 		sb.WriteString(`</td>`)
 		sb.WriteString(`</tr>`)
 	}
@@ -291,6 +322,18 @@ func buildSystemHTMLLabel(label *graph.Label, iconRelPath string) string {
 		return ""
 	}
 
+	// Calculate max characters for word wrapping
+	rowCount := 1 // name
+	if label.Technology != "" {
+		rowCount++
+	}
+
+	if label.Description != "" {
+		rowCount++
+	}
+
+	maxChars := labelMaxChars(rowCount)
+
 	var sb strings.Builder
 	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
 
@@ -322,7 +365,7 @@ func buildSystemHTMLLabel(label *graph.Label, iconRelPath string) string {
 	}
 
 	sb.WriteString(`<td valign="bottom"><b>`)
-	sb.WriteString(html.EscapeString(label.Name))
+	sb.WriteString(wrapAndEscape(label.Name, maxChars))
 	sb.WriteString(`</b></td>`)
 	sb.WriteString(`</tr>`)
 
@@ -330,7 +373,7 @@ func buildSystemHTMLLabel(label *graph.Label, iconRelPath string) string {
 	if label.Technology != "" {
 		sb.WriteString(`<tr align="center">`)
 		sb.WriteString(`<td valign="middle"><i>[`)
-		sb.WriteString(html.EscapeString(label.Technology))
+		sb.WriteString(wrapAndEscape(label.Technology, maxChars))
 		sb.WriteString(`]</i></td>`)
 		sb.WriteString(`</tr>`)
 	}
@@ -339,7 +382,7 @@ func buildSystemHTMLLabel(label *graph.Label, iconRelPath string) string {
 	if label.Description != "" {
 		sb.WriteString(`<tr align="center">`)
 		sb.WriteString(`<td valign="top">`)
-		sb.WriteString(html.EscapeString(label.Description))
+		sb.WriteString(wrapAndEscape(label.Description, maxChars))
 		sb.WriteString(`</td>`)
 		sb.WriteString(`</tr>`)
 	}
@@ -357,6 +400,18 @@ func buildContainerHTMLLabel(label *graph.Label, iconRelPath string) string {
 		return ""
 	}
 
+	// Calculate max characters for word wrapping
+	rowCount := 1 // name
+	if label.Technology != "" {
+		rowCount++
+	}
+
+	if label.Description != "" {
+		rowCount++
+	}
+
+	maxChars := labelMaxChars(rowCount)
+
 	var sb strings.Builder
 	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
 
@@ -388,7 +443,7 @@ func buildContainerHTMLLabel(label *graph.Label, iconRelPath string) string {
 	}
 
 	sb.WriteString(`<td valign="bottom"><b>`)
-	sb.WriteString(html.EscapeString(label.Name))
+	sb.WriteString(wrapAndEscape(label.Name, maxChars))
 	sb.WriteString(`</b></td>`)
 	sb.WriteString(`</tr>`)
 
@@ -396,7 +451,7 @@ func buildContainerHTMLLabel(label *graph.Label, iconRelPath string) string {
 	if label.Technology != "" {
 		sb.WriteString(`<tr align="center">`)
 		sb.WriteString(`<td valign="middle"><i>[`)
-		sb.WriteString(html.EscapeString(label.Technology))
+		sb.WriteString(wrapAndEscape(label.Technology, maxChars))
 		sb.WriteString(`]</i></td>`)
 		sb.WriteString(`</tr>`)
 	}
@@ -405,7 +460,7 @@ func buildContainerHTMLLabel(label *graph.Label, iconRelPath string) string {
 	if label.Description != "" {
 		sb.WriteString(`<tr align="center">`)
 		sb.WriteString(`<td valign="top">`)
-		sb.WriteString(html.EscapeString(label.Description))
+		sb.WriteString(wrapAndEscape(label.Description, maxChars))
 		sb.WriteString(`</td>`)
 		sb.WriteString(`</tr>`)
 	}
@@ -423,6 +478,18 @@ func buildComponentHTMLLabel(label *graph.Label, iconRelPath string) string {
 		return ""
 	}
 
+	// Calculate max characters for word wrapping
+	rowCount := 1 // name
+	if label.Technology != "" {
+		rowCount++
+	}
+
+	if label.Description != "" {
+		rowCount++
+	}
+
+	maxChars := labelMaxChars(rowCount)
+
 	var sb strings.Builder
 	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
 
@@ -454,7 +521,7 @@ func buildComponentHTMLLabel(label *graph.Label, iconRelPath string) string {
 	}
 
 	sb.WriteString(`<td valign="bottom"><b>`)
-	sb.WriteString(html.EscapeString(label.Name))
+	sb.WriteString(wrapAndEscape(label.Name, maxChars))
 	sb.WriteString(`</b></td>`)
 	sb.WriteString(`</tr>`)
 
@@ -462,7 +529,7 @@ func buildComponentHTMLLabel(label *graph.Label, iconRelPath string) string {
 	if label.Technology != "" {
 		sb.WriteString(`<tr align="center">`)
 		sb.WriteString(`<td valign="middle"><i>[`)
-		sb.WriteString(html.EscapeString(label.Technology))
+		sb.WriteString(wrapAndEscape(label.Technology, maxChars))
 		sb.WriteString(`]</i></td>`)
 		sb.WriteString(`</tr>`)
 	}
@@ -471,7 +538,7 @@ func buildComponentHTMLLabel(label *graph.Label, iconRelPath string) string {
 	if label.Description != "" {
 		sb.WriteString(`<tr align="center">`)
 		sb.WriteString(`<td valign="top">`)
-		sb.WriteString(html.EscapeString(label.Description))
+		sb.WriteString(wrapAndEscape(label.Description, maxChars))
 		sb.WriteString(`</td>`)
 		sb.WriteString(`</tr>`)
 	}

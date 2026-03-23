@@ -4,7 +4,9 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/Djarvur/c4drill/internal/graph"
@@ -34,8 +36,9 @@ const (
 var (
 	format    string
 	outputDir string
-	expanded  bool
-	version   = "dev"
+	expanded   bool
+	labelRatio float64
+	version    = "dev"
 )
 
 // NewRootCmd creates the root command for c4drill.
@@ -70,6 +73,8 @@ Output:
 		"Output directory (default: same as input file)")
 	cmd.PersistentFlags().BoolVar(&expanded, "expanded", false,
 		"Generate all-expanded diagram showing all units")
+	cmd.PersistentFlags().Float64Var(&labelRatio, "label-ratio", 0,
+		"Width:height ratio for unit labels (default: 1.6, credit card proportions)")
 
 	return cmd
 }
@@ -90,6 +95,9 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	if format != formatDot && format != formatSVG {
 		return fmt.Errorf("%w: %q", errInvalidFormat, format)
 	}
+
+	// Set label ratio for word-wrapping
+	render.LabelRatio = getLabelRatio()
 
 	inputPath := args[0]
 
@@ -273,4 +281,20 @@ func processExpandedView(m *parser.Model, basename string, writer *output.Writer
 func isC2Path(path string) bool {
 	// C2 if the path has only one segment (no dots)
 	return !strings.Contains(path, ".")
+}
+
+// getLabelRatio returns the label ratio from CLI flag, env var, or default.
+// Priority: CLI flag > C4DRILL_LABEL_RATIO env var > default (1.6).
+func getLabelRatio() float64 {
+	if labelRatio > 0 {
+		return labelRatio
+	}
+
+	if envVal := os.Getenv("C4DRILL_LABEL_RATIO"); envVal != "" {
+		if v, err := strconv.ParseFloat(envVal, 64); err == nil && v > 0 {
+			return v
+		}
+	}
+
+	return 1.6
 }
