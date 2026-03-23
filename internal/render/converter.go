@@ -45,6 +45,54 @@ const (
 	fontSizeEdge  = 10.0
 )
 
+// extractIcon extracts an icon path for a unit, using base64 or file path.
+// Returns empty string on error (graceful degradation).
+func extractIcon(iconExtractor *IconExtractor, iconType, borderColor string, useBase64 bool) string {
+	if iconExtractor == nil || borderColor == "" {
+		return ""
+	}
+
+	var (
+		iconPath string
+		err      error
+	)
+
+	if useBase64 {
+		iconPath, err = iconExtractor.ExtractSVGBase64(iconType, borderColor)
+	} else {
+		iconPath, err = iconExtractor.Extract(iconType, borderColor)
+	}
+
+	if err != nil {
+		return "" // Graceful degradation
+	}
+
+	return iconPath
+}
+
+// styleInfo contains style attributes for nodes and clusters.
+type styleInfo struct {
+	fillColor   string
+	fontColor   string
+	borderColor string
+	borderStyle string
+}
+
+// buildStyleString builds a comma-separated style string.
+func buildStyleString(style *styleInfo) []string {
+	styles := []string{"rounded"}
+
+	if style != nil && style.fillColor != "" {
+		styles = append(styles, "filled")
+	}
+
+	if style != nil && style.borderStyle == borderStyleDashed {
+		styles = append(styles, "dashed")
+	}
+
+	return styles
+}
+
 // buildCgraph converts a graph.Graph to a cgraph.Graph for rendering.
 // outputDir is the base directory where the SVG will be written (for icon extraction).
 // useBase64 indicates whether to embed icons as base64 data URIs (needed for WASM graphviz).
@@ -67,17 +115,8 @@ func buildCgraph(gv *graphviz.Graphviz, g *graph.Graph, outputDir string, useBas
 	nodeMap := make(map[string]*cgraph.Node)
 
 	// Create top-level nodes (not in clusters)
-	for _, node := range g.Nodes {
-		if node.IsInCluster {
-			continue // Will be created inside cluster
-		}
-
-		cn, err := createNode(cg, node, iconExtractor, useBase64)
-		if err != nil {
-			return nil, fmt.Errorf("create node %s: %w", node.ID, err)
-		}
-
-		nodeMap[node.ID] = cn
+	if err := createTopLevelNodes(cg, g.Nodes, nodeMap, iconExtractor, useBase64); err != nil {
+		return nil, err
 	}
 
 	// Create clusters with their nodes
@@ -88,20 +127,53 @@ func buildCgraph(gv *graphviz.Graphviz, g *graph.Graph, outputDir string, useBas
 	}
 
 	// Create edges
-	for _, edge := range g.Edges {
-		source := nodeMap[edge.Source]
+	if err := createEdges(cg, g.Edges, nodeMap); err != nil {
+		return nil, err
+	}
 
+	return cg, nil
+}
+
+// createTopLevelNodes creates nodes that are not inside clusters.
+func createTopLevelNodes(
+	cg *cgraph.Graph,
+	nodes []*graph.Node,
+	nodeMap map[string]*cgraph.Node,
+	iconExtractor *IconExtractor,
+	useBase64 bool,
+) error {
+	for _, node := range nodes {
+		if node.IsInCluster {
+			continue // Will be created inside cluster
+		}
+
+		cn, err := createNode(cg, node, iconExtractor, useBase64)
+		if err != nil {
+			return fmt.Errorf("create node %s: %w", node.ID, err)
+		}
+
+		nodeMap[node.ID] = cn
+	}
+
+	return nil
+}
+
+// createEdges creates all edges from the edge list.
+func createEdges(cg *cgraph.Graph, edges []*graph.Edge, nodeMap map[string]*cgraph.Node) error {
+	for _, edge := range edges {
+		source := nodeMap[edge.Source]
 		target := nodeMap[edge.Target]
+
 		if source == nil || target == nil {
 			continue // Skip edges with missing endpoints
 		}
 
 		if err := createEdge(cg, source, target, edge); err != nil {
-			return nil, fmt.Errorf("create edge %s->%s: %w", edge.Source, edge.Target, err)
+			return fmt.Errorf("create edge %s->%s: %w", edge.Source, edge.Target, err)
 		}
 	}
 
-	return cg, nil
+	return nil
 }
 
 // configureGraphSettings applies graph-level settings from graph.Graph.
@@ -171,79 +243,29 @@ func joinLabels(parts []string) string {
 
 // createNode creates a cgraph.Node from a graph.Node.
 // useBase64 indicates whether to embed icons as base64 data URIs.
-func createNode(cg *cgraph.Graph, node *graph.Node, iconExtractor *IconExtractor, useBase64 bool) (*cgraph.Node, error) {
+func createNode(
+	cg *cgraph.Graph,
+	node *graph.Node,
+	iconExtractor *IconExtractor,
+	useBase64 bool,
+) (*cgraph.Node, error) {
 	cn, err := cg.CreateNodeByName(node.ID)
 	if err != nil {
 		return nil, fmt.Errorf("create node by name: %w", err)
 	}
 
 	// HTML labels with shape=box and style=rounded for proper visual appearance.
-	// This combination provides a clean container look that works well with HTML tables.
 	cn.SetShape(cgraph.BoxShape)
 
 	// Extract icon and build HTML label
-	iconRelPath := ""
+	iconRelPath := extractNodeIcon(node, iconExtractor, useBase64)
 
-	if iconExtractor != nil && node.Style != nil && node.Style.BorderColor != "" {
-		iconType := iconTypeForUnit(node.Type)
-		if useBase64 {
-			// Use base64 data URI for WASM graphviz (can't load external files)
-			iconRelPath, err = iconExtractor.ExtractSVGBase64(iconType, node.Style.BorderColor)
-		} else {
-			// Use external file path for native dot command
-			iconRelPath, err = iconExtractor.Extract(iconType, node.Style.BorderColor)
-		}
-
-		if err != nil {
-			// Log warning but continue without icon (graceful degradation)
-			iconRelPath = ""
-		}
+	if err := setNodeLabel(cg, cn, node, iconRelPath); err != nil {
+		return nil, err
 	}
 
-	// Build and set the label using HTML tables
-	// IMPORTANT: Use StrdupHTML to create HTML strings that GraphViz will
-	// recognize as HTML (not quoted strings). Without this, SetLabel wraps
-	// values in quotes which breaks HTML label parsing.
-	if node.Label != nil {
-		htmlLabel := buildHTMLLabelForType(node.Label, node.Type, iconRelPath)
-		if htmlLabel != "" {
-			htmlStr, err := cg.StrdupHTML(htmlLabel)
-			if err != nil {
-				return nil, fmt.Errorf("create HTML label: %w", err)
-			}
-
-			cn.SetLabel(htmlStr)
-		}
-	}
-
-	// Build combined style string - start with rounded for record shapes
-	styles := []string{"rounded"}
-
-	if node.Style != nil {
-		// Add filled style if FillColor is specified
-		if node.Style.FillColor != "" {
-			styles = append(styles, "filled")
-
-			cn.SetFillColor(node.Style.FillColor)
-		}
-
-		if node.Style.FontColor != "" {
-			cn.SetFontColor(node.Style.FontColor)
-		}
-
-		if node.Style.BorderColor != "" {
-			cn.SetColor(node.Style.BorderColor)
-		}
-
-		if node.Style.BorderStyle == borderStyleDashed {
-			styles = append(styles, "dashed")
-		}
-	}
-
-	// Set combined style using SafeSet (must be called on Node, not Base())
-	if err := cn.SafeSet("style", strings.Join(styles, ","), ""); err != nil {
-		return nil, fmt.Errorf("set node style: %w", err)
-	}
+	// Apply style
+	applyNodeStyle(cn, node.Style)
 
 	// Set URL for clickable nodes (explore links)
 	if node.ExploreURL != "" {
@@ -253,80 +275,97 @@ func createNode(cg *cgraph.Graph, node *graph.Node, iconExtractor *IconExtractor
 	return cn, nil
 }
 
+// extractNodeIcon extracts the icon path for a node.
+func extractNodeIcon(node *graph.Node, iconExtractor *IconExtractor, useBase64 bool) string {
+	if node.Style == nil {
+		return ""
+	}
+
+	return extractIcon(iconExtractor, iconTypeForUnit(node.Type), node.Style.BorderColor, useBase64)
+}
+
+// setNodeLabel builds and sets the HTML label for a node.
+func setNodeLabel(cg *cgraph.Graph, cn *cgraph.Node, node *graph.Node, iconRelPath string) error {
+	if node.Label == nil {
+		return nil
+	}
+
+	htmlLabel := buildHTMLLabelForType(node.Label, node.Type, iconRelPath)
+	if htmlLabel == "" {
+		return nil
+	}
+
+	htmlStr, err := cg.StrdupHTML(htmlLabel)
+	if err != nil {
+		return fmt.Errorf("create HTML label: %w", err)
+	}
+
+	cn.SetLabel(htmlStr)
+
+	return nil
+}
+
+// applyNodeStyle applies visual styles to a node.
+func applyNodeStyle(cn *cgraph.Node, style *graph.NodeStyle) {
+	info := nodeStyleToInfo(style)
+	styles := buildStyleString(info)
+
+	if style != nil {
+		if style.FillColor != "" {
+			cn.SetFillColor(style.FillColor)
+		}
+
+		if style.FontColor != "" {
+			cn.SetFontColor(style.FontColor)
+		}
+
+		if style.BorderColor != "" {
+			cn.SetColor(style.BorderColor)
+		}
+	}
+
+	_ = cn.SafeSet("style", strings.Join(styles, ","), "")
+}
+
+// nodeStyleToInfo converts graph.NodeStyle to styleInfo.
+func nodeStyleToInfo(style *graph.NodeStyle) *styleInfo {
+	if style == nil {
+		return nil
+	}
+
+	return &styleInfo{
+		fillColor:   style.FillColor,
+		fontColor:   style.FontColor,
+		borderColor: style.BorderColor,
+		borderStyle: style.BorderStyle,
+	}
+}
+
 // createCluster creates a subgraph cluster from a graph.Cluster.
 // useBase64 indicates whether to embed icons as base64 data URIs.
-func createCluster(parent *cgraph.Graph, cluster *graph.Cluster, nodeMap map[string]*cgraph.Node, iconExtractor *IconExtractor, useBase64 bool) error {
+func createCluster(
+	parent *cgraph.Graph,
+	cluster *graph.Cluster,
+	nodeMap map[string]*cgraph.Node,
+	iconExtractor *IconExtractor,
+	useBase64 bool,
+) error {
 	// Name must start with "cluster_" for GraphViz to render as cluster
 	subgraph, err := parent.CreateSubGraphByName("cluster_" + cluster.ID)
 	if err != nil {
 		return fmt.Errorf("create subgraph: %w", err)
 	}
 
-	// Extract icon for cluster label
-	iconRelPath := ""
+	// Extract icon and set label
+	iconRelPath := extractClusterIcon(cluster, iconExtractor, useBase64)
 
-	if iconExtractor != nil && cluster.Style != nil && cluster.Style.BorderColor != "" {
-		iconType := iconTypeForUnit(cluster.Type)
-		if useBase64 {
-			// Use SVG base64 data URI for WASM graphviz (can't load external files)
-			iconRelPath, err = iconExtractor.ExtractSVGBase64(iconType, cluster.Style.BorderColor)
-		} else {
-			// Use external file path for native dot command
-			iconRelPath, err = iconExtractor.Extract(iconType, cluster.Style.BorderColor)
-		}
-
-		if err != nil {
-			// Log warning but continue without icon (graceful degradation)
-			iconRelPath = ""
-		}
+	if err := setClusterLabel(parent, subgraph, cluster, iconRelPath); err != nil {
+		return err
 	}
 
-	// Cluster label - use HTML format for consistent styling with nodes
-	if cluster.Label != nil {
-		htmlLabel := buildHTMLLabelForType(cluster.Label, cluster.Type, iconRelPath)
-		if htmlLabel != "" {
-			htmlStr, err := parent.StrdupHTML(htmlLabel)
-			if err != nil {
-				return fmt.Errorf("create HTML cluster label: %w", err)
-			}
-
-			subgraph.SetLabel(htmlStr)
-		}
-	}
-
-	// Build combined style string - start with rounded for clusters
-	styles := []string{"rounded"}
-
-	if cluster.Style != nil {
-		// Add filled style if FillColor is specified
-		if cluster.Style.FillColor != "" {
-			styles = append(styles, "filled")
-
-			subgraph.SetBackgroundColor(cluster.Style.FillColor)
-		}
-
-		// Set font color for cluster label
-		if cluster.Style.FontColor != "" {
-			if err := subgraph.SafeSet("fontcolor", cluster.Style.FontColor, ""); err != nil {
-				return fmt.Errorf("set cluster fontcolor: %w", err)
-			}
-		}
-
-		// Set border color (cluster uses 'color' for border)
-		if cluster.Style.BorderColor != "" {
-			if err := subgraph.SafeSet("color", cluster.Style.BorderColor, ""); err != nil {
-				return fmt.Errorf("set cluster color: %w", err)
-			}
-		}
-
-		if cluster.Style.BorderStyle == borderStyleDashed {
-			styles = append(styles, "dashed")
-		}
-	}
-
-	// Set combined style using SafeSet (called on Graph which embeds Object)
-	if err := subgraph.SafeSet("style", strings.Join(styles, ","), ""); err != nil {
-		return fmt.Errorf("set cluster style: %w", err)
+	// Apply style
+	if err := applyClusterStyle(subgraph, cluster.Style); err != nil {
+		return err
 	}
 
 	// Create nodes inside cluster
@@ -344,6 +383,85 @@ func createCluster(parent *cgraph.Graph, cluster *graph.Cluster, nodeMap map[str
 		if err := createCluster(subgraph, nestedCluster, nodeMap, iconExtractor, useBase64); err != nil {
 			return fmt.Errorf("create nested cluster %s: %w", nestedCluster.ID, err)
 		}
+	}
+
+	return nil
+}
+
+// extractClusterIcon extracts the icon path for a cluster.
+func extractClusterIcon(cluster *graph.Cluster, iconExtractor *IconExtractor, useBase64 bool) string {
+	if cluster.Style == nil {
+		return ""
+	}
+
+	return extractIcon(iconExtractor, iconTypeForUnit(cluster.Type), cluster.Style.BorderColor, useBase64)
+}
+
+// setClusterLabel builds and sets the HTML label for a cluster.
+func setClusterLabel(parent *cgraph.Graph, subgraph *cgraph.Graph, cluster *graph.Cluster, iconRelPath string) error {
+	if cluster.Label == nil {
+		return nil
+	}
+
+	htmlLabel := buildHTMLLabelForType(cluster.Label, cluster.Type, iconRelPath)
+	if htmlLabel == "" {
+		return nil
+	}
+
+	htmlStr, err := parent.StrdupHTML(htmlLabel)
+	if err != nil {
+		return fmt.Errorf("create HTML cluster label: %w", err)
+	}
+
+	subgraph.SetLabel(htmlStr)
+
+	return nil
+}
+
+// applyClusterStyle applies visual styles to a cluster.
+func applyClusterStyle(subgraph *cgraph.Graph, style *graph.NodeStyle) error {
+	if style == nil {
+		if err := subgraph.SafeSet("style", "rounded", ""); err != nil {
+			return fmt.Errorf("set cluster style: %w", err)
+		}
+
+		return nil
+	}
+
+	// Set fill color
+	if style.FillColor != "" {
+		subgraph.SetBackgroundColor(style.FillColor)
+	}
+
+	// Set font color
+	if err := setClusterAttribute(subgraph, "fontcolor", style.FontColor); err != nil {
+		return err
+	}
+
+	// Set border color
+	if err := setClusterAttribute(subgraph, "color", style.BorderColor); err != nil {
+		return err
+	}
+
+	// Set combined style string
+	info := nodeStyleToInfo(style)
+	styles := buildStyleString(info)
+
+	if err := subgraph.SafeSet("style", strings.Join(styles, ","), ""); err != nil {
+		return fmt.Errorf("set cluster style: %w", err)
+	}
+
+	return nil
+}
+
+// setClusterAttribute sets a cluster attribute if the value is non-empty.
+func setClusterAttribute(subgraph *cgraph.Graph, attr, value string) error {
+	if value == "" {
+		return nil
+	}
+
+	if err := subgraph.SafeSet(attr, value, ""); err != nil {
+		return fmt.Errorf("set cluster %s: %w", attr, err)
 	}
 
 	return nil

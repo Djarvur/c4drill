@@ -15,6 +15,8 @@ import (
 // wasmMutex protects all WASM graphviz operations from concurrent access.
 // The go-graphviz library uses a WASM engine that is not thread-safe,
 // so all render operations must be serialized to prevent memory corruption.
+//
+//nolint:gochecknoglobals // Required for thread-safe WASM operations across all render calls
 var wasmMutex sync.Mutex
 
 // Static errors for error checking.

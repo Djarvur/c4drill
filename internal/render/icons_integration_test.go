@@ -1,10 +1,11 @@
-package render
+package render_test
 
 import (
 	"testing"
 
 	"github.com/Djarvur/c4drill/internal/graph"
 	"github.com/Djarvur/c4drill/internal/model"
+	"github.com/Djarvur/c4drill/internal/render"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -39,7 +40,7 @@ func TestIconExtractorIntegration(t *testing.T) {
 	}
 
 	// Render with output directory - icons should be base64 embedded
-	output, err := RenderWithOutput(g, "dot", tmpDir)
+	output, err := render.RenderWithOutput(g, "dot", tmpDir)
 	require.NoError(t, err)
 
 	// Verify the DOT output contains base64 data URI for the icon
@@ -76,7 +77,7 @@ func TestRenderDOTWithoutOutputDir(t *testing.T) {
 	}
 
 	// Render WITHOUT output directory
-	output, err := RenderDOT(g)
+	output, err := render.RenderDOT(g)
 	require.NoError(t, err)
 
 	// Verify the DOT output does NOT contain img tags (because no icon extraction)
@@ -113,7 +114,7 @@ func TestRenderSVGWithOutputDir(t *testing.T) {
 	}
 
 	// Render SVG with output directory
-	svg, err := RenderSVGWithOutput(g, tmpDir)
+	svg, err := render.RenderSVGWithOutput(g, tmpDir)
 	require.NoError(t, err)
 
 	svgStr := string(svg)

@@ -1,10 +1,11 @@
-package render
+package render_test
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/Djarvur/c4drill/internal/render"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -14,7 +15,7 @@ func TestIconExtractor_Extract(t *testing.T) {
 	// Create temp directory for test
 	tmpDir := t.TempDir()
 
-	extractor := NewIconExtractor(tmpDir)
+	extractor := render.NewIconExtractor(tmpDir)
 
 	// Extract a person icon with C1 color
 	relPath, err := extractor.Extract("person", "#3C7FC0")
@@ -36,7 +37,7 @@ func TestIconExtractor_Extract(t *testing.T) {
 func TestIconExtractor_ExtractCachesInMemory(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
-	extractor := NewIconExtractor(tmpDir)
+	extractor := render.NewIconExtractor(tmpDir)
 
 	// First extraction
 	_, err := extractor.Extract("db", "#3C7FC0")
@@ -51,14 +52,14 @@ func TestIconExtractor_ExtractCachesInMemory(t *testing.T) {
 func TestIconExtractor_ExtractSkipsExistingFiles(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
-	extractor := NewIconExtractor(tmpDir)
+	extractor := render.NewIconExtractor(tmpDir)
 
 	// Extract icon
 	relPath, err := extractor.Extract("system", "#3C7FC0")
 	require.NoError(t, err)
 
 	// Create new extractor (simulates new run)
-	extractor2 := NewIconExtractor(tmpDir)
+	extractor2 := render.NewIconExtractor(tmpDir)
 
 	// Should skip extraction for existing file
 	relPath2, err := extractor2.Extract("system", "#3C7FC0")
@@ -69,7 +70,7 @@ func TestIconExtractor_ExtractSkipsExistingFiles(t *testing.T) {
 func TestIconExtractor_HexColorWithAndWithoutHash(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
-	extractor := NewIconExtractor(tmpDir)
+	extractor := render.NewIconExtractor(tmpDir)
 
 	// With hash
 	_, err := extractor.Extract("component", "#78A8D8")
@@ -86,7 +87,7 @@ func TestIconExtractor_HexColorWithAndWithoutHash(t *testing.T) {
 func TestIconExtractor_InvalidIconType(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
-	extractor := NewIconExtractor(tmpDir)
+	extractor := render.NewIconExtractor(tmpDir)
 
 	_, err := extractor.Extract("nonexistent", "#000000")
 	require.Error(t, err)

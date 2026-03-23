@@ -22,6 +22,8 @@ const (
 // Generic types that can be auto-transformed based on nesting level:
 // - db at C1 -> db, at C2 -> containerDb, at C3 -> componentDb
 // - queue at C1 -> queue, at C2 -> containerQueue, at C3 -> componentQueue.
+//
+//nolint:gochecknoglobals // Lookup map for O(1) type checking, immutable after init
 var genericDbTypes = map[model.UnitType]bool{
 	model.TypeDb:    true,
 	model.TypeQueue: true,

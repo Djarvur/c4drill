@@ -15,6 +15,8 @@ const (
 	iconSize       = 32 // width and height of icons
 	dataAttrLength = 3  // length of `d="` attribute prefix
 	halfDivider    = 2  // divide by 2 for centering
+	yAttrLength    = 3  // length of `y="` attribute prefix
+	nodeVPadding   = 2  // vertical pixel padding from node bounds
 )
 
 // InjectSVGIcons post-processes SVG output to inject icons as base64-encoded images.
@@ -149,7 +151,7 @@ func findPathEnd(svg string, pathStart int) int {
 // extractPathBoundingBox extracts the bounding box coordinates from a node's path.
 // Returns left, top, right, bottom coordinates.
 // Path format is like: d="M77.88,-41.6C77.88,-41.6 12,-41.6 12,-41.6...".
-func extractPathBoundingBox(pathStr string) (left, top, right, bottom string) {
+func extractPathBoundingBox(pathStr string) (string, string, string, string) {
 	// Find d=" attribute
 	dIdx := strings.Index(pathStr, `d="`)
 	if dIdx == -1 {
@@ -166,12 +168,32 @@ func extractPathBoundingBox(pathStr string) (left, top, right, bottom string) {
 
 	pathData := pathStr[dataStart : dataStart+dataEnd]
 
-	// Parse all coordinate pairs from the path
-	// Find min x (left), max x (right), min y (top - more negative), max y (bottom - less negative)
-	minX, maxX := "", ""
-	minY, maxY := "", ""
+	// Parse all coordinate pairs and compute bounds
+	return parsePathBounds(pathData)
+}
 
-	// Extract numbers from path (including negative decimals)
+// parsePathBounds extracts min/max coordinates from SVG path data.
+func parsePathBounds(pathData string) (string, string, string, string) {
+	coords := extractPathCoordinates(pathData)
+
+	var minX, maxX, minY, maxY string
+	for _, coord := range coords {
+		minX, maxX = updateBounds(minX, maxX, coord.x)
+		minY, maxY = updateBounds(minY, maxY, coord.y)
+	}
+
+	return minX, minY, maxX, maxY
+}
+
+// coordPair represents an x,y coordinate pair.
+type coordPair struct {
+	x, y string
+}
+
+// extractPathCoordinates parses all coordinate pairs from SVG path data.
+func extractPathCoordinates(pathData string) []coordPair {
+	var coords []coordPair
+
 	i := 0
 	for i < len(pathData) {
 		// Skip non-numeric characters
@@ -183,48 +205,58 @@ func extractPathBoundingBox(pathStr string) (left, top, right, bottom string) {
 			break
 		}
 
-		// Extract number
-		start := i
-		for i < len(pathData) && (isDigitOrSign(pathData[i]) || pathData[i] == '.') {
-			i++
+		// Extract x coordinate
+		x, newPos := extractNumber(pathData, i)
+		if x == "" {
+			break
 		}
 
-		num := pathData[start:i]
+		i = newPos
 
 		// Skip comma if present
 		if i < len(pathData) && pathData[i] == ',' {
 			i++
 		}
 
-		// Extract second number (y coordinate)
-		start = i
-		for i < len(pathData) && (isDigitOrSign(pathData[i]) || pathData[i] == '.') {
-			i++
+		// Extract y coordinate
+		y, newPos := extractNumber(pathData, i)
+		if y == "" {
+			break
 		}
 
-		num2 := pathData[start:i]
+		i = newPos
 
-		// Update bounds
-		if num != "" && num2 != "" {
-			if minX == "" || compareFloats(num, minX) < 0 {
-				minX = num
-			}
-
-			if maxX == "" || compareFloats(num, maxX) > 0 {
-				maxX = num
-			}
-
-			if minY == "" || compareFloats(num2, minY) < 0 {
-				minY = num2
-			}
-
-			if maxY == "" || compareFloats(num2, maxY) > 0 {
-				maxY = num2
-			}
-		}
+		coords = append(coords, coordPair{x: x, y: y})
 	}
 
-	return minX, minY, maxX, maxY
+	return coords
+}
+
+// extractNumber extracts a numeric string starting at position i.
+// Returns the number string and the new position.
+func extractNumber(s string, i int) (string, int) {
+	start := i
+
+	for i < len(s) && (isDigitOrSign(s[i]) || s[i] == '.') {
+		i++
+	}
+
+	return s[start:i], i
+}
+
+// updateBounds updates min/max bounds with a new value.
+func updateBounds(currentMin, currentMax, value string) (string, string) {
+	newMin := currentMin
+	if currentMin == "" || compareFloats(value, currentMin) < 0 {
+		newMin = value
+	}
+
+	newMax := currentMax
+	if currentMax == "" || compareFloats(value, currentMax) > 0 {
+		newMax = value
+	}
+
+	return newMin, newMax
 }
 
 // isDigitOrSign checks if a character is a digit or negative sign.
@@ -243,6 +275,7 @@ func compareFloats(a, b string) int {
 	} else if aVal > bVal {
 		return 1
 	}
+
 	return 0
 }
 
@@ -263,7 +296,8 @@ func extractFirstTextY(svg string) string {
 
 	// Calculate absolute position of y value
 	// yIdx is relative to svg[textIdx:], so add textIdx to get absolute position
-	yStart := textIdx + yIdx + 3 // 3 = len(`y="`)
+	yStart := textIdx + yIdx + yAttrLength
+
 	yEnd := strings.Index(svg[yStart:], `"`)
 	if yEnd == -1 {
 		return ""
@@ -293,8 +327,8 @@ func calculateIconYConstrained(top, bottom, textY string, iconHeight int) string
 	iconHeightFloat := float64(iconHeight)
 
 	// Constrain icon to stay within node bounds
-	minY := topVal + 2 // +2 pixel padding from node top
-	maxY := bottomVal - iconHeightFloat - 2
+	minY := topVal + nodeVPadding
+	maxY := bottomVal - iconHeightFloat - nodeVPadding
 
 	if iconHeightFloat <= nodeHeight {
 		// Icon fits - constrain to node bounds
