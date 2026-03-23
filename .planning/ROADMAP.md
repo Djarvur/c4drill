@@ -303,7 +303,7 @@ Plans:
 **Requirements:** ICON-01, ICON-02, ICON-03, ICON-04, ICON-05, ICON-06
 **Depends on:** Phase 15
 **Plans:** 1/1 plans complete
-**Status:** Ready for execution
+**Status:** Complete
 
 **Icon System Design:**
 
@@ -318,7 +318,25 @@ Plans:
 Plans:
 - [x] 16-01-PLAN.md -- Create icons package, IconExtractor, update HTML labels, integrate with converter
 
+### Phase 17: Units labels cells must be word-wrapped to make the unit shape proportions as close as possible to credit card proportions
+
+**Goal:** Add word-wrapping to HTML label cells so unit shapes approximate credit card proportions
+**Requirements:** WRAP-01, WRAP-02, WRAP-03, WRAP-04, WRAP-05
+**Depends on:** Phase 16
+**Plans:** 1 plan
+
+**Word-Wrapping Design:**
+
+- D-01: Default ratio is 8/5 = 1.6:1 (width:height)
+- D-02: Dynamic width calculation based on content height
+- D-03: Hybrid wrapping: word-based with forced character break for long words
+- D-04: All label fields wrapped: name, technology, description
+- D-05: Ratio configurable via `--label-ratio` CLI flag and `C4DRILL_LABEL_RATIO` env var
+
+Plans:
+- [ ] 17-01-PLAN.md -- Implement word-wrap functions, CLI flag, and integrate with HTML label builders
+
 ---
 
 *Roadmap created: 2026-03-09*
-*Last updated: 2026-03-20 - Phase 16 planning*
+*Last updated: 2026-03-23 - Phase 17 planning*
