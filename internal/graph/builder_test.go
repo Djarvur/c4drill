@@ -633,15 +633,15 @@ func TestBuildExpandedGraph(t *testing.T) {
 func TestBuildGraphEdgeColor(t *testing.T) {
 	t.Parallel()
 
-	// Test: Edge color matches source unit border color (internal system -> SystemBorder)
-	t.Run("edge from C1 system has SystemBorder color", func(t *testing.T) {
+	// Test: Edge color matches source unit border color (C1 internal -> PersonBorder = dark blue)
+	t.Run("edge from C1 system has PersonBorder color", func(t *testing.T) {
 		t.Parallel()
 
 		m := &parser.Model{
 			Properties: model.Properties{Name: "Test"},
 			Units: map[string]*model.Unit{
 				"app": {
-					Type:  model.TypeSystem, // C1 -> SystemBorder = "#3C7FC0"
+					Type:  model.TypeSystem, // C1 -> PersonBorder = "#073B6F" (dark blue)
 					Name:  "App",
 					Links: []model.Link{{Peer: "db"}},
 				},
@@ -656,11 +656,11 @@ func TestBuildGraphEdgeColor(t *testing.T) {
 		g := graph.BuildGraph(v)
 
 		require.Len(t, g.Edges, 1)
-		assert.Equal(t, "#3C7FC0", g.Edges[0].Color)
+		assert.Equal(t, "#073B6F", g.Edges[0].Color) // PersonBorder (dark blue)
 	})
 
 	// Test: Edge from external system uses external border color
-	t.Run("edge from external system has SystemExternalBorder color", func(t *testing.T) {
+	t.Run("edge from external system has PersonExternalBorder color", func(t *testing.T) {
 		t.Parallel()
 
 		m := &parser.Model{

@@ -18,8 +18,8 @@ func TestShapeForType(t *testing.T) {
 		model.TypeDb, model.TypeDbExternal,
 		model.TypeQueue, model.TypeQueueExternal,
 		model.TypeBox,
-		model.TypeContainer, model.TypeContainerDb, model.TypeContainerQueue,
-		model.TypeComponent, model.TypeComponentDb, model.TypeComponentQueue,
+		model.TypeContainer, model.TypeContainerDb, model.TypeContainerQueue, model.TypeContainerBox,
+		model.TypeComponent, model.TypeComponentDb, model.TypeComponentQueue, model.TypeComponentBox,
 	}
 
 	for _, typ := range types {
@@ -46,12 +46,14 @@ func TestIconForType(t *testing.T) {
 	assert.Equal(t, "\u255F\n\u2562", graph.IconForType(model.TypeContainerQueue))
 	assert.Equal(t, "\u255F\n\u2562", graph.IconForType(model.TypeComponentQueue))
 
-	// Test 5: IconForType returns empty string for system/container/component/box
+	// Test 5: IconForType returns empty string for system/container/component/box types
 	assert.Empty(t, graph.IconForType(model.TypeSystem))
 	assert.Empty(t, graph.IconForType(model.TypeSystemExternal))
 	assert.Empty(t, graph.IconForType(model.TypeBox))
 	assert.Empty(t, graph.IconForType(model.TypeContainer))
+	assert.Empty(t, graph.IconForType(model.TypeContainerBox))
 	assert.Empty(t, graph.IconForType(model.TypeComponent))
+	assert.Empty(t, graph.IconForType(model.TypeComponentBox))
 }
 
 func TestIsExternalType(t *testing.T) {
@@ -70,8 +72,8 @@ func TestIsExternalType(t *testing.T) {
 
 	internalTypes := []model.UnitType{
 		model.TypePerson, model.TypeSystem, model.TypeDb, model.TypeQueue, model.TypeBox,
-		model.TypeContainer, model.TypeContainerDb, model.TypeContainerQueue,
-		model.TypeComponent, model.TypeComponentDb, model.TypeComponentQueue,
+		model.TypeContainer, model.TypeContainerDb, model.TypeContainerQueue, model.TypeContainerBox,
+		model.TypeComponent, model.TypeComponentDb, model.TypeComponentQueue, model.TypeComponentBox,
 	}
 	for _, typ := range internalTypes {
 		assert.False(t, graph.IsExternalType(typ), "IsExternalType(%s) should be false", typ)
@@ -94,14 +96,14 @@ func TestLevelForType(t *testing.T) {
 	}
 
 	c2Types := []model.UnitType{
-		model.TypeContainer, model.TypeContainerDb, model.TypeContainerQueue,
+		model.TypeContainer, model.TypeContainerDb, model.TypeContainerQueue, model.TypeContainerBox,
 	}
 	for _, typ := range c2Types {
 		assert.Equal(t, 2, graph.LevelForType(typ), "LevelForType(%s)", typ)
 	}
 
 	c3Types := []model.UnitType{
-		model.TypeComponent, model.TypeComponentDb, model.TypeComponentQueue,
+		model.TypeComponent, model.TypeComponentDb, model.TypeComponentQueue, model.TypeComponentBox,
 	}
 	for _, typ := range c3Types {
 		assert.Equal(t, 3, graph.LevelForType(typ), "LevelForType(%s)", typ)
@@ -112,20 +114,21 @@ func TestGetStyleForType(t *testing.T) {
 	t.Parallel()
 
 	// Test 8: GetStyleForType returns transparent fill for C1 level internal types
+	// C1 uses dark blue (PersonBorder) for all unit types
 	c1Style := graph.GetStyleForType(model.TypeSystem, false)
 	assert.Empty(t, c1Style.FillColor) // Transparent background
-	assert.Equal(t, model.SystemBorder, c1Style.BorderColor)
-	assert.Equal(t, model.SystemBorder, c1Style.FontColor) // Font color matches border color
+	assert.Equal(t, model.PersonBorder, c1Style.BorderColor) // Dark blue for C1
+	assert.Equal(t, model.PersonBorder, c1Style.FontColor)   // Font color matches border color
 	assert.Equal(t, "solid", c1Style.BorderStyle)
 
-	// C2 level
+	// C2 level - blue
 	c2Style := graph.GetStyleForType(model.TypeContainer, false)
 	assert.Empty(t, c2Style.FillColor) // Transparent background
 	assert.Equal(t, model.ContainerBorder, c2Style.BorderColor)
 	assert.Equal(t, model.ContainerBorder, c2Style.FontColor) // Font color matches border color
 	assert.Equal(t, "solid", c2Style.BorderStyle)
 
-	// C3 level
+	// C3 level - light blue
 	c3Style := graph.GetStyleForType(model.TypeComponent, false)
 	assert.Empty(t, c3Style.FillColor) // Transparent background
 	assert.Equal(t, model.ComponentBorder, c3Style.BorderColor)
@@ -133,10 +136,11 @@ func TestGetStyleForType(t *testing.T) {
 	assert.Equal(t, "solid", c3Style.BorderStyle)
 
 	// Test 9: GetStyleForType returns transparent fill for external types
+	// C1 external uses dark gray (PersonExternalBorder)
 	extStyle := graph.GetStyleForType(model.TypeSystemExternal, true)
 	assert.Empty(t, extStyle.FillColor) // Transparent background
-	assert.Equal(t, model.SystemExternalBorder, extStyle.BorderColor)
-	assert.Equal(t, model.SystemExternalBorder, extStyle.FontColor) // Font color matches border color
+	assert.Equal(t, model.PersonExternalBorder, extStyle.BorderColor) // Dark gray for C1 external
+	assert.Equal(t, model.PersonExternalBorder, extStyle.FontColor)   // Font color matches border color
 
 	// Test 10: GetStyleForType returns solid border style for external nodes
 	assert.Equal(t, "solid", extStyle.BorderStyle)

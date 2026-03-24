@@ -82,21 +82,18 @@ type Properties struct {
 | Level | Types |
 |-------|-------|
 | **C1 (Context)** | person, personExternal, system, systemExternal, db, dbExternal, queue, queueExternal, box |
-| **C2 (Containers)** | container, containerDb, containerQueue |
-| **C3 (Components)** | component, componentDb, componentQueue |
+| **C2 (Containers)** | container, containerDb, containerQueue, containerBox |
+| **C3 (Components)** | component, componentDb, componentQueue, componentBox |
 
 **Containment rules:**
 
 | Container | Can Contain |
 |-----------|-------------|
-| `system` | C2 types (container, containerDb, containerQueue) |
-| `container` | C3 types (component, componentDb, componentQueue) |
-| `box` (at C1) | C1 types only |
-| `box` (at C2) | C2 types only |
-| `box` (at C3) | C3 types only |
+| `system`, `systemExternal` | C2 types (container, containerDb, containerQueue, containerBox) |
+| `container`, `containerBox` | C3 types (component, componentDb, componentQueue, componentBox) |
+| `box` (at C1) | C2 types |
+| `containerBox` (at C2) | C3 types |
 
-- Box level inferred from context (where defined)
-- Nested boxes inherit level from topmost ancestor
 - Persons defined at C1 only (but displayed on deeper diagrams when linked — Phase 3 concern)
 
 ### Link Model
@@ -135,6 +132,18 @@ type Link struct {
 - Font color: `#FFFFFF` (white)
 - Arrow color: `#666666` (gray)
 - Boundary color: `#444444` (dark gray)
+
+**Color scheme by C4 level (all unit types at each level use the same color):**
+
+| Level     | Internal   | External   | Description               |
+|-----------|------------|------------|---------------------------|
+| **C1**    | `#073B6F`  | `#8A8A8A`  | Dark blue / Dark gray     |
+| **C2**    | `#3C7FC0`  | `#A6A6A6`  | Blue / Medium gray        |
+| **C3**    | `#78A8D8`  | `#BFBFBF`  | Light blue / Light gray   |
+
+- Border color = Font color for each unit
+- Fill color = transparent for all units
+- All unit types at the same C4 level share the same color (person, system, db, queue, box at C1; container, containerDb, containerQueue, containerBox at C2; component, componentDb, componentQueue, componentBox at C3)
 
 ### TOML Parsing
 
@@ -276,4 +285,4 @@ Ideas captured but not for Phase 1:
 ---
 
 *Context created: 2026-03-09*
-*Last updated: 2026-03-09 — Added technology, link enhancements, text wrapping decisions*
+*Last updated: 2026-03-24 — Added containerBox/componentBox types, unified colors per C4 level*

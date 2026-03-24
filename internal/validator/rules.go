@@ -57,6 +57,7 @@ func ValidateSubunitRules(index map[string]*UnitInfo) ValidationErrors {
 		model.TypeSystemExternal: true,
 		model.TypeBox:            true,
 		model.TypeContainer:      true,
+		model.TypeContainerBox:   true,
 	}
 
 	for path, info := range index {
@@ -162,6 +163,7 @@ var c2Types = map[model.UnitType]bool{
 	model.TypeContainer:      true,
 	model.TypeContainerDb:    true,
 	model.TypeContainerQueue: true,
+	model.TypeContainerBox:   true,
 }
 
 // C3 types - component-level types (inside container).
@@ -171,6 +173,7 @@ var c3Types = map[model.UnitType]bool{
 	model.TypeComponent:      true,
 	model.TypeComponentDb:    true,
 	model.TypeComponentQueue: true,
+	model.TypeComponentBox:   true,
 }
 
 // c1ContainerTypes are C1 types that can contain C2 types.
@@ -235,12 +238,12 @@ func validateUnitNesting(path string, info *UnitInfo, index map[string]*UnitInfo
 		return nil
 	}
 
-	// If parent is a container, children must be C3
-	if parentType == model.TypeContainer {
+	// If parent is a container or containerBox, children must be C3
+	if parentType == model.TypeContainer || parentType == model.TypeContainerBox {
 		if !c3Types[unitType] {
 			return ValidationErrors{&ValidationError{
-				Message: fmt.Sprintf(`unit "%s" has type %s which must be inside component (C3 types only in container)`,
-					path, unitType),
+				Message: fmt.Sprintf(`unit "%s" has type %s which must be inside component (C3 types only in %s)`,
+					path, unitType, parentType),
 				Path:    path,
 			}}
 		}

@@ -34,7 +34,9 @@ func IconForType(t model.UnitType) string {
 		model.TypeContainerQueue, model.TypeComponentQueue:
 		return "\u255F\n\u2562" // queue bars
 	case model.TypeSystem, model.TypeSystemExternal,
-		model.TypeContainer, model.TypeComponent, model.TypeBox:
+		model.TypeContainer, model.TypeContainerBox,
+		model.TypeComponent, model.TypeComponentBox,
+		model.TypeBox:
 		return "" // No icon for these types
 	default:
 		return ""
@@ -71,14 +73,14 @@ func IsSystemType(t model.UnitType) bool {
 	return t == model.TypeSystem || t == model.TypeSystemExternal
 }
 
-// IsContainerType returns true if the type is a container or box type.
+// IsContainerType returns true if the type is a container or containerBox type.
 func IsContainerType(t model.UnitType) bool {
-	return t == model.TypeContainer || t == model.TypeBox
+	return t == model.TypeContainer || t == model.TypeContainerBox
 }
 
-// IsComponentType returns true if the type is a component type.
+// IsComponentType returns true if the type is a component or componentBox type.
 func IsComponentType(t model.UnitType) bool {
-	return t == model.TypeComponent
+	return t == model.TypeComponent || t == model.TypeComponentBox
 }
 
 // LevelForType returns the C4 level (1, 2, or 3) for a unit type.
@@ -91,10 +93,10 @@ func LevelForType(t model.UnitType) int {
 		model.TypeBox:
 		return levelC1
 	case model.TypeContainer, model.TypeContainerDb,
-		model.TypeContainerQueue:
+		model.TypeContainerQueue, model.TypeContainerBox:
 		return levelC2
 	case model.TypeComponent, model.TypeComponentDb,
-		model.TypeComponentQueue:
+		model.TypeComponentQueue, model.TypeComponentBox:
 		return levelC3
 	default:
 		return levelC1
@@ -115,6 +117,10 @@ func GetStyleForType(t model.UnitType, isExternal bool) *NodeStyle {
 }
 
 // getLevelStyle returns the style for internal nodes based on their C4 level.
+// Per user decision: all unit types at each level use the same color:
+// - C1: dark blue (PersonBorder)
+// - C2: blue (ContainerBorder)
+// - C3: light blue (ComponentBorder)
 func getLevelStyle(t model.UnitType) *NodeStyle {
 	level := LevelForType(t)
 
@@ -122,36 +128,39 @@ func getLevelStyle(t model.UnitType) *NodeStyle {
 	case levelC1:
 		return &NodeStyle{
 			FillColor:   "", // Transparent background
-			BorderColor: model.SystemBorder,
-			FontColor:   model.SystemBorder, // Font color matches border color
+			BorderColor: model.PersonBorder, // Dark blue for all C1 units
+			FontColor:   model.PersonBorder, // Font color matches border color
 			BorderStyle: "solid",
 		}
 	case levelC2:
 		return &NodeStyle{
 			FillColor:   "", // Transparent background
-			BorderColor: model.ContainerBorder,
+			BorderColor: model.ContainerBorder, // Blue for all C2 units
 			FontColor:   model.ContainerBorder, // Font color matches border color
 			BorderStyle: "solid",
 		}
 	case levelC3:
 		return &NodeStyle{
 			FillColor:   "", // Transparent background
-			BorderColor: model.ComponentBorder,
+			BorderColor: model.ComponentBorder, // Light blue for all C3 units
 			FontColor:   model.ComponentBorder, // Font color matches border color
 			BorderStyle: "solid",
 		}
 	default:
 		return &NodeStyle{
 			FillColor:   "", // Transparent background
-			BorderColor: model.SystemBorder,
-			FontColor:   model.SystemBorder, // Font color matches border color
+			BorderColor: model.PersonBorder,
+			FontColor:   model.PersonBorder, // Font color matches border color
 			BorderStyle: "solid",
 		}
 	}
 }
 
 // getExternalStyle returns the style for external boundary nodes.
-// Per CONTEXT.md: solid border, external palette colors.
+// Per user decision: all unit types at each level use the same color:
+// - C1 external: dark gray (PersonExternalBorder)
+// - C2 external: medium gray (ContainerExternalBorder)
+// - C3 external: light gray (ComponentExternalBorder)
 func getExternalStyle(t model.UnitType) *NodeStyle {
 	level := LevelForType(t)
 
@@ -159,29 +168,29 @@ func getExternalStyle(t model.UnitType) *NodeStyle {
 	case levelC1:
 		return &NodeStyle{
 			FillColor:   "", // Transparent background
-			BorderColor: model.SystemExternalBorder,
-			FontColor:   model.SystemExternalBorder, // Font color matches border color
+			BorderColor: model.PersonExternalBorder, // Dark gray for all C1 external units
+			FontColor:   model.PersonExternalBorder, // Font color matches border color
 			BorderStyle: "solid",
 		}
 	case levelC2:
 		return &NodeStyle{
 			FillColor:   "", // Transparent background
-			BorderColor: model.ContainerExternalBorder,
+			BorderColor: model.ContainerExternalBorder, // Medium gray for all C2 external units
 			FontColor:   model.ContainerExternalBorder, // Font color matches border color
 			BorderStyle: "solid",
 		}
 	case levelC3:
 		return &NodeStyle{
 			FillColor:   "", // Transparent background
-			BorderColor: model.ComponentExternalBorder,
+			BorderColor: model.ComponentExternalBorder, // Light gray for all C3 external units
 			FontColor:   model.ComponentExternalBorder, // Font color matches border color
 			BorderStyle: "solid",
 		}
 	default:
 		return &NodeStyle{
 			FillColor:   "", // Transparent background
-			BorderColor: model.SystemExternalBorder,
-			FontColor:   model.SystemExternalBorder, // Font color matches border color
+			BorderColor: model.PersonExternalBorder,
+			FontColor:   model.PersonExternalBorder, // Font color matches border color
 			BorderStyle: "solid",
 		}
 	}

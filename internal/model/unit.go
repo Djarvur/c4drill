@@ -21,6 +21,7 @@ const (
 	TypeContainer      UnitType = "container"
 	TypeContainerDb    UnitType = "containerDb"
 	TypeContainerQueue UnitType = "containerQueue"
+	TypeContainerBox   UnitType = "containerBox"
 )
 
 // C3 Component level unit types.
@@ -28,6 +29,7 @@ const (
 	TypeComponent      UnitType = "component"
 	TypeComponentDb    UnitType = "componentDb"
 	TypeComponentQueue UnitType = "componentQueue"
+	TypeComponentBox   UnitType = "componentBox"
 )
 
 // String returns the string representation of the UnitType.
