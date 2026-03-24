@@ -470,6 +470,11 @@ func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge)
 		e.SetFontColor(edge.Color)
 	}
 
+	// Apply minlen if specified (D-01: length > 0 sets minlen attribute)
+	if edge.MinLen > 0 {
+		e.SetMinLen(edge.MinLen)
+	}
+
 	return nil
 }
 
