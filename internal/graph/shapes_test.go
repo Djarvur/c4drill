@@ -145,3 +145,31 @@ func TestGetStyleForType(t *testing.T) {
 	// Test 10: GetStyleForType returns solid border style for external nodes
 	assert.Equal(t, "solid", extStyle.BorderStyle)
 }
+
+func TestGetStyleForType_BoxDashedBorders(t *testing.T) {
+	t.Parallel()
+
+	// Test: TypeBox returns dashed border style
+	boxStyle := graph.GetStyleForType(model.TypeBox, false)
+	assert.Equal(t, "dashed", boxStyle.BorderStyle, "TypeBox should have dashed border")
+
+	// Test: TypeContainerBox returns dashed border style
+	containerBoxStyle := graph.GetStyleForType(model.TypeContainerBox, false)
+	assert.Equal(t, "dashed", containerBoxStyle.BorderStyle, "TypeContainerBox should have dashed border")
+
+	// Test: TypeComponentBox returns dashed border style
+	componentBoxStyle := graph.GetStyleForType(model.TypeComponentBox, false)
+	assert.Equal(t, "dashed", componentBoxStyle.BorderStyle, "TypeComponentBox should have dashed border")
+
+	// Test: TypeSystem returns solid border style (unchanged)
+	systemStyle := graph.GetStyleForType(model.TypeSystem, false)
+	assert.Equal(t, "solid", systemStyle.BorderStyle, "TypeSystem should have solid border")
+
+	// Test: TypeContainer returns solid border style (unchanged)
+	containerStyle := graph.GetStyleForType(model.TypeContainer, false)
+	assert.Equal(t, "solid", containerStyle.BorderStyle, "TypeContainer should have solid border")
+
+	// Test: TypeComponent returns solid border style (unchanged)
+	componentStyle := graph.GetStyleForType(model.TypeComponent, false)
+	assert.Equal(t, "solid", componentStyle.BorderStyle, "TypeComponent should have solid border")
+}

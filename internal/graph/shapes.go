@@ -126,8 +126,15 @@ func GetStyleForType(t model.UnitType, isExternal bool) *NodeStyle {
 // - C1: dark blue (PersonBorder)
 // - C2: blue (ContainerBorder)
 // - C3: light blue (ComponentBorder)
+// Box types use dashed borders to differentiate from other unit types.
 func getLevelStyle(t model.UnitType) *NodeStyle {
 	level := LevelForType(t)
+
+	// Box types get dashed borders
+	borderStyle := "solid"
+	if IsBoxType(t) {
+		borderStyle = "dashed"
+	}
 
 	switch level {
 	case levelC1:
@@ -135,28 +142,28 @@ func getLevelStyle(t model.UnitType) *NodeStyle {
 			FillColor:   "", // Transparent background
 			BorderColor: model.PersonBorder, // Dark blue for all C1 units
 			FontColor:   model.PersonBorder, // Font color matches border color
-			BorderStyle: "solid",
+			BorderStyle: borderStyle,
 		}
 	case levelC2:
 		return &NodeStyle{
 			FillColor:   "", // Transparent background
 			BorderColor: model.ContainerBorder, // Blue for all C2 units
 			FontColor:   model.ContainerBorder, // Font color matches border color
-			BorderStyle: "solid",
+			BorderStyle: borderStyle,
 		}
 	case levelC3:
 		return &NodeStyle{
 			FillColor:   "", // Transparent background
 			BorderColor: model.ComponentBorder, // Light blue for all C3 units
 			FontColor:   model.ComponentBorder, // Font color matches border color
-			BorderStyle: "solid",
+			BorderStyle: borderStyle,
 		}
 	default:
 		return &NodeStyle{
 			FillColor:   "", // Transparent background
 			BorderColor: model.PersonBorder,
 			FontColor:   model.PersonBorder, // Font color matches border color
-			BorderStyle: "solid",
+			BorderStyle: borderStyle,
 		}
 	}
 }
@@ -166,8 +173,15 @@ func getLevelStyle(t model.UnitType) *NodeStyle {
 // - C1 external: dark gray (PersonExternalBorder)
 // - C2 external: medium gray (ContainerExternalBorder)
 // - C3 external: light gray (ComponentExternalBorder)
+// Box types use dashed borders to differentiate from other unit types.
 func getExternalStyle(t model.UnitType) *NodeStyle {
 	level := LevelForType(t)
+
+	// Box types get dashed borders
+	borderStyle := "solid"
+	if IsBoxType(t) {
+		borderStyle = "dashed"
+	}
 
 	switch level {
 	case levelC1:
@@ -175,28 +189,28 @@ func getExternalStyle(t model.UnitType) *NodeStyle {
 			FillColor:   "", // Transparent background
 			BorderColor: model.PersonExternalBorder, // Dark gray for all C1 external units
 			FontColor:   model.PersonExternalBorder, // Font color matches border color
-			BorderStyle: "solid",
+			BorderStyle: borderStyle,
 		}
 	case levelC2:
 		return &NodeStyle{
 			FillColor:   "", // Transparent background
 			BorderColor: model.ContainerExternalBorder, // Medium gray for all C2 external units
 			FontColor:   model.ContainerExternalBorder, // Font color matches border color
-			BorderStyle: "solid",
+			BorderStyle: borderStyle,
 		}
 	case levelC3:
 		return &NodeStyle{
 			FillColor:   "", // Transparent background
 			BorderColor: model.ComponentExternalBorder, // Light gray for all C3 external units
 			FontColor:   model.ComponentExternalBorder, // Font color matches border color
-			BorderStyle: "solid",
+			BorderStyle: borderStyle,
 		}
 	default:
 		return &NodeStyle{
 			FillColor:   "", // Transparent background
 			BorderColor: model.PersonExternalBorder,
 			FontColor:   model.PersonExternalBorder, // Font color matches border color
-			BorderStyle: "solid",
+			BorderStyle: borderStyle,
 		}
 	}
 }
