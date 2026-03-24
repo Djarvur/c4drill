@@ -12,7 +12,7 @@ C4Drill transforms TOML architecture definitions into professional C4 diagrams t
 - **v1.3 Validation Enhancements** -- Phase 14 (shipped 2026-03-17)
 - **v1.4 Edge Coloring** -- Phase 15 (shipped 2026-03-18)
 - **v1.5 SVG Icons** -- Phase 16-17 (shipped 2026-03-23)
-- **v1.6 Simplified Shapes** -- Phase 18 (in progress)
+- **v1.6 Simplified Shapes** -- Phase 18 (shipped 2026-03-24)
 
 ## Phases
 
@@ -146,7 +146,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 15. Edge Coloring | v1.4 | 1/1 | Complete | 2026-03-18 |
 | 16. SVG Icons | v1.5 | 1/1 | Complete | 2026-03-18 |
 | 17. Word-wrapped Labels | v1.5 | 1/1 | Complete | 2026-03-23 |
-| 18. Simplified Shapes | v1.6 | 0/1 | Planning | |
+| 18. Simplified Shapes | v1.6 | 1/1 | Complete | 2026-03-24 |
 
 ### Phase 12: HTML labels for all unit types
 
@@ -346,11 +346,14 @@ Plans:
 
 ---
 
-### v1.6 Simplified Shapes (In Progress)
+### v1.6 Simplified Shapes (Complete)
 
 **Milestone Goal:** Replace icon system with native GraphViz shapes and simplified labels
 
 ### Phase 18: Simplified Shapes
+
+**Status:** Complete
+**Plans:** 1/1 plans complete
 
 **Goal:** Remove SVG icons, use native GraphViz cylinder shapes for DB/Queue, simplify labels
 **Requirements:** ICON-01, ICON-02, ICON-03, ICON-04, DB-01, DB-02, DB-03, QUEUE-01, QUEUE-02, QUEUE-03, PERSON-01, PERSON-02, PERSON-03, PERSON-04, LABEL-01, LABEL-02, LABEL-03, LABEL-04, WRAP-01, WRAP-02
@@ -370,9 +373,9 @@ Plans:
 - D-09: Keep word-wrap functionality from Phase 17
 
 Plans:
-- [ ] 18-01-PLAN.md -- Remove icon system, add native shapes, update label builders
+- [x] 18-01-PLAN.md -- Remove icon system, add native shapes, update label builders
 
 ---
 
 *Roadmap created: 2026-03-09*
-*Last updated: 2026-03-24 - Phase 18 plan created*
+*Last updated: 2026-03-24 - Phase 18 complete*

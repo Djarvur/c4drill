@@ -9,41 +9,41 @@ Requirements for Simplified Shapes milestone. Replace icon system with native Gr
 
 ### Icon Removal
 
-- [ ] **ICON-01**: Remove icons package (internal/icons) entirely
-- [ ] **ICON-02**: Remove IconExtractor from converter
-- [ ] **ICON-03**: Remove .icons/ directory generation from output
-- [ ] **ICON-04**: Remove SVG postprocessing logic
+- [x] **ICON-01**: Remove icons package (internal/icons) entirely
+- [x] **ICON-02**: Remove IconExtractor from converter
+- [x] **ICON-03**: Remove .icons/ directory generation from output
+- [x] **ICON-04**: Remove SVG postprocessing logic
 
 ### DB Shape
 
-- [ ] **DB-01**: DB units render with GraphViz native `shape=cylinder`
-- [ ] **DB-02**: DB external units also use cylinder shape
-- [ ] **DB-03**: DB label is simple 3-row table (name, technology, description)
+- [x] **DB-01**: DB units render with GraphViz native `shape=cylinder`
+- [x] **DB-02**: DB external units also use cylinder shape
+- [x] **DB-03**: DB label is simple 3-row table (name, technology, description)
 
 ### Queue Shape
 
-- [ ] **QUEUE-01**: Queue units render with GraphViz native `shape=cylinder` rotated 90°
-- [ ] **QUEUE-02**: Queue external units also use rotated cylinder shape
-- [ ] **QUEUE-03**: Queue label is simple 3-row table (name, technology, description)
+- [x] **QUEUE-01**: Queue units render with GraphViz native `shape=cylinder` rotated 90deg
+- [x] **QUEUE-02**: Queue external units also use rotated cylinder shape
+- [x] **QUEUE-03**: Queue label is simple 3-row table (name, technology, description)
 
 ### Person Label
 
-- [ ] **PERSON-01**: Person units use 2-column table layout
-- [ ] **PERSON-02**: First column contains 👤 emoji at font size 8
-- [ ] **PERSON-03**: Second column contains name and description rows
-- [ ] **PERSON-04**: Person external units use same label format
+- [x] **PERSON-01**: Person units use 2-column table layout
+- [x] **PERSON-02**: First column contains emoji (&#x1F464;) at font size +4
+- [x] **PERSON-03**: Second column contains name and description rows
+- [x] **PERSON-04**: Person external units use same label format
 
 ### System/Box Label
 
-- [ ] **LABEL-01**: System units use simple 3-row table (name, technology, description)
-- [ ] **LABEL-02**: Box units use same 3-row table format
-- [ ] **LABEL-03**: Container and Component units use same 3-row table format
-- [ ] **LABEL-04**: No icon column in system/box/container/component labels
+- [x] **LABEL-01**: System units use simple 3-row table (name, technology, description)
+- [x] **LABEL-02**: Box units use same 3-row table format
+- [x] **LABEL-03**: Container and Component units use same 3-row table format
+- [x] **LABEL-04**: No icon column in system/box/container/component labels
 
 ### Word Wrap
 
-- [ ] **WRAP-01**: All label text is word-wrapped to maintain credit card proportions
-- [ ] **WRAP-02**: Existing --label-ratio flag continues to work
+- [x] **WRAP-01**: All label text is word-wrapped to maintain credit card proportions
+- [x] **WRAP-02**: Existing --label-ratio flag continues to work
 
 ## v1.1 Requirements (Shipped)
 
