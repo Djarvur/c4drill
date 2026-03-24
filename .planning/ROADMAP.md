@@ -146,7 +146,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 15. Edge Coloring | v1.4 | 1/1 | Complete | 2026-03-18 |
 | 16. SVG Icons | v1.5 | 1/1 | Complete | 2026-03-18 |
 | 17. Word-wrapped Labels | v1.5 | 1/1 | Complete | 2026-03-23 |
-| 18. Simplified Shapes | v1.6 | 1/1 | Complete | 2026-03-24 |
+| 18. Simplified Shapes | v1.6 | Complete    | 2026-03-24 | 2026-03-24 |
 
 ### Phase 12: HTML labels for all unit types
 
