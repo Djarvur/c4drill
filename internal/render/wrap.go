@@ -180,3 +180,57 @@ func labelMaxCharsNoIcon(rowCount int) int {
 	}
 	return chars
 }
+
+// labelMaxCharsForCylinder calculates the maximum characters per line for DB labels.
+// DB nodes use cylinder shape which adds extra visual height for the 3D effect.
+// Uses a higher effective ratio to fill the wider space and maintain target aspect ratio.
+func labelMaxCharsForCylinder(rowCount int) int {
+	totalHeight := rowCount * pointsPerRow
+	// Use higher ratio to compensate for cylinder shape overhead (~37% extra height)
+	cylinderRatio := LabelRatio * 2.2
+	totalWidth := int(float64(totalHeight) * cylinderRatio)
+	chars := estimateCharsFromWidth(totalWidth)
+	// Use reasonable minimum for cylinder
+	minCharsForCylinder := 20
+	if chars < minCharsForCylinder {
+		return minCharsForCylinder
+	}
+	return chars
+}
+
+// labelMaxCharsForQueue calculates the maximum characters per line for Queue labels.
+// Queue nodes have an ASCII graphic row that adds height but limited width.
+// Uses a higher effective ratio to fill the wider space.
+func labelMaxCharsForQueue(rowCount int) int {
+	totalHeight := rowCount * pointsPerRow
+	// Use higher ratio to compensate for ASCII graphic row overhead
+	queueRatio := LabelRatio * 1.6
+	totalWidth := int(float64(totalHeight) * queueRatio)
+	chars := estimateCharsFromWidth(totalWidth)
+	// Use reasonable minimum for queue
+	minCharsForQueue := 15
+	if chars < minCharsForQueue {
+		return minCharsForQueue
+	}
+	return chars
+}
+
+// labelMaxCharsForPerson calculates the maximum characters per line for Person labels.
+// Person labels have an icon column which reduces available text width.
+// Uses a lower minimum to encourage wrapping and create more proportional dimensions.
+// Enforces a minimum of 2 rows for better aspect ratio.
+func labelMaxCharsForPerson(rowCount int) int {
+	// Use minimum of 2 rows for better proportions
+	effectiveRows := rowCount
+	if effectiveRows < 2 {
+		effectiveRows = 2
+	}
+	textWidth := calculateTextWidth(effectiveRows, LabelRatio)
+	chars := estimateCharsFromWidth(textWidth)
+	// Use lower minimum for Person to encourage wrapping for better proportions
+	minCharsForPerson := 10
+	if chars < minCharsForPerson {
+		return minCharsForPerson
+	}
+	return chars
+}

@@ -109,9 +109,9 @@ func TestHTMLQueueLabel(t *testing.T) {
 		t.Error("Queue label should contain description")
 	}
 
-	// Graphic row should use valign="middle" and align="center"
-	if !strings.Contains(result, `<tr align="center"><td valign="middle">═╦╩═╦═══</td></tr>`) {
-		t.Error("Queue label graphic row should have valign=middle and align=center")
+	// Graphic row should use nested table with padding (new format for proportion compensation)
+	if !strings.Contains(result, `<table border="0" cellpadding="0" cellspacing="0"><tr><td width="`) {
+		t.Error("Queue label graphic row should have nested table with padding")
 	}
 }
 
