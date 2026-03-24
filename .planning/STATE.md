@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI-Ready
 status: completed
-last_updated: "2026-03-24T18:18:04.223Z"
-last_activity: 2026-03-24 — Completed 20-01-PLAN.md
+last_updated: "2026-03-24T18:25:00.000Z"
+last_activity: 2026-03-24 — Completed 21-02-PLAN.md
 progress:
   total_phases: 15
-  completed_phases: 13
+  completed_phases: 14
   total_plans: 21
-  completed_plans: 19
+  completed_plans: 20
 ---
 
 # Project State
@@ -19,14 +19,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** Phase 20 — Helvetica Font
+**Current focus:** Phase 21 — Box Labels and Dashed Borders
 
 ## Current Position
 
-Phase: 20 (Complete)
-Plan: 20-01 (Complete)
-Status: Phase 20 complete - Helvetica font added to all diagram elements
-Last activity: 2026-03-24 — Completed 20-01-PLAN.md
+Phase: 21 (Complete)
+Plan: 21-02 (Complete)
+Status: Phase 21 complete - Mixed content validation and box color by contents
+Last activity: 2026-03-24 — Completed 21-02-PLAN.md
 
 ## Accumulated Context
 
@@ -50,6 +50,8 @@ Prior decisions from v1.0-v1.6:
 - [Phase 20-helvetica-font]: Use Helvetica font for all diagram elements (graph, clusters, edges)
 - [Phase 21]: Box labels use same 3-row HTML table format as container/component units — Consistent visual appearance across all unit types that don't have special shapes
 - [Phase 21]: All box types (TypeBox, TypeContainerBox, TypeComponentBox) get dashed borders — Visual differentiation from other unit types like system/container/component
+- [Phase 21]: C1 boxes cannot contain both external and non-external units (validation rule)
+- [Phase 21]: C1 box color determined by contents — grey (#8A8A8A) for external, dark blue (#073B6F) for internal
 
 ### Pending Todos
 
@@ -66,10 +68,10 @@ None.
 ### Roadmap Evolution
 
 - Phase 21 added: box label has unnecessary curly brackets, box border must be dashed by default
-- Phase 22 added: fix box labels, dashed borders, validator for mixed external/non-external, color by content
+- Phase 21 plan 02 added: validator for mixed external/non-external, color by content
 
 ## Session Continuity
 
-Last session: 2026-03-24T18:18:04.212Z
-Status: Phase 20 complete
+Last session: 2026-03-24T18:25:00.000Z
+Status: Phase 21 complete
 Next: Project complete - all planned phases finished
