@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI-Ready
 status: completed
-last_updated: "2026-03-24T17:40:29.782Z"
+last_updated: "2026-03-24T18:18:04.223Z"
 last_activity: 2026-03-24 — Completed 20-01-PLAN.md
 progress:
   total_phases: 15
   completed_phases: 13
-  total_plans: 19
-  completed_plans: 18
+  total_plans: 21
+  completed_plans: 19
 ---
 
 # Project State
@@ -48,6 +48,8 @@ Prior decisions from v1.0-v1.6:
 
 - Use Helvetica font for all text rendering (nodes, edges, clusters)
 - [Phase 20-helvetica-font]: Use Helvetica font for all diagram elements (graph, clusters, edges)
+- [Phase 21]: Box labels use same 3-row HTML table format as container/component units — Consistent visual appearance across all unit types that don't have special shapes
+- [Phase 21]: All box types (TypeBox, TypeContainerBox, TypeComponentBox) get dashed borders — Visual differentiation from other unit types like system/container/component
 
 ### Pending Todos
 
@@ -68,6 +70,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-24T16:56:00.000Z
+Last session: 2026-03-24T18:18:04.212Z
 Status: Phase 20 complete
 Next: Project complete - all planned phases finished

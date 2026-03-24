@@ -150,7 +150,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 18. Simplified Shapes | v1.6 | Complete    | 2021-03-24 | 2021-03-24 |
 | 19. Queue Label Fix | v1.7 | 0/1 | Planning | — |
 | 20. Helvetica Font | v1.7 | 1/1 | Complete | 2021-03-24 |
-| 21. Box Fixes | v1.7 | 0/2 | Planning | — |
+| 21. Box Fixes | 1/2 | In Progress|  | — |
 
 ### Phase 12: HTML labels for all unit types
 
@@ -424,7 +424,7 @@ Plans:
 ### Phase 21: Box Fixes - Labels, Borders, Validation, Color by Content
 
 **Status:** Planning
-**Plans:** 0/2 plans complete
+**Plans:** 1/2 plans executed
 
 **Goal:** Fix box unit rendering: remove curly brackets from labels, add dashed borders, validate C1 box contents, and color C1 boxes based on contents
 **Requirements:** BOX-01, BOX-02, BOX-03, BOX-04
