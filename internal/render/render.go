@@ -29,22 +29,23 @@ var (
 //
 //nolint:revive // Function name matches plan specification (04-01-PLAN.md)
 func RenderDOT(g *graph.Graph) ([]byte, error) {
-	return render(g, graphviz.XDOT, "")
+	return render(g, graphviz.XDOT)
 }
 
 // RenderSVG renders a graph to SVG format.
 //
 //nolint:revive // Function name matches plan specification (04-01-PLAN.md)
 func RenderSVG(g *graph.Graph) ([]byte, error) {
-	return render(g, graphviz.SVG, "")
+	return render(g, graphviz.SVG)
 }
 
-// RenderSVGWithOutput renders a graph to SVG format with icon extraction.
-// The outputDir is used as the base directory for the .icons/ subdirectory.
+// RenderSVGWithOutput renders a graph to SVG format.
+// The outputDir parameter is kept for API compatibility but is no longer used
+// since icons are now handled via native GraphViz shapes and emoji.
 //
 //nolint:revive // Function name matches plan specification (04-01-PLAN.md)
-func RenderSVGWithOutput(g *graph.Graph, outputDir string) ([]byte, error) {
-	return render(g, graphviz.SVG, outputDir)
+func RenderSVGWithOutput(g *graph.Graph, _ string) ([]byte, error) {
+	return render(g, graphviz.SVG)
 }
 
 // Render renders a graph to the specified format ("dot" or "svg").
@@ -60,23 +61,24 @@ func Render(g *graph.Graph, format string) ([]byte, error) {
 	}
 }
 
-// RenderWithOutput renders a graph to the specified format with icon extraction.
-// Icons are embedded as base64 data URIs (WASM graphviz cannot load external files).
+// RenderWithOutput renders a graph to the specified format.
+// The outputDir parameter is kept for API compatibility but is no longer used
+// since icons are now handled via native GraphViz shapes and emoji.
 //
 //nolint:revive // Function name matches plan specification (04-01-PLAN.md)
-func RenderWithOutput(g *graph.Graph, format, outputDir string) ([]byte, error) {
+func RenderWithOutput(g *graph.Graph, format, _ string) ([]byte, error) {
 	switch format {
 	case "dot":
-		return render(g, graphviz.XDOT, outputDir)
+		return render(g, graphviz.XDOT)
 	case "svg":
-		return render(g, graphviz.SVG, outputDir)
+		return render(g, graphviz.SVG)
 	default:
 		return nil, fmt.Errorf("%w: %q (supported: dot, svg)", ErrUnsupportedFormat, format)
 	}
 }
 
 // render is the internal render function that handles all formats.
-func render(g *graph.Graph, format graphviz.Format, outputDir string) ([]byte, error) {
+func render(g *graph.Graph, format graphviz.Format) ([]byte, error) {
 	if g == nil {
 		return nil, ErrNilGraph
 	}
@@ -93,26 +95,7 @@ func render(g *graph.Graph, format graphviz.Format, outputDir string) ([]byte, e
 	}
 	defer gv.Close()
 
-	// For DOT with output: embed base64 data URIs in HTML labels
-	// For SVG with output: use iconReserve placeholder to reserve layout space,
-	// then inject icons post-render via InjectSVGIcons
-	useBase64 := format == graphviz.XDOT && outputDir != ""
-	needSVGInjection := format == graphviz.SVG && outputDir != ""
-
-	// For SVG, don't create iconExtractor (no file paths or base64 in labels).
-	// Pass iconReserve as placeholder so labels get <td width="36"> for layout.
-	renderOutputDir := outputDir
-	iconPlaceholder := ""
-
-	if format == graphviz.SVG {
-		renderOutputDir = ""
-
-		if needSVGInjection {
-			iconPlaceholder = iconReserve
-		}
-	}
-
-	cg, err := buildCgraph(gv, g, renderOutputDir, useBase64, iconPlaceholder)
+	cg, err := buildCgraph(gv, g)
 	if err != nil {
 		return nil, fmt.Errorf("build graph: %w", err)
 	}
@@ -121,18 +104,6 @@ func render(g *graph.Graph, format graphviz.Format, outputDir string) ([]byte, e
 	var buf bytes.Buffer
 	if err := gv.Render(ctx, cg, format, &buf); err != nil {
 		return nil, fmt.Errorf("render output: %w", err)
-	}
-
-	// For SVG, post-process to inject icons
-	if needSVGInjection {
-		iconExtractor := NewIconExtractor(outputDir)
-
-		injected, err := InjectSVGIcons(buf.Bytes(), g, iconExtractor)
-		if err != nil {
-			return nil, fmt.Errorf("inject svg icons: %w", err)
-		}
-
-		return injected, nil
 	}
 
 	return buf.Bytes(), nil

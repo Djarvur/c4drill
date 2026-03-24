@@ -12,7 +12,6 @@ import (
 
 // HTML Label Builder Tests
 // These tests verify the HTML label builder functions for each unit type.
-// The implementations will be added in Wave 1 (plan 12-01).
 
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestHTMLPersonLabel(t *testing.T) {
@@ -20,8 +19,8 @@ func TestHTMLPersonLabel(t *testing.T) {
 		Name:        "Test User",
 		Description: "Test description",
 	}
-	result := buildPersonHTMLLabel(label, ".icons/person-3C7FC0.svg")
-	// Should contain HTML table with icon and name
+	result := buildPersonHTMLLabel(label)
+	// Should contain HTML table with emoji and name
 	if !strings.Contains(result, "<table") {
 		t.Error("Person label should contain HTML table")
 	}
@@ -30,8 +29,13 @@ func TestHTMLPersonLabel(t *testing.T) {
 		t.Error("Person label should contain name")
 	}
 
-	if !strings.Contains(result, `<img src=".icons/person-3C7FC0.svg"`) {
-		t.Error("Person label should contain img tag with icon path")
+	// Check for emoji instead of img tag
+	if !strings.Contains(result, "&#x1F464;") {
+		t.Error("Person label should contain person emoji")
+	}
+
+	if strings.Contains(result, "<img") {
+		t.Error("Person label should NOT contain img tag")
 	}
 }
 
@@ -43,7 +47,7 @@ func TestHTMLDbLabel(t *testing.T) {
 		Description: "Test description",
 	}
 
-	result := buildDbHTMLLabel(label, ".icons/db-3C7FC0.svg")
+	result := buildDbHTMLLabel(label)
 	if !strings.Contains(result, "<table") {
 		t.Error("DB label should contain HTML table")
 	}
@@ -52,8 +56,14 @@ func TestHTMLDbLabel(t *testing.T) {
 		t.Error("DB label should contain name")
 	}
 
-	if !strings.Contains(result, `<img src=".icons/db-3C7FC0.svg"`) {
-		t.Error("DB label should contain img tag with icon path")
+	// Should NOT contain img tag
+	if strings.Contains(result, "<img") {
+		t.Error("DB label should NOT contain img tag")
+	}
+
+	// Should be single-column (no rowspan for icon)
+	if strings.Contains(result, "rowspan") {
+		t.Error("DB label should NOT contain rowspan (single-column layout)")
 	}
 }
 
@@ -65,17 +75,19 @@ func TestHTMLQueueLabel(t *testing.T) {
 		Description: "Test description",
 	}
 
-	result := buildQueueHTMLLabel(label, ".icons/pipe-3C7FC0.svg")
+	result := buildQueueHTMLLabel(label)
 	if !strings.Contains(result, "<table") {
 		t.Error("Queue label should contain HTML table")
 	}
-	// Queue uses rowspan like other unit types
-	if !strings.Contains(result, "rowspan") {
-		t.Error("Queue label should contain rowspan")
+
+	// Should NOT contain img tag
+	if strings.Contains(result, "<img") {
+		t.Error("Queue label should NOT contain img tag")
 	}
 
-	if !strings.Contains(result, `<img src=".icons/pipe-3C7FC0.svg"`) {
-		t.Error("Queue label should contain img tag with icon path")
+	// Should be single-column (no rowspan for icon)
+	if strings.Contains(result, "rowspan") {
+		t.Error("Queue label should NOT contain rowspan (single-column layout)")
 	}
 }
 
@@ -87,7 +99,7 @@ func TestHTMLSystemLabel(t *testing.T) {
 		Description: "Test description",
 	}
 
-	result := buildSystemHTMLLabel(label, ".icons/system-3C7FC0.svg")
+	result := buildSystemHTMLLabel(label)
 	if !strings.Contains(result, "<table") {
 		t.Error("System label should contain HTML table")
 	}
@@ -96,12 +108,19 @@ func TestHTMLSystemLabel(t *testing.T) {
 		t.Error("System label should contain name")
 	}
 
-	if !strings.Contains(result, `<img src=".icons/system-3C7FC0.svg"`) {
-		t.Error("System label should contain img tag with icon path")
+	// Should NOT contain img tag
+	if strings.Contains(result, "<img") {
+		t.Error("System label should NOT contain img tag")
 	}
-	// Should NOT contain old monospace SYS label anymore
+
+	// Should NOT contain old monospace SYS label
 	if strings.Contains(result, "SYS") {
 		t.Error("System label should NOT contain old SYS monospace label")
+	}
+
+	// Should be single-column (no rowspan for icon)
+	if strings.Contains(result, "rowspan") {
+		t.Error("System label should NOT contain rowspan (single-column layout)")
 	}
 }
 
@@ -113,7 +132,7 @@ func TestHTMLContainerLabel(t *testing.T) {
 		Description: "Test description",
 	}
 
-	result := buildContainerHTMLLabel(label, ".icons/container-3C7FC0.svg")
+	result := buildContainerHTMLLabel(label)
 	if !strings.Contains(result, "<table") {
 		t.Error("Container label should contain HTML table")
 	}
@@ -122,12 +141,19 @@ func TestHTMLContainerLabel(t *testing.T) {
 		t.Error("Container label should contain name")
 	}
 
-	if !strings.Contains(result, `<img src=".icons/container-3C7FC0.svg"`) {
-		t.Error("Container label should contain img tag with icon path")
+	// Should NOT contain img tag
+	if strings.Contains(result, "<img") {
+		t.Error("Container label should NOT contain img tag")
 	}
-	// Should NOT contain old monospace CONT label anymore
+
+	// Should NOT contain old monospace CONT label
 	if strings.Contains(result, "CONT") {
 		t.Error("Container label should NOT contain old CONT monospace label")
+	}
+
+	// Should be single-column (no rowspan for icon)
+	if strings.Contains(result, "rowspan") {
+		t.Error("Container label should NOT contain rowspan (single-column layout)")
 	}
 }
 
@@ -139,7 +165,7 @@ func TestHTMLComponentLabel(t *testing.T) {
 		Description: "Test description",
 	}
 
-	result := buildComponentHTMLLabel(label, ".icons/component-78A8D8.svg")
+	result := buildComponentHTMLLabel(label)
 	if !strings.Contains(result, "<table") {
 		t.Error("Component label should contain HTML table")
 	}
@@ -148,32 +174,18 @@ func TestHTMLComponentLabel(t *testing.T) {
 		t.Error("Component label should contain name")
 	}
 
-	if !strings.Contains(result, `<img src=".icons/component-78A8D8.svg"`) {
-		t.Error("Component label should contain img tag with icon path")
+	// Should NOT contain img tag
+	if strings.Contains(result, "<img") {
+		t.Error("Component label should NOT contain img tag")
 	}
-	// Should NOT contain old monospace COMP label anymore
+
+	// Should NOT contain old monospace COMP label
 	if strings.Contains(result, "COMP") {
 		t.Error("Component label should NOT contain old COMP monospace label")
 	}
-}
 
-//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
-func TestHTMLLabelEmptyIconPath(t *testing.T) {
-	label := &graph.Label{
-		Name:        "Test User",
-		Description: "Test description",
-	}
-	result := buildPersonHTMLLabel(label, "")
-	// Should still contain HTML table with name even without icon
-	if !strings.Contains(result, "<table") {
-		t.Error("Person label should contain HTML table")
-	}
-
-	if !strings.Contains(result, "Test User") {
-		t.Error("Person label should contain name")
-	}
-	// Should NOT contain img tag when iconRelPath is empty
-	if strings.Contains(result, "<img") {
-		t.Error("Person label should NOT contain img tag when iconRelPath is empty")
+	// Should be single-column (no rowspan for icon)
+	if strings.Contains(result, "rowspan") {
+		t.Error("Component label should NOT contain rowspan (single-column layout)")
 	}
 }

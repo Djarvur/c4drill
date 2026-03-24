@@ -12,24 +12,24 @@ import (
 )
 
 // buildHTMLLabelForType returns the appropriate HTML label for a unit type.
-func buildHTMLLabelForType(label *graph.Label, t model.UnitType, iconRelPath string) string {
+func buildHTMLLabelForType(label *graph.Label, t model.UnitType) string {
 	if label == nil {
 		return ""
 	}
 
 	switch {
 	case graph.IsPersonType(t):
-		return buildPersonHTMLLabel(label, iconRelPath)
+		return buildPersonHTMLLabel(label)
 	case graph.IsDbType(t):
-		return buildDbHTMLLabel(label, iconRelPath)
+		return buildDbHTMLLabel(label)
 	case graph.IsQueueType(t):
-		return buildQueueHTMLLabel(label, iconRelPath)
+		return buildQueueHTMLLabel(label)
 	case graph.IsSystemType(t):
-		return buildSystemHTMLLabel(label, iconRelPath)
+		return buildSystemHTMLLabel(label)
 	case graph.IsContainerType(t):
-		return buildContainerHTMLLabel(label, iconRelPath)
+		return buildContainerHTMLLabel(label)
 	case graph.IsComponentType(t):
-		return buildComponentHTMLLabel(label, iconRelPath)
+		return buildComponentHTMLLabel(label)
 	default:
 		// Fallback to generic record label for unknown types
 		return buildRecordLabel(label)
@@ -44,31 +44,6 @@ const (
 	fontSizeGraph = 14.0
 	fontSizeEdge  = 10.0
 )
-
-// extractIcon extracts an icon path for a unit, using base64 or file path.
-// Returns empty string on error (graceful degradation).
-func extractIcon(iconExtractor *IconExtractor, iconType, borderColor string, useBase64 bool) string {
-	if iconExtractor == nil || borderColor == "" {
-		return ""
-	}
-
-	var (
-		iconPath string
-		err      error
-	)
-
-	if useBase64 {
-		iconPath, err = iconExtractor.ExtractSVGBase64(iconType, borderColor)
-	} else {
-		iconPath, err = iconExtractor.Extract(iconType, borderColor)
-	}
-
-	if err != nil {
-		return "" // Graceful degradation
-	}
-
-	return iconPath
-}
 
 // styleInfo contains style attributes for nodes and clusters.
 type styleInfo struct {
@@ -94,16 +69,9 @@ func buildStyleString(style *styleInfo) []string {
 }
 
 // buildCgraph converts a graph.Graph to a cgraph.Graph for rendering.
-// outputDir is the base directory where the SVG will be written (for icon extraction).
-// useBase64 indicates whether to embed icons as base64 data URIs (needed for WASM graphviz).
-// iconPlaceholder, if non-empty, is used instead of real icon extraction to reserve
-// layout space for post-render icon injection.
 func buildCgraph(
 	gv *graphviz.Graphviz,
 	g *graph.Graph,
-	outputDir string,
-	useBase64 bool,
-	iconPlaceholder string,
 ) (*cgraph.Graph, error) {
 	cg, err := gv.Graph()
 	if err != nil {
@@ -113,23 +81,17 @@ func buildCgraph(
 	// Configure graph-level settings
 	configureGraphSettings(cg, g)
 
-	// Create icon extractor for this render (only if outputDir is provided)
-	var iconExtractor *IconExtractor
-	if outputDir != "" {
-		iconExtractor = NewIconExtractor(outputDir)
-	}
-
 	// Build node lookup map
 	nodeMap := make(map[string]*cgraph.Node)
 
 	// Create top-level nodes (not in clusters)
-	if err := createTopLevelNodes(cg, g.Nodes, nodeMap, iconExtractor, useBase64, iconPlaceholder); err != nil {
+	if err := createTopLevelNodes(cg, g.Nodes, nodeMap); err != nil {
 		return nil, err
 	}
 
 	// Create clusters with their nodes
 	for _, cluster := range g.Clusters {
-		if err := createCluster(cg, cluster, nodeMap, iconExtractor, useBase64, iconPlaceholder); err != nil {
+		if err := createCluster(cg, cluster, nodeMap); err != nil {
 			return nil, fmt.Errorf("create cluster %s: %w", cluster.ID, err)
 		}
 	}
@@ -147,16 +109,13 @@ func createTopLevelNodes(
 	cg *cgraph.Graph,
 	nodes []*graph.Node,
 	nodeMap map[string]*cgraph.Node,
-	iconExtractor *IconExtractor,
-	useBase64 bool,
-	iconPlaceholder string,
 ) error {
 	for _, node := range nodes {
 		if node.IsInCluster {
 			continue // Will be created inside cluster
 		}
 
-		cn, err := createNode(cg, node, iconExtractor, useBase64, iconPlaceholder)
+		cn, err := createNode(cg, node)
 		if err != nil {
 			return fmt.Errorf("create node %s: %w", node.ID, err)
 		}
@@ -251,26 +210,29 @@ func joinLabels(parts []string) string {
 }
 
 // createNode creates a cgraph.Node from a graph.Node.
-// useBase64 indicates whether to embed icons as base64 data URIs.
 func createNode(
 	cg *cgraph.Graph,
 	node *graph.Node,
-	iconExtractor *IconExtractor,
-	useBase64 bool,
-	iconPlaceholder string,
 ) (*cgraph.Node, error) {
 	cn, err := cg.CreateNodeByName(node.ID)
 	if err != nil {
 		return nil, fmt.Errorf("create node by name: %w", err)
 	}
 
-	// HTML labels with shape=box and style=rounded for proper visual appearance.
-	cn.SetShape(cgraph.BoxShape)
+	// Set shape based on unit type
+	// DB and Queue use cylinder shape, all others use box
+	if graph.IsDbType(node.Type) || graph.IsQueueType(node.Type) {
+		cn.SetShape(cgraph.CylinderShape)
+		// Queue uses horizontal cylinder (90 degree rotation)
+		if graph.IsQueueType(node.Type) {
+			cn.SetOrientation(90.0)
+		}
+	} else {
+		cn.SetShape(cgraph.BoxShape)
+	}
 
-	// Extract icon and build HTML label
-	iconRelPath := extractNodeIcon(node, iconExtractor, useBase64, iconPlaceholder)
-
-	if err := setNodeLabel(cg, cn, node, iconRelPath); err != nil {
+	// Build and set HTML label
+	if err := setNodeLabel(cg, cn, node); err != nil {
 		return nil, err
 	}
 
@@ -285,27 +247,13 @@ func createNode(
 	return cn, nil
 }
 
-// extractNodeIcon extracts the icon path for a node.
-func extractNodeIcon(node *graph.Node, iconExtractor *IconExtractor, useBase64 bool, iconPlaceholder string) string {
-	if node.Style == nil {
-		return ""
-	}
-
-	// If placeholder mode, return placeholder for nodes that would have icons
-	if iconPlaceholder != "" && node.Style.BorderColor != "" {
-		return iconPlaceholder
-	}
-
-	return extractIcon(iconExtractor, iconTypeForUnit(node.Type), node.Style.BorderColor, useBase64)
-}
-
 // setNodeLabel builds and sets the HTML label for a node.
-func setNodeLabel(cg *cgraph.Graph, cn *cgraph.Node, node *graph.Node, iconRelPath string) error {
+func setNodeLabel(cg *cgraph.Graph, cn *cgraph.Node, node *graph.Node) error {
 	if node.Label == nil {
 		return nil
 	}
 
-	htmlLabel := buildHTMLLabelForType(node.Label, node.Type, iconRelPath)
+	htmlLabel := buildHTMLLabelForType(node.Label, node.Type)
 	if htmlLabel == "" {
 		return nil
 	}
@@ -357,14 +305,10 @@ func nodeStyleToInfo(style *graph.NodeStyle) *styleInfo {
 }
 
 // createCluster creates a subgraph cluster from a graph.Cluster.
-// useBase64 indicates whether to embed icons as base64 data URIs.
 func createCluster(
 	parent *cgraph.Graph,
 	cluster *graph.Cluster,
 	nodeMap map[string]*cgraph.Node,
-	iconExtractor *IconExtractor,
-	useBase64 bool,
-	iconPlaceholder string,
 ) error {
 	// Name must start with "cluster_" for GraphViz to render as cluster
 	subgraph, err := parent.CreateSubGraphByName("cluster_" + cluster.ID)
@@ -372,10 +316,8 @@ func createCluster(
 		return fmt.Errorf("create subgraph: %w", err)
 	}
 
-	// Extract icon and set label
-	iconRelPath := extractClusterIcon(cluster, iconExtractor, useBase64, iconPlaceholder)
-
-	if err := setClusterLabel(parent, subgraph, cluster, iconRelPath); err != nil {
+	// Set cluster label
+	if err := setClusterLabel(parent, subgraph, cluster); err != nil {
 		return err
 	}
 
@@ -386,7 +328,7 @@ func createCluster(
 
 	// Create nodes inside cluster
 	for _, node := range cluster.Nodes {
-		cn, err := createNode(subgraph, node, iconExtractor, useBase64, iconPlaceholder)
+		cn, err := createNode(subgraph, node)
 		if err != nil {
 			return fmt.Errorf("create node %s in cluster: %w", node.ID, err)
 		}
@@ -396,7 +338,7 @@ func createCluster(
 
 	// Create nested clusters recursively
 	for _, nestedCluster := range cluster.Clusters {
-		if err := createCluster(subgraph, nestedCluster, nodeMap, iconExtractor, useBase64, iconPlaceholder); err != nil {
+		if err := createCluster(subgraph, nestedCluster, nodeMap); err != nil {
 			return fmt.Errorf("create nested cluster %s: %w", nestedCluster.ID, err)
 		}
 	}
@@ -404,32 +346,13 @@ func createCluster(
 	return nil
 }
 
-// extractClusterIcon extracts the icon path for a cluster.
-func extractClusterIcon(
-	cluster *graph.Cluster,
-	iconExtractor *IconExtractor,
-	useBase64 bool,
-	iconPlaceholder string,
-) string {
-	if cluster.Style == nil {
-		return ""
-	}
-
-	// If placeholder mode, return placeholder for clusters that would have icons
-	if iconPlaceholder != "" && cluster.Style.BorderColor != "" {
-		return iconPlaceholder
-	}
-
-	return extractIcon(iconExtractor, iconTypeForUnit(cluster.Type), cluster.Style.BorderColor, useBase64)
-}
-
 // setClusterLabel builds and sets the HTML label for a cluster.
-func setClusterLabel(parent *cgraph.Graph, subgraph *cgraph.Graph, cluster *graph.Cluster, iconRelPath string) error {
+func setClusterLabel(parent *cgraph.Graph, subgraph *cgraph.Graph, cluster *graph.Cluster) error {
 	if cluster.Label == nil {
 		return nil
 	}
 
-	htmlLabel := buildHTMLLabelForType(cluster.Label, cluster.Type, iconRelPath)
+	htmlLabel := buildHTMLLabelForType(cluster.Label, cluster.Type)
 	if htmlLabel == "" {
 		return nil
 	}
