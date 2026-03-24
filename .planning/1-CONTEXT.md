@@ -89,12 +89,15 @@ type Properties struct {
 
 | Container | Can Contain |
 |-----------|-------------|
-| `system`, `systemExternal` | C2 types (container, containerDb, containerQueue, containerBox) |
-| `container`, `containerBox` | C3 types (component, componentDb, componentQueue, componentBox) |
-| `box` (at C1) | C2 types |
-| `containerBox` (at C2) | C3 types |
+| `system` | C2 types (container, containerDb, containerQueue, containerBox) |
+| `container` | C3 types (component, componentDb, componentQueue, componentBox) |
+| `box` (C1) | C1 types only (same-level grouping) |
+| `containerBox` (C2) | C2 types only (same-level grouping) |
+| `componentBox` (C3) | C3 types only (same-level grouping) |
 
+- `systemExternal` cannot contain anything (leaf node)
 - Persons defined at C1 only (but displayed on deeper diagrams when linked — Phase 3 concern)
+- Box types provide same-level grouping, not cross-level containment
 
 ### Link Model
 

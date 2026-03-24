@@ -53,11 +53,10 @@ func ValidateSubunitRules(index map[string]*UnitInfo) ValidationErrors {
 
 	// Types that can have subunits
 	allowedTypes := map[model.UnitType]bool{
-		model.TypeSystem:         true,
-		model.TypeSystemExternal: true,
-		model.TypeBox:            true,
-		model.TypeContainer:      true,
-		model.TypeContainerBox:   true,
+		model.TypeSystem:       true,
+		model.TypeBox:          true, // C1 box can contain C1 types
+		model.TypeContainer:    true,
+		model.TypeContainerBox: true, // C2 box can contain C2 types
 	}
 
 	for path, info := range index {
@@ -176,19 +175,13 @@ var c3Types = map[model.UnitType]bool{
 	model.TypeComponentBox:   true,
 }
 
-// c1ContainerTypes are C1 types that can contain C2 types.
-//
-//nolint:gochecknoglobals // Lookup map for O(1) type checking, immutable after init
-var c1ContainerTypes = map[model.UnitType]bool{
-	model.TypeSystem:         true,
-	model.TypeSystemExternal: true,
-	model.TypeBox:            true,
-}
-
 // ValidateNestingHierarchy checks that units are placed at the correct C4 level.
 // - C1 types (person, system, db, queue, box + external variants) are top-level only
-// - C2 types (container variants) belong inside system/systemExternal/box
-// - C3 types (component variants) belong inside container
+// - Inside system: C2 types (container variants)
+// - Inside box (C1): C1 types only (same-level grouping)
+// - Inside container: C3 types (component variants)
+// - Inside containerBox (C2): C2 types only (same-level grouping)
+// - Inside componentBox (C3): C3 types only (same-level grouping)
 // Returns all errors found (not fail-fast).
 func ValidateNestingHierarchy(index map[string]*UnitInfo) ValidationErrors {
 	errors := make(ValidationErrors, 0, len(index))
@@ -225,12 +218,12 @@ func validateUnitNesting(path string, info *UnitInfo, index map[string]*UnitInfo
 
 	parentType := parentInfo.Unit.Type
 
-	// If parent is a C1 container type (system/box), children must be C2
-	if c1ContainerTypes[parentType] {
+	// If parent is system, children must be C2
+	if parentType == model.TypeSystem {
 		if !c2Types[unitType] {
 			return ValidationErrors{&ValidationError{
-				Message: fmt.Sprintf(`unit "%s" has type %s which must be inside container (C2 types only in %s)`,
-					path, unitType, parentType),
+				Message: fmt.Sprintf(`unit "%s" has type %s which must be C2 type (inside system)`,
+					path, unitType),
 				Path:    path,
 			}}
 		}
@@ -238,18 +231,59 @@ func validateUnitNesting(path string, info *UnitInfo, index map[string]*UnitInfo
 		return nil
 	}
 
-	// If parent is a container or containerBox, children must be C3
-	if parentType == model.TypeContainer || parentType == model.TypeContainerBox {
-		if !c3Types[unitType] {
+	// If parent is C1 box, children must be C1 (same-level grouping)
+	if parentType == model.TypeBox {
+		if !c1Types[unitType] {
 			return ValidationErrors{&ValidationError{
-				Message: fmt.Sprintf(`unit "%s" has type %s which must be inside component (C3 types only in %s)`,
-					path, unitType, parentType),
+				Message: fmt.Sprintf(`unit "%s" has type %s which must be C1 type (inside C1 box)`,
+					path, unitType),
 				Path:    path,
 			}}
 		}
+
+		return nil
 	}
 
-	// Other parent types (person, db, queue, C2 variants, C3 variants) cannot have children
+	// If parent is container, children must be C3
+	if parentType == model.TypeContainer {
+		if !c3Types[unitType] {
+			return ValidationErrors{&ValidationError{
+				Message: fmt.Sprintf(`unit "%s" has type %s which must be C3 type (inside container)`,
+					path, unitType),
+				Path:    path,
+			}}
+		}
+
+		return nil
+	}
+
+	// If parent is containerBox (C2), children must be C2 (same-level grouping)
+	if parentType == model.TypeContainerBox {
+		if !c2Types[unitType] {
+			return ValidationErrors{&ValidationError{
+				Message: fmt.Sprintf(`unit "%s" has type %s which must be C2 type (inside containerBox)`,
+					path, unitType),
+				Path:    path,
+			}}
+		}
+
+		return nil
+	}
+
+	// If parent is componentBox (C3), children must be C3 (same-level grouping)
+	if parentType == model.TypeComponentBox {
+		if !c3Types[unitType] {
+			return ValidationErrors{&ValidationError{
+				Message: fmt.Sprintf(`unit "%s" has type %s which must be C3 type (inside componentBox)`,
+					path, unitType),
+				Path:    path,
+			}}
+		}
+
+		return nil
+	}
+
+	// Other parent types (person, systemExternal, db, queue, C2/C3 leaf variants) cannot have children
 	// This is handled by ValidateSubunitRules, so we skip here
 	return nil
 }

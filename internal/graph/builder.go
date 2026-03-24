@@ -362,8 +362,13 @@ func shouldHaveExploreLink(node *Node, v *view.View) bool {
 		return false
 	}
 
-	// Only system and box types can be expanded
-	if entry.Unit.Type != model.TypeSystem && entry.Unit.Type != model.TypeBox {
+	// Only types that can contain subunits can be expanded
+	switch entry.Unit.Type {
+	case model.TypeSystem, model.TypeBox,
+		model.TypeContainer, model.TypeContainerBox,
+		model.TypeComponentBox:
+		// These types can have subunits
+	default:
 		return false
 	}
 

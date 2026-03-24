@@ -168,6 +168,7 @@ func TestValidateSubunitRules_RejectsInvalidTypes(t *testing.T) {
 	}{
 		{"person", model.TypePerson},
 		{"personExternal", model.TypePersonExternal},
+		{"systemExternal", model.TypeSystemExternal},
 		{"db", model.TypeDb},
 		{"dbExternal", model.TypeDbExternal},
 		{"queue", model.TypeQueue},
@@ -177,6 +178,7 @@ func TestValidateSubunitRules_RejectsInvalidTypes(t *testing.T) {
 		{"component", model.TypeComponent},
 		{"componentDb", model.TypeComponentDb},
 		{"componentQueue", model.TypeComponentQueue},
+		{"componentBox", model.TypeComponentBox},
 	}
 
 	for _, tc := range invalidTypes {
@@ -210,14 +212,15 @@ func TestValidateSubunitRules_RejectsInvalidTypes(t *testing.T) {
 func TestValidateSubunitRules_AllowsValidTypes(t *testing.T) {
 	t.Parallel()
 
+	// Types that can have subunits: system, box, container, containerBox
 	validTypes := []struct {
 		name     string
 		unitType model.UnitType
 	}{
 		{"system", model.TypeSystem},
-		{"systemExternal", model.TypeSystemExternal},
 		{"box", model.TypeBox},
 		{"container", model.TypeContainer},
+		{"containerBox", model.TypeContainerBox},
 	}
 
 	for _, tc := range validTypes {
@@ -638,6 +641,7 @@ func TestValidateNestingHierarchy_RejectsC3AtTopLevel(t *testing.T) {
 		{"component", model.TypeComponent},
 		{"componentDb", model.TypeComponentDb},
 		{"componentQueue", model.TypeComponentQueue},
+		{"componentBox", model.TypeComponentBox},
 	}
 
 	for _, tc := range c3Types {
@@ -721,6 +725,7 @@ func TestValidateNestingHierarchy_RejectsC3InSystem(t *testing.T) {
 		{"component", model.TypeComponent},
 		{"componentDb", model.TypeComponentDb},
 		{"componentQueue", model.TypeComponentQueue},
+		{"componentBox", model.TypeComponentBox},
 	}
 
 	for _, tc := range c3Types {
@@ -750,7 +755,7 @@ func TestValidateNestingHierarchy_RejectsC3InSystem(t *testing.T) {
 			}
 
 			expectedMsg := `unit "system.child" has type ` + string(tc.unitType) +
-				` which must be inside container (C2 types only in system)`
+				` which must be C2 type (inside system)`
 			if errors[0].Message != expectedMsg {
 				t.Errorf("expected message %q, got %q", expectedMsg, errors[0].Message)
 			}
@@ -768,45 +773,36 @@ func TestValidateNestingHierarchy_AllowsC2InSystem(t *testing.T) {
 		{"container", model.TypeContainer},
 		{"containerDb", model.TypeContainerDb},
 		{"containerQueue", model.TypeContainerQueue},
+		{"containerBox", model.TypeContainerBox},
 	}
 
-	parentTypes := []struct {
-		name     string
-		unitType model.UnitType
-	}{
-		{"system", model.TypeSystem},
-		{"systemExternal", model.TypeSystemExternal},
-		{"box", model.TypeBox},
-	}
+	// Only system can contain C2 types
+	for _, child := range c2Types {
+		t.Run("system_"+child.name, func(t *testing.T) {
+			t.Parallel()
 
-	for _, parent := range parentTypes {
-		for _, child := range c2Types {
-			t.Run(parent.name+"_"+child.name, func(t *testing.T) {
-				t.Parallel()
-
-				units := map[string]*model.Unit{
-					"parent": {
-						Type: parent.unitType,
-						Subunits: map[string]*model.Unit{
-							"child": {
-								Type: child.unitType,
-								Links: []model.Link{
-									{Peer: "other"},
-								},
+			units := map[string]*model.Unit{
+				"system": {
+					Type: model.TypeSystem,
+					Subunits: map[string]*model.Unit{
+						"child": {
+							Type: child.unitType,
+							Links: []model.Link{
+								{Peer: "other"},
 							},
 						},
 					},
-					"other": {Type: model.TypeDb},
-				}
+				},
+				"other": {Type: model.TypeDb},
+			}
 
-				index := validator.BuildIndex(units, "")
-				errors := validator.ValidateNestingHierarchy(index)
+			index := validator.BuildIndex(units, "")
+			errors := validator.ValidateNestingHierarchy(index)
 
-				if len(errors) != 0 {
-					t.Errorf("expected no errors for C2 type %s inside %s, got %d: %v", child.name, parent.name, len(errors), errors)
-				}
-			})
-		}
+			if len(errors) != 0 {
+				t.Errorf("expected no errors for C2 type %s inside system, got %d: %v", child.name, len(errors), errors)
+			}
+		})
 	}
 }
 
@@ -820,6 +816,7 @@ func TestValidateNestingHierarchy_RejectsC2InContainer(t *testing.T) {
 		{"container", model.TypeContainer},
 		{"containerDb", model.TypeContainerDb},
 		{"containerQueue", model.TypeContainerQueue},
+		{"containerBox", model.TypeContainerBox},
 	}
 
 	for _, tc := range c2Types {
@@ -854,7 +851,7 @@ func TestValidateNestingHierarchy_RejectsC2InContainer(t *testing.T) {
 			}
 
 			expectedMsg := `unit "system.api.child" has type ` + string(tc.unitType) +
-				` which must be inside component (C3 types only in container)`
+				` which must be C3 type (inside container)`
 			if errors[0].Message != expectedMsg {
 				t.Errorf("expected message %q, got %q", expectedMsg, errors[0].Message)
 			}
@@ -872,6 +869,7 @@ func TestValidateNestingHierarchy_AllowsC3InContainer(t *testing.T) {
 		{"component", model.TypeComponent},
 		{"componentDb", model.TypeComponentDb},
 		{"componentQueue", model.TypeComponentQueue},
+		{"componentBox", model.TypeComponentBox},
 	}
 
 	for _, tc := range c3Types {

@@ -770,7 +770,8 @@ name = "Database"
 
 	mydb, ok := mybox.Subunits["mydb"]
 	require.True(t, ok, "missing 'mybox.mydb' subunit")
-	assert.Equal(t, model.TypeContainerDb, mydb.Type, "db inside box should become containerDb")
+	// C1 box can only contain C1 types, so db stays as db (not converted to containerDb)
+	assert.Equal(t, model.TypeDb, mydb.Type, "db inside C1 box should stay as db (same-level grouping)")
 }
 
 func TestParseGenericTypeInference_InSystemExternal(t *testing.T) {
@@ -797,7 +798,8 @@ name = "Queue"
 
 	myqueue, ok := external.Subunits["myqueue"]
 	require.True(t, ok, "missing 'external.myqueue' subunit")
-	assert.Equal(t, model.TypeContainerQueue, myqueue.Type, "queue inside systemExternal should become containerQueue")
+	// systemExternal cannot contain subunits (validator will reject), but parser keeps type as-is
+	assert.Equal(t, model.TypeQueue, myqueue.Type, "queue inside systemExternal stays as queue (systemExternal cannot contain subunits)")
 }
 
 func TestParseGenericTypeInference_ExplicitTypesUnchanged(t *testing.T) {
