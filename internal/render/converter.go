@@ -30,6 +30,8 @@ func buildHTMLLabelForType(label *graph.Label, t model.UnitType) string {
 		return buildContainerHTMLLabel(label)
 	case graph.IsComponentType(t):
 		return buildComponentHTMLLabel(label)
+	case graph.IsBoxType(t):
+		return buildBoxHTMLLabel(label)
 	default:
 		// Fallback to generic record label for unknown types
 		return buildRecordLabel(label)

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Djarvur/c4drill/internal/graph"
+	"github.com/Djarvur/c4drill/internal/model"
 	"github.com/Djarvur/c4drill/internal/render"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -225,4 +226,91 @@ func TestGraphTitle(t *testing.T) {
 		require.NoError(t, err)
 		assert.Contains(t, string(output), "My C4 Diagram")
 	})
+}
+
+//nolint:funlen,paralleltest // Table-driven test pattern; go-graphviz WASM concurrency issues
+func TestBoxHTMLLabelGeneration(t *testing.T) {
+	tests := []struct {
+		name        string
+		nodeType    model.UnitType
+		label       *graph.Label
+		contains    []string
+		notContains []string
+	}{
+		{
+			name:     "Box label with name only",
+			nodeType: model.TypeBox,
+			label:    &graph.Label{Name: "My Box"},
+			contains: []string{"<b>", "</b>", "My Box", "<table border=\"0\""},
+			notContains: []string{},
+		},
+		{
+			name:     "Box label with name and technology",
+			nodeType: model.TypeBox,
+			label:    &graph.Label{Name: "API Gateway", Technology: "Kong"},
+			contains: []string{"<b>", "</b>", "API Gateway", "<i>", "</i>", "[Kong]"},
+			notContains: []string{},
+		},
+		{
+			name:     "Box label with all fields",
+			nodeType: model.TypeBox,
+			label:    &graph.Label{Name: "Gateway", Technology: "Kong", Description: "API Gateway"},
+			contains: []string{"<b>", "</b>", "Gateway", "<i>", "</i>", "[Kong]", "API Gateway"},
+			notContains: []string{},
+		},
+		{
+			name:     "ContainerBox label uses HTML format",
+			nodeType: model.TypeContainerBox,
+			label:    &graph.Label{Name: "Container Box"},
+			contains: []string{"<b>", "</b>", "Container Box", "<table border=\"0\""},
+			notContains: []string{},
+		},
+		{
+			name:     "ComponentBox label uses HTML format",
+			nodeType: model.TypeComponentBox,
+			label:    &graph.Label{Name: "Component Box"},
+			contains: []string{"<b>", "</b>", "Component Box", "<table border=\"0\""},
+			notContains: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := &graph.Graph{
+				Title:     "Test",
+				Direction: "TB",
+				Nodes: []*graph.Node{
+					{
+						ID:    "test_box",
+						Label: tt.label,
+						Type:  tt.nodeType,
+						Shape: graph.ShapeRecord,
+						Style: &graph.NodeStyle{FillColor: "#438DD5"},
+					},
+				},
+			}
+
+			output, err := render.RenderDOT(g)
+			require.NoError(t, err)
+
+			dotStr := string(output)
+			for _, c := range tt.contains {
+				assert.Contains(t, dotStr, c)
+			}
+
+			// Extract the label content (between label=< and >,)
+			// to verify no curly brackets in the label itself
+			labelStart := strings.Index(dotStr, "label=<")
+			if labelStart != -1 {
+				labelContent := dotStr[labelStart+7:]
+				labelEnd := strings.Index(labelContent, ">,")
+				if labelEnd != -1 {
+					labelContent = labelContent[:labelEnd]
+					// Check that label content does not contain curly brackets
+					assert.NotContains(t, labelContent, "{", "Label should not contain {")
+					assert.NotContains(t, labelContent, "}", "Label should not contain }")
+				}
+			}
+		})
+	}
 }

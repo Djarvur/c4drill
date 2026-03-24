@@ -83,6 +83,11 @@ func IsComponentType(t model.UnitType) bool {
 	return t == model.TypeComponent || t == model.TypeComponentBox
 }
 
+// IsBoxType returns true if the type is a box variant (box, containerBox, componentBox).
+func IsBoxType(t model.UnitType) bool {
+	return t == model.TypeBox || t == model.TypeContainerBox || t == model.TypeComponentBox
+}
+
 // LevelForType returns the C4 level (1, 2, or 3) for a unit type.
 func LevelForType(t model.UnitType) int {
 	switch t {

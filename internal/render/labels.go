@@ -436,6 +436,54 @@ func buildComponentHTMLLabel(label *graph.Label) string {
 	return sb.String()
 }
 
+// buildBoxHTMLLabel generates an HTML table label for Box-type nodes.
+// Format: name (bold) / [technology] italic / description
+// Single-column layout without icon column.
+// Output does NOT contain curly brackets {} unlike record labels.
+func buildBoxHTMLLabel(label *graph.Label) string {
+	if label == nil {
+		return ""
+	}
+
+	// Calculate max characters for word wrapping (no icon column)
+	rowCount := 1 // name
+	if label.Technology != "" {
+		rowCount++
+	}
+
+	if label.Description != "" {
+		rowCount++
+	}
+
+	maxChars := labelMaxCharsNoIcon(rowCount)
+
+	var sb strings.Builder
+	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
+
+	// Row 1: Name (bold)
+	sb.WriteString(`<tr align="center"><td valign="bottom"><b>`)
+	sb.WriteString(wrapAndEscape(label.Name, maxChars))
+	sb.WriteString(`</b></td></tr>`)
+
+	// Row 2: Technology (if present, italic in brackets)
+	if label.Technology != "" {
+		sb.WriteString(`<tr align="center"><td valign="middle"><i>[`)
+		sb.WriteString(wrapAndEscape(label.Technology, maxChars))
+		sb.WriteString(`]</i></td></tr>`)
+	}
+
+	// Row 3: Description (if present)
+	if label.Description != "" {
+		sb.WriteString(`<tr align="center"><td valign="top">`)
+		sb.WriteString(wrapAndEscape(label.Description, maxChars))
+		sb.WriteString(`</td></tr>`)
+	}
+
+	sb.WriteString(`</table>`)
+
+	return sb.String()
+}
+
 // iconTypeForUnit maps unit types to icon names.
 // This function is kept for backward compatibility but is no longer used
 // since we replaced SVG icons with native GraphViz shapes and emoji.
