@@ -167,15 +167,16 @@ func buildDbHTMLLabel(label *graph.Label) string {
 }
 
 // buildQueueHTMLLabel generates an HTML table label for Queue-type nodes.
-// Format: name (bold) / [technology] italic / description
-// Single-column layout without icon column.
+// Format: ASCII graphic / name (bold) / [technology] italic / description
+// 4-row table with ASCII art graphic as first row.
 func buildQueueHTMLLabel(label *graph.Label) string {
 	if label == nil {
 		return ""
 	}
 
 	// Calculate max characters for word wrapping (no icon column)
-	rowCount := 1 // name
+	// Graphic row doesn't wrap but counts for proportion
+	rowCount := 2 // graphic + name
 	if label.Technology != "" {
 		rowCount++
 	}
@@ -189,19 +190,24 @@ func buildQueueHTMLLabel(label *graph.Label) string {
 	var sb strings.Builder
 	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
 
-	// Row 1: Name (bold)
+	// Row 1: ASCII art graphic (NOT wrapped, NOT escaped)
+	sb.WriteString(`<tr align="center"><td valign="middle">`)
+	sb.WriteString("═╦╩═╦═══")
+	sb.WriteString(`</td></tr>`)
+
+	// Row 2: Name (bold)
 	sb.WriteString(`<tr align="center"><td valign="bottom"><b>`)
 	sb.WriteString(wrapAndEscape(label.Name, maxChars))
 	sb.WriteString(`</b></td></tr>`)
 
-	// Row 2: Technology (if present, italic in brackets)
+	// Row 3: Technology (if present, italic in brackets)
 	if label.Technology != "" {
 		sb.WriteString(`<tr align="center"><td valign="middle"><i>[`)
 		sb.WriteString(wrapAndEscape(label.Technology, maxChars))
 		sb.WriteString(`]</i></td></tr>`)
 	}
 
-	// Row 3: Description (if present)
+	// Row 4: Description (if present)
 	if label.Description != "" {
 		sb.WriteString(`<tr align="center"><td valign="top">`)
 		sb.WriteString(wrapAndEscape(label.Description, maxChars))

@@ -89,6 +89,29 @@ func TestHTMLQueueLabel(t *testing.T) {
 	if strings.Contains(result, "rowspan") {
 		t.Error("Queue label should NOT contain rowspan (single-column layout)")
 	}
+
+	// Queue-specific: should contain ASCII art graphic as first row
+	if !strings.Contains(result, "═╦╩═╦═══") {
+		t.Error("Queue label should contain ASCII art graphic")
+	}
+
+	// Verify name, technology, description are present
+	if !strings.Contains(result, "Test Queue") {
+		t.Error("Queue label should contain name")
+	}
+
+	if !strings.Contains(result, "RabbitMQ") {
+		t.Error("Queue label should contain technology")
+	}
+
+	if !strings.Contains(result, "Test description") {
+		t.Error("Queue label should contain description")
+	}
+
+	// Graphic row should use valign="middle" and align="center"
+	if !strings.Contains(result, `<tr align="center"><td valign="middle">═╦╩═╦═══</td></tr>`) {
+		t.Error("Queue label graphic row should have valign=middle and align=center")
+	}
 }
 
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
