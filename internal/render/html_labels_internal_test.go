@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Djarvur/c4drill/internal/graph"
+	"github.com/Djarvur/c4drill/internal/model"
 )
 
 // Note: Tests in this file do NOT use t.Parallel() because the go-graphviz
@@ -210,5 +211,86 @@ func TestHTMLComponentLabel(t *testing.T) {
 	// Should be single-column (no rowspan for icon)
 	if strings.Contains(result, "rowspan") {
 		t.Error("Component label should NOT contain rowspan (single-column layout)")
+	}
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestQueueShape(t *testing.T) {
+	// Create a minimal graph with a Queue node and a DB node
+	g := &graph.Graph{
+		Nodes: []*graph.Node{
+			{
+				ID:   "queue1",
+				Type: model.TypeQueue,
+				Label: &graph.Label{
+					Name: "Test Queue",
+				},
+			},
+			{
+				ID:   "db1",
+				Type: model.TypeDb,
+				Label: &graph.Label{
+					Name: "Test DB",
+				},
+			},
+		},
+	}
+
+	// Render to DOT and verify shapes
+	dotOutput, err := RenderDOT(g)
+	if err != nil {
+		t.Fatalf("RenderDOT failed: %v", err)
+	}
+
+	dotStr := string(dotOutput)
+
+	// Queue should NOT have cylinder shape
+	if strings.Contains(dotStr, `queue1`) && strings.Contains(dotStr, `shape=cylinder`) &&
+		strings.Index(dotStr, `queue1`) < strings.Index(dotStr, `shape=cylinder`) {
+		// Check if cylinder shape is on queue1 line (within same node definition)
+		queueIdx := strings.Index(dotStr, `queue1`)
+		cylinderIdx := strings.Index(dotStr, `shape=cylinder`)
+		nextNodeIdx := strings.Index(dotStr[queueIdx+1:], "\n\t")
+		if nextNodeIdx == -1 || cylinderIdx < queueIdx+nextNodeIdx {
+			t.Error("Queue node should NOT have cylinder shape")
+		}
+	}
+
+	// DB should still have cylinder shape
+	if !strings.Contains(dotStr, `db1`) || !strings.Contains(dotStr, `shape=cylinder`) {
+		t.Error("DB node should have cylinder shape")
+	}
+
+	// Verify db1 node definition contains shape=cylinder
+	dbIdx := strings.Index(dotStr, `db1`)
+	if dbIdx == -1 {
+		t.Fatal("DB node not found in output")
+	}
+
+	// Find end of db1 node definition (next node or closing brace)
+	endIdx := strings.Index(dotStr[dbIdx:], "];")
+	if endIdx == -1 {
+		t.Fatal("Could not find end of DB node definition")
+	}
+
+	dbNodeDef := dotStr[dbIdx : dbIdx+endIdx]
+	if !strings.Contains(dbNodeDef, `shape=cylinder`) {
+		t.Error("DB node definition should contain shape=cylinder")
+	}
+
+	// Verify queue1 node definition does NOT contain shape=cylinder
+	queueIdx := strings.Index(dotStr, `queue1`)
+	if queueIdx == -1 {
+		t.Fatal("Queue node not found in output")
+	}
+
+	endIdx = strings.Index(dotStr[queueIdx:], "];")
+	if endIdx == -1 {
+		t.Fatal("Could not find end of Queue node definition")
+	}
+
+	queueNodeDef := dotStr[queueIdx : queueIdx+endIdx]
+	if strings.Contains(queueNodeDef, `shape=cylinder`) {
+		t.Error("Queue node definition should NOT contain shape=cylinder")
 	}
 }

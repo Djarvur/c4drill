@@ -220,13 +220,9 @@ func createNode(
 	}
 
 	// Set shape based on unit type
-	// DB and Queue use cylinder shape, all others use box
-	if graph.IsDbType(node.Type) || graph.IsQueueType(node.Type) {
+	// DB uses cylinder shape, all others use box
+	if graph.IsDbType(node.Type) {
 		cn.SetShape(cgraph.CylinderShape)
-		// Queue uses horizontal cylinder (90 degree rotation)
-		if graph.IsQueueType(node.Type) {
-			cn.SetOrientation(90.0)
-		}
 	} else {
 		cn.SetShape(cgraph.BoxShape)
 	}
