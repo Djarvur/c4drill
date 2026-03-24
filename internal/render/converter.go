@@ -383,6 +383,11 @@ func applyClusterStyle(subgraph *cgraph.Graph, style *graph.NodeStyle) error {
 		return err
 	}
 
+	// Set font name for cluster labels
+	if err := setClusterAttribute(subgraph, "fontname", "Helvetica"); err != nil {
+		return err
+	}
+
 	// Set border color
 	if err := setClusterAttribute(subgraph, "color", style.BorderColor); err != nil {
 		return err
@@ -429,6 +434,7 @@ func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge)
 	if edge.Label != nil {
 		e.SetLabel(buildEdgeLabel(edge.Label))
 		e.SetFontSize(fontSizeEdge)
+		e.SetFontName("Helvetica")
 	}
 
 	// Edge style
