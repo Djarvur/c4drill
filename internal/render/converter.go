@@ -163,9 +163,12 @@ func configureGraphSettings(cg *cgraph.Graph, g *graph.Graph) {
 		cg.SetSplines("ortho")
 	}
 
-	// Font settings
+	// Font settings - set default fontname for all element types
 	cg.SetFontName("Helvetica")
 	cg.SetFontSize(fontSizeGraph)
+	// Set default fontname for nodes (kind=1) and edges (kind=2)
+	cg.Attr(1, "fontname", "Helvetica") // nodes
+	cg.Attr(2, "fontname", "Helvetica") // edges
 
 	// Build combined label with navigation and title
 	var labelParts []string
