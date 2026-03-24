@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI-Ready
 status: completed
-last_updated: "2026-03-24T16:55:51.276Z"
+last_updated: "2026-03-24T17:40:29.782Z"
 last_activity: 2026-03-24 — Completed 20-01-PLAN.md
 progress:
-  total_phases: 14
+  total_phases: 15
   completed_phases: 13
   total_plans: 19
   completed_plans: 18
@@ -60,6 +60,11 @@ None.
 ### Deferred Items
 
 - TestOutputFlag test failure (pre-existing, out of scope) - see deferred-items.md
+
+### Roadmap Evolution
+
+- Phase 21 added: box label has unnecessary curly brackets, box border must be dashed by default
+- Phase 22 added: fix box labels, dashed borders, validator for mixed external/non-external, color by content
 
 ## Session Continuity
 

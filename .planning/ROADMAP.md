@@ -6,26 +6,26 @@ C4Drill transforms TOML architecture definitions into professional C4 diagrams t
 
 ## Milestones
 
-- **v1.0 Initial Release** -- Phases 1-6 (shipped 2026-03-10)
-- **v1.1 AI-Ready** -- Phases 7-10 (shipped 2026-03-13)
-- **v1.2 Bug Fixes** -- Phases 11-13 (shipped 2026-03-14)
-- **v1.3 Validation Enhancements** -- Phase 14 (shipped 2026-03-17)
-- **v1.4 Edge Coloring** -- Phase 15 (shipped 2026-03-18)
-- **v1.5 SVG Icons** -- Phase 16-17 (shipped 2026-03-23)
-- **v1.6 Simplified Shapes** -- Phase 18 (shipped 2026-03-24)
+- **v1.0 Initial Release** -- Phases 1-6 (shipped 2021-03-10)
+- **v1.1 AI-Ready** -- Phases 7-10 (shipped 2021-03-13)
+- **v1.2 Bug Fixes** -- Phases 11-13 (shipped 2021-03-14)
+- **v1.3 Validation Enhancements** -- Phase 14 (shipped 2021-03-17)
+- **v1.4 Edge Coloring** -- Phase 15 (shipped 2021-03-18)
+- **v1.5 SVG Icons** -- Phase 16-17 (shipped 2021-03-23)
+- **v1.6 Simplified Shapes** -- Phase 18 (shipped 2021-03-24)
 - **v1.7 Queue Label Fix** -- Phase 19 (in progress)
 
 ## Phases
 
 <details>
-<summary>v1.0 Initial Release (Phases 1-6) -- SHIPPED 2026-03-10</summary>
+<summary>v1.0 Initial Release (Phases 1-6) -- SHIPPED 2021-03-10</summary>
 
-- [x] Phase 1: Foundation & Model -- completed 2026-03-09
-- [x] Phase 2: Validation -- completed 2026-03-09
-- [x] Phase 3: Views & Graphs -- completed 2026-03-09
-- [x] Phase 4: Rendering & Output -- completed 2026-03-10
-- [x] Phase 5: Navigation -- completed 2026-03-10
-- [x] Phase 6: CLI & Polish -- completed 2026-03-10
+- [x] Phase 1: Foundation & Model -- completed 2021-03-09
+- [x] Phase 2: Validation -- completed 2021-03-09
+- [x] Phase 3: Views & Graphs -- completed 2021-03-09
+- [x] Phase 4: Rendering & Output -- completed 2021-03-10
+- [x] Phase 5: Navigation -- completed 2021-03-10
+- [x] Phase 6: CLI & Polish -- completed 2021-03-10
 
 See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 
@@ -36,9 +36,9 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 **Milestone Goal:** Make C4Drill AI-friendly with documentation, single-view expanded diagrams, and stricter validation
 
 - [x] **Phase 7: AI Documentation** -- TOML language manual for AI assistants
-- [x] **Phase 8: All-Expanded Mode** -- Single-view expanded rendering with cross-level edges (completed 2026-03-10)
-- [x] **Phase 9: No Orphan Units** -- Validation rule requiring all units to be linked (completed 2026-03-11)
-- [x] **Phase 10: Link List Format** -- Change Links/LinksFrom from maps to lists with explicit target/source (completed 2026-03-13)
+- [x] **Phase 8: All-Expanded Mode** -- Single-view expanded rendering with cross-level edges (completed 2021-03-10)
+- [x] **Phase 9: No Orphan Units** -- Validation rule requiring all units to be linked (completed 2021-03-11)
+- [x] **Phase 10: Link List Format** -- Change Links/LinksFrom from maps to lists with explicit target/source (completed 2021-03-13)
 
 ---
 
@@ -130,26 +130,26 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. Foundation & Model | v1.0 | 3/3 | Complete | 2026-03-09 |
-| 2. Validation | v1.0 | 2/2 | Complete | 2026-03-09 |
-| 3. Views & Graphs | v1.0 | 4/4 | Complete | 2026-03-09 |
-| 4. Rendering & Output | v1.0 | 3/3 | Complete | 2026-03-10 |
-| 5. Navigation | v1.0 | 2/2 | Complete | 2026-03-10 |
-| 6. CLI & Polish | v1.0 | 2/2 | Complete | 2026-03-10 |
-| 7. AI Documentation | v1.1 | 2/2 | Complete | 2026-03-10 |
-| 8. All-Expanded Mode | v1.1 | 2/2 | Complete | 2026-03-10 |
-| 9. No Orphan Units | v1.1 | 1/1 | Complete | 2026-03-11 |
-| 10. Link List Format | v1.1 | 3/3 | Complete | 2026-03-13 |
-| 11. Unit Shape and Attributes | v1.1 | 1/1 | Complete | 2026-03-13 |
-| 12. HTML labels for all unit types | v1.2 | 2/2 | Complete | 2026-03-13 |
-| 13. Refined HTML Labels | v1.2 | Complete    | 2026-03-14 | 2026-03-14 |
-| 14. Nesting Validation | v1.3 | Complete    | 2026-03-17 | 2026-03-17 |
-| 15. Edge Coloring | v1.4 | 1/1 | Complete | 2026-03-18 |
-| 16. SVG Icons | v1.5 | 1/1 | Complete | 2026-03-18 |
-| 17. Word-wrapped Labels | v1.5 | 1/1 | Complete | 2026-03-23 |
-| 18. Simplified Shapes | v1.6 | Complete    | 2026-03-24 | 2026-03-24 |
+| 1. Foundation & Model | v1.0 | 3/3 | Complete | 2021-03-09 |
+| 2. Validation | v1.0 | 2/2 | Complete | 2021-03-09 |
+| 3. Views & Graphs | v1.0 | 4/4 | Complete | 2021-03-09 |
+| 4. Rendering & Output | v1.0 | 3/3 | Complete | 2021-03-10 |
+| 5. Navigation | v1.0 | 2/2 | Complete | 2021-03-10 |
+| 6. CLI & Polish | v1.0 | 2/2 | Complete | 2021-03-10 |
+| 7. AI Documentation | v1.1 | 2/2 | Complete | 2021-03-10 |
+| 8. All-Expanded Mode | v1.1 | 2/2 | Complete | 2021-03-10 |
+| 9. No Orphan Units | v1.1 | 1/1 | Complete | 2021-03-11 |
+| 10. Link List Format | v1.1 | 3/3 | Complete | 2021-03-13 |
+| 11. Unit Shape and Attributes | v1.1 | 1/1 | Complete | 2021-03-13 |
+| 12. HTML labels for all unit types | v1.2 | 2/2 | Complete | 2021-03-13 |
+| 13. Refined HTML Labels | v1.2 | Complete    | 2021-03-14 | 2021-03-14 |
+| 14. Nesting Validation | v1.3 | Complete    | 2021-03-17 | 2021-03-17 |
+| 15. Edge Coloring | v1.4 | 1/1 | Complete | 2021-03-18 |
+| 16. SVG Icons | v1.5 | 1/1 | Complete | 2021-03-18 |
+| 17. Word-wrapped Labels | v1.5 | 1/1 | Complete | 2021-03-23 |
+| 18. Simplified Shapes | v1.6 | Complete    | 2021-03-24 | 2021-03-24 |
 | 19. Queue Label Fix | v1.7 | 0/1 | Planning | — |
-| 20. Helvetica Font | 1/1 | Complete    | 2026-03-24 | — |
+| 20. Helvetica Font | 1/1 | Complete    | 2021-03-24 | — |
 
 ### Phase 12: HTML labels for all unit types
 
@@ -420,7 +420,17 @@ Plans:
 - D-02: Set fontname="Helvetica" for all cluster (subgraph) labels
 - D-03: Ensure consistent font family across all diagram elements
 
+### Phase 21: fix box labels, dashed borders, validator for mixed external/non-external, color by content
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 21
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 22 to break down)
+
 ---
 
-*Roadmap created: 2026-03-09*
-*Last updated: 2026-03-24 - Phase 20 added (Helvetica Font)*
+*Roadmap created: 2021-03-09*
+*Last updated: 2021-03-24 - Phase 20 added (Helvetica Font)*
