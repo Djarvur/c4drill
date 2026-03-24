@@ -355,7 +355,7 @@ Plans:
 **Goal:** Remove SVG icons, use native GraphViz cylinder shapes for DB/Queue, simplify labels
 **Requirements:** ICON-01, ICON-02, ICON-03, ICON-04, DB-01, DB-02, DB-03, QUEUE-01, QUEUE-02, QUEUE-03, PERSON-01, PERSON-02, PERSON-03, PERSON-04, LABEL-01, LABEL-02, LABEL-03, LABEL-04, WRAP-01, WRAP-02
 **Depends on:** Phase 17
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 **Simplified Shapes Design:**
 
@@ -364,8 +364,8 @@ Plans:
 - D-03: Remove .icons/ directory generation
 - D-04: Remove SVG postprocessing logic
 - D-05: DB units use `shape=cylinder` (native GraphViz)
-- D-06: Queue units use `shape=cylinder` with 90° rotation
-- D-07: Person labels: 2-column table with 👤 emoji (font size 8)
+- D-06: Queue units use `shape=cylinder` with 90 rotation
+- D-07: Person labels: 2-column table with emoji (font size +4)
 - D-08: System/Box/Container/Component labels: 3-row table (name, technology, description)
 - D-09: Keep word-wrap functionality from Phase 17
 
@@ -375,4 +375,4 @@ Plans:
 ---
 
 *Roadmap created: 2026-03-09*
-*Last updated: 2026-03-24 - v1.6 milestone started*
+*Last updated: 2026-03-24 - Phase 18 plan created*
