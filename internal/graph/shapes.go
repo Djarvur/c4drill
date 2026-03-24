@@ -88,6 +88,44 @@ func IsBoxType(t model.UnitType) bool {
 	return t == model.TypeBox || t == model.TypeContainerBox || t == model.TypeComponentBox
 }
 
+// HasExternalSubunits returns true if the unit has any external subunits.
+// Returns false if unit is nil or has no subunits.
+func HasExternalSubunits(unit *model.Unit) bool {
+	if unit == nil {
+		return false
+	}
+
+	for _, subunit := range unit.Subunits {
+		if IsExternalType(subunit.Type) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// GetBoxStyleByContents returns the style for a C1 box based on its contents.
+// - Boxes with external subunits: grey border (PersonExternalBorder)
+// - Boxes with only non-external subunits: dark blue border (PersonBorder)
+// - Both cases: dashed border style
+func GetBoxStyleByContents(unit *model.Unit) *NodeStyle {
+	if HasExternalSubunits(unit) {
+		return &NodeStyle{
+			FillColor:   "",                              // Transparent background
+			BorderColor: model.PersonExternalBorder,      // Grey for external boxes
+			FontColor:   model.PersonExternalBorder,      // Font color matches border color
+			BorderStyle: "dashed",
+		}
+	}
+
+	return &NodeStyle{
+		FillColor:   "",                     // Transparent background
+		BorderColor: model.PersonBorder,     // Dark blue for internal boxes
+		FontColor:   model.PersonBorder,     // Font color matches border color
+		BorderStyle: "dashed",
+	}
+}
+
 // LevelForType returns the C4 level (1, 2, or 3) for a unit type.
 func LevelForType(t model.UnitType) int {
 	switch t {

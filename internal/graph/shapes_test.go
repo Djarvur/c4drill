@@ -173,3 +173,117 @@ func TestGetStyleForType_BoxDashedBorders(t *testing.T) {
 	componentStyle := graph.GetStyleForType(model.TypeComponent, false)
 	assert.Equal(t, "solid", componentStyle.BorderStyle, "TypeComponent should have solid border")
 }
+
+func TestHasExternalSubunits(t *testing.T) {
+	t.Parallel()
+
+	// Test: Returns true for box with TypePersonExternal subunit
+	boxWithPersonExt := &model.Unit{
+		Type: model.TypeBox,
+		Subunits: map[string]*model.Unit{
+			"extPerson": {Type: model.TypePersonExternal},
+		},
+	}
+	assert.True(t, graph.HasExternalSubunits(boxWithPersonExt), "box with TypePersonExternal subunit should return true")
+
+	// Test: Returns true for box with TypeSystemExternal subunit
+	boxWithSystemExt := &model.Unit{
+		Type: model.TypeBox,
+		Subunits: map[string]*model.Unit{
+			"extSystem": {Type: model.TypeSystemExternal},
+		},
+	}
+	assert.True(t, graph.HasExternalSubunits(boxWithSystemExt), "box with TypeSystemExternal subunit should return true")
+
+	// Test: Returns true for box with TypeDbExternal subunit
+	boxWithDbExt := &model.Unit{
+		Type: model.TypeBox,
+		Subunits: map[string]*model.Unit{
+			"extDb": {Type: model.TypeDbExternal},
+		},
+	}
+	assert.True(t, graph.HasExternalSubunits(boxWithDbExt), "box with TypeDbExternal subunit should return true")
+
+	// Test: Returns true for box with TypeQueueExternal subunit
+	boxWithQueueExt := &model.Unit{
+		Type: model.TypeBox,
+		Subunits: map[string]*model.Unit{
+			"extQueue": {Type: model.TypeQueueExternal},
+		},
+	}
+	assert.True(t, graph.HasExternalSubunits(boxWithQueueExt), "box with TypeQueueExternal subunit should return true")
+
+	// Test: Returns false for box with only TypePerson subunit
+	boxWithPerson := &model.Unit{
+		Type: model.TypeBox,
+		Subunits: map[string]*model.Unit{
+			"person": {Type: model.TypePerson},
+		},
+	}
+	assert.False(t, graph.HasExternalSubunits(boxWithPerson), "box with only TypePerson subunit should return false")
+
+	// Test: Returns false for box with only TypeSystem subunit
+	boxWithSystem := &model.Unit{
+		Type: model.TypeBox,
+		Subunits: map[string]*model.Unit{
+			"system": {Type: model.TypeSystem},
+		},
+	}
+	assert.False(t, graph.HasExternalSubunits(boxWithSystem), "box with only TypeSystem subunit should return false")
+
+	// Test: Returns false for box with no subunits
+	emptyBox := &model.Unit{
+		Type:     model.TypeBox,
+		Subunits: nil,
+	}
+	assert.False(t, graph.HasExternalSubunits(emptyBox), "box with no subunits should return false")
+
+	// Test: Returns false for nil unit
+	assert.False(t, graph.HasExternalSubunits(nil), "nil unit should return false")
+}
+
+func TestGetBoxStyleByContents(t *testing.T) {
+	t.Parallel()
+
+	// Test: Returns grey border for box with external subunits
+	boxWithExternal := &model.Unit{
+		Type: model.TypeBox,
+		Subunits: map[string]*model.Unit{
+			"extPerson": {Type: model.TypePersonExternal},
+			"extSystem": {Type: model.TypeSystemExternal},
+		},
+	}
+	styleExternal := graph.GetBoxStyleByContents(boxWithExternal)
+	assert.Equal(t, model.PersonExternalBorder, styleExternal.BorderColor, "box with external subunits should have grey border")
+	assert.Equal(t, model.PersonExternalBorder, styleExternal.FontColor, "box with external subunits should have grey font color")
+	assert.Equal(t, "dashed", styleExternal.BorderStyle, "box should have dashed border")
+	assert.Empty(t, styleExternal.FillColor, "box should have transparent fill")
+
+	// Test: Returns dark blue border for box with only non-external subunits
+	boxWithInternal := &model.Unit{
+		Type: model.TypeBox,
+		Subunits: map[string]*model.Unit{
+			"person": {Type: model.TypePerson},
+			"system": {Type: model.TypeSystem},
+		},
+	}
+	styleInternal := graph.GetBoxStyleByContents(boxWithInternal)
+	assert.Equal(t, model.PersonBorder, styleInternal.BorderColor, "box with only non-external subunits should have dark blue border")
+	assert.Equal(t, model.PersonBorder, styleInternal.FontColor, "box with only non-external subunits should have dark blue font color")
+	assert.Equal(t, "dashed", styleInternal.BorderStyle, "box should have dashed border")
+	assert.Empty(t, styleInternal.FillColor, "box should have transparent fill")
+
+	// Test: Returns dark blue border for empty box (no external subunits)
+	emptyBox := &model.Unit{
+		Type:     model.TypeBox,
+		Subunits: nil,
+	}
+	styleEmpty := graph.GetBoxStyleByContents(emptyBox)
+	assert.Equal(t, model.PersonBorder, styleEmpty.BorderColor, "empty box should have dark blue border")
+	assert.Equal(t, "dashed", styleEmpty.BorderStyle, "box should have dashed border")
+
+	// Test: Returns dark blue border for nil unit
+	styleNil := graph.GetBoxStyleByContents(nil)
+	assert.Equal(t, model.PersonBorder, styleNil.BorderColor, "nil unit should have dark blue border")
+	assert.Equal(t, "dashed", styleNil.BorderStyle, "box should have dashed border")
+}

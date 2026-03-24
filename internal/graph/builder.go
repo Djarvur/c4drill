@@ -86,12 +86,20 @@ func BuildExpandedGraph(v *view.View) *Graph {
 // buildNestedCluster recursively creates a cluster with nested clusters for subunits.
 // This is used by BuildExpandedGraph to show the complete hierarchy in a single diagram.
 func buildNestedCluster(entry *view.Entry, path string, v *view.View) *Cluster {
+	// For C1 boxes, use content-based styling
+	var style *NodeStyle
+	if entry.Unit.Type == model.TypeBox {
+		style = GetBoxStyleByContents(entry.Unit)
+	} else {
+		style = GetStyleForType(entry.Unit.Type, entry.IsExternal)
+	}
+
 	cluster := &Cluster{
 		ID:         "cluster_" + path,
 		Label:      buildClusterLabel(entry),
 		Nodes:      make([]*Node, 0),
 		Clusters:   make([]*Cluster, 0),
-		Style:      GetStyleForType(entry.Unit.Type, entry.IsExternal),
+		Style:      style,
 		Type:       entry.Unit.Type,
 		IsExternal: entry.IsExternal,
 	}
@@ -140,23 +148,39 @@ func buildNode(entry *view.Entry) *Node {
 		label.Name += " [+]"
 	}
 
+	// For C1 boxes, use content-based styling
+	var style *NodeStyle
+	if entry.Unit.Type == model.TypeBox {
+		style = GetBoxStyleByContents(entry.Unit)
+	} else {
+		style = GetStyleForType(entry.Unit.Type, entry.IsExternal)
+	}
+
 	return &Node{
 		ID:         entry.FullPath,
 		Label:      label,
 		Shape:      ShapeForType(entry.Unit.Type),
 		Type:       entry.Unit.Type,
-		Style:      GetStyleForType(entry.Unit.Type, entry.IsExternal),
+		Style:      style,
 		IsExternal: entry.IsExternal,
 	}
 }
 
 // buildCluster creates a cluster for an expanded unit.
 func buildCluster(entry *view.Entry) *Cluster {
+	// For C1 boxes, use content-based styling
+	var style *NodeStyle
+	if entry.Unit.Type == model.TypeBox {
+		style = GetBoxStyleByContents(entry.Unit)
+	} else {
+		style = GetStyleForType(entry.Unit.Type, entry.IsExternal)
+	}
+
 	cluster := &Cluster{
 		ID:         "cluster_" + entry.FullPath,
 		Label:      buildClusterLabel(entry),
 		Nodes:      make([]*Node, 0),
-		Style:      GetStyleForType(entry.Unit.Type, entry.IsExternal),
+		Style:      style,
 		Type:       entry.Unit.Type,
 		IsExternal: entry.IsExternal,
 	}
