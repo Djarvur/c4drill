@@ -149,7 +149,8 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 17. Word-wrapped Labels | v1.5 | 1/1 | Complete | 2021-03-23 |
 | 18. Simplified Shapes | v1.6 | Complete    | 2021-03-24 | 2021-03-24 |
 | 19. Queue Label Fix | v1.7 | 0/1 | Planning | — |
-| 20. Helvetica Font | 1/1 | Complete    | 2021-03-24 | — |
+| 20. Helvetica Font | v1.7 | 1/1 | Complete | 2021-03-24 |
+| 21. Box Fixes | v1.7 | 0/2 | Planning | — |
 
 ### Phase 12: HTML labels for all unit types
 
@@ -406,13 +407,13 @@ Plans:
 
 ### Phase 20: Helvetica Font
 
-**Status:** Ready for execution
+**Status:** Complete
 **Plans:** 1/1 plans complete
 
 **Goal:** Use Helvetica font for all text rendering in diagrams
 **Requirements:** FONT-01, FONT-02
 **Depends on:** Phase 19
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 **Helvetica Font Design:**
 
@@ -420,17 +421,28 @@ Plans:
 - D-02: Set fontname="Helvetica" for all cluster (subgraph) labels
 - D-03: Ensure consistent font family across all diagram elements
 
-### Phase 21: fix box labels, dashed borders, validator for mixed external/non-external, color by content
+### Phase 21: Box Fixes - Labels, Borders, Validation, Color by Content
 
-**Goal:** [To be planned]
-**Requirements**: TBD
-**Depends on:** Phase 21
-**Plans:** 0 plans
+**Status:** Planning
+**Plans:** 0/2 plans complete
+
+**Goal:** Fix box unit rendering: remove curly brackets from labels, add dashed borders, validate C1 box contents, and color C1 boxes based on contents
+**Requirements:** BOX-01, BOX-02, BOX-03, BOX-04
+**Depends on:** Phase 20
+**Plans:** 2 plans
+
+**Box Fixes Design:**
+
+- D-01: Box labels use HTML table format (no curly brackets) - same as container/component
+- D-02: All box types (box, containerBox, componentBox) have dashed borders
+- D-03: C1 boxes cannot contain both external and non-external units (validation rule)
+- D-04: C1 box color based on contents: grey for externals, dark blue for non-externals
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 22 to break down)
+- [ ] 21-01-PLAN.md -- Box HTML labels and dashed borders
+- [ ] 21-02-PLAN.md -- C1 Box validation and color by content
 
 ---
 
 *Roadmap created: 2021-03-09*
-*Last updated: 2021-03-24 - Phase 20 added (Helvetica Font)*
+*Last updated: 2021-03-24 - Phase 21 plans added (Box Fixes)*
