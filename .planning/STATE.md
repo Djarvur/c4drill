@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: AI-Ready
-status: completed
-last_updated: "2026-03-24T08:05:24.432Z"
-last_activity: 2026-03-24 — Removed SVG icon system, added native cylinder shapes
+milestone: v1.7
+milestone_name: Queue Label Fix
+status: planning
+last_updated: "2026-03-24T08:20:00.000Z"
+last_activity: 2026-03-24 — Milestone v1.7 started (Queue cylinder rotation doesn't work)
 progress:
-  total_phases: 12
-  completed_phases: 12
-  total_plans: 17
-  completed_plans: 17
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -19,39 +19,30 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** Phase 18 — Simplified Shapes (native cylinder shapes, emoji labels)
+**Current focus:** Phase 19 — Queue Label Fix
 
 ## Current Position
 
-Phase: 18-simplified-shapes
-Plan: 01 (completed)
-Status: Plan 18-01 complete
-Last activity: 2026-03-24 — Removed SVG icon system, added native cylinder shapes
-
-## Performance Metrics
-
-**Velocity:**
-
-- Total plans completed (v1.0-v1.6): 27
-
-**By Phase (v1.6):**
-
-| Phase              | Plans | Completed | Status    |
-|--------------------|-------|-----------|-----------|
-| 18. Simplified Shapes | 1  | 1         | Complete  |
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-24 — Milestone v1.7 started
 
 ## Accumulated Context
 
 ### Decisions
 
-Recent decisions affecting v1.6:
+Prior decisions from v1.0-v1.6:
 
-- Use GraphViz native `shape=cylinder` for DB units
-- Use GraphViz native `shape=cylinder` with 90deg orientation for Queue units
+- Use GraphViz native `shape=cylinder` for DB units (works)
 - Person labels: 2-column table with emoji (&#x1F464;) instead of SVG icons
 - System/Box/Container/Component labels: 3-row single-column table (name, technology, description)
-- Remove entire icon extraction system (icons package, IconExtractor)
-- Remove SVG postprocessing (svg_icons.go, dot_icons.go)
+- Icon extraction system removed
+- SVG postprocessing removed
+
+**New decision for v1.7:**
+
+- Queue units: Use HTML label with ASCII art (═╦╩═╦═══) instead of rotated cylinder (GraphViz doesn't support cylinder rotation)
 
 ### Pending Todos
 
@@ -67,15 +58,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-24T07:56:16Z
-Status: Plan 18-01 completed
-Next: Verify phase complete or continue with additional plans
-
-## v1.0-v1.5 Summary
-
-**Shipped:** 2026-03-10 through 2026-03-23
-
-- 17 phases, 26+ plans completed
-- Full C4 model support with validation
-- HTML labels, edge coloring, nesting validation
-- Icon system (removed in v1.6)
+Last session: 2026-03-24T08:10:00Z
+Status: Milestone v1.7 started
+Next: Define requirements and create roadmap

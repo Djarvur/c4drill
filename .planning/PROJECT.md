@@ -24,25 +24,24 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 ### Active
 
-- [ ] Remove SVG icon extraction system
-- [ ] Remove SVG postprocessing
-- [ ] DB units use native cylinder shape
-- [ ] Queue units use native cylinder shape (rotated 90°)
-- [ ] Person units use 2-column table with 👤 emoji
-- [ ] System/Box units use 3-row table (name, technology, description)
+- [ ] Queue units use HTML label with ASCII art (═╦╩═╦═══) - GraphViz cylinder rotation doesn't work
 
-## Current Milestone: v1.6 Simplified Shapes
+## Current Milestone: v1.7 Queue Label Fix
 
-**Goal:** Replace icon system with native GraphViz shapes and simplified labels
+**Goal:** Fix Queue rendering - use HTML labels with ASCII art instead of rotated cylinder
 
 **Target features:**
 
-- Remove SVG icon extraction system entirely
-- Remove SVG postprocessing
-- DB units → native cylinder shape
-- Queue units → native cylinder shape (rotated 90°)
-- Person units → 2-column table with 👤 emoji (font size 8)
-- System/Box units → 3-row table (name, technology, description)
+- Queue units → HTML label with ASCII art pattern (═╦╩═╦═══)
+- 4-row table: graphic, name, technology, description
+
+### Shipped in v1.6
+
+- ✓ Remove SVG icon extraction system entirely
+- ✓ Remove SVG postprocessing
+- ✓ DB units → native cylinder shape
+- ✓ Person units → 2-column table with 👤 emoji
+- ✓ System/Box/Container/Component → 3-row table
 
 ### Out of Scope
 

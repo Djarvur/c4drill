@@ -13,6 +13,7 @@ C4Drill transforms TOML architecture definitions into professional C4 diagrams t
 - **v1.4 Edge Coloring** -- Phase 15 (shipped 2026-03-18)
 - **v1.5 SVG Icons** -- Phase 16-17 (shipped 2026-03-23)
 - **v1.6 Simplified Shapes** -- Phase 18 (shipped 2026-03-24)
+- **v1.7 Queue Label Fix** -- Phase 19 (in progress)
 
 ## Phases
 
@@ -147,6 +148,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 16. SVG Icons | v1.5 | 1/1 | Complete | 2026-03-18 |
 | 17. Word-wrapped Labels | v1.5 | 1/1 | Complete | 2026-03-23 |
 | 18. Simplified Shapes | v1.6 | Complete    | 2026-03-24 | 2026-03-24 |
+| 19. Queue Label Fix | v1.7 | 0/1 | Planning | — |
 
 ### Phase 12: HTML labels for all unit types
 
@@ -377,5 +379,31 @@ Plans:
 
 ---
 
+### v1.7 Queue Label Fix (In Progress)
+
+**Milestone Goal:** Fix Queue rendering - GraphViz cylinder rotation doesn't work, use HTML labels
+
+### Phase 19: Queue Label Fix
+
+**Status:** Planning
+**Plans:** 0/1 plans complete
+
+**Goal:** Revert Queue units to HTML labels with ASCII art graphic (═╦╩═╦═══)
+**Requirements:** QUEUE-FIX-01, QUEUE-FIX-02, QUEUE-FIX-03, QUEUE-FIX-04
+**Depends on:** Phase 18
+**Plans:** 1 plan
+
+**Queue Label Fix Design:**
+
+- D-01: Queue units use HTML label with ASCII art graphic (═╦╩═╦═══)
+- D-02: Queue external units use same HTML label format
+- D-03: Queue label is 4-row table (graphic, name, technology, description)
+- D-04: Remove cylinder shape and SetOrientation from Queue units in converter
+
+Plans:
+- [ ] 19-01-PLAN.md -- Update Queue label builder, remove cylinder shape for Queue
+
+---
+
 *Roadmap created: 2026-03-09*
-*Last updated: 2026-03-24 - Phase 18 complete*
+*Last updated: 2026-03-24 - Phase 19 started (v1.7)*

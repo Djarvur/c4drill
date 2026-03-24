@@ -3,7 +3,18 @@
 **Defined:** 2026-03-10
 **Core Value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing
 
-## v1.6 Requirements
+## v1.7 Requirements
+
+Requirements for Queue Label Fix. GraphViz cylinder rotation doesn't work, revert Queue to HTML labels.
+
+### Queue Label Fix
+
+- [ ] **QUEUE-FIX-01**: Queue units use HTML label with ASCII art graphic (═╦╩═╦═══)
+- [ ] **QUEUE-FIX-02**: Queue external units use same HTML label format
+- [ ] **QUEUE-FIX-03**: Queue label is 4-row table (graphic, name, technology, description)
+- [ ] **QUEUE-FIX-04**: Remove cylinder shape and orientation from Queue units
+
+## v1.6 Requirements (Shipped)
 
 Requirements for Simplified Shapes milestone. Replace icon system with native GraphViz shapes.
 
@@ -20,11 +31,11 @@ Requirements for Simplified Shapes milestone. Replace icon system with native Gr
 - [x] **DB-02**: DB external units also use cylinder shape
 - [x] **DB-03**: DB label is simple 3-row table (name, technology, description)
 
-### Queue Shape
+### Queue Shape (Superseded by v1.7)
 
-- [x] **QUEUE-01**: Queue units render with GraphViz native `shape=cylinder` rotated 90deg
-- [x] **QUEUE-02**: Queue external units also use rotated cylinder shape
-- [x] **QUEUE-03**: Queue label is simple 3-row table (name, technology, description)
+- [x] ~~**QUEUE-01**: Queue units render with GraphViz native `shape=cylinder` rotated 90deg~~ — Doesn't work, see QUEUE-FIX-01
+- [x] ~~**QUEUE-02**: Queue external units also use rotated cylinder shape~~ — Doesn't work, see QUEUE-FIX-02
+- [x] **QUEUE-03**: Queue label is simple 3-row table (name, technology, description) — Revised to 4-row in v1.7
 
 ### Person Label
 
@@ -131,6 +142,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status  |
 |-------------|-------|---------|
+| QUEUE-FIX-01 | 19   | Pending |
+| QUEUE-FIX-02 | 19   | Pending |
+| QUEUE-FIX-03 | 19   | Pending |
+| QUEUE-FIX-04 | 19   | Pending |
 | ICON-01     | 18    | Complete |
 | ICON-02     | 18    | Complete |
 | ICON-03     | 18    | Complete |
