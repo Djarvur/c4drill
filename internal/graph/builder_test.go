@@ -816,6 +816,104 @@ func TestBuildGraphEdgeColor(t *testing.T) {
 }
 
 //nolint:funlen // Test functions with model setup are naturally longer
+func TestBuildGraphEdgeLength(t *testing.T) {
+	t.Parallel()
+
+	// Test 1: Edge with length > 0 has MinLen set
+	t.Run("edge with length > 0 has MinLen set", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type: model.TypeSystem,
+					Name: "App",
+					Links: []model.Link{
+						{
+							Peer:   "db",
+							Length: 2,
+						},
+					},
+				},
+				"db": {
+					Type: model.TypeDb,
+					Name: "Database",
+				},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Edges, 1)
+		assert.Equal(t, 2, g.Edges[0].MinLen)
+	})
+
+	// Test 2: Edge with length 0 has MinLen 0
+	t.Run("edge with length 0 has MinLen 0", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type: model.TypeSystem,
+					Name: "App",
+					Links: []model.Link{
+						{
+							Peer:   "db",
+							Length: 0,
+						},
+					},
+				},
+				"db": {
+					Type: model.TypeDb,
+					Name: "Database",
+				},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Edges, 1)
+		assert.Equal(t, 0, g.Edges[0].MinLen)
+	})
+
+	// Test 3: Edge without length has MinLen 0 (default)
+	t.Run("edge without length has MinLen 0", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type: model.TypeSystem,
+					Name: "App",
+					Links: []model.Link{
+						{
+							Peer: "db",
+							// No Length field
+						},
+					},
+				},
+				"db": {
+					Type: model.TypeDb,
+					Name: "Database",
+				},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Edges, 1)
+		assert.Equal(t, 0, g.Edges[0].MinLen)
+	})
+}
+
+//nolint:funlen // Test functions with model setup are naturally longer
 func TestBuildGraphWithPathSetsNavigation(t *testing.T) {
 	t.Parallel()
 
