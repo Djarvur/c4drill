@@ -14,6 +14,11 @@ Requirements for Queue Label Fix. GraphViz cylinder rotation doesn't work, rever
 - [ ] **QUEUE-FIX-03**: Queue label is 4-row table (graphic, name, technology, description)
 - [ ] **QUEUE-FIX-04**: Remove cylinder shape and orientation from Queue units
 
+### Link Length Attribute
+
+- [x] **LINK-LEN-01**: Link struct has Length int field with toml:"length" tag for TOML configuration
+- [x] **LINK-LEN-02**: Edge with Length > 0 gets minlen attribute in rendered DOT output
+
 ## v1.6 Requirements (Shipped)
 
 Requirements for Simplified Shapes milestone. Replace icon system with native GraphViz shapes.
@@ -146,6 +151,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | QUEUE-FIX-02 | 19   | Pending |
 | QUEUE-FIX-03 | 19   | Pending |
 | QUEUE-FIX-04 | 19   | Pending |
+| LINK-LEN-01 | 22    | Complete |
+| LINK-LEN-02 | 22    | Complete |
 | ICON-01     | 18    | Complete |
 | ICON-02     | 18    | Complete |
 | ICON-03     | 18    | Complete |

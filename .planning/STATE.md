@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI-Ready
 status: completed
-last_updated: "2026-03-24T18:29:58.882Z"
-last_activity: 2026-03-24 — Completed 21-02-PLAN.md
+last_updated: "2026-03-24T20:57:29.000Z"
+last_activity: 2026-03-24 — Completed 22-01-PLAN.md
 progress:
   total_phases: 15
-  completed_phases: 14
-  total_plans: 21
-  completed_plans: 20
+  completed_phases: 15
+  total_plans: 22
+  completed_plans: 21
 ---
 
 # Project State
@@ -19,14 +19,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** Phase 21 — Box Labels and Dashed Borders
+**Current focus:** Phase 22 — Links Must Have Length Attribute
 
 ## Current Position
 
-Phase: 21 (Complete)
-Plan: 21-02 (Complete)
-Status: Phase 21 complete - Mixed content validation and box color by contents
-Last activity: 2026-03-24 — Completed 21-02-PLAN.md
+Phase: 22 (Complete)
+Plan: 22-01 (Complete)
+Status: Phase 22 complete - Link length attribute translates to GraphViz minlen
+Last activity: 2026-03-24 — Completed 22-01-PLAN.md
 
 ## Accumulated Context
 
@@ -52,6 +52,7 @@ Prior decisions from v1.0-v1.6:
 - [Phase 21]: All box types (TypeBox, TypeContainerBox, TypeComponentBox) get dashed borders — Visual differentiation from other unit types like system/container/component
 - [Phase 21]: C1 boxes cannot contain both external and non-external units (validation rule)
 - [Phase 21]: C1 box color determined by contents — grey (#8A8A8A) for external, dark blue (#073B6F) for internal
+- [Phase 22]: Link.Length field maps to Edge.MinLen which maps to GraphViz minlen attribute — Users can control edge rank spacing via length attribute in TOML
 
 ### Pending Todos
 
@@ -69,9 +70,10 @@ None.
 
 - Phase 21 added: box label has unnecessary curly brackets, box border must be dashed by default
 - Phase 21 plan 02 added: validator for mixed external/non-external, color by content
+- Phase 22 added: links must have length attribute
 
 ## Session Continuity
 
-Last session: 2026-03-24T18:25:00.000Z
-Status: Phase 21 complete
+Last session: 2026-03-24T20:55:00.000Z
+Status: Phase 22 complete
 Next: Project complete - all planned phases finished

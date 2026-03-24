@@ -151,7 +151,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 19. Queue Label Fix | v1.7 | 0/1 | Planning | - |
 | 20. Helvetica Font | v1.7 | 1/1 | Complete | 2021-03-24 |
 | 21. Box Fixes | v1.7 | Complete    | 2026-03-24 | 2026-03-24 |
-| 22. Link Length Attribute | v1.7 | 0/1 | Planning | - |
+| 22. Link Length Attribute | v1.7 | Complete    | 2026-03-24 | 2026-03-24 |
 
 ### Phase 12: HTML labels for all unit types
 
@@ -445,8 +445,8 @@ Plans:
 
 ### Phase 22: Link Length Attribute
 
-**Status:** Planning
-**Plans:** 0/1 plans complete
+**Status:** Complete
+**Plans:** 1/1 plans complete
 
 **Goal:** Links can have length attribute that sets GraphViz minlen on edges for visual spacing control
 **Requirements:** LINK-LEN-01, LINK-LEN-02
@@ -459,9 +459,9 @@ Plans:
 - D-02: Edge with Length > 0 gets minlen attribute in rendered DOT
 
 Plans:
-- [ ] 22-01-PLAN.md -- Add Length field to Link, MinLen to Edge, and wire through to converter
+- [x] 22-01-PLAN.md -- Add Length field to Link, MinLen to Edge, and wire through to converter
 
 ---
 
 *Roadmap created: 2021-03-09*
-*Last updated: 2026-03-24 - Phase 22 planned*
+*Last updated: 2026-03-24 - Phase 22 complete*
