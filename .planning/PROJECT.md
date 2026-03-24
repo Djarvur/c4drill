@@ -24,20 +24,25 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 ### Active
 
-- [ ] TOML Language Manual for AI-assisted diagram generation
-- [ ] All-Expanded rendering mode with cross-level edges
-- [ ] No-orphan-units validation rule
+- [ ] Remove SVG icon extraction system
+- [ ] Remove SVG postprocessing
+- [ ] DB units use native cylinder shape
+- [ ] Queue units use native cylinder shape (rotated 90°)
+- [ ] Person units use 2-column table with 👤 emoji
+- [ ] System/Box units use 3-row table (name, technology, description)
 
-## Current Milestone: v1.1 AI-Ready
+## Current Milestone: v1.6 Simplified Shapes
 
-**Goal:** Make C4Drill AI-friendly with documentation, single-view expanded diagrams, and stricter validation
+**Goal:** Replace icon system with native GraphViz shapes and simplified labels
 
 **Target features:**
 
-- AI-focused prompt file (CLAUDE.md) + human reference for TOML authoring
-- `--expanded` CLI flag to render all units expanded with all cross-level edges
-- Output saved to `{basename}.expanded.{ext}`
-- Validation rule rejecting unlinked (orphan) units
+- Remove SVG icon extraction system entirely
+- Remove SVG postprocessing
+- DB units → native cylinder shape
+- Queue units → native cylinder shape (rotated 90°)
+- Person units → 2-column table with 👤 emoji (font size 8)
+- System/Box units → 3-row table (name, technology, description)
 
 ### Out of Scope
 
@@ -138,4 +143,4 @@ link = { "target_unit" = { reverse = false, equal = false, color = "black", styl
 - **Shapes**: Person, DB, Queue, System each have distinct record shapes
 
 ---
-*Last updated: 2026-03-10 after v1.1 milestone started*
+*Last updated: 2026-03-24 after v1.6 milestone started*

@@ -10,6 +10,9 @@ C4Drill transforms TOML architecture definitions into professional C4 diagrams t
 - **v1.1 AI-Ready** -- Phases 7-10 (shipped 2026-03-13)
 - **v1.2 Bug Fixes** -- Phases 11-13 (shipped 2026-03-14)
 - **v1.3 Validation Enhancements** -- Phase 14 (shipped 2026-03-17)
+- **v1.4 Edge Coloring** -- Phase 15 (shipped 2026-03-18)
+- **v1.5 SVG Icons** -- Phase 16-17 (shipped 2026-03-23)
+- **v1.6 Simplified Shapes** -- Phase 18 (in progress)
 
 ## Phases
 
@@ -140,6 +143,10 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 12. HTML labels for all unit types | v1.2 | 2/2 | Complete | 2026-03-13 |
 | 13. Refined HTML Labels | v1.2 | Complete    | 2026-03-14 | 2026-03-14 |
 | 14. Nesting Validation | v1.3 | Complete    | 2026-03-17 | 2026-03-17 |
+| 15. Edge Coloring | v1.4 | 1/1 | Complete | 2026-03-18 |
+| 16. SVG Icons | v1.5 | 1/1 | Complete | 2026-03-18 |
+| 17. Word-wrapped Labels | v1.5 | 1/1 | Complete | 2026-03-23 |
+| 18. Simplified Shapes | v1.6 | 0/1 | Planning | |
 
 ### Phase 12: HTML labels for all unit types
 
@@ -323,7 +330,8 @@ Plans:
 **Goal:** Add word-wrapping to HTML label cells so unit shapes approximate credit card proportions
 **Requirements:** WRAP-01, WRAP-02, WRAP-03, WRAP-04, WRAP-05
 **Depends on:** Phase 16
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
+**Status:** Complete
 
 **Word-Wrapping Design:**
 
@@ -334,9 +342,37 @@ Plans:
 - D-05: Ratio configurable via `--label-ratio` CLI flag and `C4DRILL_LABEL_RATIO` env var
 
 Plans:
-- [ ] 17-01-PLAN.md -- Implement word-wrap functions, CLI flag, and integrate with HTML label builders
+- [x] 17-01-PLAN.md -- Implement word-wrap functions, CLI flag, and integrate with HTML label builders
+
+---
+
+### v1.6 Simplified Shapes (In Progress)
+
+**Milestone Goal:** Replace icon system with native GraphViz shapes and simplified labels
+
+### Phase 18: Simplified Shapes
+
+**Goal:** Remove SVG icons, use native GraphViz cylinder shapes for DB/Queue, simplify labels
+**Requirements:** ICON-01, ICON-02, ICON-03, ICON-04, DB-01, DB-02, DB-03, QUEUE-01, QUEUE-02, QUEUE-03, PERSON-01, PERSON-02, PERSON-03, PERSON-04, LABEL-01, LABEL-02, LABEL-03, LABEL-04, WRAP-01, WRAP-02
+**Depends on:** Phase 17
+**Plans:** 0 plans
+
+**Simplified Shapes Design:**
+
+- D-01: Remove icons package (internal/icons) entirely
+- D-02: Remove IconExtractor from converter
+- D-03: Remove .icons/ directory generation
+- D-04: Remove SVG postprocessing logic
+- D-05: DB units use `shape=cylinder` (native GraphViz)
+- D-06: Queue units use `shape=cylinder` with 90° rotation
+- D-07: Person labels: 2-column table with 👤 emoji (font size 8)
+- D-08: System/Box/Container/Component labels: 3-row table (name, technology, description)
+- D-09: Keep word-wrap functionality from Phase 17
+
+Plans:
+- [ ] 18-01-PLAN.md -- Remove icon system, add native shapes, update label builders
 
 ---
 
 *Roadmap created: 2026-03-09*
-*Last updated: 2026-03-23 - Phase 17 planning*
+*Last updated: 2026-03-24 - v1.6 milestone started*

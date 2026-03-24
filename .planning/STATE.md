@@ -1,70 +1,56 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: AI-Ready
+milestone: v1.6
+milestone_name: Simplified Shapes
 status: planning
-last_updated: "2026-03-23T18:36:38.128Z"
+last_updated: "2026-03-24T00:00:00.000Z"
 progress:
-  total_phases: 11
-  completed_phases: 10
-  total_plans: 15
-  completed_plans: 15
+  total_phases: 18
+  completed_phases: 17
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-10)
+See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** Phase 16 — embed-and-render-level-colored-svg-icons-for-units
+**Current focus:** Phase 18 — Simplified Shapes (native cylinder shapes, emoji labels)
 
 ## Current Position
 
-Phase: 16
-Plan: Not started
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-24 — Milestone v1.6 started
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed (v1.0): 16
-- Total plans completed (v1.1): 5
-- Total plans completed (v1.2): 3
-- Total plans completed (v1.3): 1
-- Total plans completed (v1.4): 1
-- Total plans completed (v1.5): 0 (1 planned)
+- Total plans completed (v1.0-v1.5): 26
 
-**By Phase (v1.5):**
+**By Phase (v1.6):**
 
-| Phase                  | Plans | Completed | Status    |
-|------------------------|-------|-----------|-----------|
-| 14. Nesting Validation | 1     | 1         | Complete  |
-| 15. Edge Coloring      | 1     | 1         | Complete  |
-| 16. SVG Icons          | 1     | 0         | Planned   |
-| Phase 16-embed-and-render-level-colored-svg-icons-for-units P01 | min | 5 tasks | 15 files |
+| Phase              | Plans | Completed | Status    |
+|--------------------|-------|-----------|-----------|
+| 18. Simplified Shapes | 0  | 0         | Planning  |
 
 ## Accumulated Context
 
 ### Decisions
 
-Recent decisions affecting v1.5:
+Recent decisions affecting v1.6:
 
-- [Phase 16]: Use Go embed.FS for SVG icon storage
-- [16-01]: Icons extracted on-demand to {output}/.icons/
-- [16-01]: Icon naming: type-{hexcolor}.svg (e.g., person-3C7FC0.svg)
-- [16-01]: IMG tags at 32x32 pixels in HTML labels with rowspan
-
-### Roadmap Evolution
-
-- Phase 14 added: Nesting validation to enforce C4 model hierarchy
-- 14-01 complete: ValidateNestingHierarchy function with comprehensive test coverage
-- Phase 15 added: Edge coloring from source unit border
-- 15-01 complete: Edge struct Color field, builder color computation, converter color application
-- Phase 16 added: Embed and render level-colored SVG icons for units
-- 16-01 planned: icons package, IconExtractor, HTML label IMG tags, converter integration
-- Phase 17 added: Units labels cells must be word-wrapped to make the unit shape proportions as close as possible to credit card proportions
+- Use GraphViz native `shape=cylinder` for DB units
+- Use GraphViz native `shape=cylinder` with 90° rotation for Queue units
+- Person labels: 2-column table with 👤 emoji (font size 8) instead of SVG icons
+- System/Box labels: 3-row table (name, technology, description) without icon column
+- Remove entire icon extraction system (icons package, IconExtractor)
+- Remove SVG postprocessing
 
 ### Pending Todos
 
@@ -80,32 +66,15 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-23T18:36:38.115Z
-Status: Phase 16 planning complete
-Next: Execute Phase 16 with `/gsd:execute-phase 16`
+Last session: 2026-03-24
+Status: Milestone v1.6 started
+Next: Create requirements and roadmap
 
-## v1.0 Summary
+## v1.0-v1.5 Summary
 
-**Shipped:** 2026-03-10
+**Shipped:** 2026-03-10 through 2026-03-23
 
-- 6 phases, 16 plans completed
-- 9,624 LOC Go across 48 files
-- 28 feature commits
-
-## v1.1 Summary
-
-**Shipped:** 2026-03-11
-
-- 3 phases, 5 plans completed
-- AI documentation skill package
-- All-expanded view mode
-- Orphan unit validation
-
-## v1.2 Summary
-
-**Shipped:** 2026-03-14
-
-- 3 phases, 3 plans completed
-- Fixed nested cluster rendering in expanded view
-- HTML labels with shape=box, style=rounded, and table attributes
-- Cluster labels use HTML format with type coloring
+- 17 phases, 26+ plans completed
+- Full C4 model support with validation
+- HTML labels, edge coloring, nesting validation
+- Icon system (to be removed in v1.6)
