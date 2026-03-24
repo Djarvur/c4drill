@@ -13,7 +13,7 @@ C4Drill transforms TOML architecture definitions into professional C4 diagrams t
 - **v1.4 Edge Coloring** -- Phase 15 (shipped 2021-03-18)
 - **v1.5 SVG Icons** -- Phase 16-17 (shipped 2021-03-23)
 - **v1.6 Simplified Shapes** -- Phase 18 (shipped 2021-03-24)
-- **v1.7 Queue Label Fix** -- Phase 19 (in progress)
+- **v1.7 Queue Label Fix** -- Phase 19-22 (in progress)
 
 ## Phases
 
@@ -148,9 +148,10 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 16. SVG Icons | v1.5 | 1/1 | Complete | 2021-03-18 |
 | 17. Word-wrapped Labels | v1.5 | 1/1 | Complete | 2021-03-23 |
 | 18. Simplified Shapes | v1.6 | Complete    | 2021-03-24 | 2021-03-24 |
-| 19. Queue Label Fix | v1.7 | 0/1 | Planning | — |
+| 19. Queue Label Fix | v1.7 | 0/1 | Planning | - |
 | 20. Helvetica Font | v1.7 | 1/1 | Complete | 2021-03-24 |
 | 21. Box Fixes | v1.7 | Complete    | 2026-03-24 | 2026-03-24 |
+| 22. Link Length Attribute | v1.7 | 0/1 | Planning | - |
 
 ### Phase 12: HTML labels for all unit types
 
@@ -442,7 +443,25 @@ Plans:
 - [x] 21-01-PLAN.md -- Box HTML labels and dashed borders
 - [x] 21-02-PLAN.md -- C1 Box validation and color by content
 
+### Phase 22: Link Length Attribute
+
+**Status:** Planning
+**Plans:** 0/1 plans complete
+
+**Goal:** Links can have length attribute that sets GraphViz minlen on edges for visual spacing control
+**Requirements:** LINK-LEN-01, LINK-LEN-02
+**Depends on:** Phase 21
+**Plans:** 1 plan
+
+**Link Length Design:**
+
+- D-01: Link struct has Length int field with toml:"length" tag
+- D-02: Edge with Length > 0 gets minlen attribute in rendered DOT
+
+Plans:
+- [ ] 22-01-PLAN.md -- Add Length field to Link, MinLen to Edge, and wire through to converter
+
 ---
 
 *Roadmap created: 2021-03-09*
-*Last updated: 2026-03-24 - Phase 21 complete (Box Fixes)*
+*Last updated: 2026-03-24 - Phase 22 planned*
