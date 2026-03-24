@@ -84,6 +84,8 @@ type Edge struct {
 	ArrowHead ArrowDirection
 	// Color is the edge line and label color (from source unit's border color or explicit override).
 	Color string
+	// MinLen is the minimum length (minlen attribute) for the edge.
+	MinLen int
 }
 
 // EdgeLabel contains label information for an edge.

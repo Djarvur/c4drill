@@ -57,6 +57,8 @@ type Link struct {
 	Description string `toml:"description"`
 	// LabelPosition indicates where the label appears on the link.
 	LabelPosition LabelPosition `toml:"labelPosition"`
+	// Length is the minimum edge length (rank spacing). 0 means default.
+	Length int `toml:"length"`
 }
 
 // FindLinkByPeer searches a slice of links for one with the given peer name.

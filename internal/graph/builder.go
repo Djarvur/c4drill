@@ -329,6 +329,9 @@ func createEdge(source, target string, link model.Link, sourceEntry *view.Entry)
 		edge.Color = style.BorderColor
 	}
 
+	// Copy length to MinLen (D-01: length > 0 sets minlen attribute)
+	edge.MinLen = link.Length
+
 	return edge
 }
 
