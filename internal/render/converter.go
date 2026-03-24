@@ -430,11 +430,11 @@ func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge)
 		return fmt.Errorf("create edge by name: %w", err)
 	}
 
-	// Set edge label
+	// Set edge label and font
+	e.SetFontName("Helvetica")
 	if edge.Label != nil {
 		e.SetLabel(buildEdgeLabel(edge.Label))
 		e.SetFontSize(fontSizeEdge)
-		e.SetFontName("Helvetica")
 	}
 
 	// Edge style
