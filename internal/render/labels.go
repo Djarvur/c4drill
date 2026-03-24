@@ -1,7 +1,6 @@
 package render
 
 import (
-	"strconv"
 	"strings"
 
 	"github.com/Djarvur/c4drill/internal/graph"
@@ -83,15 +82,6 @@ func buildPersonHTMLLabel(label *graph.Label) string {
 
 	maxChars := labelMaxCharsForPerson(rowCount)
 
-	// Calculate horizontal padding to compensate for icon column
-	// Use minimum of 2 rows for padding calculation to match labelMaxCharsForPerson
-	effectiveRows := rowCount
-	if effectiveRows < 2 {
-		effectiveRows = 2
-	}
-	totalHeight := effectiveRows * 18
-	hPadding := totalHeight / 10 // 10% for minimal padding
-
 	var sb strings.Builder
 	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
 
@@ -101,38 +91,23 @@ func buildPersonHTMLLabel(label *graph.Label) string {
 		rowspan = 2
 	}
 
-	// Row 1: Emoji (rowspan) + Name with horizontal padding
+	// Row 1: Emoji (rowspan) + Name
 	sb.WriteString(`<tr align="center">`)
 
 	// Emoji column with person emoji
 	sb.WriteString(`<td width="36" rowspan="`)
-	sb.WriteString(strconv.Itoa(rowspan))
+	sb.WriteString(rowspanString(rowspan))
 	sb.WriteString(`" valign="middle"><font size="+4">&#x1F464;</font></td>`)
 
-	sb.WriteString(`<td valign="bottom">`)
-	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0"><tr>`)
-	sb.WriteString(`<td width="`)
-	sb.WriteString(strconv.Itoa(hPadding))
-	sb.WriteString(`"></td><td><b>`)
+	sb.WriteString(`<td valign="bottom"><b>`)
 	sb.WriteString(wrapAndEscape(label.Name, maxChars))
-	sb.WriteString(`</b></td><td width="`)
-	sb.WriteString(strconv.Itoa(hPadding))
-	sb.WriteString(`"></td></tr></table></td>`)
-	sb.WriteString(`</tr>`)
+	sb.WriteString(`</b></td></tr>`)
 
-	// Row 2: Description (if present) with horizontal padding
+	// Row 2: Description (if present)
 	if label.Description != "" {
-		sb.WriteString(`<tr align="center">`)
-		sb.WriteString(`<td valign="top">`)
-		sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0"><tr>`)
-		sb.WriteString(`<td width="`)
-		sb.WriteString(strconv.Itoa(hPadding))
-		sb.WriteString(`"></td><td>`)
+		sb.WriteString(`<tr align="center"><td valign="top">`)
 		sb.WriteString(wrapAndEscape(label.Description, maxChars))
-		sb.WriteString(`</td><td width="`)
-		sb.WriteString(strconv.Itoa(hPadding))
-		sb.WriteString(`"></td></tr></table></td>`)
-		sb.WriteString(`</tr>`)
+		sb.WriteString(`</td></tr>`)
 	}
 
 	sb.WriteString(`</table>`)
@@ -140,11 +115,18 @@ func buildPersonHTMLLabel(label *graph.Label) string {
 	return sb.String()
 }
 
+// rowspanString converts rowspan int to string without importing strconv.
+func rowspanString(n int) string {
+	if n == 1 {
+		return "1"
+	}
+
+	return "2"
+}
+
 // buildDbHTMLLabel generates an HTML table label for Database-type nodes.
 // Format: name (bold) / [technology] italic / description
 // Single-column layout without icon column.
-// Note: DB nodes use cylinder shape which adds extra visual height for the 3D effect.
-// We add horizontal padding to compensate and maintain the target aspect ratio.
 func buildDbHTMLLabel(label *graph.Label) string {
 	if label == nil {
 		return ""
@@ -163,48 +145,26 @@ func buildDbHTMLLabel(label *graph.Label) string {
 	// Use cylinder-specific calculation to compensate for shape's extra height
 	maxChars := labelMaxCharsForCylinder(rowCount)
 
-	// Minimal horizontal padding for visual breathing room
-	totalHeight := rowCount * 18
-	hPadding := totalHeight / 10 // 10% for minimal padding
-
 	var sb strings.Builder
 	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
 
-	// Row 1: Name (bold) with horizontal padding
-	sb.WriteString(`<tr align="center"><td valign="bottom">`)
-	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0"><tr>`)
-	sb.WriteString(`<td width="`)
-	sb.WriteString(strconv.Itoa(hPadding))
-	sb.WriteString(`"></td><td><b>`)
+	// Row 1: Name (bold)
+	sb.WriteString(`<tr align="center"><td valign="bottom"><b>`)
 	sb.WriteString(wrapAndEscape(label.Name, maxChars))
-	sb.WriteString(`</b></td><td width="`)
-	sb.WriteString(strconv.Itoa(hPadding))
-	sb.WriteString(`"></td></tr></table></td></tr>`)
+	sb.WriteString(`</b></td></tr>`)
 
 	// Row 2: Technology (if present, italic in brackets)
 	if label.Technology != "" {
-		sb.WriteString(`<tr align="center"><td valign="middle">`)
-		sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0"><tr>`)
-		sb.WriteString(`<td width="`)
-		sb.WriteString(strconv.Itoa(hPadding))
-		sb.WriteString(`"></td><td><i>[`)
+		sb.WriteString(`<tr align="center"><td valign="middle"><i>[`)
 		sb.WriteString(wrapAndEscape(label.Technology, maxChars))
-		sb.WriteString(`]</i></td><td width="`)
-		sb.WriteString(strconv.Itoa(hPadding))
-		sb.WriteString(`"></td></tr></table></td></tr>`)
+		sb.WriteString(`]</i></td></tr>`)
 	}
 
 	// Row 3: Description (if present)
 	if label.Description != "" {
 		sb.WriteString(`<tr align="center"><td valign="top">`)
-		sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0"><tr>`)
-		sb.WriteString(`<td width="`)
-		sb.WriteString(strconv.Itoa(hPadding))
-		sb.WriteString(`"></td><td>`)
 		sb.WriteString(wrapAndEscape(label.Description, maxChars))
-		sb.WriteString(`</td><td width="`)
-		sb.WriteString(strconv.Itoa(hPadding))
-		sb.WriteString(`"></td></tr></table></td></tr>`)
+		sb.WriteString(`</td></tr>`)
 	}
 
 	sb.WriteString(`</table>`)
@@ -215,8 +175,6 @@ func buildDbHTMLLabel(label *graph.Label) string {
 // buildQueueHTMLLabel generates an HTML table label for Queue-type nodes.
 // Format: ASCII graphic / name (bold) / [technology] italic / description
 // 4-row table with ASCII art graphic as first row.
-// Note: Queue labels use horizontal padding to compensate for the ASCII graphic row
-// which contributes to height but has limited width.
 func buildQueueHTMLLabel(label *graph.Label) string {
 	if label == nil {
 		return ""
@@ -235,59 +193,31 @@ func buildQueueHTMLLabel(label *graph.Label) string {
 
 	maxChars := labelMaxCharsForQueue(rowCount)
 
-	// Minimal horizontal padding for visual breathing room
-	totalHeight := rowCount * 18
-	hPadding := totalHeight / 10 // 10% for minimal padding
-
 	var sb strings.Builder
 	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
 
-	// Row 1: ASCII art graphic (NOT wrapped, NOT escaped) with padding
+	// Row 1: ASCII art graphic
 	sb.WriteString(`<tr align="center"><td valign="middle">`)
-	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0"><tr>`)
-	sb.WriteString(`<td width="`)
-	sb.WriteString(strconv.Itoa(hPadding))
-	sb.WriteString(`"></td><td>`)
 	sb.WriteString("═╦╩═╦═══")
-	sb.WriteString(`</td><td width="`)
-	sb.WriteString(strconv.Itoa(hPadding))
-	sb.WriteString(`"></td></tr></table></td></tr>`)
+	sb.WriteString(`</td></tr>`)
 
-	// Row 2: Name (bold) with horizontal padding
-	sb.WriteString(`<tr align="center"><td valign="bottom">`)
-	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0"><tr>`)
-	sb.WriteString(`<td width="`)
-	sb.WriteString(strconv.Itoa(hPadding))
-	sb.WriteString(`"></td><td><b>`)
+	// Row 2: Name (bold)
+	sb.WriteString(`<tr align="center"><td valign="bottom"><b>`)
 	sb.WriteString(wrapAndEscape(label.Name, maxChars))
-	sb.WriteString(`</b></td><td width="`)
-	sb.WriteString(strconv.Itoa(hPadding))
-	sb.WriteString(`"></td></tr></table></td></tr>`)
+	sb.WriteString(`</b></td></tr>`)
 
 	// Row 3: Technology (if present, italic in brackets)
 	if label.Technology != "" {
-		sb.WriteString(`<tr align="center"><td valign="middle">`)
-		sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0"><tr>`)
-		sb.WriteString(`<td width="`)
-		sb.WriteString(strconv.Itoa(hPadding))
-		sb.WriteString(`"></td><td><i>[`)
+		sb.WriteString(`<tr align="center"><td valign="middle"><i>[`)
 		sb.WriteString(wrapAndEscape(label.Technology, maxChars))
-		sb.WriteString(`]</i></td><td width="`)
-		sb.WriteString(strconv.Itoa(hPadding))
-		sb.WriteString(`"></td></tr></table></td></tr>`)
+		sb.WriteString(`]</i></td></tr>`)
 	}
 
 	// Row 4: Description (if present)
 	if label.Description != "" {
 		sb.WriteString(`<tr align="center"><td valign="top">`)
-		sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0"><tr>`)
-		sb.WriteString(`<td width="`)
-		sb.WriteString(strconv.Itoa(hPadding))
-		sb.WriteString(`"></td><td>`)
 		sb.WriteString(wrapAndEscape(label.Description, maxChars))
-		sb.WriteString(`</td><td width="`)
-		sb.WriteString(strconv.Itoa(hPadding))
-		sb.WriteString(`"></td></tr></table></td></tr>`)
+		sb.WriteString(`</td></tr>`)
 	}
 
 	sb.WriteString(`</table>`)
