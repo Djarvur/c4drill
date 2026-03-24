@@ -1,12 +1,12 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: AI-Ready
-status: Defining requirements
-last_updated: "2026-03-24T09:31:16.470Z"
-last_activity: 2026-03-24 — Milestone v1.7 started
+milestone: v1.7
+milestone_name: Queue Label Fix
+status: Phase added
+last_updated: "2026-03-24T18:30:00.000Z"
+last_activity: 2026-03-24 — Phase 20 (Helvetica Font) added to roadmap
 progress:
-  total_phases: 13
+  total_phases: 14
   completed_phases: 12
   total_plans: 17
   completed_plans: 17
@@ -19,14 +19,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** Phase 19 — Queue Label Fix
+**Current focus:** Phase 20 — Helvetica Font
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 20 (Not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-03-24 — Milestone v1.7 started
+Status: Phase added to roadmap
+Last activity: 2026-03-24 — Phase 20 (Helvetica Font) added to roadmap
 
 ## Accumulated Context
 
@@ -40,9 +40,13 @@ Prior decisions from v1.0-v1.6:
 - Icon extraction system removed
 - SVG postprocessing removed
 
-**New decision for v1.7:**
+**Decisions for v1.7:**
 
 - Queue units: Use HTML label with ASCII art (═╦╩═╦═══) instead of rotated cylinder (GraphViz doesn't support cylinder rotation)
+
+**New decision for Phase 20:**
+
+- Use Helvetica font for all text rendering (nodes, edges, clusters)
 
 ### Pending Todos
 
@@ -58,6 +62,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-24T09:31:16.459Z
-Status: Milestone v1.7 started
-Next: Define requirements and create roadmap
+Last session: 2026-03-24T18:30:00.000Z
+Status: Phase 20 added to roadmap
+Next: Run /gsd:discuss-phase 20 or /gsd:plan-phase 20

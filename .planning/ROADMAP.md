@@ -149,6 +149,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 17. Word-wrapped Labels | v1.5 | 1/1 | Complete | 2026-03-23 |
 | 18. Simplified Shapes | v1.6 | Complete    | 2026-03-24 | 2026-03-24 |
 | 19. Queue Label Fix | v1.7 | 0/1 | Planning | — |
+| 20. Helvetica Font | v1.7 | 0/0 | Not started | — |
 
 ### Phase 12: HTML labels for all unit types
 
@@ -403,7 +404,23 @@ Plans:
 Plans:
 - [ ] 19-01-PLAN.md -- Update Queue label builder, remove cylinder shape for Queue
 
+### Phase 20: Helvetica Font
+
+**Status:** Not started
+**Plans:** 0/0 plans complete
+
+**Goal:** Use Helvetica font for all text rendering in diagrams
+**Requirements:** FONT-01, FONT-02
+**Depends on:** Phase 19
+**Plans:** 0 plans
+
+**Helvetica Font Design:**
+
+- D-01: Set fontname="Helvetica" for all nodes and edges
+- D-02: Set fontname="Helvetica" for all cluster (subgraph) labels
+- D-03: Ensure consistent font family across all diagram elements
+
 ---
 
 *Roadmap created: 2026-03-09*
-*Last updated: 2026-03-24 - Phase 19 started (v1.7)*
+*Last updated: 2026-03-24 - Phase 20 added (Helvetica Font)*
