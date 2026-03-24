@@ -97,7 +97,7 @@ func buildPersonHTMLLabel(label *graph.Label) string {
 	// Emoji column with person emoji
 	sb.WriteString(`<td width="36" rowspan="`)
 	sb.WriteString(rowspanString(rowspan))
-	sb.WriteString(`" valign="middle"><font size="+4">&#x1F464;</font></td>`)
+	sb.WriteString(`" valign="middle"><font POINT-SIZE="32">&#x1F464;</font></td>`)
 
 	sb.WriteString(`<td valign="bottom"><b>`)
 	sb.WriteString(wrapAndEscape(label.Name, maxChars))
