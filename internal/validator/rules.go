@@ -287,3 +287,56 @@ func validateUnitNesting(path string, info *UnitInfo, index map[string]*UnitInfo
 	// This is handled by ValidateSubunitRules, so we skip here
 	return nil
 }
+
+// externalTypes maps all C1 external types for O(1) lookup.
+//
+//nolint:gochecknoglobals // Lookup map for O(1) type checking, immutable after init
+var externalTypes = map[model.UnitType]bool{
+	model.TypePersonExternal:  true,
+	model.TypeSystemExternal:  true,
+	model.TypeDbExternal:      true,
+	model.TypeQueueExternal:   true,
+}
+
+// ValidateBoxMixedContents checks that C1 boxes contain only external or only non-external units.
+// Mixing external and non-external units in the same C1 box is not allowed.
+// ContainerBox (C2) and ComponentBox (C3) are not validated by this rule.
+// Returns all errors found (not fail-fast).
+func ValidateBoxMixedContents(index map[string]*UnitInfo) ValidationErrors {
+	var errors ValidationErrors
+
+	for path, info := range index {
+		// Only validate C1 TypeBox units
+		if info.Unit.Type != model.TypeBox {
+			continue
+		}
+
+		// Skip boxes without subunits
+		if len(info.Unit.Subunits) == 0 {
+			continue
+		}
+
+		// Check if box has both external and non-external subunits
+		hasExternal := false
+		hasNonExternal := false
+
+		for _, subunit := range info.Unit.Subunits {
+			if externalTypes[subunit.Type] {
+				hasExternal = true
+			} else if c1Types[subunit.Type] {
+				// Only count C1 non-external types (person, system, db, queue)
+				hasNonExternal = true
+			}
+		}
+
+		// If both external and non-external found, it's an error
+		if hasExternal && hasNonExternal {
+			errors = append(errors, &ValidationError{
+				Message: fmt.Sprintf(`box "%s" cannot contain both external and non-external units`, path),
+				Path:    path,
+			})
+		}
+	}
+
+	return errors
+}

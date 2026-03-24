@@ -976,3 +976,154 @@ func TestValidateNestingHierarchy_CollectsAllErrors(t *testing.T) {
 		t.Errorf("expected 3 errors for multiple violations, got %d: %v", len(errors), errors)
 	}
 }
+
+// TestValidateBoxMixedContents tests that C1 boxes cannot contain
+// both external and non-external units.
+
+func TestValidateBoxMixedContents_OnlyExternalUnitsPasses(t *testing.T) {
+	t.Parallel()
+
+	// C1 box with only external units should pass
+	units := map[string]*model.Unit{
+		"extBox": {
+			Type: model.TypeBox,
+			Subunits: map[string]*model.Unit{
+				"extPerson": {Type: model.TypePersonExternal},
+				"extSystem": {Type: model.TypeSystemExternal},
+			},
+		},
+	}
+
+	index := validator.BuildIndex(units, "")
+	errors := validator.ValidateBoxMixedContents(index)
+
+	if len(errors) != 0 {
+		t.Errorf("expected no errors for box with only external units, got %d: %v", len(errors), errors)
+	}
+}
+
+func TestValidateBoxMixedContents_OnlyNonExternalUnitsPasses(t *testing.T) {
+	t.Parallel()
+
+	// C1 box with only non-external units should pass
+	units := map[string]*model.Unit{
+		"intBox": {
+			Type: model.TypeBox,
+			Subunits: map[string]*model.Unit{
+				"person": {Type: model.TypePerson},
+				"system": {Type: model.TypeSystem},
+			},
+		},
+	}
+
+	index := validator.BuildIndex(units, "")
+	errors := validator.ValidateBoxMixedContents(index)
+
+	if len(errors) != 0 {
+		t.Errorf("expected no errors for box with only non-external units, got %d: %v", len(errors), errors)
+	}
+}
+
+func TestValidateBoxMixedContents_MixedUnitsFails(t *testing.T) {
+	t.Parallel()
+
+	// C1 box with mixed external and non-external units should fail
+	units := map[string]*model.Unit{
+		"mixedBox": {
+			Type: model.TypeBox,
+			Subunits: map[string]*model.Unit{
+				"person":     {Type: model.TypePerson},
+				"extSystem":  {Type: model.TypeSystemExternal},
+			},
+		},
+	}
+
+	index := validator.BuildIndex(units, "")
+	errors := validator.ValidateBoxMixedContents(index)
+
+	if len(errors) != 1 {
+		t.Fatalf("expected 1 error for box with mixed units, got %d", len(errors))
+	}
+
+	expectedMsg := `box "mixedBox" cannot contain both external and non-external units`
+	if errors[0].Message != expectedMsg {
+		t.Errorf("expected message %q, got %q", expectedMsg, errors[0].Message)
+	}
+}
+
+func TestValidateBoxMixedContents_ContainerBoxNotValidated(t *testing.T) {
+	t.Parallel()
+
+	// ContainerBox (C2) with mixed units should pass (not validated by this rule)
+	units := map[string]*model.Unit{
+		"system": {
+			Type: model.TypeSystem,
+			Subunits: map[string]*model.Unit{
+				"containerBox": {
+					Type: model.TypeContainerBox,
+					Subunits: map[string]*model.Unit{
+						"container":    {Type: model.TypeContainer},
+						"containerDb":  {Type: model.TypeContainerDb},
+					},
+				},
+			},
+		},
+	}
+
+	index := validator.BuildIndex(units, "")
+	errors := validator.ValidateBoxMixedContents(index)
+
+	if len(errors) != 0 {
+		t.Errorf("expected no errors for containerBox (C2), got %d: %v", len(errors), errors)
+	}
+}
+
+func TestValidateBoxMixedContents_ComponentBoxNotValidated(t *testing.T) {
+	t.Parallel()
+
+	// ComponentBox (C3) with mixed units should pass (not validated by this rule)
+	units := map[string]*model.Unit{
+		"system": {
+			Type: model.TypeSystem,
+			Subunits: map[string]*model.Unit{
+				"api": {
+					Type: model.TypeContainer,
+					Subunits: map[string]*model.Unit{
+						"componentBox": {
+							Type: model.TypeComponentBox,
+							Subunits: map[string]*model.Unit{
+								"component":    {Type: model.TypeComponent},
+								"componentDb":  {Type: model.TypeComponentDb},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	index := validator.BuildIndex(units, "")
+	errors := validator.ValidateBoxMixedContents(index)
+
+	if len(errors) != 0 {
+		t.Errorf("expected no errors for componentBox (C3), got %d: %v", len(errors), errors)
+	}
+}
+
+func TestValidateBoxMixedContents_EmptyBoxPasses(t *testing.T) {
+	t.Parallel()
+
+	// Empty box should pass
+	units := map[string]*model.Unit{
+		"emptyBox": {
+			Type: model.TypeBox,
+		},
+	}
+
+	index := validator.BuildIndex(units, "")
+	errors := validator.ValidateBoxMixedContents(index)
+
+	if len(errors) != 0 {
+		t.Errorf("expected no errors for empty box, got %d: %v", len(errors), errors)
+	}
+}
