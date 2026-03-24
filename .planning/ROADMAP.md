@@ -150,7 +150,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 18. Simplified Shapes | v1.6 | Complete    | 2021-03-24 | 2021-03-24 |
 | 19. Queue Label Fix | v1.7 | 0/1 | Planning | — |
 | 20. Helvetica Font | v1.7 | 1/1 | Complete | 2021-03-24 |
-| 21. Box Fixes | v1.7 | 2/2 | Complete | 2026-03-24 |
+| 21. Box Fixes | v1.7 | Complete    | 2026-03-24 | 2026-03-24 |
 
 ### Phase 12: HTML labels for all unit types
 
