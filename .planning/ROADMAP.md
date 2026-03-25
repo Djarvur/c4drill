@@ -152,7 +152,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 20. Helvetica Font | v1.7 | 1/1 | Complete | 2021-03-24 |
 | 21. Box Fixes | v1.7 | Complete    | 2026-03-24 | 2026-03-24 |
 | 22. Link Length Attribute | v1.7 | Complete    | 2026-03-24 | 2026-03-24 |
-| 23. Deterministic Order | v1.7 | 1/1 | Complete | 2026-03-25 |
+| 23. Deterministic Order | v1.7 | Complete    | 2026-03-25 | 2026-03-25 |
 
 ### Phase 12: HTML labels for all unit types
 
