@@ -13,7 +13,7 @@ C4Drill transforms TOML architecture definitions into professional C4 diagrams t
 - **v1.4 Edge Coloring** -- Phase 15 (shipped 2021-03-18)
 - **v1.5 SVG Icons** -- Phase 16-17 (shipped 2021-03-23)
 - **v1.6 Simplified Shapes** -- Phase 18 (shipped 2021-03-24)
-- **v1.7 Queue Label Fix** -- Phase 19-22 (in progress)
+- **v1.7 Queue Label Fix** -- Phase 19-23 (in progress)
 
 ## Phases
 
@@ -152,6 +152,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 20. Helvetica Font | v1.7 | 1/1 | Complete | 2021-03-24 |
 | 21. Box Fixes | v1.7 | Complete    | 2026-03-24 | 2026-03-24 |
 | 22. Link Length Attribute | v1.7 | Complete    | 2026-03-24 | 2026-03-24 |
+| 23. Deterministic Order | v1.7 | 0/1 | Planning | - |
 
 ### Phase 12: HTML labels for all unit types
 
@@ -461,7 +462,27 @@ Plans:
 Plans:
 - [x] 22-01-PLAN.md -- Add Length field to Link, MinLen to Edge, and wire through to converter
 
+### Phase 23: Deterministic Node and Edge Creation Order
+
+**Status:** Planning
+**Plans:** 1/1 plans
+
+**Goal:** Node and edge creation order must be deterministic, not dependent on Go map iteration order. Sort map keys alphabetically before iterating.
+**Requirements:** None (technical improvement)
+**Depends on:** Phase 22
+**Plans:** 1 plan
+
+**Deterministic Order Design:**
+
+- D-01: All map iterations in builder.go use sorted keys (maps.Keys + slices.Sort)
+- D-02: Nodes appear in alphabetical order by path
+- D-03: Cluster children appear in alphabetical order by name
+- D-04: Edges appear in deterministic order based on sorted source paths
+
+Plans:
+- [ ] 23-01-PLAN.md -- Add deterministic map iteration to builder.go with tests
+
 ---
 
 *Roadmap created: 2021-03-09*
-*Last updated: 2026-03-24 - Phase 22 complete*
+*Last updated: 2026-03-25 - Phase 23 planned*
