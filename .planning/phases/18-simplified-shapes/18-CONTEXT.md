@@ -12,7 +12,7 @@ Remove SVG icon system and use native GraphViz shapes for DB/Queue units. Simpli
 1. Remove entire icon system (icons package, IconExtractor, SVG postprocessing)
 2. DB units → `shape=cylinder` (native GraphViz)
 3. Queue units → `shape=cylinder` with 90° rotation
-4. Person labels → 2-column table with 👤 emoji (font size +4)
+4. Person labels → 2-column table with 👤 emoji (`POINT-SIZE="32"`)
 5. System/Box/Container/Component labels → 3-row table (name, technology, description)
 6. Keep word-wrap functionality from Phase 17
 
@@ -44,7 +44,7 @@ Remove SVG icon system and use native GraphViz shapes for DB/Queue units. Simpli
 
 ### Person Label
 - **D-11:** Person units keep 2-column table layout
-- **D-12:** First column contains 👤 emoji with `<font size="+4">` (same as before)
+- **D-12:** First column contains 👤 emoji with `<font POINT-SIZE="32">`
 - **D-13:** Second column contains name and description rows
 - **D-14:** Person external units use same label format
 
@@ -67,7 +67,7 @@ Remove SVG icon system and use native GraphViz shapes for DB/Queue units. Simpli
 <specifics>
 ## Specific Ideas
 
-- User confirmed `<font size="+4">` for Person emoji (not literal size 8)
+- User confirmed `<font POINT-SIZE="32">` for Person emoji (GraphViz-compatible font sizing)
 - Queue cylinder rotation: use native GraphViz orientation support
 - All icon-related code removed: package, extractor, column, postprocessing
 - DB/Queue labels use same 3-row format as System/Box
@@ -111,9 +111,11 @@ Remove SVG icon system and use native GraphViz shapes for DB/Queue units. Simpli
 - `internal/graph/shapes.go` — Shape definitions, need cylinder for DB/Queue
 
 ### Established Patterns
-- HTML labels use `<table>` with `<tr>`/`<td>` structure
+- HTML labels use `<table>` with `<tr>`/`<td>` structure (no nested padding tables)
+- `cellpadding="0" cellspacing="0"` for clean label borders
 - Label types dispatch via `buildHTMLLabelForType()` switch statement
 - Shape assignment in `shapes.go:GetStyleForType()`
+- Font sizing uses `POINT-SIZE` attribute (GraphViz-compatible)
 
 ### Integration Points
 - `buildPersonHTMLLabel()` — Keep 2-column, use 👤 emoji (no img tag)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/pelletier/go-toml/v2"
+	"github.com/pelletier/go-toml/v2/unstable"
 )
 
 // ParseError represents an error that occurred during TOML parsing.
@@ -38,9 +39,22 @@ func (e *ParseError) Unwrap() error {
 	return e.Cause
 }
 
-// wrapDecodeError wraps a go-toml DecodeError to extract line number information.
-// If the error is not a DecodeError, it returns a generic ParseError.
+// wrapDecodeError wraps a go-toml error to extract line number information.
+// Handles both *toml.DecodeError and *unstable.ParserError.
+// If the error is not recognized, it returns a generic ParseError.
 func wrapDecodeError(err error) error {
+	// Handle unstable.ParserError (from unstable API)
+	if pe, ok := err.(*unstable.ParserError); ok {
+		// ParserError has Highlight (byte offset), need to convert to line number
+		// We need the original data to calculate line - check if we can get it
+		return &ParseError{
+			Message: pe.Message,
+			Line:    1, // ParserError doesn't provide line directly, default to 1
+			Cause:   pe,
+		}
+	}
+
+	// Handle toml.DecodeError (from regular unmarshal)
 	if de, ok := errors.AsType[*toml.DecodeError](err); ok {
 		// DecodeError.String() already provides a nicely formatted error
 		// with line number and context. We extract the line for our ParseError.

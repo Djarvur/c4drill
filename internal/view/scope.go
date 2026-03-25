@@ -17,14 +17,31 @@ func GenerateExpandedView(m *parser.Model) *View {
 	}
 
 	v := &View{
-		Level: LevelC1,
-		Title: m.Properties.Name,
-		Edges: m.Properties.Edges,
-		Units: make(map[string]*Entry),
+		Level:     LevelC1,
+		Title:     m.Properties.Name,
+		Edges:     m.Properties.Edges,
+		UnitOrder: make([]string, 0),
+		Units:     make(map[string]*Entry),
 	}
 
-	// Recursively add all units depth-first
-	for name, unit := range m.Units {
+	// Determine iteration order: use UnitOrder if available, otherwise fallback to map keys
+	var unitOrder []string
+	if len(m.UnitOrder) > 0 {
+		unitOrder = m.UnitOrder
+	} else {
+		// Fallback for test models or models without explicit order
+		for name := range m.Units {
+			unitOrder = append(unitOrder, name)
+		}
+	}
+
+	// Recursively add all units depth-first in definition order
+	for _, name := range unitOrder {
+		unit := m.Units[name]
+		if unit == nil {
+			continue
+		}
+
 		addUnitRecursive(v, name, unit)
 	}
 
@@ -43,9 +60,25 @@ func addUnitRecursive(v *View, path string, unit *model.Unit) {
 		HasSubunits: len(unit.Subunits) > 0,
 		IsExternal:  IsExternalType(unit.Type),
 	}
+	v.UnitOrder = append(v.UnitOrder, path)
 
-	// Recursively add subunits
-	for subName, subUnit := range unit.Subunits {
+	// Determine iteration order: use SubunitOrder if available, otherwise fallback to map keys
+	var subunitOrder []string
+	if len(unit.SubunitOrder) > 0 {
+		subunitOrder = unit.SubunitOrder
+	} else {
+		for name := range unit.Subunits {
+			subunitOrder = append(subunitOrder, name)
+		}
+	}
+
+	// Recursively add subunits in definition order
+	for _, subName := range subunitOrder {
+		subUnit := unit.Subunits[subName]
+		if subUnit == nil {
+			continue
+		}
+
 		addUnitRecursive(v, path+"."+subName, subUnit)
 	}
 }
@@ -58,14 +91,31 @@ func GenerateC1View(m *parser.Model) *View {
 	}
 
 	v := &View{
-		Level: LevelC1,
-		Title: m.Properties.Name,
-		Edges: m.Properties.Edges,
-		Units: make(map[string]*Entry),
+		Level:     LevelC1,
+		Title:     m.Properties.Name,
+		Edges:     m.Properties.Edges,
+		UnitOrder: make([]string, 0),
+		Units:     make(map[string]*Entry),
 	}
 
-	// Add all top-level units
-	for name, unit := range m.Units {
+	// Determine iteration order: use UnitOrder if available, otherwise fallback to map keys
+	var unitOrder []string
+	if len(m.UnitOrder) > 0 {
+		unitOrder = m.UnitOrder
+	} else {
+		// Fallback for test models or models without explicit order
+		for name := range m.Units {
+			unitOrder = append(unitOrder, name)
+		}
+	}
+
+	// Add all top-level units in definition order
+	for _, name := range unitOrder {
+		unit := m.Units[name]
+		if unit == nil {
+			continue
+		}
+
 		v.Units[name] = &Entry{
 			Unit:        unit,
 			FullPath:    name,
@@ -73,6 +123,7 @@ func GenerateC1View(m *parser.Model) *View {
 			HasSubunits: len(unit.Subunits) > 0,
 			IsExternal:  IsExternalType(unit.Type),
 		}
+		v.UnitOrder = append(v.UnitOrder, name)
 	}
 
 	// Add external boundary nodes for referenced units not in the model
@@ -90,7 +141,23 @@ func isUnitExpanded(unit *model.Unit, unitPath string) bool {
 // addExternalBoundaryNodes scans all links (including nested subunits) and adds
 // boundary nodes for referenced units that are not in the current view.
 func addExternalBoundaryNodes(v *View, m *parser.Model) {
-	for name, unit := range m.Units {
+	// Determine iteration order: use UnitOrder if available, otherwise fallback to map keys
+	var unitOrder []string
+	if len(m.UnitOrder) > 0 {
+		unitOrder = m.UnitOrder
+	} else {
+		for name := range m.Units {
+			unitOrder = append(unitOrder, name)
+		}
+	}
+
+	// Iterate in definition order
+	for _, name := range unitOrder {
+		unit := m.Units[name]
+		if unit == nil {
+			continue
+		}
+
 		addExternalBoundaryNodesRecursive(v, name, unit)
 	}
 }
@@ -103,6 +170,7 @@ func addExternalBoundaryNodesRecursive(v *View, path string, unit *model.Unit) {
 		if _, exists := v.Units[link.Peer]; !exists {
 			// Create external boundary node
 			v.Units[link.Peer] = createExternalBoundaryNode(link.Peer, path)
+			v.UnitOrder = append(v.UnitOrder, link.Peer) // Append at end
 		}
 	}
 
@@ -111,11 +179,26 @@ func addExternalBoundaryNodesRecursive(v *View, path string, unit *model.Unit) {
 		if _, exists := v.Units[link.Peer]; !exists {
 			// Create external boundary node
 			v.Units[link.Peer] = createExternalBoundaryNode(link.Peer, path)
+			v.UnitOrder = append(v.UnitOrder, link.Peer) // Append at end
 		}
 	}
 
-	// Recursively check subunits
-	for subName, subUnit := range unit.Subunits {
+	// Recursively check subunits in definition order (with fallback for test models)
+	var subunitOrder []string
+	if len(unit.SubunitOrder) > 0 {
+		subunitOrder = unit.SubunitOrder
+	} else {
+		for name := range unit.Subunits {
+			subunitOrder = append(subunitOrder, name)
+		}
+	}
+
+	for _, subName := range subunitOrder {
+		subUnit := unit.Subunits[subName]
+		if subUnit == nil {
+			continue
+		}
+
 		addExternalBoundaryNodesRecursive(v, path+"."+subName, subUnit)
 	}
 }
@@ -155,11 +238,27 @@ func GenerateC2View(m *parser.Model, systemPath string) *View {
 		Edges:        systemUnit.Edges,
 		Parent:       systemPath,
 		ExpandedUnit: systemPath,
+		UnitOrder:    make([]string, 0),
 		Units:        make(map[string]*Entry),
 	}
 
-	// Add subunits (containers) of the expanded system
-	for name, unit := range systemUnit.Subunits {
+	// Determine iteration order: use SubunitOrder if available, otherwise fallback to map keys
+	var subunitOrder []string
+	if len(systemUnit.SubunitOrder) > 0 {
+		subunitOrder = systemUnit.SubunitOrder
+	} else {
+		for name := range systemUnit.Subunits {
+			subunitOrder = append(subunitOrder, name)
+		}
+	}
+
+	// Add subunits (containers) of the expanded system in definition order
+	for _, name := range subunitOrder {
+		unit := systemUnit.Subunits[name]
+		if unit == nil {
+			continue
+		}
+
 		fullPath := systemPath + "." + name
 		v.Units[fullPath] = &Entry{
 			Unit:        unit,
@@ -168,10 +267,11 @@ func GenerateC2View(m *parser.Model, systemPath string) *View {
 			HasSubunits: len(unit.Subunits) > 0,
 			IsExternal:  IsExternalType(unit.Type),
 		}
+		v.UnitOrder = append(v.UnitOrder, fullPath)
 	}
 
 	// Add external boundary nodes for links from subunits
-	addExternalBoundaryNodesForSubunits(v, systemUnit.Subunits, systemPath)
+	addExternalBoundaryNodesForSubunits(v, systemUnit.Subunits, subunitOrder, systemPath)
 
 	return v
 }
@@ -208,11 +308,27 @@ func GenerateC3View(m *parser.Model, containerPath string) *View {
 		Edges:        containerUnit.Edges,
 		Parent:       parentPath,
 		ExpandedUnit: containerPath,
+		UnitOrder:    make([]string, 0),
 		Units:        make(map[string]*Entry),
 	}
 
-	// Add subunits (components) of the expanded container
-	for name, unit := range containerUnit.Subunits {
+	// Determine iteration order: use SubunitOrder if available, otherwise fallback to map keys
+	var subunitOrder []string
+	if len(containerUnit.SubunitOrder) > 0 {
+		subunitOrder = containerUnit.SubunitOrder
+	} else {
+		for name := range containerUnit.Subunits {
+			subunitOrder = append(subunitOrder, name)
+		}
+	}
+
+	// Add subunits (components) of the expanded container in definition order
+	for _, name := range subunitOrder {
+		unit := containerUnit.Subunits[name]
+		if unit == nil {
+			continue
+		}
+
 		fullPath := containerPath + "." + name
 		v.Units[fullPath] = &Entry{
 			Unit:        unit,
@@ -221,10 +337,11 @@ func GenerateC3View(m *parser.Model, containerPath string) *View {
 			HasSubunits: len(unit.Subunits) > 0,
 			IsExternal:  IsExternalType(unit.Type),
 		}
+		v.UnitOrder = append(v.UnitOrder, fullPath)
 	}
 
 	// Add external boundary nodes for links from subunits
-	addExternalBoundaryNodesForSubunits(v, containerUnit.Subunits, containerPath)
+	addExternalBoundaryNodesForSubunits(v, containerUnit.Subunits, subunitOrder, containerPath)
 
 	return v
 }
@@ -266,13 +383,20 @@ func findUnitByPath(m *parser.Model, path string) *model.Unit {
 
 // addExternalBoundaryNodesForSubunits scans links from subunits and adds
 // boundary nodes for referenced units that are not in the current view.
-func addExternalBoundaryNodesForSubunits(v *View, subunits map[string]*model.Unit, parentPath string) {
-	for _, unit := range subunits {
+func addExternalBoundaryNodesForSubunits(v *View, subunits map[string]*model.Unit, subunitOrder []string, parentPath string) {
+	// Iterate in definition order
+	for _, name := range subunitOrder {
+		unit := subunits[name]
+		if unit == nil {
+			continue
+		}
+
 		// Check outgoing links
 		for _, link := range unit.Links {
 			if _, exists := v.Units[link.Peer]; !exists {
 				// Create external boundary node
 				v.Units[link.Peer] = createExternalBoundaryNode(link.Peer, parentPath)
+				v.UnitOrder = append(v.UnitOrder, link.Peer) // Append at end
 			}
 		}
 
@@ -281,6 +405,7 @@ func addExternalBoundaryNodesForSubunits(v *View, subunits map[string]*model.Uni
 			if _, exists := v.Units[link.Peer]; !exists {
 				// Create external boundary node
 				v.Units[link.Peer] = createExternalBoundaryNode(link.Peer, parentPath)
+				v.UnitOrder = append(v.UnitOrder, link.Peer) // Append at end
 			}
 		}
 	}

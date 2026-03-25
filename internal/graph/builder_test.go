@@ -917,10 +917,11 @@ func TestBuildGraphEdgeLength(t *testing.T) {
 func TestBuildGraphDeterministicOrder(t *testing.T) {
 	t.Parallel()
 
-	// Create units with names that would sort differently than random map order
-	// Using "zeta", "alpha", "gamma" to test alphabetical ordering
+	// Create units with explicit definition order (zeta, alpha, gamma)
+	// Phase 26: Order is definition order, not alphabetical
 	m := &parser.Model{
 		Properties: model.Properties{Name: "Test"},
+		UnitOrder:  []string{"zeta", "alpha", "gamma"}, // Explicit definition order
 		Units: map[string]*model.Unit{
 			"zeta": {
 				Type: model.TypeSystem,
@@ -943,8 +944,8 @@ func TestBuildGraphDeterministicOrder(t *testing.T) {
 		},
 	}
 
-	// Test 1: BuildGraph produces nodes in alphabetical order by path
-	t.Run("BuildGraph produces nodes in alphabetical order", func(t *testing.T) {
+	// Test 1: BuildGraph produces nodes in definition order
+	t.Run("BuildGraph produces nodes in definition order", func(t *testing.T) {
 		t.Parallel()
 
 		v := view.GenerateC1View(m)
@@ -952,14 +953,14 @@ func TestBuildGraphDeterministicOrder(t *testing.T) {
 
 		require.Len(t, g.Nodes, 3)
 
-		// Nodes should be in alphabetical order by path
-		require.Equal(t, "alpha", g.Nodes[0].ID, "first node should be alpha")
-		require.Equal(t, "gamma", g.Nodes[1].ID, "second node should be gamma")
-		require.Equal(t, "zeta", g.Nodes[2].ID, "third node should be zeta")
+		// Nodes should be in definition order (zeta, alpha, gamma)
+		require.Equal(t, "zeta", g.Nodes[0].ID, "first node should be zeta (definition order)")
+		require.Equal(t, "alpha", g.Nodes[1].ID, "second node should be alpha (definition order)")
+		require.Equal(t, "gamma", g.Nodes[2].ID, "third node should be gamma (definition order)")
 	})
 
-	// Test 2: BuildGraph produces edges in alphabetical order by source path
-	t.Run("BuildGraph produces edges in alphabetical order by source", func(t *testing.T) {
+	// Test 2: BuildGraph produces edges in definition order by source
+	t.Run("BuildGraph produces edges in definition order by source", func(t *testing.T) {
 		t.Parallel()
 
 		v := view.GenerateC1View(m)
@@ -967,12 +968,12 @@ func TestBuildGraphDeterministicOrder(t *testing.T) {
 
 		require.Len(t, g.Edges, 2)
 
-		// Edges should be in alphabetical order by source path
-		// alpha->gamma comes before zeta->alpha
-		require.Equal(t, "alpha", g.Edges[0].Source, "first edge source should be alpha")
-		require.Equal(t, "gamma", g.Edges[0].Target, "first edge target should be gamma")
-		require.Equal(t, "zeta", g.Edges[1].Source, "second edge source should be zeta")
-		require.Equal(t, "alpha", g.Edges[1].Target, "second edge target should be alpha")
+		// Edges should be in definition order by source (zeta first, then alpha)
+		// zeta->alpha comes first, then alpha->gamma
+		require.Equal(t, "zeta", g.Edges[0].Source, "first edge source should be zeta (definition order)")
+		require.Equal(t, "alpha", g.Edges[0].Target, "first edge target should be alpha")
+		require.Equal(t, "alpha", g.Edges[1].Source, "second edge source should be alpha (definition order)")
+		require.Equal(t, "gamma", g.Edges[1].Target, "second edge target should be gamma")
 	})
 
 	// Test 3: Multiple calls produce identical output order
@@ -998,16 +999,18 @@ func TestBuildGraphDeterministicOrder(t *testing.T) {
 		}
 	})
 
-	// Test 4: BuildExpandedGraph produces top-level clusters/nodes in alphabetical order
-	t.Run("BuildExpandedGraph produces top-level items in alphabetical order", func(t *testing.T) {
+	// Test 4: BuildExpandedGraph produces top-level items in definition order
+	t.Run("BuildExpandedGraph produces top-level items in definition order", func(t *testing.T) {
 		t.Parallel()
 
 		m2 := &parser.Model{
 			Properties: model.Properties{Name: "Test"},
+			UnitOrder:  []string{"zeta", "alpha", "gamma"}, // Explicit definition order
 			Units: map[string]*model.Unit{
 				"zeta": {
 					Type: model.TypeSystem,
 					Name: "Zeta System",
+					SubunitOrder: []string{"sub"},
 					Subunits: map[string]*model.Unit{
 						"sub": {Type: model.TypeContainer, Name: "Sub"},
 					},
@@ -1015,6 +1018,7 @@ func TestBuildGraphDeterministicOrder(t *testing.T) {
 				"alpha": {
 					Type: model.TypeSystem,
 					Name: "Alpha System",
+					SubunitOrder: []string{"sub"},
 					Subunits: map[string]*model.Unit{
 						"sub": {Type: model.TypeContainer, Name: "Sub"},
 					},
@@ -1030,27 +1034,28 @@ func TestBuildGraphDeterministicOrder(t *testing.T) {
 		v := view.GenerateExpandedView(m2)
 		g := graph.BuildExpandedGraph(v)
 
-		// Top-level clusters should be in alphabetical order
+		// Top-level clusters should be in definition order (zeta, alpha)
 		require.Len(t, g.Clusters, 2)
-		require.Equal(t, "cluster_alpha", g.Clusters[0].ID, "first cluster should be alpha")
-		require.Equal(t, "cluster_zeta", g.Clusters[1].ID, "second cluster should be zeta")
+		require.Equal(t, "cluster_zeta", g.Clusters[0].ID, "first cluster should be zeta (definition order)")
+		require.Equal(t, "cluster_alpha", g.Clusters[1].ID, "second cluster should be alpha (definition order)")
 
 		// Top-level nodes should be in alphabetical order
 		require.Len(t, g.Nodes, 1)
 		require.Equal(t, "gamma", g.Nodes[0].ID, "first node should be gamma")
 	})
 
-	// Test 5: buildCluster processes subunits in alphabetical order
-	t.Run("buildCluster processes subunits in alphabetical order", func(t *testing.T) {
+	// Test 5: buildCluster processes subunits in definition order
+	t.Run("buildCluster processes subunits in definition order", func(t *testing.T) {
 		t.Parallel()
 
 		m2 := &parser.Model{
 			Properties: model.Properties{Name: "Test"},
 			Units: map[string]*model.Unit{
 				"system": {
-					Type:     model.TypeSystem,
-					Name:     "System",
-					Expanded: []string{"system"}, // Mark the system itself as expanded
+					Type:          model.TypeSystem,
+					Name:          "System",
+					Expanded:      []string{"system"}, // Mark the system itself as expanded
+					SubunitOrder:  []string{"zeta", "alpha", "gamma"}, // Explicit definition order
 					Subunits: map[string]*model.Unit{
 						"zeta":  {Type: model.TypeContainer, Name: "Zeta"},
 						"alpha": {Type: model.TypeContainer, Name: "Alpha"},
@@ -1066,27 +1071,29 @@ func TestBuildGraphDeterministicOrder(t *testing.T) {
 		require.Len(t, g.Clusters, 1)
 		cluster := g.Clusters[0]
 
-		// Subunits should be in alphabetical order
+		// Subunits should be in definition order (zeta, alpha, gamma)
 		require.Len(t, cluster.Nodes, 3)
-		require.Equal(t, "system.alpha", cluster.Nodes[0].ID, "first subunit should be alpha")
-		require.Equal(t, "system.gamma", cluster.Nodes[1].ID, "second subunit should be gamma")
-		require.Equal(t, "system.zeta", cluster.Nodes[2].ID, "third subunit should be zeta")
+		require.Equal(t, "system.zeta", cluster.Nodes[0].ID, "first subunit should be zeta (definition order)")
+		require.Equal(t, "system.alpha", cluster.Nodes[1].ID, "second subunit should be alpha (definition order)")
+		require.Equal(t, "system.gamma", cluster.Nodes[2].ID, "third subunit should be gamma (definition order)")
 	})
 
-	// Test 6: buildNestedCluster processes subunits in alphabetical order
-	t.Run("buildNestedCluster processes subunits in alphabetical order", func(t *testing.T) {
+	// Test 6: buildNestedCluster processes subunits in definition order
+	t.Run("buildNestedCluster processes subunits in definition order", func(t *testing.T) {
 		t.Parallel()
 
 		m2 := &parser.Model{
 			Properties: model.Properties{Name: "Test"},
 			Units: map[string]*model.Unit{
 				"system": {
-					Type: model.TypeSystem,
-					Name: "System",
+					Type:         model.TypeSystem,
+					Name:         "System",
+					SubunitOrder: []string{"zeta", "alpha", "gamma"}, // Explicit definition order
 					Subunits: map[string]*model.Unit{
 						"zeta": {
-							Type: model.TypeContainer,
-							Name: "Zeta",
+							Type:          model.TypeContainer,
+							Name:          "Zeta",
+							SubunitOrder:  []string{"sub3", "sub1", "sub2"}, // Explicit definition order
 							Subunits: map[string]*model.Unit{
 								"sub3": {Type: model.TypeComponent, Name: "Sub3"},
 								"sub1": {Type: model.TypeComponent, Name: "Sub1"},
@@ -1107,10 +1114,10 @@ func TestBuildGraphDeterministicOrder(t *testing.T) {
 		topCluster := g.Clusters[0]
 		require.Equal(t, "cluster_system", topCluster.ID)
 
-		// Top-level subunits (alpha, gamma as nodes; zeta as cluster) should be sorted
-		// Nodes in cluster: alpha, gamma (alphabetical)
+		// Top-level subunits should be in definition order (zeta as cluster, then alpha, gamma as nodes)
+		// Nodes in cluster: alpha, gamma (in definition order after zeta cluster)
 		require.Len(t, topCluster.Nodes, 2)
-		require.Equal(t, "system.alpha", topCluster.Nodes[0].ID, "first node should be alpha")
+		require.Equal(t, "system.alpha", topCluster.Nodes[0].ID, "first node should be alpha (definition order)")
 		require.Equal(t, "system.gamma", topCluster.Nodes[1].ID, "second node should be gamma")
 
 		// Nested clusters: zeta
@@ -1118,11 +1125,11 @@ func TestBuildGraphDeterministicOrder(t *testing.T) {
 		zetaCluster := topCluster.Clusters[0]
 		require.Equal(t, "cluster_system.zeta", zetaCluster.ID)
 
-		// Zeta's subunits should also be sorted
+		// Zeta's subunits should be in definition order (sub3, sub1, sub2)
 		require.Len(t, zetaCluster.Nodes, 3)
-		require.Equal(t, "system.zeta.sub1", zetaCluster.Nodes[0].ID, "zeta sub1 should be first")
-		require.Equal(t, "system.zeta.sub2", zetaCluster.Nodes[1].ID, "zeta sub2 should be second")
-		require.Equal(t, "system.zeta.sub3", zetaCluster.Nodes[2].ID, "zeta sub3 should be third")
+		require.Equal(t, "system.zeta.sub3", zetaCluster.Nodes[0].ID, "zeta sub3 should be first (definition order)")
+		require.Equal(t, "system.zeta.sub1", zetaCluster.Nodes[1].ID, "zeta sub1 should be second (definition order)")
+		require.Equal(t, "system.zeta.sub2", zetaCluster.Nodes[2].ID, "zeta sub2 should be third (definition order)")
 	})
 }
 

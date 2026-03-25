@@ -75,6 +75,7 @@ None.
 - Phase 22 added: links must have length attribute
 - Phase 23 added: deterministic node and edge creation order
 - Phase 25 added: edges must be twice thicker than borders
+- Phase 26 added: preserve TOML definition order for nodes and edges
 
 ## Session Continuity
 

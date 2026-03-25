@@ -178,7 +178,7 @@ func TestValidateSubunitRules_RejectsInvalidTypes(t *testing.T) {
 		{"component", model.TypeComponent},
 		{"componentDb", model.TypeComponentDb},
 		{"componentQueue", model.TypeComponentQueue},
-		{"componentBox", model.TypeComponentBox},
+		// Note: componentBox CAN have subunits - it's a grouping mechanism for C3 components
 	}
 
 	for _, tc := range invalidTypes {

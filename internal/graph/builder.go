@@ -1,7 +1,6 @@
 package graph
 
 import (
-	"maps"
 	"slices"
 	"strings"
 
@@ -25,9 +24,8 @@ func BuildGraph(v *view.View) *Graph {
 		Clusters:  make([]*Cluster, 0),
 	}
 
-	// Build nodes and clusters (deterministic order)
-	keys := slices.Sorted(maps.Keys(v.Units))
-	for _, key := range keys {
+	// Build nodes and clusters in definition order (from view.UnitOrder)
+	for _, key := range v.UnitOrder {
 		entry := v.Units[key]
 		if entry.IsExpanded {
 			cluster := buildCluster(entry)
@@ -60,7 +58,7 @@ func BuildExpandedGraph(v *view.View) *Graph {
 		Clusters:  make([]*Cluster, 0),
 	}
 
-	// Find top-level units (those without a dot in their path)
+	// Find top-level units (those without a dot in their path) in definition order
 	topLevelUnits := make(map[string]*view.Entry)
 
 	for path, entry := range v.Units {
@@ -69,10 +67,13 @@ func BuildExpandedGraph(v *view.View) *Graph {
 		}
 	}
 
-	// Build nodes and nested clusters for top-level units (deterministic order)
-	topLevelKeys := slices.Sorted(maps.Keys(topLevelUnits))
-	for _, path := range topLevelKeys {
+	// Build nodes and nested clusters for top-level units in definition order
+	for _, path := range v.UnitOrder {
 		entry := topLevelUnits[path]
+		if entry == nil {
+			continue // Skip non-top-level entries
+		}
+
 		if entry.HasSubunits {
 			cluster := buildNestedCluster(entry, path, v)
 			g.Clusters = append(g.Clusters, cluster)
@@ -109,9 +110,18 @@ func buildNestedCluster(entry *view.Entry, path string, v *view.View) *Cluster {
 		IsExternal: entry.IsExternal,
 	}
 
-	// Process subunits (deterministic order)
-	childKeys := slices.Sorted(maps.Keys(entry.Unit.Subunits))
-	for _, childName := range childKeys {
+	// Process subunits in definition order (use SubunitOrder if available)
+	var childOrder []string
+	if len(entry.Unit.SubunitOrder) > 0 {
+		childOrder = entry.Unit.SubunitOrder
+	} else {
+		// Fallback to map keys for test models without explicit order
+		for name := range entry.Unit.Subunits {
+			childOrder = append(childOrder, name)
+		}
+	}
+
+	for _, childName := range childOrder {
 		childUnit := entry.Unit.Subunits[childName]
 		childPath := path + "." + childName
 
@@ -192,9 +202,18 @@ func buildCluster(entry *view.Entry) *Cluster {
 		IsExternal: entry.IsExternal,
 	}
 
-	// Add child units as nodes inside the cluster (deterministic order)
-	childKeys := slices.Sorted(maps.Keys(entry.Unit.Subunits))
-	for _, childName := range childKeys {
+	// Add child units as nodes inside the cluster in definition order
+	var childOrder []string
+	if len(entry.Unit.SubunitOrder) > 0 {
+		childOrder = entry.Unit.SubunitOrder
+	} else {
+		// Fallback to map keys for test models without explicit order
+		for name := range entry.Unit.Subunits {
+			childOrder = append(childOrder, name)
+		}
+	}
+
+	for _, childName := range childOrder {
 		childUnit := entry.Unit.Subunits[childName]
 		childPath := entry.FullPath + "." + childName
 		childEntry := &view.Entry{
@@ -233,9 +252,8 @@ func buildEdges(v *view.View) []*Edge {
 	edges := make([]*Edge, 0)
 	seen := make(map[string]bool) // Track processed links
 
-	// Process edges in deterministic order (sorted by source path)
-	keys := slices.Sorted(maps.Keys(v.Units))
-	for _, path := range keys {
+	// Process edges in definition order
+	for _, path := range v.UnitOrder {
 		entry := v.Units[path]
 		// Process outgoing links
 		outEdges := processOutgoingLinks(path, entry.Unit.Links, v.Units, seen)
