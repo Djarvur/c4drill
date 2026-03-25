@@ -508,7 +508,26 @@ Plans:
 Plans:
 - [x] 25-01-PLAN.md -- Set edge penwidth to 2.0 in createEdge()
 
+### Phase 26: preserve TOML definition order for nodes and edges
+
+**Goal:** Preserve TOML definition order for nodes and edges - instead of alphabetical sorting via `slices.Sorted(maps.Keys())`, iterate in the exact order units are defined in the TOML file.
+**Requirements**: None (technical improvement)
+**Depends on:** Phase 25
+**Plans:** 1 plan
+
+**Definition Order Design:**
+
+- D-01: Use go-toml unstable API to capture unit definition order during parsing
+- D-02: Add UnitOrder []string to parser.Model for top-level unit order
+- D-03: Add SubunitOrder []string to model.Unit for nested unit order
+- D-04: Add UnitOrder []string to view.View for view-level order propagation
+- D-05: Replace all slices.Sorted(maps.Keys()) in builder.go with UnitOrder iteration
+- D-06: External boundary nodes appended at end of order list
+
+Plans:
+- [ ] 26-01-PLAN.md -- Add order tracking fields and implement definition order preservation
+
 ---
 
 *Roadmap created: 2021-03-09*
-*Last updated: 2026-03-25 - Phase 25 complete*
+*Last updated: 2026-03-25 - Phase 26 planning*
