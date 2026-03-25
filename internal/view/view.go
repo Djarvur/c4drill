@@ -22,6 +22,8 @@ type View struct {
 	Level Level
 	// Title is the diagram title (from properties.name or parent name).
 	Title string
+	// UnitOrder tracks the definition order of unit paths.
+	UnitOrder []string
 	// Units are the units visible in this view (keyed by full path).
 	Units map[string]*Entry
 	// Edges is the edge routing style for this view.

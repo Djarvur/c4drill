@@ -65,6 +65,8 @@ type Unit struct {
 	Links []Link `toml:"link"`
 	// LinksFrom contains incoming relationships as a slice of Link structs.
 	LinksFrom []Link `toml:"linkFrom"`
+	// SubunitOrder tracks the definition order of subunit names (not from TOML).
+	SubunitOrder []string `toml:"-"`
 	// Subunits contains nested units within this unit.
 	Subunits map[string]*Unit `toml:",inline"`
 }

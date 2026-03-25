@@ -34,6 +34,8 @@ var genericDbTypes = map[model.UnitType]bool{
 type Model struct {
 	// Properties contains the global [properties] section.
 	Properties model.Properties `toml:"properties"`
+	// UnitOrder tracks the definition order of unit names.
+	UnitOrder []string
 	// Units contains all top-level units keyed by section name.
 	Units map[string]*model.Unit
 }
