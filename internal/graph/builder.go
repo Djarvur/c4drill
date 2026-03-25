@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"maps"
 	"slices"
 	"strings"
 
@@ -24,8 +25,10 @@ func BuildGraph(v *view.View) *Graph {
 		Clusters:  make([]*Cluster, 0),
 	}
 
-	// Build nodes and clusters
-	for _, entry := range v.Units {
+	// Build nodes and clusters (deterministic order)
+	keys := slices.Sorted(maps.Keys(v.Units))
+	for _, key := range keys {
+		entry := v.Units[key]
 		if entry.IsExpanded {
 			cluster := buildCluster(entry)
 			g.Clusters = append(g.Clusters, cluster)
@@ -66,8 +69,10 @@ func BuildExpandedGraph(v *view.View) *Graph {
 		}
 	}
 
-	// Build nodes and nested clusters for top-level units
-	for path, entry := range topLevelUnits {
+	// Build nodes and nested clusters for top-level units (deterministic order)
+	topLevelKeys := slices.Sorted(maps.Keys(topLevelUnits))
+	for _, path := range topLevelKeys {
+		entry := topLevelUnits[path]
 		if entry.HasSubunits {
 			cluster := buildNestedCluster(entry, path, v)
 			g.Clusters = append(g.Clusters, cluster)
@@ -104,8 +109,10 @@ func buildNestedCluster(entry *view.Entry, path string, v *view.View) *Cluster {
 		IsExternal: entry.IsExternal,
 	}
 
-	// Process subunits
-	for childName, childUnit := range entry.Unit.Subunits {
+	// Process subunits (deterministic order)
+	childKeys := slices.Sorted(maps.Keys(entry.Unit.Subunits))
+	for _, childName := range childKeys {
+		childUnit := entry.Unit.Subunits[childName]
 		childPath := path + "." + childName
 
 		childEntry, exists := v.Units[childPath]
@@ -185,8 +192,10 @@ func buildCluster(entry *view.Entry) *Cluster {
 		IsExternal: entry.IsExternal,
 	}
 
-	// Add child units as nodes inside the cluster
-	for childName, childUnit := range entry.Unit.Subunits {
+	// Add child units as nodes inside the cluster (deterministic order)
+	childKeys := slices.Sorted(maps.Keys(entry.Unit.Subunits))
+	for _, childName := range childKeys {
+		childUnit := entry.Unit.Subunits[childName]
 		childPath := entry.FullPath + "." + childName
 		childEntry := &view.Entry{
 			Unit:        childUnit,
@@ -224,7 +233,10 @@ func buildEdges(v *view.View) []*Edge {
 	edges := make([]*Edge, 0)
 	seen := make(map[string]bool) // Track processed links
 
-	for path, entry := range v.Units {
+	// Process edges in deterministic order (sorted by source path)
+	keys := slices.Sorted(maps.Keys(v.Units))
+	for _, path := range keys {
+		entry := v.Units[path]
 		// Process outgoing links
 		outEdges := processOutgoingLinks(path, entry.Unit.Links, v.Units, seen)
 		edges = append(edges, outEdges...)
