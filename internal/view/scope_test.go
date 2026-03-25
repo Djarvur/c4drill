@@ -920,3 +920,26 @@ func TestGenerateExpandedView_LevelIsC1(t *testing.T) {
 	require.NotNil(t, v)
 	assert.Equal(t, view.LevelC1, v.Level)
 }
+
+func TestGenerateC1ViewDefinitionOrder(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		UnitOrder:  []string{"zulu", "alpha", "gamma"},
+		Units: map[string]*model.Unit{
+			"zulu":  {Type: model.TypeSystem, Name: "Zulu"},
+			"alpha": {Type: model.TypeSystem, Name: "Alpha"},
+			"gamma": {Type: model.TypeDb, Name: "Gamma"},
+		},
+	}
+
+	v := view.GenerateC1View(m)
+	require.NotNil(t, v)
+
+	// View should propagate UnitOrder from Model
+	require.Len(t, v.UnitOrder, 3, "UnitOrder should have 3 entries")
+	assert.Equal(t, "zulu", v.UnitOrder[0], "first should be zulu")
+	assert.Equal(t, "alpha", v.UnitOrder[1], "second should be alpha")
+	assert.Equal(t, "gamma", v.UnitOrder[2], "third should be gamma")
+}

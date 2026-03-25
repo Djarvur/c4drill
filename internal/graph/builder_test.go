@@ -1220,3 +1220,45 @@ func TestBuildGraphWithPathSetsNavigation(t *testing.T) {
 		assert.Equal(t, "../mainsystem.svg", g.Navigation.BackLink.URL)
 	})
 }
+
+// TestBuildGraphDefinitionOrder tests that BuildGraph produces nodes in definition order.
+func TestBuildGraphDefinitionOrder(t *testing.T) {
+	t.Parallel()
+
+	// Create model with explicit definition order (not alphabetical)
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		UnitOrder:  []string{"zulu", "alpha", "gamma"},
+		Units: map[string]*model.Unit{
+			"zulu": {
+				Type: model.TypeSystem,
+				Name: "Zulu System",
+				Links: []model.Link{{Peer: "alpha", Technology: "HTTP"}},
+			},
+			"alpha": {
+				Type: model.TypeSystem,
+				Name: "Alpha System",
+				Links: []model.Link{{Peer: "gamma", Technology: "TCP"}},
+			},
+			"gamma": {
+				Type: model.TypeDb,
+				Name: "Gamma Database",
+			},
+		},
+	}
+
+	v := view.GenerateC1View(m)
+	g := graph.BuildGraph(v)
+
+	require.Len(t, g.Nodes, 3)
+
+	// Nodes should be in DEFINITION order, not alphabetical
+	require.Equal(t, "zulu", g.Nodes[0].ID, "first node should be zulu (definition order)")
+	require.Equal(t, "alpha", g.Nodes[1].ID, "second node should be alpha (definition order)")
+	require.Equal(t, "gamma", g.Nodes[2].ID, "third node should be gamma (definition order)")
+
+	// Edges should also be in definition order by source
+	require.Len(t, g.Edges, 2)
+	require.Equal(t, "zulu", g.Edges[0].Source, "first edge source should be zulu")
+	require.Equal(t, "alpha", g.Edges[1].Source, "second edge source should be alpha")
+}

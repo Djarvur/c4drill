@@ -835,3 +835,71 @@ type = "containerQueue"
 	assert.Equal(t, model.TypeContainerQueue, containerqueue.Type, "explicit containerQueue should stay as containerQueue")
 }
 
+func TestParseDefinitionOrder(t *testing.T) {
+	t.Parallel()
+
+	// Define units in non-alphabetical order: zulu, alpha, gamma
+	data := []byte(`
+[properties]
+name = "Order Test"
+
+[zulu]
+type = "system"
+name = "Zulu System"
+
+[alpha]
+type = "system"
+name = "Alpha System"
+
+[gamma]
+type = "db"
+name = "Gamma Database"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	// UnitOrder should preserve TOML definition order: zulu, alpha, gamma
+	require.Len(t, got.UnitOrder, 3, "UnitOrder should have 3 entries")
+	assert.Equal(t, "zulu", got.UnitOrder[0], "first unit should be zulu (definition order)")
+	assert.Equal(t, "alpha", got.UnitOrder[1], "second unit should be alpha (definition order)")
+	assert.Equal(t, "gamma", got.UnitOrder[2], "third unit should be gamma (definition order)")
+}
+
+func TestParseSubunitDefinitionOrder(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Subunit Order Test"
+
+[system]
+type = "system"
+name = "System"
+
+[system.zeta]
+type = "container"
+name = "Zeta Container"
+
+[system.alpha]
+type = "container"
+name = "Alpha Container"
+
+[system.gamma]
+type = "container"
+name = "Gamma Container"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	system, ok := got.Units["system"]
+	require.True(t, ok, "missing 'system' unit")
+
+	// SubunitOrder should preserve TOML definition order: zeta, alpha, gamma
+	require.Len(t, system.SubunitOrder, 3, "SubunitOrder should have 3 entries")
+	assert.Equal(t, "zeta", system.SubunitOrder[0], "first subunit should be zeta")
+	assert.Equal(t, "alpha", system.SubunitOrder[1], "second subunit should be alpha")
+	assert.Equal(t, "gamma", system.SubunitOrder[2], "third subunit should be gamma")
+}
+
