@@ -475,6 +475,9 @@ func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge)
 		e.SetMinLen(edge.MinLen)
 	}
 
+	// Set edge penwidth to 2.0 (twice the default node border width of 1.0)
+	e.SetPenWidth(2.0)
+
 	return nil
 }
 
