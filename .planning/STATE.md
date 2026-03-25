@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI-Ready
 status: completed
-last_updated: "2026-03-25T13:27:45.709Z"
-last_activity: 2026-03-25 — Completed 23-01-PLAN.md
+last_updated: "2026-03-25T14:23:52Z"
+last_activity: 2026-03-25 — Completed 25-01-PLAN.md
 progress:
-  total_phases: 17
-  completed_phases: 16
-  total_plans: 23
-  completed_plans: 22
+  total_phases: 18
+  completed_phases: 17
+  total_plans: 24
+  completed_plans: 23
 ---
 
 # Project State
@@ -19,14 +19,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** Phase 23 — Deterministic Node and Edge Creation Order
+**Current focus:** Phase 25 — Edges Must Be Twice Thicker Than Borders
 
 ## Current Position
 
-Phase: 23 (Complete)
-Plan: 23-01 (Complete)
-Status: Phase 23 complete - All map iterations use sorted keys for deterministic output
-Last activity: 2026-03-25 — Completed 23-01-PLAN.md
+Phase: 25 (Complete)
+Plan: 25-01 (Complete)
+Status: Phase 25 complete - Edge penwidth set to 2.0 for visual prominence
+Last activity: 2026-03-25 — Completed 25-01-PLAN.md
 
 ## Accumulated Context
 
@@ -54,6 +54,7 @@ Prior decisions from v1.0-v1.6:
 - [Phase 21]: C1 box color determined by contents — grey (#8A8A8A) for external, dark blue (#073B6F) for internal
 - [Phase 22]: Link.Length field maps to Edge.MinLen which maps to GraphViz minlen attribute — Users can control edge rank spacing via length attribute in TOML
 - [Phase 23]: All map iterations in builder.go use slices.Sorted(maps.Keys()) for deterministic node/edge/cluster ordering — Same input produces identical output order every time
+- [Phase 25]: Edge penwidth set to 2.0 in createEdge() — Edges are twice as thick as node borders (1.0) for visual prominence
 
 ### Pending Todos
 
@@ -73,9 +74,10 @@ None.
 - Phase 21 plan 02 added: validator for mixed external/non-external, color by content
 - Phase 22 added: links must have length attribute
 - Phase 23 added: deterministic node and edge creation order
+- Phase 25 added: edges must be twice thicker than borders
 
 ## Session Continuity
 
-Last session: 2026-03-25T13:18:00.000Z
-Status: Phase 23 complete
+Last session: 2026-03-25T14:23:52Z
+Status: Phase 25 complete
 Next: Project complete - all planned phases finished

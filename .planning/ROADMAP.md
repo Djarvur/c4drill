@@ -154,7 +154,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 22. Link Length Attribute | v1.7 | Complete    | 2026-03-24 | 2026-03-24 |
 | 23. Deterministic Order | v1.7 | Complete    | 2026-03-25 | 2026-03-25 |
 | 24. Edge Thickness | v1.7 | - | Skipped | - |
-| 25. Edge Thickness | v1.7 | 0/1 | Planning | - |
+| 25. Edge Thickness | v1.7 | 1/1 | Complete | 2026-03-25 |
 
 ### Phase 12: HTML labels for all unit types
 
@@ -491,8 +491,8 @@ Plans:
 
 ### Phase 25: Edge Thickness
 
-**Status:** Planning
-**Plans:** 1/1 plans
+**Status:** Complete
+**Plans:** 1/1 plans complete
 
 **Goal:** Set edge penwidth to 2.0 to make edges twice as thick as node borders (which use default 1.0)
 **Requirements:** None (visual improvement)
@@ -506,9 +506,9 @@ Plans:
 - D-03: Edges at 2.0 are visually 2x thicker than borders
 
 Plans:
-- [ ] 25-01-PLAN.md -- Set edge penwidth to 2.0 in createEdge()
+- [x] 25-01-PLAN.md -- Set edge penwidth to 2.0 in createEdge()
 
 ---
 
 *Roadmap created: 2021-03-09*
-*Last updated: 2026-03-25 - Phase 25 planning*
+*Last updated: 2026-03-25 - Phase 25 complete*
