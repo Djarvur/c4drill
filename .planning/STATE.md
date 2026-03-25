@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI-Ready
 status: completed
-last_updated: "2026-03-24T21:02:59.013Z"
-last_activity: 2026-03-24 — Completed 22-01-PLAN.md
+last_updated: "2026-03-25T13:27:00.000Z"
+last_activity: 2026-03-25 — Completed 23-01-PLAN.md
 progress:
   total_phases: 16
-  completed_phases: 15
-  total_plans: 22
-  completed_plans: 21
+  completed_phases: 16
+  total_plans: 23
+  completed_plans: 22
 ---
 
 # Project State
@@ -19,14 +19,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** Phase 22 — Links Must Have Length Attribute
+**Current focus:** Phase 23 — Deterministic Node and Edge Creation Order
 
 ## Current Position
 
-Phase: 22 (Complete)
-Plan: 22-01 (Complete)
-Status: Phase 22 complete - Link length attribute translates to GraphViz minlen
-Last activity: 2026-03-24 — Completed 22-01-PLAN.md
+Phase: 23 (Complete)
+Plan: 23-01 (Complete)
+Status: Phase 23 complete - All map iterations use sorted keys for deterministic output
+Last activity: 2026-03-25 — Completed 23-01-PLAN.md
 
 ## Accumulated Context
 
@@ -53,6 +53,7 @@ Prior decisions from v1.0-v1.6:
 - [Phase 21]: C1 boxes cannot contain both external and non-external units (validation rule)
 - [Phase 21]: C1 box color determined by contents — grey (#8A8A8A) for external, dark blue (#073B6F) for internal
 - [Phase 22]: Link.Length field maps to Edge.MinLen which maps to GraphViz minlen attribute — Users can control edge rank spacing via length attribute in TOML
+- [Phase 23]: All map iterations in builder.go use slices.Sorted(maps.Keys()) for deterministic node/edge/cluster ordering — Same input produces identical output order every time
 
 ### Pending Todos
 
@@ -71,9 +72,10 @@ None.
 - Phase 21 added: box label has unnecessary curly brackets, box border must be dashed by default
 - Phase 21 plan 02 added: validator for mixed external/non-external, color by content
 - Phase 22 added: links must have length attribute
+- Phase 23 added: deterministic node and edge creation order
 
 ## Session Continuity
 
-Last session: 2026-03-24T20:55:00.000Z
-Status: Phase 22 complete
+Last session: 2026-03-25T13:18:00.000Z
+Status: Phase 23 complete
 Next: Project complete - all planned phases finished

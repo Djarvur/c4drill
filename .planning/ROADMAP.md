@@ -152,7 +152,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 20. Helvetica Font | v1.7 | 1/1 | Complete | 2021-03-24 |
 | 21. Box Fixes | v1.7 | Complete    | 2026-03-24 | 2026-03-24 |
 | 22. Link Length Attribute | v1.7 | Complete    | 2026-03-24 | 2026-03-24 |
-| 23. Deterministic Order | v1.7 | 0/1 | Planning | - |
+| 23. Deterministic Order | v1.7 | 1/1 | Complete | 2026-03-25 |
 
 ### Phase 12: HTML labels for all unit types
 
@@ -464,8 +464,8 @@ Plans:
 
 ### Phase 23: Deterministic Node and Edge Creation Order
 
-**Status:** Planning
-**Plans:** 1/1 plans
+**Status:** Complete
+**Plans:** 1/1 plans complete
 
 **Goal:** Node and edge creation order must be deterministic, not dependent on Go map iteration order. Sort map keys alphabetically before iterating.
 **Requirements:** None (technical improvement)
@@ -480,9 +480,9 @@ Plans:
 - D-04: Edges appear in deterministic order based on sorted source paths
 
 Plans:
-- [ ] 23-01-PLAN.md -- Add deterministic map iteration to builder.go with tests
+- [x] 23-01-PLAN.md -- Add deterministic map iteration to builder.go with tests
 
 ---
 
 *Roadmap created: 2021-03-09*
-*Last updated: 2026-03-25 - Phase 23 planned*
+*Last updated: 2026-03-25 - Phase 23 complete*
