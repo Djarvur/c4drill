@@ -13,7 +13,7 @@ C4Drill transforms TOML architecture definitions into professional C4 diagrams t
 - **v1.4 Edge Coloring** -- Phase 15 (shipped 2021-03-18)
 - **v1.5 SVG Icons** -- Phase 16-17 (shipped 2021-03-23)
 - **v1.6 Simplified Shapes** -- Phase 18 (shipped 2021-03-24)
-- **v1.7 Queue Label Fix** -- Phase 19-23 (in progress)
+- **v1.7 Queue Label Fix** -- Phase 19-25 (in progress)
 
 ## Phases
 
@@ -153,6 +153,8 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 21. Box Fixes | v1.7 | Complete    | 2026-03-24 | 2026-03-24 |
 | 22. Link Length Attribute | v1.7 | Complete    | 2026-03-24 | 2026-03-24 |
 | 23. Deterministic Order | v1.7 | Complete    | 2026-03-25 | 2026-03-25 |
+| 24. Edge Thickness | v1.7 | - | Skipped | - |
+| 25. Edge Thickness | v1.7 | 0/1 | Planning | - |
 
 ### Phase 12: HTML labels for all unit types
 
@@ -182,7 +184,7 @@ Person label:
 ```html
 <table border="0" cellpadding="0" cellspacing="0">
   <tr align=center>
-    <td rowspan=2 valign=middle><font size="+4">👤</font></td>
+    <td rowspan=2 valign=middle><font size="+4">&#x1F464;</font></td>
     <td valign=bottom><b>User name</b></td>
   </tr>
   <tr align=center>
@@ -195,7 +197,7 @@ DB label:
 ```html
 <table border="0" cellpadding="0" cellspacing="0">
   <tr align=center>
-    <td rowspan=3 valign=middle><font size="+4">⛁</font></td>
+    <td rowspan=3 valign=middle><font size="+4">&#x1F4C1;</font></td>
     <td valign=bottom><b>DB name</b></td>
   </tr>
   <tr align=center>
@@ -211,7 +213,7 @@ Queue label:
 ```html
 <table border="0" cellpadding="0" cellspacing="0">
   <tr align=center>
-    <td valign=middle>═╦╩═╦══</td>
+    <td valign=middle>&#2550;&#9523;&#9559;&#2550;&#9532;&#9532;</td>
   </tr>
   <tr align=center>
     <td valign=bottom><b>Queue name</b></td>
@@ -392,14 +394,14 @@ Plans:
 **Status:** Planning
 **Plans:** 0/1 plans complete
 
-**Goal:** Revert Queue units to HTML labels with ASCII art graphic (═╦╩═╦═══)
+**Goal:** Revert Queue units to HTML labels with ASCII art graphic (&#2550;&#9523;&#9559;&#2550;&#9532;&#9532;&#947;)
 **Requirements:** QUEUE-FIX-01, QUEUE-FIX-02, QUEUE-FIX-03, QUEUE-FIX-04
 **Depends on:** Phase 18
 **Plans:** 1 plan
 
 **Queue Label Fix Design:**
 
-- D-01: Queue units use HTML label with ASCII art graphic (═╦╩═╦═══)
+- D-01: Queue units use HTML label with ASCII art graphic (&#2550;&#9523;&#9559;&#2550;&#9532;&#9532;&#947;)
 - D-02: Queue external units use same HTML label format
 - D-03: Queue label is 4-row table (graphic, name, technology, description)
 - D-04: Remove cylinder shape and SetOrientation from Queue units in converter
@@ -482,7 +484,31 @@ Plans:
 Plans:
 - [x] 23-01-PLAN.md -- Add deterministic map iteration to builder.go with tests
 
+### Phase 24: Edge Thickness
+
+**Status:** Skipped
+**Note:** Duplicate of Phase 25 - merged into single phase
+
+### Phase 25: Edge Thickness
+
+**Status:** Planning
+**Plans:** 1/1 plans
+
+**Goal:** Set edge penwidth to 2.0 to make edges twice as thick as node borders (which use default 1.0)
+**Requirements:** None (visual improvement)
+**Depends on:** Phase 23
+**Plans:** 1 plan
+
+**Edge Thickness Design:**
+
+- D-01: Add `e.SetPenWidth(2.0)` in createEdge() function
+- D-02: Node borders use GraphViz default penwidth (1.0)
+- D-03: Edges at 2.0 are visually 2x thicker than borders
+
+Plans:
+- [ ] 25-01-PLAN.md -- Set edge penwidth to 2.0 in createEdge()
+
 ---
 
 *Roadmap created: 2021-03-09*
-*Last updated: 2026-03-25 - Phase 23 complete*
+*Last updated: 2026-03-25 - Phase 25 planning*
