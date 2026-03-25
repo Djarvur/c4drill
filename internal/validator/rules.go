@@ -53,10 +53,11 @@ func ValidateSubunitRules(index map[string]*UnitInfo) ValidationErrors {
 
 	// Types that can have subunits
 	allowedTypes := map[model.UnitType]bool{
-		model.TypeSystem:       true,
-		model.TypeBox:          true, // C1 box can contain C1 types
-		model.TypeContainer:    true,
-		model.TypeContainerBox: true, // C2 box can contain C2 types
+		model.TypeSystem:        true,
+		model.TypeBox:           true, // C1 box can contain C1 types
+		model.TypeContainer:     true,
+		model.TypeContainerBox:  true, // C2 box can contain C2 types
+		model.TypeComponentBox:  true, // C3 box can contain C3 types
 	}
 
 	for path, info := range index {
