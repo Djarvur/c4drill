@@ -7,6 +7,7 @@ import (
 
 	"github.com/Djarvur/c4drill/internal/model"
 	"github.com/pelletier/go-toml/v2"
+	"github.com/pelletier/go-toml/v2/unstable"
 )
 
 // Default type based on nesting level:
@@ -42,17 +43,25 @@ type Model struct {
 
 // Parse parses TOML data into a Model.
 // It unmarshals the TOML content, with links automatically parsed from [[link]] arrays.
+// Definition order of units and subunits is preserved.
 func Parse(data []byte) (*Model, error) {
-	// First pass: unmarshal the entire document to a raw map
+	// First pass: capture definition order using unstable API
+	unitOrder, subunitOrders, err := captureDefinitionOrder(data)
+	if err != nil {
+		return nil, wrapDecodeError(err)
+	}
+
+	// Second pass: unmarshal the entire document to a raw map
 	var rawMap map[string]any
 
 	if err := toml.Unmarshal(data, &rawMap); err != nil {
 		return nil, wrapDecodeError(err)
 	}
 
-	// Second pass: build the Model struct
+	// Third pass: build the Model struct
 	m := &Model{
-		Units: make(map[string]*model.Unit),
+		UnitOrder: unitOrder,
+		Units:     make(map[string]*model.Unit),
 	}
 
 	// Extract properties if present
@@ -67,13 +76,15 @@ func Parse(data []byte) (*Model, error) {
 		}
 	}
 
-	// Process all other sections as units (C1 level, no parent type)
-	for name, value := range rawMap {
-		if name == "properties" {
-			continue
+	// Process units in the captured order (not rawMap iteration order)
+	for _, name := range unitOrder {
+		value, ok := rawMap[name]
+		if !ok {
+			continue // Should not happen if captureDefinitionOrder is correct
 		}
 
-		unit, err := parseUnit(name, value, "")
+		subunitOrder := subunitOrders[name]
+		unit, err := parseUnitWithOrder(name, value, "", subunitOrder, subunitOrders)
 		if err != nil {
 			return nil, err
 		}
@@ -84,9 +95,75 @@ func Parse(data []byte) (*Model, error) {
 	return m, nil
 }
 
-// parseUnit parses a raw map value into a Unit struct, including nested subunits.
-// parentType is the type of the parent unit, used to determine default type.
-func parseUnit(name string, value any, parentType model.UnitType) (*model.Unit, error) {
+// captureDefinitionOrder uses the unstable API to capture the order of units and subunits.
+// Returns: unitOrder (top-level), subunitOrders (nested), error.
+func captureDefinitionOrder(data []byte) ([]string, map[string][]string, error) {
+	unitOrder := make([]string, 0)
+	subunitOrders := make(map[string][]string)
+
+	seenUnits := make(map[string]bool)
+	seenSubunits := make(map[string]bool)
+
+	p := unstable.Parser{}
+	p.Reset(data)
+
+	for p.NextExpression() {
+		expr := p.Expression()
+		if expr.Kind != unstable.Table {
+			continue // Skip non-table expressions
+		}
+
+		// Extract the table key parts
+		keyIter := expr.Key()
+		var parts []string
+		for keyIter.Next() {
+			parts = append(parts, string(keyIter.Node().Data))
+		}
+
+		if len(parts) == 0 {
+			continue
+		}
+
+		// Skip [properties] section
+		if len(parts) == 1 && parts[0] == "properties" {
+			continue
+		}
+
+		if len(parts) == 1 {
+			// Top-level unit [name]
+			name := parts[0]
+			if !seenUnits[name] {
+				unitOrder = append(unitOrder, name)
+				seenUnits[name] = true
+			}
+		} else if len(parts) == 2 {
+			// Subunit [parent.child]
+			parent := parts[0]
+			child := parts[1]
+			key := parent + "." + child
+			if !seenSubunits[key] {
+				subunitOrders[parent] = append(subunitOrders[parent], child)
+				seenSubunits[key] = true
+			}
+		}
+		// Ignore deeper nesting (len(parts) > 2) - not supported
+	}
+
+	if err := p.Error(); err != nil {
+		return nil, nil, err
+	}
+
+	return unitOrder, subunitOrders, nil
+}
+
+// parseUnitWithOrder parses a unit with explicit subunit order.
+func parseUnitWithOrder(
+	name string,
+	value any,
+	parentType model.UnitType,
+	subunitOrder []string,
+	subunitOrders map[string][]string,
+) (*model.Unit, error) {
 	unitMap, ok := value.(map[string]any)
 	if !ok {
 		return nil, &ParseError{
@@ -115,24 +192,49 @@ func parseUnit(name string, value any, parentType model.UnitType) (*model.Unit, 
 	// Infer level-specific type for generic types (db, queue)
 	unit.Type = inferGenericType(unit.Type, parentType)
 
-	// Handle nested subunits (sections like [parent.child])
-	for key, val := range unitMap {
-		// Skip fields that are already in the Unit struct
-		if isBuiltinField(key) {
-			continue
-		}
+	// Process subunits in the provided order
+	if len(subunitOrder) > 0 {
+		unit.Subunits = make(map[string]*model.Unit)
+		unit.SubunitOrder = subunitOrder
 
-		// This must be a subunit
-		subunit, err := parseUnit(key, val, unit.Type)
-		if err != nil {
-			return nil, err
-		}
+		for _, subName := range subunitOrder {
+			subVal, ok := unitMap[subName]
+			if !ok {
+				continue
+			}
 
-		if unit.Subunits == nil {
-			unit.Subunits = make(map[string]*model.Unit)
-		}
+			// Get the subunit's own subunit order
+			fullPath := name + "." + subName
+			subSubunitOrder := subunitOrders[fullPath]
 
-		unit.Subunits[key] = subunit
+			subunit, err := parseUnitWithOrder(subName, subVal, unit.Type, subSubunitOrder, subunitOrders)
+			if err != nil {
+				return nil, err
+			}
+
+			unit.Subunits[subName] = subunit
+		}
+	} else {
+		// Fallback: process subunits from raw map (no order guarantee, but maintains backward compatibility)
+		for key, val := range unitMap {
+			// Skip fields that are already in the Unit struct
+			if isBuiltinField(key) {
+				continue
+			}
+
+			// This must be a subunit
+			subunit, err := parseUnitWithOrder(key, val, unit.Type, nil, subunitOrders)
+			if err != nil {
+				return nil, err
+			}
+
+			if unit.Subunits == nil {
+				unit.Subunits = make(map[string]*model.Unit)
+			}
+
+			unit.Subunits[key] = subunit
+			unit.SubunitOrder = append(unit.SubunitOrder, key)
+		}
 	}
 
 	return &unit, nil
