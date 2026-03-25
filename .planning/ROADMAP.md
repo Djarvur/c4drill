@@ -513,7 +513,7 @@ Plans:
 **Goal:** Preserve TOML definition order for nodes and edges - instead of alphabetical sorting via `slices.Sorted(maps.Keys())`, iterate in the exact order units are defined in the TOML file.
 **Requirements**: None (technical improvement)
 **Depends on:** Phase 25
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 **Definition Order Design:**
 

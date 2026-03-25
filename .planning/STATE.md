@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: AI-Ready
 status: completed
-last_updated: "2026-03-25T14:23:52Z"
-last_activity: 2026-03-25 — Completed 25-01-PLAN.md
+last_updated: "2026-03-25T15:30:00Z"
+last_activity: 2026-03-25 — Completed 26-01-PLAN.md
 progress:
-  total_phases: 18
-  completed_phases: 17
-  total_plans: 24
-  completed_plans: 23
+  total_phases: 19
+  completed_phases: 18
+  total_plans: 25
+  completed_plans: 24
 ---
 
 # Project State
@@ -19,14 +19,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** Phase 25 — Edges Must Be Twice Thicker Than Borders
+**Current focus:** Phase 26 — Preserve TOML Definition Order
 
 ## Current Position
 
-Phase: 25 (Complete)
-Plan: 25-01 (Complete)
-Status: Phase 25 complete - Edge penwidth set to 2.0 for visual prominence
-Last activity: 2026-03-25 — Completed 25-01-PLAN.md
+Phase: 26 (Complete)
+Plan: 26-01 (Complete)
+Status: Phase 26 complete - Nodes and edges appear in TOML definition order
+Last activity: 2026-03-25 — Completed 26-01-PLAN.md
 
 ## Accumulated Context
 
@@ -55,6 +55,7 @@ Prior decisions from v1.0-v1.6:
 - [Phase 22]: Link.Length field maps to Edge.MinLen which maps to GraphViz minlen attribute — Users can control edge rank spacing via length attribute in TOML
 - [Phase 23]: All map iterations in builder.go use slices.Sorted(maps.Keys()) for deterministic node/edge/cluster ordering — Same input produces identical output order every time
 - [Phase 25]: Edge penwidth set to 2.0 in createEdge() — Edges are twice as thick as node borders (1.0) for visual prominence
+- [Phase 26]: Nodes and edges appear in TOML definition order — Units rendered in the order they appear in the source file, not alphabetically sorted
 
 ### Pending Todos
 
@@ -79,6 +80,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-25T14:23:52Z
-Status: Phase 25 complete
+Last session: 2026-03-25T15:30:00Z
+Status: Phase 26 complete
 Next: Project complete - all planned phases finished
