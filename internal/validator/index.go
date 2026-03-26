@@ -48,6 +48,8 @@ func BuildIndex(units map[string]*model.Unit, parentPath string) map[string]*Uni
 // populateIncomingLinks adds LinksFrom entries based on Links from other units.
 // When unit A has a link to unit B, this adds a LinksFrom entry to B pointing to A.
 // This ensures the orphan validation correctly identifies units that are linked to.
+// IMPORTANT: All link attributes (including Length) are preserved to ensure edge
+// properties are correct regardless of which unit is processed first during edge building.
 func populateIncomingLinks(index map[string]*UnitInfo) {
 	for sourcePath, sourceInfo := range index {
 		for _, link := range sourceInfo.Unit.Links {
@@ -61,9 +63,17 @@ func populateIncomingLinks(index map[string]*UnitInfo) {
 				continue
 			}
 
-			// Add reverse link entry
+			// Add reverse link entry, preserving all attributes from the original link
 			targetInfo.Unit.LinksFrom = append(targetInfo.Unit.LinksFrom, model.Link{
-				Peer: sourcePath,
+				Peer:          sourcePath,
+				Arrow:         link.Arrow,
+				Rank:          link.Rank,
+				Color:         link.Color,
+				Style:         link.Style,
+				Technology:    link.Technology,
+				Description:   link.Description,
+				LabelPosition: link.LabelPosition,
+				Length:        link.Length,
 			})
 		}
 	}

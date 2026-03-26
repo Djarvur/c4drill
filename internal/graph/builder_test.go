@@ -1,11 +1,14 @@
 package graph_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/Djarvur/c4drill/internal/graph"
 	"github.com/Djarvur/c4drill/internal/model"
 	"github.com/Djarvur/c4drill/internal/parser"
+	"github.com/Djarvur/c4drill/internal/render"
+	"github.com/Djarvur/c4drill/internal/validator"
 	"github.com/Djarvur/c4drill/internal/view"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -627,6 +630,112 @@ func TestBuildExpandedGraph(t *testing.T) {
 		assert.Equal(t, "system.api", g.Edges[0].Source)
 		assert.Equal(t, "db", g.Edges[0].Target)
 	})
+
+	// Test 7: BuildExpandedGraph preserves length attribute for cross-level connections
+	// This tests the bug where nested subunit -> external top-level unit loses minlen
+	t.Run("preserves length attribute for nested subunit to external unit", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"linuxSystem": {
+					Type: model.TypeSystem,
+					Name: "Linux System",
+					Subunits: map[string]*model.Unit{
+						"storages": {
+							Type: model.TypeContainer,
+							Name: "Storages",
+							Subunits: map[string]*model.Unit{
+								"keycloakStorage": {
+									Type: model.TypeContainer,
+									Name: "Keycloak Storage",
+									Subunits: map[string]*model.Unit{
+										"client": {
+											Type: model.TypeComponent,
+											Name: "Keycloak Client",
+											Links: []model.Link{
+												{Peer: "keycloak", Length: 2},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				"keycloak": {
+					Type: model.TypeSystemExternal,
+					Name: "Keycloak",
+				},
+			},
+		}
+
+		v := view.GenerateExpandedView(m)
+		g := graph.BuildExpandedGraph(v)
+
+		require.NotNil(t, g)
+
+		// Find the edge from client to keycloak
+		var foundEdge *graph.Edge
+
+		for _, edge := range g.Edges {
+			if edge.Source == "linuxSystem.storages.keycloakStorage.client" && edge.Target == "keycloak" {
+				foundEdge = edge
+				break
+			}
+		}
+
+		require.NotNil(t, foundEdge, "Edge from client to keycloak should exist")
+		assert.Equal(t, 2, foundEdge.MinLen, "Edge should have MinLen=2 from TOML length attribute")
+	})
+}
+
+// TestBuildExpandedGraphRealToml tests that length attribute is preserved for the real TOML file.
+// This is a regression test for a bug where LinksFrom entries created by the validator
+// did not preserve link attributes like Length, causing edges to lose minlen values
+// when the target unit was processed before the source unit.
+func TestBuildExpandedGraphRealToml(t *testing.T) {
+	t.Parallel()
+
+	// Use ParseFile like the command does
+	m, err := parser.ParseFile("../../cyp-auth-infra/saira-20260320.c2.full.toml")
+	require.NoError(t, err)
+
+	// Run validation like the command does (this adds LinksFrom entries)
+	valErrors := validator.Validate(m)
+	require.Empty(t, valErrors, "model should be valid")
+
+	// Check that the client unit has the link with length attribute
+	client := m.Units["linuxSystem"].Subunits["storages"].Subunits["keycloakStorage"].Subunits["client"]
+	require.NotNil(t, client, "client unit should exist")
+	require.Len(t, client.Links, 1, "client should have 1 link")
+	assert.Equal(t, "keycloak", client.Links[0].Peer)
+	expectedLength := client.Links[0].Length
+	require.Greater(t, expectedLength, 0, "link should have Length > 0")
+
+	// Generate expanded view and check edges
+	v := view.GenerateExpandedView(m)
+	g := graph.BuildExpandedGraph(v)
+
+	// Find the edge from client to keycloak
+	var foundEdge *graph.Edge
+	for _, edge := range g.Edges {
+		if edge.Source == "linuxSystem.storages.keycloakStorage.client" && edge.Target == "keycloak" {
+			foundEdge = edge
+			break
+		}
+	}
+
+	require.NotNil(t, foundEdge, "Edge from client to keycloak should exist")
+	assert.Equal(t, expectedLength, foundEdge.MinLen, "Edge MinLen should match TOML length attribute")
+
+	// Also verify that the rendered DOT contains minlen
+	dotData, err := render.RenderDOT(g)
+	require.NoError(t, err)
+
+	expectedMinlen := fmt.Sprintf("minlen=%d", expectedLength)
+	assert.Contains(t, string(dotData), expectedMinlen, "DOT output should contain minlen for the edge")
 }
 
 //nolint:funlen // Test functions with model setup are naturally longer
