@@ -9,10 +9,10 @@ Requirements for Queue Label Fix. GraphViz cylinder rotation doesn't work, rever
 
 ### Queue Label Fix
 
-- [ ] **QUEUE-FIX-01**: Queue units use HTML label with ASCII art graphic (═╦╩═╦═══)
-- [ ] **QUEUE-FIX-02**: Queue external units use same HTML label format
-- [ ] **QUEUE-FIX-03**: Queue label is 4-row table (graphic, name, technology, description)
-- [ ] **QUEUE-FIX-04**: Remove cylinder shape and orientation from Queue units
+- [x] **QUEUE-FIX-01**: Queue units use HTML label with ASCII art graphic (═╦╩═╦═══)
+- [x] **QUEUE-FIX-02**: Queue external units use same HTML label format
+- [x] **QUEUE-FIX-03**: Queue label is 4-row table (graphic, name, technology, description)
+- [x] **QUEUE-FIX-04**: Remove cylinder shape and orientation from Queue units
 
 ### Link Length Attribute
 
@@ -147,10 +147,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status  |
 |-------------|-------|---------|
-| QUEUE-FIX-01 | 19   | Pending |
-| QUEUE-FIX-02 | 19   | Pending |
-| QUEUE-FIX-03 | 19   | Pending |
-| QUEUE-FIX-04 | 19   | Pending |
+| QUEUE-FIX-01 | 19   | Complete |
+| QUEUE-FIX-02 | 19   | Complete |
+| QUEUE-FIX-03 | 19   | Complete |
+| QUEUE-FIX-04 | 19   | Complete |
 | LINK-LEN-01 | 22    | Complete |
 | LINK-LEN-02 | 22    | Complete |
 | ICON-01     | 18    | Complete |
