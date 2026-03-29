@@ -158,18 +158,18 @@ func addExternalBoundaryNodes(v *View, m *parser.Model) {
 			continue
 		}
 
-		addExternalBoundaryNodesRecursive(v, name, unit)
+		addExternalBoundaryNodesRecursive(v, m, name, unit)
 	}
 }
 
 // addExternalBoundaryNodesRecursive recursively scans a unit and its subunits for links
 // and adds boundary nodes for referenced units not in the view.
-func addExternalBoundaryNodesRecursive(v *View, path string, unit *model.Unit) {
+func addExternalBoundaryNodesRecursive(v *View, m *parser.Model, path string, unit *model.Unit) {
 	// Check outgoing links
 	for _, link := range unit.Links {
 		if _, exists := v.Units[link.Peer]; !exists {
-			// Create external boundary node
-			v.Units[link.Peer] = createExternalBoundaryNode(link.Peer, path)
+			// Create external boundary node, preserving original unit data if it exists in model
+			v.Units[link.Peer] = createExternalBoundaryNode(m, link.Peer, path)
 			v.UnitOrder = append(v.UnitOrder, link.Peer) // Append at end
 		}
 	}
@@ -177,8 +177,8 @@ func addExternalBoundaryNodesRecursive(v *View, path string, unit *model.Unit) {
 	// Check incoming links (LinksFrom)
 	for _, link := range unit.LinksFrom {
 		if _, exists := v.Units[link.Peer]; !exists {
-			// Create external boundary node
-			v.Units[link.Peer] = createExternalBoundaryNode(link.Peer, path)
+			// Create external boundary node, preserving original unit data if it exists in model
+			v.Units[link.Peer] = createExternalBoundaryNode(m, link.Peer, path)
 			v.UnitOrder = append(v.UnitOrder, link.Peer) // Append at end
 		}
 	}
@@ -199,14 +199,28 @@ func addExternalBoundaryNodesRecursive(v *View, path string, unit *model.Unit) {
 			continue
 		}
 
-		addExternalBoundaryNodesRecursive(v, path+"."+subName, subUnit)
+		addExternalBoundaryNodesRecursive(v, m, path+"."+subName, subUnit)
 	}
 }
 
 // createExternalBoundaryNode creates an Entry representing an external boundary node.
-// It infers the appropriate external type based on the context.
-func createExternalBoundaryNode(name string, _ string) *Entry {
-	// Default to external system type for boundary nodes
+// If the unit exists in the model (e.g., a nested subunit), it uses the original unit data
+// to preserve attributes like links with length. Otherwise, it creates a minimal placeholder.
+func createExternalBoundaryNode(m *parser.Model, name string, _ string) *Entry {
+	// Try to find the actual unit in the model
+	actualUnit := findUnitByPath(m, name)
+	if actualUnit != nil {
+		// Use the actual unit data to preserve links and other attributes
+		return &Entry{
+			Unit:        actualUnit,
+			FullPath:    name,
+			IsExpanded:  false,
+			HasSubunits: len(actualUnit.Subunits) > 0,
+			IsExternal:  IsExternalType(actualUnit.Type),
+		}
+	}
+
+	// Default to external system type for boundary nodes that don't exist in model
 	return &Entry{
 		Unit: &model.Unit{
 			Type: model.TypeSystemExternal,
@@ -271,7 +285,7 @@ func GenerateC2View(m *parser.Model, systemPath string) *View {
 	}
 
 	// Add external boundary nodes for links from subunits
-	addExternalBoundaryNodesForSubunits(v, systemUnit.Subunits, subunitOrder, systemPath)
+	addExternalBoundaryNodesForSubunits(v, m, systemUnit.Subunits, subunitOrder, systemPath)
 
 	return v
 }
@@ -341,7 +355,7 @@ func GenerateC3View(m *parser.Model, containerPath string) *View {
 	}
 
 	// Add external boundary nodes for links from subunits
-	addExternalBoundaryNodesForSubunits(v, containerUnit.Subunits, subunitOrder, containerPath)
+	addExternalBoundaryNodesForSubunits(v, m, containerUnit.Subunits, subunitOrder, containerPath)
 
 	return v
 }
@@ -383,7 +397,7 @@ func findUnitByPath(m *parser.Model, path string) *model.Unit {
 
 // addExternalBoundaryNodesForSubunits scans links from subunits and adds
 // boundary nodes for referenced units that are not in the current view.
-func addExternalBoundaryNodesForSubunits(v *View, subunits map[string]*model.Unit, subunitOrder []string, parentPath string) {
+func addExternalBoundaryNodesForSubunits(v *View, m *parser.Model, subunits map[string]*model.Unit, subunitOrder []string, parentPath string) {
 	// Iterate in definition order
 	for _, name := range subunitOrder {
 		unit := subunits[name]
@@ -394,8 +408,8 @@ func addExternalBoundaryNodesForSubunits(v *View, subunits map[string]*model.Uni
 		// Check outgoing links
 		for _, link := range unit.Links {
 			if _, exists := v.Units[link.Peer]; !exists {
-				// Create external boundary node
-				v.Units[link.Peer] = createExternalBoundaryNode(link.Peer, parentPath)
+				// Create external boundary node, preserving original unit data if it exists in model
+				v.Units[link.Peer] = createExternalBoundaryNode(m, link.Peer, parentPath)
 				v.UnitOrder = append(v.UnitOrder, link.Peer) // Append at end
 			}
 		}
@@ -403,8 +417,8 @@ func addExternalBoundaryNodesForSubunits(v *View, subunits map[string]*model.Uni
 		// Check incoming links (LinksFrom)
 		for _, link := range unit.LinksFrom {
 			if _, exists := v.Units[link.Peer]; !exists {
-				// Create external boundary node
-				v.Units[link.Peer] = createExternalBoundaryNode(link.Peer, parentPath)
+				// Create external boundary node, preserving original unit data if it exists in model
+				v.Units[link.Peer] = createExternalBoundaryNode(m, link.Peer, parentPath)
 				v.UnitOrder = append(v.UnitOrder, link.Peer) // Append at end
 			}
 		}
