@@ -13,7 +13,7 @@ C4Drill transforms TOML architecture definitions into professional C4 diagrams t
 - **v1.4 Edge Coloring** -- Phase 15 (shipped 2021-03-18)
 - **v1.5 SVG Icons** -- Phase 16-17 (shipped 2021-03-23)
 - **v1.6 Simplified Shapes** -- Phase 18 (shipped 2021-03-24)
-- **v1.7 Queue Label Fix** -- Phase 19-25 (in progress)
+- **v1.7 Queue Label Fix** -- Phase 19-26 (complete)
 
 ## Phases
 
@@ -148,7 +148,7 @@ Phases 7, 8, and 9 are independent and can run in parallel.
 | 16. SVG Icons | v1.5 | 1/1 | Complete | 2021-03-18 |
 | 17. Word-wrapped Labels | v1.5 | 1/1 | Complete | 2021-03-23 |
 | 18. Simplified Shapes | v1.6 | Complete    | 2021-03-24 | 2021-03-24 |
-| 19. Queue Label Fix | v1.7 | 0/1 | Planning | - |
+| 19. Queue Label Fix | v1.7 | 1/1 | Complete | 2026-03-29 |
 | 20. Helvetica Font | v1.7 | 1/1 | Complete | 2021-03-24 |
 | 21. Box Fixes | v1.7 | Complete    | 2026-03-24 | 2026-03-24 |
 | 22. Link Length Attribute | v1.7 | Complete    | 2026-03-24 | 2026-03-24 |
@@ -391,8 +391,8 @@ Plans:
 
 ### Phase 19: Queue Label Fix
 
-**Status:** Planning
-**Plans:** 0/1 plans complete
+**Status:** Complete
+**Plans:** 1/1 plans complete
 
 **Goal:** Revert Queue units to HTML labels with ASCII art graphic (&#2550;&#9523;&#9559;&#2550;&#9532;&#9532;&#947;)
 **Requirements:** QUEUE-FIX-01, QUEUE-FIX-02, QUEUE-FIX-03, QUEUE-FIX-04
@@ -407,7 +407,7 @@ Plans:
 - D-04: Remove cylinder shape and SetOrientation from Queue units in converter
 
 Plans:
-- [ ] 19-01-PLAN.md -- Update Queue label builder, remove cylinder shape for Queue
+- [x] 19-01-PLAN.md -- Update Queue label builder, remove cylinder shape for Queue
 
 ### Phase 20: Helvetica Font
 
@@ -525,7 +525,7 @@ Plans:
 - D-06: External boundary nodes appended at end of order list
 
 Plans:
-- [ ] 26-01-PLAN.md -- Add order tracking fields and implement definition order preservation
+- [x] 26-01-PLAN.md -- Add order tracking fields and implement definition order preservation
 
 ---
 
