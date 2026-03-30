@@ -24,16 +24,31 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 ### Active
 
-- [ ] Queue units use HTML label with ASCII art (═╦╩═╦═══) - GraphViz cylinder rotation doesn't work
+- [ ] C1 view: only top-level units, edges resolved to visible ancestors
+- [ ] C2/C3 files: auto-generated for units with subunits
+- [ ] properties.expanded controls default expansion
 
-## Current Milestone: v1.7 Queue Label Fix
+## Current Milestone: v1.8 Proper C1/C2/C3 View Generation
 
-**Goal:** Fix Queue rendering - use HTML labels with ASCII art instead of rotated cylinder
+**Goal:** Generate correct per-level diagrams — C1 shows only top-level units, C2/C3 files are created for units with subunits
 
 **Target features:**
 
-- Queue units → HTML label with ASCII art pattern (═╦╩═╦═══)
-- 4-row table: graphic, name, technology, description
+- C1 diagram: only top-level units with edges resolved to C1 ancestors
+- C2 diagrams: auto-generated for each system/box with subunits
+- C3 diagrams: auto-generated for each container with subunits
+- Edge resolution: links to deeply nested targets resolve to the nearest visible ancestor
+- properties.expanded controls which top-level units are expanded by default
+
+### Shipped in v1.7
+
+- ✓ Queue units render with ASCII art graphic (═╦╩═╦═══)
+- ✓ Helvetica font for all diagram elements
+- ✓ Box labels with dashed borders, validation for mixed content, color by content type
+- ✓ Link length attribute for edge spacing control
+- ✓ Deterministic node/edge ordering
+- ✓ Thicker edges (penwidth 2.0) for visual prominence
+- ✓ TOML definition order preservation for nodes and edges
 
 ### Shipped in v1.6
 
@@ -142,4 +157,4 @@ link = { "target_unit" = { reverse = false, equal = false, color = "black", styl
 - **Shapes**: Person, DB, Queue, System each have distinct record shapes
 
 ---
-*Last updated: 2026-03-24 after v1.6 milestone started*
+*Last updated: 2026-03-29 after v1.8 milestone started*
