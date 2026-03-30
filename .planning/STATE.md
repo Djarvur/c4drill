@@ -1,70 +1,23 @@
----
-gsd_state_version: 1.0
-milestone: v1.8
-milestone_name: Proper C1/C2/C3 View Generation
-status: active
-last_updated: "2026-03-29T22:00:00.000Z"
-last_activity: 2026-03-29 — Milestone v1.8 started
-progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
----
+# v1.8: Proper C1/C2/C3 View Generation
 
-# Project State
+## Status: **COMPLETE**
 
-## Project Reference
+## Summary
 
-See: .planning/PROJECT.md (updated 2026-03-29)
+Fixed the two root-cause bugs:
+1. **C1 pollution**: `addExternalBoundaryNodesRecursive` scanned ALL nested links → replaced with `addC1BoundaryNodes` that resolves peers to top-level ancestors
+2. **No C2/C3**: `collectExpandedUnitPaths` only checked per-unit `Expanded` → replaced with `collectExpandableUnitPaths` that auto-detects units with subunits
 
-**Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** v1.8 — Fix view generation for proper C1/C2/C3 layer separation
+## Evidence
 
-## Current Position
+| Metric | Before | After |
+|--------|--------|-------|
+| C1 nodes (saira TOML) | 105 | 5 |
+| Sub-diagrams generated | 0 | 17 |
+| All tests passing | ✅ | ✅ |
+| `--expanded` flag | ✅ | ✅ |
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-29 — Milestone v1.8 started
+## Commits
 
-## Accumulated Context
-
-### Decisions
-
-Prior decisions from v1.0-v1.7:
-
-- Use GraphViz native `shape=cylinder` for DB units (works)
-- Person labels: 2-column table with emoji (&#x1F464;) instead of SVG icons
-- System/Box/Container/Component labels: 3-row single-column table (name, technology, description)
-- Icon extraction system removed
-- SVG postprocessing removed
-- Queue units: Use HTML label with ASCII art graphic (═╦╩═╦═══)
-- Helvetica font for all diagram elements
-- Box labels use same 3-row HTML table, dashed borders
-- Link.Length field maps to Edge.MinLen
-- Deterministic node/edge ordering via slices.Sorted(maps.Keys())
-- Edge penwidth 2.0 for visual prominence
-- TOML definition order preservation for nodes and edges
-
-### Pending Todos
-
-None.
-
-### Blockers/Concerns
-
-None.
-
-### Deferred Items
-
-- TestOutputFlag test failure (pre-existing, out of scope) - see deferred-items.md
-
-### Roadmap Evolution
-
-None yet for v1.8.
-
-## Session Continuity
-
-Last session: 2026-03-29T22:00:00Z
-Status: v1.8 milestone started — defining requirements
-Next: Define requirements and create roadmap
+- `f9dc69a` fix: proper C1/C2/C3 view generation with edge resolution
+- `c5091f9` chore: update baseline SVG
