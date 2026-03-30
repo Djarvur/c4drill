@@ -119,22 +119,33 @@ func GenerateC1View(m *parser.Model) *View {
 		v.Units[name] = &Entry{
 			Unit:        unit,
 			FullPath:    name,
-			IsExpanded:  isUnitExpanded(unit, name),
+			IsExpanded:  isExpandedInC1(m, unit, name),
 			HasSubunits: len(unit.Subunits) > 0,
 			IsExternal:  IsExternalType(unit.Type),
 		}
 		v.UnitOrder = append(v.UnitOrder, name)
 	}
 
-	// Add external boundary nodes for referenced units not in the model
-	addExternalBoundaryNodes(v, m)
+	// Add boundary nodes: scan ALL links (including nested subunits) but resolve
+	// peer targets to their nearest top-level ancestor visible in the view.
+	// This prevents C1 from being polluted with deeply nested subunit boundary nodes.
+	addC1BoundaryNodes(v, m)
 
 	return v
 }
 
 // isUnitExpanded checks if a unit should be expanded based on its Expanded list.
-// Per the design decision: only per-unit expanded attribute is used (no global default).
 func isUnitExpanded(unit *model.Unit, unitPath string) bool {
+	return slices.Contains(unit.Expanded, unitPath)
+}
+
+// isExpandedInC1 checks if a top-level unit should be shown as expanded in C1 view.
+// It checks both properties.expanded (global) and per-unit expanded (self-referencing).
+func isExpandedInC1(m *parser.Model, unit *model.Unit, unitPath string) bool {
+	if slices.Contains(m.Properties.Expanded, unitPath) {
+		return true
+	}
+
 	return slices.Contains(unit.Expanded, unitPath)
 }
 
@@ -231,6 +242,147 @@ func createExternalBoundaryNode(m *parser.Model, name string, _ string) *Entry {
 		HasSubunits: false,
 		IsExternal:  true,
 	}
+}
+
+// addC1BoundaryNodes scans ALL links in the model (including deeply nested subunits)
+// but resolves peer targets to their nearest visible top-level ancestor.
+// This prevents C1 from being polluted with ~100 boundary nodes for nested subunits.
+// For example, a link from linuxSystem.sshAuth.sshd → linuxSystem.sshAuth.nss is
+// internal to linuxSystem and creates no boundary node. A link from
+// webUser → linuxSystem.localIDP.grpcAPIs.authAPI resolves to webUser → linuxSystem.
+func addC1BoundaryNodes(v *View, m *parser.Model) {
+	// Collect all link peers from ALL units (recursive) and resolve them
+	var unitOrder []string
+	if len(m.UnitOrder) > 0 {
+		unitOrder = m.UnitOrder
+	} else {
+		for name := range m.Units {
+			unitOrder = append(unitOrder, name)
+		}
+	}
+
+	for _, name := range unitOrder {
+		unit := m.Units[name]
+		if unit == nil {
+			continue
+		}
+
+		resolveAndAddBoundary(v, m, name, unit)
+	}
+}
+
+// resolveAndAddBoundary recursively scans a unit and all its subunits for links.
+// For each link, it resolves the peer to the nearest visible top-level ancestor in the view.
+// If the resolved peer isn't in the view, it creates a boundary node.
+// Resolved links are collected on the top-level source entry's ResolvedLinks/ResolvedLinksFrom.
+func resolveAndAddBoundary(v *View, m *parser.Model, path string, unit *model.Unit) {
+	// Find the top-level ancestor of this path (source for resolved links)
+	sourceAncestor := path
+	if idx := strings.Index(path, "."); idx > 0 {
+		sourceAncestor = path[:idx]
+	}
+
+	sourceEntry := v.Units[sourceAncestor]
+
+	// Process outgoing links
+	for _, link := range unit.Links {
+		resolved := resolveToTopLevel(v, link.Peer)
+		if resolved == "" {
+			continue // Internal link (both sides under same ancestor or self-referencing)
+		}
+
+		if _, exists := v.Units[resolved]; !exists {
+			v.Units[resolved] = createExternalBoundaryNode(m, resolved, path)
+			v.UnitOrder = append(v.UnitOrder, resolved)
+		}
+
+		// Add resolved outgoing link to the source ancestor
+		if sourceEntry != nil && resolved != sourceAncestor {
+			resolvedLink := model.Link{
+				Peer:          resolved,
+				Technology:    link.Technology,
+				Description:   link.Description,
+				Style:         link.Style,
+				Arrow:         link.Arrow,
+				Rank:          link.Rank,
+				LabelPosition: link.LabelPosition,
+				Color:         link.Color,
+				Length:        link.Length,
+			}
+			sourceEntry.ResolvedLinks = append(sourceEntry.ResolvedLinks, resolvedLink)
+		}
+	}
+
+	// Process incoming links
+	for _, link := range unit.LinksFrom {
+		resolved := resolveToTopLevel(v, link.Peer)
+		if resolved == "" {
+			continue
+		}
+
+		if _, exists := v.Units[resolved]; !exists {
+			v.Units[resolved] = createExternalBoundaryNode(m, resolved, path)
+			v.UnitOrder = append(v.UnitOrder, resolved)
+		}
+
+		// Add resolved incoming link to the source ancestor
+		if sourceEntry != nil && resolved != sourceAncestor {
+			resolvedLink := model.Link{
+				Peer:          resolved,
+				Technology:    link.Technology,
+				Description:   link.Description,
+				Style:         link.Style,
+				Arrow:         link.Arrow,
+				Rank:          link.Rank,
+				LabelPosition: link.LabelPosition,
+				Color:         link.Color,
+				Length:        link.Length,
+			}
+			sourceEntry.ResolvedLinksFrom = append(sourceEntry.ResolvedLinksFrom, resolvedLink)
+		}
+	}
+
+	// Recurse into subunits
+	var subunitOrder []string
+	if len(unit.SubunitOrder) > 0 {
+		subunitOrder = unit.SubunitOrder
+	} else {
+		for name := range unit.Subunits {
+			subunitOrder = append(subunitOrder, name)
+		}
+	}
+
+	for _, subName := range subunitOrder {
+		subUnit := unit.Subunits[subName]
+		if subUnit == nil {
+			continue
+		}
+
+		resolveAndAddBoundary(v, m, path+"."+subName, subUnit)
+	}
+}
+
+// resolveToTopLevel resolves a peer path to its nearest visible top-level ancestor.
+// Returns the top-level unit name if the peer or one of its ancestors is in the view.
+// Returns "" if the peer and source share the same top-level ancestor (internal link).
+func resolveToTopLevel(v *View, peer string) string {
+	// If the peer itself is directly in the view, return it
+	if _, exists := v.Units[peer]; exists {
+		return peer
+	}
+
+	// Walk up the peer's path to find the top-level ancestor
+	parts := strings.SplitN(peer, ".", 2)
+	topLevel := parts[0]
+
+	// If the top-level ancestor is in the view, return it
+	if _, exists := v.Units[topLevel]; exists {
+		return topLevel
+	}
+
+	// Not found at all — this is a truly external unit, return it as-is
+	// (it will become a boundary node)
+	return peer
 }
 
 // GenerateC2View creates a C2 (Container) level view for an expanded system.

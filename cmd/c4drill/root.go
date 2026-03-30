@@ -149,41 +149,49 @@ func runRoot(cmd *cobra.Command, args []string) error {
 }
 
 // collectExpandedPaths returns all unit paths that need diagrams.
-// Always includes "" for C1, plus paths for expanded systems/containers.
+// Always includes "" for C1, plus paths for any unit that has subunits.
+// Units are auto-detected (any unit with subunits gets a sub-diagram).
+// This can be overridden by properties.expanded or per-unit expanded lists.
 func collectExpandedPaths(m *parser.Model) []string {
 	// Preallocate with capacity for C1 + expanded units
 	paths := make([]string, 0, 1+len(m.Units))
 	paths = append(paths, "") // Always include C1
 
-	// Recursively find expanded units
+	// Recursively find units with subunits (auto-detect expandable units)
 	for name, unit := range m.Units {
-		paths = append(paths, collectExpandedUnitPaths(name, unit)...)
+		paths = append(paths, collectExpandableUnitPaths(m, name, unit)...)
 	}
 
 	return paths
 }
 
-// collectExpandedUnitPaths recursively collects paths of expanded units.
-func collectExpandedUnitPaths(parentPath string, unit *model.Unit) []string {
+// collectExpandableUnitPaths recursively collects paths of units that should have sub-diagrams.
+// A unit gets a sub-diagram if it has subunits (auto-detect).
+func collectExpandableUnitPaths(m *parser.Model, parentPath string, unit *model.Unit) []string {
 	var paths []string
 
-	// Check if this unit is expanded (has subunits shown)
-	// A unit is expanded if it has subunits AND its own name is in its Expanded list
-	if len(unit.Subunits) > 0 && len(unit.Expanded) > 0 {
-		// Check if the parent path itself is in the expanded list
-		// For top-level units, parentPath is just the name (e.g., "mainapp")
-		for _, expanded := range unit.Expanded {
-			if expanded == parentPath || expanded == "" {
-				paths = append(paths, parentPath)
+	// Auto-detect: any unit with subunits should have a sub-diagram
+	if len(unit.Subunits) > 0 {
+		paths = append(paths, parentPath)
 
-				break
+		// Recurse into subunits (they may also have subunits)
+		var subOrder []string
+		if len(unit.SubunitOrder) > 0 {
+			subOrder = unit.SubunitOrder
+		} else {
+			for subName := range unit.Subunits {
+				subOrder = append(subOrder, subName)
 			}
 		}
 
-		// Recurse into subunits
-		for subName, subUnit := range unit.Subunits {
+		for _, subName := range subOrder {
+			subUnit := unit.Subunits[subName]
+			if subUnit == nil {
+				continue
+			}
+
 			subPath := parentPath + "." + subName
-			paths = append(paths, collectExpandedUnitPaths(subPath, subUnit)...)
+			paths = append(paths, collectExpandableUnitPaths(m, subPath, subUnit)...)
 		}
 	}
 

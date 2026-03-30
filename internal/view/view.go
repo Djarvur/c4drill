@@ -47,6 +47,12 @@ type Entry struct {
 	IsExternal bool
 	// HasSubunits indicates if this unit has children (for [+] indicator).
 	HasSubunits bool
+	// ResolvedLinks contains outgoing links resolved for the current view level.
+	// When non-nil, the graph builder uses these instead of Unit.Links.
+	ResolvedLinks []model.Link
+	// ResolvedLinksFrom contains incoming links resolved for the current view level.
+	// When non-nil, the graph builder uses these instead of Unit.LinksFrom.
+	ResolvedLinksFrom []model.Link
 }
 
 // IsExternalType returns true if the unit type is an external variant.

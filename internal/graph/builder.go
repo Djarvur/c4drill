@@ -255,12 +255,25 @@ func buildEdges(v *view.View) []*Edge {
 	// Process edges in definition order
 	for _, path := range v.UnitOrder {
 		entry := v.Units[path]
+
+		// Use resolved links when available (for C1 views with edge resolution),
+		// otherwise fall back to the unit's direct links.
+		outLinks := entry.Unit.Links
+		if entry.ResolvedLinks != nil {
+			outLinks = entry.ResolvedLinks
+		}
+
+		inLinks := entry.Unit.LinksFrom
+		if entry.ResolvedLinksFrom != nil {
+			inLinks = entry.ResolvedLinksFrom
+		}
+
 		// Process outgoing links
-		outEdges := processOutgoingLinks(path, entry.Unit.Links, v.Units, seen)
+		outEdges := processOutgoingLinks(path, outLinks, v.Units, seen)
 		edges = append(edges, outEdges...)
 
 		// Process incoming links (linkFrom)
-		inEdges := processIncomingLinks(path, entry.Unit.LinksFrom, v.Units, seen)
+		inEdges := processIncomingLinks(path, inLinks, v.Units, seen)
 		edges = append(edges, inEdges...)
 	}
 

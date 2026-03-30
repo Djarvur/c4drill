@@ -339,3 +339,181 @@ func TestIntegrationLinksWithExternalBoundary(t *testing.T) {
 	assert.Contains(t, v.Units, "externalservice")
 	assert.True(t, v.Units["externalservice"].IsExternal)
 }
+
+// TestIntegrationC1ViewNoNestedBoundaryPollution verifies that deeply nested subunit links
+// do NOT create boundary nodes for every nested unit in C1 view.
+// This is the regression test for the bug where C1 showed ~100 nodes instead of ~5.
+func TestIntegrationC1ViewNoNestedBoundaryPollution(t *testing.T) {
+	t.Parallel()
+
+	// Model mimics the real saira TOML: top-level users, keycloak, and a deeply nested system
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"webUser": {
+				Type: model.TypePersonExternal,
+				Name: "Web User",
+				Links: []model.Link{
+					{Peer: "linuxSystem.localIDP.grpcAPIs.authAPI"},
+					{Peer: "linuxSystem.localIDP.grpcAPIs.sessionAPI"},
+				},
+			},
+			"sshUser": {
+				Type: model.TypePersonExternal,
+				Name: "SSH User",
+				Links: []model.Link{
+					{Peer: "linuxSystem.sshAuth.sshd"},
+				},
+			},
+			"adminUser": {
+				Type: model.TypePersonExternal,
+				Name: "Admin User",
+				Links: []model.Link{
+					{Peer: "linuxSystem.rbac"},
+				},
+			},
+			"keycloak": {
+				Type:        model.TypeSystemExternal,
+				Name:        "Keycloak",
+				Technology:  "External IDP",
+			},
+			"linuxSystem": {
+				Type:        model.TypeSystem,
+				Name:        "Linux System",
+				Description: "Linux server",
+				Subunits: map[string]*model.Unit{
+					"sshAuth": {
+						Type: model.TypeContainerBox,
+						Name: "SSH Auth",
+						Subunits: map[string]*model.Unit{
+							"sshd": {
+								Type: model.TypeContainer,
+								Name: "SSHD",
+								Links: []model.Link{
+									{Peer: "linuxSystem.sshAuth.nss"},
+								},
+							},
+							"nss": {
+								Type: model.TypeContainer,
+								Name: "NSS",
+							},
+						},
+					},
+					"localIDP": {
+						Type: model.TypeContainerBox,
+						Name: "Local IDP",
+						Subunits: map[string]*model.Unit{
+							"grpcAPIs": {
+								Type: model.TypeComponentBox,
+								Name: "gRPC APIs",
+								Subunits: map[string]*model.Unit{
+									"authAPI": {
+										Type: model.TypeComponent,
+										Name: "Auth API",
+										Links: []model.Link{
+											{Peer: "keycloak"},
+										},
+									},
+									"sessionAPI": {
+										Type: model.TypeComponent,
+										Name: "Session API",
+									},
+								},
+							},
+						},
+					},
+					"rbac": {
+						Type: model.TypeContainer,
+						Name: "RBAC",
+					},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC1View(m)
+	require.NotNil(t, v)
+
+	// C1 should show exactly 5 top-level units: webUser, sshUser, adminUser, keycloak, linuxSystem
+	assert.Equal(t, 5, len(v.Units), "C1 should have exactly 5 nodes, got %d: %v", len(v.Units), keys(v.Units))
+
+	// Verify each expected node is present
+	assert.Contains(t, v.Units, "webUser")
+	assert.Contains(t, v.Units, "sshUser")
+	assert.Contains(t, v.Units, "adminUser")
+	assert.Contains(t, v.Units, "keycloak")
+	assert.Contains(t, v.Units, "linuxSystem")
+
+	// Nested units should NOT appear in C1
+	assert.NotContains(t, v.Units, "linuxSystem.sshAuth")
+	assert.NotContains(t, v.Units, "linuxSystem.sshAuth.sshd")
+	assert.NotContains(t, v.Units, "linuxSystem.localIDP.grpcAPIs.authAPI")
+	assert.NotContains(t, v.Units, "linuxSystem.rbac")
+
+	// linuxSystem should have [+] indicator
+	assert.True(t, v.Units["linuxSystem"].HasSubunits)
+}
+
+// keys returns the keys of a map for error messages.
+func keys(m map[string]*view.Entry) []string {
+	result := make([]string, 0, len(m))
+	for k := range m {
+		result = append(result, k)
+	}
+
+	return result
+}
+
+// TestIntegrationC1EdgeResolution verifies that edges in C1 are resolved to top-level ancestors.
+func TestIntegrationC1EdgeResolution(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"webUser": {
+				Type: model.TypePersonExternal,
+				Name: "Web User",
+				// Link targets a deeply nested component
+				Links: []model.Link{
+					{Peer: "system.api.handler", Technology: "HTTP"},
+				},
+			},
+			"system": {
+				Type: model.TypeSystem,
+				Name: "System",
+				Subunits: map[string]*model.Unit{
+					"api": {
+						Type: model.TypeContainer,
+						Name: "API",
+						Subunits: map[string]*model.Unit{
+							"handler": {
+								Type: model.TypeComponent,
+								Name: "Handler",
+								Links: []model.Link{
+									{Peer: "externaldb"},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC1View(m)
+	require.NotNil(t, v)
+
+	// Should have 3 nodes: webUser, system, externaldb
+	assert.Equal(t, 3, len(v.Units))
+
+	// webUser should have a resolved link to system (not system.api.handler)
+	if assert.NotNil(t, v.Units["webUser"].ResolvedLinks) {
+		assert.Equal(t, "system", v.Units["webUser"].ResolvedLinks[0].Peer)
+	}
+
+	// system should have a resolved link to externaldb (from handler's link)
+	if assert.NotNil(t, v.Units["system"].ResolvedLinks) {
+		assert.Equal(t, "externaldb", v.Units["system"].ResolvedLinks[0].Peer)
+	}
+}
