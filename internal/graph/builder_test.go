@@ -315,7 +315,7 @@ func TestBuildGraphWithPathSetsExploreURL(t *testing.T) {
 
 		require.Len(t, g.Nodes, 1)
 		// Node should have explore URL since it has subunits and is not expanded
-		assert.Equal(t, "./mainsystem.svg", g.Nodes[0].ExploreURL)
+		assert.Equal(t, "diagram/mainsystem.svg", g.Nodes[0].ExploreURL)
 	})
 
 	// Test 5: Only system/box types get explore links (not person/db/queue)

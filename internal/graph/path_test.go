@@ -11,49 +11,69 @@ import (
 func TestComputeExploreURL(t *testing.T) {
 	t.Parallel()
 
-	// Test 1: ComputeExploreURL for C1->C2: currentPath="", targetPath="mainapp" returns "./mainapp.svg"
+	// C1->C2: C1 file is at {basename}.dot, C2 target is at {basename}/mainapp.svg
 	t.Run("C1 to C2 navigation", func(t *testing.T) {
 		t.Parallel()
 
 		url := graph.ComputeExploreURL("", "mainapp", "diagram", "svg")
-		assert.Equal(t, "./mainapp.svg", url)
+		assert.Equal(t, "diagram/mainapp.svg", url)
 	})
 
-	// Test 2: ComputeExploreURL for C2->C3: currentPath="mainapp", targetPath="mainapp.api" returns "./mainapp/api.svg"
+	// C2->C3: C2 file is at {basename}/mainapp.dot, C3 target is at {basename}/mainapp/api.svg
 	t.Run("C2 to C3 navigation", func(t *testing.T) {
 		t.Parallel()
 
 		url := graph.ComputeExploreURL("mainapp", "mainapp.api", "diagram", "svg")
-		assert.Equal(t, "./mainapp/api.svg", url)
+		assert.Equal(t, "mainapp/api.svg", url)
 	})
 
-	// Test 3: ComputeExploreURL with special chars: targetPath="api (v2)" returns URL-encoded path
+	// Special chars in target path are URL-encoded
 	t.Run("URL encoding for special characters", func(t *testing.T) {
 		t.Parallel()
 
 		url := graph.ComputeExploreURL("", "api (v2)", "diagram", "svg")
-		assert.Equal(t, "./api%20%28v2%29.svg", url)
+		assert.Equal(t, "diagram/api%20%28v2%29.svg", url)
 	})
 
+	// C3->C4: mainapp.api file at {basename}/mainapp/api.dot,
+	// mainapp.api.auth target at {basename}/mainapp/api/auth.svg
+	// Common directory prefix: mainapp, so relative is api/auth.svg
 	t.Run("nested path with multiple levels", func(t *testing.T) {
 		t.Parallel()
 
 		url := graph.ComputeExploreURL("mainapp.api", "mainapp.api.auth", "diagram", "svg")
-		assert.Equal(t, "./mainapp/api/auth.svg", url)
+		assert.Equal(t, "api/auth.svg", url)
 	})
 
-	t.Run("different format", func(t *testing.T) {
+	// Format parameter is ignored; URLs always use SVG for browser navigation
+	t.Run("different format still produces svg URLs", func(t *testing.T) {
 		t.Parallel()
 
-		url := graph.ComputeExploreURL("", "mainapp", "diagram", "png")
-		assert.Equal(t, "./mainapp.png", url)
+		url := graph.ComputeExploreURL("", "mainapp", "diagram", "dot")
+		assert.Equal(t, "diagram/mainapp.svg", url)
+	})
+
+	// C2->C2 sibling: from mainapp.dot to otherunit.dot (both at same depth under basename/)
+	t.Run("C2 to sibling C2 navigation", func(t *testing.T) {
+		t.Parallel()
+
+		url := graph.ComputeExploreURL("mainapp", "otherunit", "diagram", "svg")
+		assert.Equal(t, "otherunit.svg", url)
+	})
+
+	// C3->C3 sibling: from mainapp/api.dot to mainapp/web.svg (both in same directory)
+	t.Run("C3 to C3 sibling navigation", func(t *testing.T) {
+		t.Parallel()
+
+		url := graph.ComputeExploreURL("mainapp.api", "mainapp.web", "diagram", "svg")
+		assert.Equal(t, "web.svg", url)
 	})
 }
 
 func TestComputeBackLinkURL(t *testing.T) {
 	t.Parallel()
 
-	// Test 4: ComputeBackLinkURL for C2->C1: currentPath="mainapp", format="svg" returns "../basename.svg"
+	// C2->C1: from {basename}/mainapp.dot back to {basename}.dot
 	t.Run("C2 to C1 back-link", func(t *testing.T) {
 		t.Parallel()
 
@@ -61,8 +81,7 @@ func TestComputeBackLinkURL(t *testing.T) {
 		assert.Equal(t, "../diagram.svg", url)
 	})
 
-	// Test 5: ComputeBackLinkURL for C3->C2: currentPath="mainapp.api", format="svg" returns "../mainapp.svg"
-	// File structure: C3 at diagram/mainapp/api.svg, C2 at diagram/mainapp.svg
+	// C3->C2: from {basename}/mainapp/api.dot back to {basename}/mainapp.dot
 	t.Run("C3 to C2 back-link", func(t *testing.T) {
 		t.Parallel()
 

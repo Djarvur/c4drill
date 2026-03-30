@@ -9,17 +9,60 @@ import (
 // currentPath is the dotted path of the current diagram (empty for C1).
 // targetPath is the dotted path of the target unit.
 // basename is the output base filename (from TOML file).
-// format is the output format (e.g., "svg").
-func ComputeExploreURL(_ string, targetPath, _ string, format string) string {
-	// Convert dotted path to directory structure with URL-encoded segments
-	parts := strings.Split(targetPath, ".")
+// format is the output format (e.g., "svg") - ignored; URLs always use "svg"
+// for browser navigation regardless of the format being generated.
+func ComputeExploreURL(currentPath, targetPath, basename, _ string) string {
+	// Always use SVG for clickable links (browser navigation)
+	const linkFormat = "svg"
 
-	encodedParts := make([]string, len(parts))
-	for i, part := range parts {
-		encodedParts[i] = URLEncodePath(part)
+	// Convert dotted target path to URL-encoded directory/file segments
+	targetParts := strings.Split(targetPath, ".")
+	encodedTarget := make([]string, len(targetParts))
+	for i, part := range targetParts {
+		encodedTarget[i] = URLEncodePath(part)
 	}
 
-	return "./" + strings.Join(encodedParts, "/") + "." + format
+	// C1 case: file is at {basename}.{fmt}, target is at {basename}/{path}.svg
+	if currentPath == "" {
+		return basename + "/" + strings.Join(encodedTarget, "/") + "." + linkFormat
+	}
+
+	// For C2/C3, compute proper relative path from current file's directory to target file.
+	//
+	// File layout under {basename}/:
+	//   C2 for "mainapp"        -> mainapp.dot              (dir: .)
+	//   C3 for "mainapp.api"    -> mainapp/api.dot          (dir: mainapp/)
+	//   C4 for "mainapp.api.v2" -> mainapp/api/v2.dot       (dir: mainapp/api/)
+	//
+	// The current file's directory is all parts except the last.
+	// The target file's path is the full encoded target path.
+	currentParts := strings.Split(currentPath, ".")
+
+	// Current file's directory parts (all but last which is filename)
+	currentDirParts := currentParts[:len(currentParts)-1]
+
+	// Find common directory prefix length
+	commonDirLen := 0
+	for i := 0; i < len(currentDirParts) && i < len(encodedTarget); i++ {
+		if currentDirParts[i] == targetParts[i] {
+			commonDirLen++
+		} else {
+			break
+		}
+	}
+
+	// Levels to go up from current directory to common ancestor
+	levelsUp := len(currentDirParts) - commonDirLen
+
+	upPath := ""
+	for range levelsUp {
+		upPath += "../"
+	}
+
+	// Path down from common ancestor to target (all target parts after common prefix)
+	downPath := strings.Join(encodedTarget[commonDirLen:], "/") + "." + linkFormat
+
+	return upPath + downPath
 }
 
 // ComputeBackLinkURL calculates the relative path from current diagram back to parent.
@@ -75,16 +118,10 @@ func computeBreadcrumbURL(parts []string, ancestorIndex int, basename, format st
 	// Number of levels to go up = total depth - ancestor level
 	levelsUp := len(parts) - ancestorIndex - 1
 
-	var (
-		up     string
-		upSb76 strings.Builder
-	)
-
+	up := ""
 	for range levelsUp {
-		upSb76.WriteString("../")
+		up += "../"
 	}
-
-	up += upSb76.String()
 
 	if ancestorIndex == 0 {
 		// First level ancestor - link to C1 basename
