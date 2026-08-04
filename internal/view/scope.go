@@ -399,13 +399,15 @@ func GenerateC2View(m *parser.Model, systemPath string) *View {
 	}
 
 	v := &View{
-		Level:        LevelC2,
-		Title:        systemUnit.Name + " - Containers",
-		Edges:        systemUnit.Edges,
-		Parent:       systemPath,
-		ExpandedUnit: systemPath,
-		UnitOrder:    make([]string, 0),
-		Units:        make(map[string]*Entry),
+		Level:             LevelC2,
+		Title:             systemUnit.Name + " - Containers",
+		RootTitle:         m.Properties.Name,
+		Edges:             systemUnit.Edges,
+		Parent:            systemPath,
+		ExpandedUnit:      systemPath,
+		ExpandedUnitModel: systemUnit,
+		UnitOrder:         make([]string, 0),
+		Units:             make(map[string]*Entry),
 	}
 
 	// Determine iteration order: use SubunitOrder if available, otherwise fallback to map keys
@@ -436,8 +438,17 @@ func GenerateC2View(m *parser.Model, systemPath string) *View {
 		v.UnitOrder = append(v.UnitOrder, fullPath)
 	}
 
-	// Add external boundary nodes for links from subunits
+	// Add external boundary nodes for links from subunits (recursively)
 	addExternalBoundaryNodesForSubunits(v, m, systemUnit.Subunits, subunitOrder, systemPath)
+
+	// Resolve links for boundary nodes (external entities have deep links that need resolving)
+	resolveBoundaryNodeLinks(v)
+
+	// Resolve cross-subunit links: when a descendant of subunit A links to a
+	// descendant of subunit B (or to an external boundary node), create a
+	// resolved link A -> B on subunit A's entry. Without this, edges between
+	// sibling subunits are lost because the peer path is too deep for isTargetInView.
+	resolveSubunitCrossLinks(v, m, systemUnit.Subunits, subunitOrder, systemPath)
 
 	return v
 }
@@ -469,13 +480,15 @@ func GenerateC3View(m *parser.Model, containerPath string) *View {
 	}
 
 	v := &View{
-		Level:        LevelC3,
-		Title:        title,
-		Edges:        containerUnit.Edges,
-		Parent:       parentPath,
-		ExpandedUnit: containerPath,
-		UnitOrder:    make([]string, 0),
-		Units:        make(map[string]*Entry),
+		Level:             LevelC3,
+		Title:             title,
+		RootTitle:         m.Properties.Name,
+		Edges:             containerUnit.Edges,
+		Parent:            parentPath,
+		ExpandedUnit:      containerPath,
+		ExpandedUnitModel: containerUnit,
+		UnitOrder:         make([]string, 0),
+		Units:             make(map[string]*Entry),
 	}
 
 	// Determine iteration order: use SubunitOrder if available, otherwise fallback to map keys
@@ -508,6 +521,14 @@ func GenerateC3View(m *parser.Model, containerPath string) *View {
 
 	// Add external boundary nodes for links from subunits
 	addExternalBoundaryNodesForSubunits(v, m, containerUnit.Subunits, subunitOrder, containerPath)
+
+	// Resolve links for boundary nodes (external entities have deep links that need resolving)
+	resolveBoundaryNodeLinks(v)
+
+	// Resolve cross-subunit links: when a descendant of one component links to
+	// a descendant of another component (or to an external boundary node), create
+	// a resolved link between the components.
+	resolveSubunitCrossLinks(v, m, containerUnit.Subunits, subunitOrder, containerPath)
 
 	return v
 }
@@ -547,32 +568,316 @@ func findUnitByPath(m *parser.Model, path string) *model.Unit {
 	return unit
 }
 
-// addExternalBoundaryNodesForSubunits scans links from subunits and adds
-// boundary nodes for referenced units that are not in the current view.
+// addExternalBoundaryNodesForSubunits scans links from subunits (recursively) and adds
+// boundary nodes for referenced units that are outside the current view's scope.
+// It resolves link peers to their nearest visible ancestor in the view, so deeply
+// nested links (e.g., linuxSystem.storages.localStorage.lookupAPI) are resolved
+// to the nearest visible parent (e.g., linuxSystem.storages) rather than appearing
+// as individual boundary nodes.
 func addExternalBoundaryNodesForSubunits(v *View, m *parser.Model, subunits map[string]*model.Unit, subunitOrder []string, parentPath string) {
-	// Iterate in definition order
+	// Iterate in definition order, recursing into nested subunits
 	for _, name := range subunitOrder {
 		unit := subunits[name]
 		if unit == nil {
 			continue
 		}
 
+		fullPath := parentPath + "." + name
+
 		// Check outgoing links
 		for _, link := range unit.Links {
-			if _, exists := v.Units[link.Peer]; !exists {
-				// Create external boundary node, preserving original unit data if it exists in model
-				v.Units[link.Peer] = createExternalBoundaryNode(m, link.Peer, parentPath)
-				v.UnitOrder = append(v.UnitOrder, link.Peer) // Append at end
-			}
+			addResolvedBoundaryNode(v, m, link.Peer, parentPath)
 		}
 
 		// Check incoming links (LinksFrom)
 		for _, link := range unit.LinksFrom {
-			if _, exists := v.Units[link.Peer]; !exists {
-				// Create external boundary node, preserving original unit data if it exists in model
-				v.Units[link.Peer] = createExternalBoundaryNode(m, link.Peer, parentPath)
-				v.UnitOrder = append(v.UnitOrder, link.Peer) // Append at end
+			addResolvedBoundaryNode(v, m, link.Peer, parentPath)
+		}
+
+		// Recurse into nested subunits
+		if len(unit.Subunits) > 0 {
+			var childOrder []string
+			if len(unit.SubunitOrder) > 0 {
+				childOrder = unit.SubunitOrder
+			} else {
+				for childName := range unit.Subunits {
+					childOrder = append(childOrder, childName)
+				}
+			}
+
+			addExternalBoundaryNodesForSubunits(v, m, unit.Subunits, childOrder, fullPath)
+		}
+	}
+}
+
+// addResolvedBoundaryNode resolves a link peer to its nearest visible ancestor
+// in the view and adds it as a boundary node if it's outside the view's scope.
+// If the peer is already in the view, nothing happens.
+// If the peer is a nested path whose ancestor is in the view, nothing happens
+// (the ancestor is already visible).
+// If the peer is completely outside the scope, it's added as a boundary node.
+func addResolvedBoundaryNode(v *View, m *parser.Model, peer, scopePath string) {
+	// If already in view, nothing to do
+	if _, exists := v.Units[peer]; exists {
+		return
+	}
+
+	// Walk up the peer's path to find the nearest visible ancestor
+	for {
+		idx := strings.LastIndex(peer, ".")
+		if idx <= 0 {
+			break
+		}
+
+		peer = peer[:idx]
+
+		if _, exists := v.Units[peer]; exists {
+			// An ancestor is in the view — peer is an internal nested reference
+			return
+		}
+	}
+
+	// Peer has no ancestor in the view — it's external, add as boundary node
+	if _, exists := v.Units[peer]; !exists {
+		v.Units[peer] = createExternalBoundaryNode(m, peer, scopePath)
+		v.UnitOrder = append(v.UnitOrder, peer)
+	}
+}
+
+// resolveBoundaryNodeLinks resolves links for external boundary nodes so that
+// edges connect to the nearest visible ancestor in the view.
+// For example, if webUser links to linuxSystem.localIDP.grpcAPIs.authAPI but the
+// view only shows linuxSystem.localIDP, the link is resolved to
+// webUser -> linuxSystem.localIDP.
+func resolveBoundaryNodeLinks(v *View) {
+	for _, path := range v.UnitOrder {
+		entry := v.Units[path]
+		if entry == nil || !entry.IsExternal {
+			continue
+		}
+
+		if len(entry.Unit.Links) == 0 && len(entry.Unit.LinksFrom) == 0 {
+			continue
+		}
+
+		// Resolve outgoing links
+		if len(entry.Unit.Links) > 0 {
+			resolved := make([]model.Link, 0, len(entry.Unit.Links))
+			for _, link := range entry.Unit.Links {
+				resolvedPeer := resolveToViewAncestor(v, link.Peer)
+				if resolvedPeer != "" && resolvedPeer != path {
+					resolved = append(resolved, model.Link{
+						Peer:          resolvedPeer,
+						Arrow:         link.Arrow,
+						Rank:          link.Rank,
+						Color:         link.Color,
+						Style:         link.Style,
+						Technology:    link.Technology,
+						Description:   link.Description,
+						LabelPosition: link.LabelPosition,
+						Length:        link.Length,
+					})
+				}
+			}
+			if len(resolved) > 0 {
+				entry.ResolvedLinks = resolved
+			}
+		}
+
+		// Resolve incoming links (LinksFrom)
+		if len(entry.Unit.LinksFrom) > 0 {
+			resolved := make([]model.Link, 0, len(entry.Unit.LinksFrom))
+			for _, link := range entry.Unit.LinksFrom {
+				resolvedPeer := resolveToViewAncestor(v, link.Peer)
+				if resolvedPeer != "" && resolvedPeer != path {
+					resolved = append(resolved, model.Link{
+						Peer:          resolvedPeer,
+						Arrow:         link.Arrow,
+						Rank:          link.Rank,
+						Color:         link.Color,
+						Style:         link.Style,
+						Technology:    link.Technology,
+						Description:   link.Description,
+						LabelPosition: link.LabelPosition,
+						Length:        link.Length,
+					})
+				}
+			}
+			if len(resolved) > 0 {
+				entry.ResolvedLinksFrom = resolved
 			}
 		}
 	}
+}
+
+// resolveToViewAncestor resolves a peer path to its nearest ancestor
+// (or itself) that is present in the view.
+// Returns "" if no ancestor is found in the view.
+func resolveToViewAncestor(v *View, peer string) string {
+	// Check if peer itself is in the view
+	if _, exists := v.Units[peer]; exists {
+		return peer
+	}
+
+	// Walk up the peer's path to find nearest visible ancestor
+	for {
+		idx := strings.LastIndex(peer, ".")
+		if idx <= 0 {
+			break
+		}
+
+		peer = peer[:idx]
+
+		if _, exists := v.Units[peer]; exists {
+			return peer
+		}
+	}
+
+	// Check if the top-level peer (no dots) is in the view
+	if _, exists := v.Units[peer]; exists {
+		return peer
+	}
+
+	return ""
+}
+
+// resolveSubunitCrossLinks scans all descendants of each subunit and creates
+// ResolvedLinks on the subunit entry when a descendant's link points to a
+// different subunit or external boundary node in the view.
+// This ensures that edges between sibling subunits (e.g., dacProxy -> authModules)
+// appear in C2/C3 diagrams even though the actual links are between deeply nested
+// descendants (e.g., dacProxy.Unit.Links -> authModules.otp.settingsAPI).
+func resolveSubunitCrossLinks(v *View, m *parser.Model, subunits map[string]*model.Unit, subunitOrder []string, parentPath string) {
+	for _, name := range subunitOrder {
+		unit := subunits[name]
+		if unit == nil {
+			continue
+		}
+
+		fullPath := parentPath + "." + name
+		subunitEntry := v.Units[fullPath]
+		if subunitEntry == nil {
+			continue
+		}
+
+		// Process direct links on the subunit itself
+		for _, link := range unit.Links {
+			addResolvedCrossLink(v, subunitEntry, fullPath, link)
+		}
+
+		// Process direct incoming links on the subunit itself
+		for _, link := range unit.LinksFrom {
+			addResolvedCrossLinkFrom(v, subunitEntry, fullPath, link)
+		}
+
+		// Recursively process descendant links
+		if len(unit.Subunits) > 0 {
+			var childOrder []string
+			if len(unit.SubunitOrder) > 0 {
+				childOrder = unit.SubunitOrder
+			} else {
+				for childName := range unit.Subunits {
+					childOrder = append(childOrder, childName)
+				}
+			}
+
+			resolveDescendantCrossLinks(v, subunitEntry, fullPath, unit.Subunits, childOrder, fullPath)
+		}
+	}
+}
+
+// resolveDescendantCrossLinks recursively scans a subunit's descendants for links
+// and adds resolved links to the subunit entry when the link target resolves to
+// a different subunit or external boundary node in the view.
+// entryPath is the fixed path of the subunit entry (used to detect self-links).
+// parentPath is the current recursion depth (changes as we recurse deeper).
+func resolveDescendantCrossLinks(v *View, subunitEntry *Entry, entryPath string, subunits map[string]*model.Unit, subunitOrder []string, parentPath string) {
+	for _, name := range subunitOrder {
+		unit := subunits[name]
+		if unit == nil {
+			continue
+		}
+
+		fullPath := parentPath + "." + name
+
+		// Process outgoing links
+		for _, link := range unit.Links {
+			addResolvedCrossLink(v, subunitEntry, entryPath, link)
+		}
+
+		// Process incoming links (LinksFrom)
+		for _, link := range unit.LinksFrom {
+			addResolvedCrossLinkFrom(v, subunitEntry, entryPath, link)
+		}
+
+		// Recurse into nested subunits
+		if len(unit.Subunits) > 0 {
+			var childOrder []string
+			if len(unit.SubunitOrder) > 0 {
+				childOrder = unit.SubunitOrder
+			} else {
+				for childName := range unit.Subunits {
+					childOrder = append(childOrder, childName)
+				}
+			}
+
+			resolveDescendantCrossLinks(v, subunitEntry, entryPath, unit.Subunits, childOrder, fullPath)
+		}
+	}
+}
+
+// addResolvedCrossLink resolves a link peer to the nearest visible ancestor in the view
+// and adds it as a ResolvedLink on the subunit entry if it points to a different entity.
+func addResolvedCrossLink(v *View, subunitEntry *Entry, sourcePath string, link model.Link) {
+	resolvedPeer := resolveToViewAncestor(v, link.Peer)
+	if resolvedPeer == "" || resolvedPeer == sourcePath {
+		return
+	}
+
+	// Check if this exact resolved link already exists (avoid duplicates)
+	for _, existing := range subunitEntry.ResolvedLinks {
+		if existing.Peer == resolvedPeer {
+			return
+		}
+	}
+
+	subunitEntry.ResolvedLinks = append(subunitEntry.ResolvedLinks, model.Link{
+		Peer:          resolvedPeer,
+		Technology:    link.Technology,
+		Description:   link.Description,
+		Style:         link.Style,
+		Arrow:         link.Arrow,
+		Rank:          link.Rank,
+		LabelPosition: link.LabelPosition,
+		Color:         link.Color,
+		Length:        link.Length,
+	})
+}
+
+// addResolvedCrossLinkFrom resolves an incoming link peer and adds it as a
+// ResolvedLinksFrom on the subunit entry if it points to a different entity.
+func addResolvedCrossLinkFrom(v *View, subunitEntry *Entry, sourcePath string, link model.Link) {
+	resolvedPeer := resolveToViewAncestor(v, link.Peer)
+	if resolvedPeer == "" || resolvedPeer == sourcePath {
+		return
+	}
+
+	// Check if this exact resolved link already exists (avoid duplicates)
+	for _, existing := range subunitEntry.ResolvedLinksFrom {
+		if existing.Peer == resolvedPeer {
+			return
+		}
+	}
+
+	subunitEntry.ResolvedLinksFrom = append(subunitEntry.ResolvedLinksFrom, model.Link{
+		Peer:          resolvedPeer,
+		Technology:    link.Technology,
+		Description:   link.Description,
+		Style:         link.Style,
+		Arrow:         link.Arrow,
+		Rank:          link.Rank,
+		LabelPosition: link.LabelPosition,
+		Color:         link.Color,
+		Length:        link.Length,
+	})
 }

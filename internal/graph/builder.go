@@ -10,6 +10,8 @@ import (
 
 // BuildGraph constructs a graph structure from a view.
 // The graph contains nodes, edges, and clusters ready for DOT rendering.
+// For C2/C3 views, internal nodes are wrapped in a boundary cluster representing
+// the expanded system/container. External boundary nodes remain at the top level.
 func BuildGraph(v *view.View) *Graph {
 	if v == nil {
 		return nil
@@ -24,15 +26,44 @@ func BuildGraph(v *view.View) *Graph {
 		Clusters:  make([]*Cluster, 0),
 	}
 
-	// Build nodes and clusters in definition order (from view.UnitOrder)
-	for _, key := range v.UnitOrder {
-		entry := v.Units[key]
-		if entry.IsExpanded {
-			cluster := buildCluster(entry)
-			g.Clusters = append(g.Clusters, cluster)
-		} else {
-			node := buildNode(entry)
-			g.Nodes = append(g.Nodes, node)
+	// For C2/C3 views, wrap internal nodes in a boundary cluster
+	if v.Level != view.LevelC1 && v.ExpandedUnit != "" {
+		boundaryCluster := buildBoundaryCluster(v)
+
+		// Build nodes and clusters in definition order
+		for _, key := range v.UnitOrder {
+			entry := v.Units[key]
+
+			// External boundary nodes go at top level
+			if entry.IsExternal {
+				node := buildNode(entry)
+				g.Nodes = append(g.Nodes, node)
+				continue
+			}
+
+			// Internal nodes go inside the boundary cluster
+			if entry.IsExpanded {
+				cluster := buildCluster(entry)
+				boundaryCluster.Clusters = append(boundaryCluster.Clusters, cluster)
+			} else {
+				node := buildNode(entry)
+				node.IsInCluster = true
+				boundaryCluster.Nodes = append(boundaryCluster.Nodes, node)
+			}
+		}
+
+		g.Clusters = append(g.Clusters, boundaryCluster)
+	} else {
+		// C1 view: build nodes and clusters in definition order (from view.UnitOrder)
+		for _, key := range v.UnitOrder {
+			entry := v.Units[key]
+			if entry.IsExpanded {
+				cluster := buildCluster(entry)
+				g.Clusters = append(g.Clusters, cluster)
+			} else {
+				node := buildNode(entry)
+				g.Nodes = append(g.Nodes, node)
+			}
 		}
 	}
 
@@ -40,6 +71,53 @@ func BuildGraph(v *view.View) *Graph {
 	g.Edges = buildEdges(v)
 
 	return g
+}
+
+// buildBoundaryCluster creates a cluster representing the expanded system/container
+// boundary for C2/C3 views. Internal nodes and sub-clusters are placed inside this
+// cluster, while external boundary nodes remain at the graph's top level.
+func buildBoundaryCluster(v *view.View) *Cluster {
+	unit := v.ExpandedUnitModel
+	var label *Label
+	var style *NodeStyle
+
+	if unit != nil {
+		label = &Label{
+			Name:        unit.Name,
+			Technology:  unit.Technology,
+			Description: unit.Description,
+			Icon:        IconForType(unit.Type),
+		}
+		style = GetStyleForType(unit.Type, false)
+	} else {
+		// Fallback: derive name from ExpandedUnit path
+		name := v.ExpandedUnit
+		if idx := strings.LastIndex(name, "."); idx >= 0 {
+			name = name[idx+1:]
+		}
+		label = &Label{Name: name}
+		style = &NodeStyle{
+			BorderColor: model.PersonBorder,
+			FontColor:   model.PersonBorder,
+		}
+	}
+
+	return &Cluster{
+		ID:        v.ExpandedUnit,
+		Label:     label,
+		Nodes:     make([]*Node, 0),
+		Clusters:  make([]*Cluster, 0),
+		Style:     style,
+		Type:      unitTypeOrDefault(unit),
+	}
+}
+
+// unitTypeOrDefault returns the unit type or TypeSystem as default.
+func unitTypeOrDefault(unit *model.Unit) model.UnitType {
+	if unit == nil {
+		return model.TypeSystem
+	}
+	return unit.Type
 }
 
 // BuildExpandedGraph constructs a graph with nested clusters for all-expanded mode.
@@ -471,7 +549,11 @@ func extractParentName(v *view.View, _ string) string {
 			// Return the parent part (second to last)
 			return parts[len(parts)-2]
 		}
-		// Single part means C2, parent is the root
+		// Single part means C2, parent is the root diagram
+		if v.RootTitle != "" {
+			return v.RootTitle
+		}
+
 		return v.ExpandedUnit
 	}
 
@@ -479,6 +561,26 @@ func extractParentName(v *view.View, _ string) string {
 }
 
 // buildBreadcrumbs creates breadcrumb items from the view.
+// For C2 views (single-segment ExpandedUnit), it prepends a root breadcrumb
+// pointing to the C1 diagram.
 func buildBreadcrumbs(v *view.View, basename, format string) []BreadcrumbItem {
-	return BuildBreadcrumbPath(v.ExpandedUnit, basename, format)
+	crumbs := BuildBreadcrumbPath(v.ExpandedUnit, basename, format)
+
+	// For C2 views, the single-segment path produces only one breadcrumb
+	// (the current level). Prepend the root C1 diagram as parent breadcrumb.
+	if v.Level == view.LevelC2 && len(crumbs) > 0 {
+		rootName := v.RootTitle
+		if rootName == "" {
+			rootName = "Context"
+		}
+
+		rootCrumb := BreadcrumbItem{
+			Name: rootName,
+			URL:  ComputeBackLinkURL(v.ExpandedUnit, basename, format),
+		}
+
+		crumbs = append([]BreadcrumbItem{rootCrumb}, crumbs...)
+	}
+
+	return crumbs
 }

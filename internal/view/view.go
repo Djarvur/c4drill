@@ -22,6 +22,9 @@ type View struct {
 	Level Level
 	// Title is the diagram title (from properties.name or parent name).
 	Title string
+	// RootTitle is the C1 root diagram title (from properties.name).
+	// Used by navigation to display correct back-links text for C2/C3 views.
+	RootTitle string
 	// UnitOrder tracks the definition order of unit paths.
 	UnitOrder []string
 	// Units are the units visible in this view (keyed by full path).
@@ -32,6 +35,9 @@ type View struct {
 	Parent string
 	// ExpandedUnit is the unit being expanded (for C2/C3 views).
 	ExpandedUnit string
+	// ExpandedUnitModel is the model unit for the expanded entity (for C2/C3 views).
+	// Used by the graph builder to create the boundary cluster label.
+	ExpandedUnitModel *model.Unit
 }
 
 // Entry represents a unit entry within a view.
