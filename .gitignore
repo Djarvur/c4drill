@@ -70,3 +70,6 @@ draft.txt
 
 # Private test data — cyp-auth-infra architecture (keep local, never commit)
 cyp-auth-infra/
+
+# GSD runtime state (hooks write-gate state, per-machine)
+.gsd/
