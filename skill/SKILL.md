@@ -539,7 +539,19 @@ c4drill architecture.toml
 Success = no output (generates SVG by default)
 Failure = error message with line number
 
+### Output Formats
+
+| Flag | Format | Use when |
+|------|--------|----------|
+| (default) | `svg` | General use; clickable navigation in Chrome/Firefox |
+| `-f html` | `html` | Safari/WebKit (which ignores SVG `<a>` links); also `file://` viewing |
+| `-f dot` | `dot` | Customizing layout in GraphViz tools |
+
+```bash
+c4drill architecture.toml -f html    # Safari-compatible
+```
+
 ---
 
-*Skill version: 1.0.0*
-*C4Drill version: v1.0+*
+*Skill version: 1.1.0*
+*C4Drill version: v1.9+*
