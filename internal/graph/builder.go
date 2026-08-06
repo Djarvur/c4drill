@@ -65,7 +65,9 @@ func BuildGraph(v *view.View) *Graph {
 			}
 
 			entry := v.Units[key]
-			if entry.IsExpanded {
+			// D-07: expansion only takes effect when there are subunits to
+			// show — an expanded-but-empty unit renders as a plain node.
+			if entry.IsExpanded && len(entry.Unit.Subunits) > 0 {
 				cluster := buildCluster(entry)
 				g.Clusters = append(g.Clusters, cluster)
 			} else {
