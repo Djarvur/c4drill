@@ -11,7 +11,7 @@ Fix view generation so C1 shows only top-level units, C2/C3 diagrams are auto-ge
 
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
-| 1 | Fix C1 View Scoping | 3/3 | Complete   | 2026-08-06 |
+| 1 | Fix C1 View Scoping | 3/3 | Complete    | 2026-08-06 |
 | 2 | Auto-generate C2/C3 | Create sub-diagrams for units with subunits | VIEW-03, VIEW-04, VIEW-05 | 3 |
 | 3 | Compatibility & Validation | Existing TOML files and --expanded still work | COMPAT-01, COMPAT-02 | 2 |
 
