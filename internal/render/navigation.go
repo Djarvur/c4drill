@@ -47,7 +47,7 @@ func BuildNavigationLabel(nav *graph.Navigation) string {
 		return ""
 	}
 
-	return "<TABLE BORDER=\"0\" CELLBORDER=\"0\" CELLSPACING=\"0\" ALIGN=\"CENTER\">" +
+	return "<TABLE BORDER=\"0\" CELLBORDER=\"0\" CELLSPACING=\"0\" CELLPADDING=\"0\" ALIGN=\"CENTER\">" +
 		"<TR>" + strings.Join(tds, "") + "</TR></TABLE>"
 }
 
@@ -79,15 +79,16 @@ func breadcrumbTDs(items []graph.BreadcrumbItem) []string {
 	var tds []string
 
 	for i, item := range items {
-		// Determine whether a trailing separator is needed (all items except
-		// the last get a "→" appended inside their cell).
-		isLast := i == len(items)-1
-		separator := ""
-		if !isLast {
-			separator = "&#8594;"
+		// Leading separator on all items except the first (merged into the
+		// item's cell as a prefix, avoiding inter-cell gaps that GraphViz
+		// adds between trailing separators and the next cell's content).
+		isFirst := i == 0
+		prefix := ""
+		if !isFirst {
+			prefix = "&#8594;"
 		}
 
-		tds = append(tds, breadcrumbItemTD(item, separator))
+		tds = append(tds, breadcrumbItemTD(item, prefix))
 	}
 
 	return tds
@@ -95,19 +96,19 @@ func breadcrumbTDs(items []graph.BreadcrumbItem) []string {
 
 // breadcrumbItemTD renders a single breadcrumb item as a clickable or plain TD.
 // Clickable items are wrapped in <U> (underline) inside the muted <FONT> so
-// they are recognisable as links. The trailing separator (typically " > ") is
-// appended inside the same cell to keep the breadcrumb compact.
-func breadcrumbItemTD(item graph.BreadcrumbItem, separator string) string {
+// they are recognisable as links. The leading separator (→) is prepended
+// inside the same cell to keep the breadcrumb compact.
+func breadcrumbItemTD(item graph.BreadcrumbItem, prefix string) string {
 	escaped := html.EscapeString(item.Name)
 	if item.URL == "" {
-		return plainNavTD(escaped + separator)
+		return plainNavTD(prefix + escaped)
 	}
 
 	// HTML-escape the URL for the HREF attribute (WR-01): url.PathEscape does
 	// not escape '&', which GraphViz's HTML-like label parser rejects, silently
 	// dropping the breadcrumb anchor.
-	return fmt.Sprintf(`<TD HREF="%s">%s<U>%s</U>%s%s</TD>`,
-		html.EscapeString(item.URL), navFontOpen, escaped, separator, "</FONT>")
+	return fmt.Sprintf(`<TD HREF="%s">%s%s<U>%s</U>%s</TD>`,
+		html.EscapeString(item.URL), navFontOpen, prefix, escaped, "</FONT>")
 }
 
 // plainNavTD wraps a literal HTML fragment (already escaped or a known entity)

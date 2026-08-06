@@ -224,7 +224,7 @@ func configureGraphSettings(cg *cgraph.Graph, g *graph.Graph) error {
 		rows = append(rows, "<TR>"+titleTD+"</TR>")
 	}
 
-	combinedHTML := "<TABLE BORDER=\"0\" CELLBORDER=\"0\" CELLSPACING=\"0\" ALIGN=\"CENTER\">" +
+	combinedHTML := "<TABLE BORDER=\"0\" CELLBORDER=\"0\" CELLSPACING=\"0\" CELLPADDING=\"0\" ALIGN=\"CENTER\">" +
 		strings.Join(rows, "") + "</TABLE>"
 
 	htmlStr, err := cg.StrdupHTML(combinedHTML)
