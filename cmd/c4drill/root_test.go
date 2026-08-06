@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -669,6 +670,148 @@ func TestCompat02_MultilevelFixtureFiveNodeC1(t *testing.T) {
 	// C3 sub-diagram for mainSystem.sshAuth (auto-detected: has subunits).
 	_, err = os.Stat(filepath.Join(tmpDir, "multilevel", "mainSystem", "sshAuth.dot"))
 	require.NoError(t, err, "C3 diagram for mainSystem.sshAuth should exist")
+}
+
+// TestCompat02_NavigationLinksResolve (03-04-03) proves the three UAT
+// navigation gaps are closed end-to-end on the public multilevel.toml fixture:
+//
+//	Gap 1: every explore href in C2/C3 SVGs resolves to an existing sibling
+//	       file (os.Stat join against the real CLI-generated tree); the C3
+//	       collapsed-ancestor node no longer emits the empty href=".svg".
+//	Gap 2: the navigation bar renders as clickable <a xlink:href> anchors in
+//	       SVG (not escaped &lt;a href= literal text).
+//	Gap 3: the .dot render format still emits .svg navigation URLs.
+//
+// The DOT-level canonicalDOT golden (TestBuildExpandedGraphBaselineDOT) strips
+// and normalizes URL/label attributes, so it cannot enforce these user-facing
+// navigation contracts; this test does.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestCompat02_NavigationLinksResolve(t *testing.T) {
+	svgDir := generateMultilevelOutput(t, "svg")
+
+	t.Run("C2 SVG navigation is clickable and hrefs resolve", func(t *testing.T) {
+		c2 := readOutputFile(t, filepath.Join(svgDir, "multilevel", "mainSystem.svg"))
+
+		assert.Contains(t, c2, `<a xlink:href=`,
+			"C2 SVG navigation bar must render clickable anchors (Gap 2)")
+		assert.NotContains(t, c2, `&lt;a href=`,
+			"C2 SVG must not contain escaped nav markup (Gap 2)")
+
+		c2Dir := filepath.Join(svgDir, "multilevel")
+		for _, href := range collectNavAndExploreHrefs(c2) {
+			assertHrefsResolve(t, c2Dir, href, "C2 mainSystem.svg")
+		}
+	})
+
+	t.Run("C3 SVG ancestor link resolves and no empty href", func(t *testing.T) {
+		c3 := readOutputFile(t, filepath.Join(svgDir, "multilevel", "mainSystem", "sshAuth.svg"))
+
+		// Gap 1 symptom B: the C3 collapsed-ancestor node must not emit the
+		// empty href=".svg" ComputeExploreURL produced before the self-link
+		// guard.
+		assert.NotContains(t, c3, `href=".svg"`,
+			"C3 SVG must not contain the empty href=\".svg\" (Gap 1 symptom B)")
+		assert.Contains(t, c3, `<a xlink:href=`,
+			"C3 SVG navigation bar must render clickable anchors (Gap 2)")
+
+		hrefs := collectNavAndExploreHrefs(c3)
+		require.NotEmpty(t, hrefs, "C3 SVG should contain clickable hrefs")
+		// The C2 ancestor (mainSystem.svg) must be reachable upward from C3.
+		assert.Contains(t, hrefs, "../mainSystem.svg",
+			"C3 SVG must link upward to its C2 ancestor mainSystem.svg (Gap 1)")
+
+		c3Dir := filepath.Join(svgDir, "multilevel", "mainSystem")
+		for _, href := range hrefs {
+			assertHrefsResolve(t, c3Dir, href, "C3 sshAuth.svg")
+		}
+	})
+
+	t.Run("dot render still uses svg navigation URLs", func(t *testing.T) {
+		dotDir := generateMultilevelOutput(t, "dot")
+		dotStr := readOutputFile(t, filepath.Join(dotDir, "multilevel", "mainSystem.dot"))
+
+		// Gap 3: even though the render format is .dot, navigation URLs must
+		// end with .svg (browser-navigable), matching the explore URLs.
+		assert.Contains(t, dotStr, "../multilevel.svg",
+			"C2 .dot navigation back-link must use ../multilevel.svg (Gap 3)")
+		assert.NotContains(t, dotStr, "../multilevel.dot",
+			"C2 .dot navigation must not reference the .dot file (Gap 3)")
+	})
+}
+
+// generateMultilevelOutput runs the c4drill CLI on the multilevel fixture into
+// a fresh temp directory in the given format and returns that directory.
+func generateMultilevelOutput(t *testing.T, format string) string {
+	t.Helper()
+
+	dir := t.TempDir()
+	cmd := NewRootCmd()
+	cmd.SetArgs([]string{
+		filepath.Join("testdata", "multilevel.toml"),
+		"--output", dir,
+		"--format", format,
+	})
+	require.NoError(t, cmd.Execute())
+
+	return dir
+}
+
+// readOutputFile reads a generated output file. The gosec G304 nolint applies
+// because the path is constructed inside t.TempDir().
+//
+//nolint:gosec // G304: Test reads files generated into t.TempDir()
+func readOutputFile(t *testing.T, path string) string {
+	t.Helper()
+
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+
+	return string(data)
+}
+
+// collectNavAndExploreHrefs extracts every href value (navigation xlink:href
+// anchors and node URL/xlink:href explore links) from a rendered SVG string.
+// GraphViz emits hrefs as xlink:href="..." in SVG output.
+func collectNavAndExploreHrefs(svg string) []string {
+	var hrefs []string
+
+	const marker = `xlink:href="`
+	for {
+		idx := strings.Index(svg, marker)
+		if idx < 0 {
+			break
+		}
+
+		start := idx + len(marker)
+		rest := svg[start:]
+
+		end := strings.Index(rest, `"`)
+		if end < 0 {
+			break
+		}
+
+		href := rest[:end]
+		if href != "" {
+			hrefs = append(hrefs, href)
+		}
+
+		svg = svg[start+end:]
+	}
+
+	return hrefs
+}
+
+// assertHrefsResolve asserts that a single href resolves to an existing file
+// when joined with the directory of the SVG that emitted it.
+func assertHrefsResolve(t *testing.T, dir, href, src string) {
+	t.Helper()
+
+	resolved := filepath.Join(dir, href)
+	if _, err := os.Stat(resolved); err != nil {
+		t.Errorf("href %q from %s does not resolve (joined %s): %v",
+			href, src, resolved, err)
+	}
 }
 
 // =============================================================================
