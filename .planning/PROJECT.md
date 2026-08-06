@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A Go CLI tool for generating C4 architecture diagrams from TOML definitions. Users describe their system architecture in a structured TOML file, and C4Drill renders it as GraphViz DOT or SVG diagrams. Supports C1 (Context), C2 (Containers), and C3 (Components) layers with collapsed/expanded views and interactive explore links.
+A Go CLI tool for generating C4 architecture diagrams from TOML definitions. Users describe their system architecture in a structured TOML file, and C4Drill renders it as GraphViz DOT, SVG, or HTML diagrams. Supports C1 (Context), C2 (Containers), and C3 (Components) layers with collapsed/expanded views and interactive explore links. The HTML format (`-f html`) wraps the SVG in a self-contained document with a JS shim so clickable navigation works in Safari/WebKit (which silently ignores SVG `<a>` hyperlinks).
 
 ## Core Value
 
@@ -71,6 +71,11 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - ✓ Person units → 2-column table with 👤 emoji
 - ✓ System/Box/Container/Component → 3-row table
 
+### Post-v1.8 Fixes (2026-08-06, unscoped — from post-UAT testing)
+
+- ✓ **Safari SVG link fix**: new `-f html` output format. Safari/WebKit silently ignores SVG `<a>` navigation; the HTML format inlines the SVG and injects a JS shim that restores clickable drill-down navigation. SVG and DOT formats unchanged (default stays svg).
+- ✓ **Navigation redesign**: dropped the redundant back-link (breadcrumb-only nav); breadcrumb items now show pretty unit Names (not raw path keys); root context always present in C2/C3 breadcrumbs (navigate to C1 from any level); title visually distinct from nav (14pt vs 10pt gray); breadcrumb items tightly packed (separator merged into item cells to avoid GraphViz column-stretching gaps).
+
 ### Out of Scope
 
 - **C4 Layer 4 (Code)** — Class/function level diagrams not needed
@@ -97,7 +102,7 @@ The tool uses nested TOML objects where each level contains strictly typed subun
 
 - **Tech Stack**: Go 1.26.1
 - **Input Format**: TOML — single file
-- **Output**: GraphViz DOT and SVG via go-graphviz
+- **Output**: GraphViz DOT, SVG, or HTML via go-graphviz (HTML = SVG inlined in a wrapper with a JS nav shim for Safari compatibility)
 - **Diagram Scope**: C1-C3 layers only
 
 ## Key Decisions
@@ -166,7 +171,7 @@ link = { "target_unit" = { reverse = false, equal = false, color = "black", styl
 
 - **Collapsed**: Single record shape with "explore" link to drill-down file
 - **Expanded**: Cluster with subunits rendered inside
-- **File structure**: `{basename}.svg` for context, `{basename}/` directory for expanded units
+- **File structure**: `{basename}.{format}` for context, `{basename}/` directory for expanded units (format = svg, html, or dot)
 - **Shapes**: Person, DB, Queue, System each have distinct record shapes
 
 ---

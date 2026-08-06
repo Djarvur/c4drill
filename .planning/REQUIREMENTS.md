@@ -38,6 +38,7 @@
 - ✓ **RENDER-04**: Generate explore links for drilling into nested structures
 - ✓ **RENDER-05**: Support all unit types (person, system, db, queue, box, container, component + externals)
 - ✓ **RENDER-06**: Apply styling: colors, borders, edge routing styles
+- ✓ **RENDER-07**: Render HTML output (`-f html`) — SVG inlined in a self-contained HTML document with a JS nav shim for Safari/WebKit compatibility (which silently ignores SVG `<a>` hyperlinks). Default format remains svg.
 
 ### CLI
 
