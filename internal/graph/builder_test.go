@@ -1330,15 +1330,17 @@ func skipDOTWhitespace(dot string, pos int) int {
 
 // parseDOTSubgraph parses a "subgraph ... { ... }" statement, recursing into
 // its children. It returns the statement and the position past its closing "}".
+// The opening "{" is located with quoted-string and HTML label awareness so a
+// head containing those characters cannot truncate the statement early.
 func parseDOTSubgraph(dot string, pos int) (dotStatement, int, bool) {
-	open := strings.Index(dot[pos:], "{")
+	open := findDOTBlockOpen(dot, pos)
 	if open < 0 {
 		return dotStatement{}, pos, false
 	}
 
-	head := strings.TrimSpace(dot[pos : pos+open])
+	head := strings.TrimSpace(dot[pos:open])
 
-	children, next, ok := parseDOTBlock(dot, pos+open+1)
+	children, next, ok := parseDOTBlock(dot, open+1)
 	if !ok {
 		return dotStatement{}, next, false
 	}
@@ -1348,16 +1350,20 @@ func parseDOTSubgraph(dot string, pos int) (dotStatement, int, bool) {
 
 // parseDOTAttrStatement parses one attribute statement (graph/node/edge
 // defaults, node or edge statement). It returns the statement and the position
-// past its "];" terminator. The ";" alone is not a safe terminator because
+// past its "];" terminator. Terminators are located with quoted-string and
+// HTML label awareness: attribute values are user-authored (descriptions,
+// technologies) and may contain "];", "{" or "}" inside quotes or HTML labels,
+// so a raw "];" search would truncate the statement and silently shift the
+// parse of everything after it. The ";" alone is not a safe terminator because
 // HTML entity values (e.g. "&#x1F464;") contain semicolons.
 func parseDOTAttrStatement(dot string, pos int) (dotStatement, int, bool) {
-	end := strings.Index(dot[pos:], "];")
+	end := findDOTAttrTerminator(dot, pos)
 	if end < 0 {
 		return dotStatement{}, pos, false
 	}
 
-	text := dot[pos : pos+end]
-	next := pos + end + 2
+	text := dot[pos:end]
+	next := end + 2
 
 	open := strings.Index(text, "[")
 	if open < 0 {
@@ -1367,8 +1373,82 @@ func parseDOTAttrStatement(dot string, pos int) (dotStatement, int, bool) {
 	return dotStatement{
 		kind:  "attr",
 		head:  strings.TrimSpace(text[:open]),
-		attrs: normalizeDOTAttrs(text[open+1 : len(text)-1]),
+		attrs: normalizeDOTAttrs(text[open+1:]),
 	}, next, true
+}
+
+// scanDOTValueEnd advances pos past a DOT value region starting at pos: a
+// double-quoted string (with backslash escapes) or an HTML label (<...>,
+// which may nest). It returns the position just past the closing quote or ">",
+// or len(dot) when the region is unterminated.
+func scanDOTValueEnd(dot string, pos int) int {
+	if dot[pos] == '"' {
+		for i := pos + 1; i < len(dot); i++ {
+			if dot[i] == '\\' {
+				i++ // skip the escaped character
+
+				continue
+			}
+
+			if dot[i] == '"' {
+				return i + 1
+			}
+		}
+
+		return len(dot)
+	}
+
+	depth := 1
+
+	for i := pos + 1; i < len(dot); i++ {
+		switch dot[i] {
+		case '<':
+			depth++
+		case '>':
+			depth--
+			if depth == 0 {
+				return i + 1
+			}
+		}
+	}
+
+	return len(dot)
+}
+
+// findDOTAttrTerminator returns the absolute index of the "];" that terminates
+// the attribute statement starting at pos, skipping quoted strings and HTML
+// labels inside attribute values. It returns -1 when the document ends before
+// a terminator.
+func findDOTAttrTerminator(dot string, pos int) int {
+	for i := pos; i < len(dot); i++ {
+		switch dot[i] {
+		case '"', '<':
+			i = scanDOTValueEnd(dot, i) - 1
+		case ']':
+			if i+1 < len(dot) && dot[i+1] == ';' {
+				return i
+			}
+		}
+	}
+
+	return -1
+}
+
+// findDOTBlockOpen returns the absolute index of the "{" that opens the block
+// of the subgraph statement starting at pos, skipping quoted strings and HTML
+// labels in the head. It returns -1 when the document ends before an opening
+// brace.
+func findDOTBlockOpen(dot string, pos int) int {
+	for i := pos; i < len(dot); i++ {
+		switch dot[i] {
+		case '"', '<':
+			i = scanDOTValueEnd(dot, i) - 1
+		case '{':
+			return i
+		}
+	}
+
+	return -1
 }
 
 // isGeometryAttr reports whether an attribute is layout geometry emitted by the
