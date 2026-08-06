@@ -7,60 +7,87 @@ import (
 
 // ComputeExploreURL calculates the relative path from current diagram to target.
 // currentPath is the dotted path of the current diagram (empty for C1).
-// targetPath is the dotted path of the target unit.
+// targetPath is the dotted path of the target unit (a FULL dotted path such
+// as "mainSystem.sshAuth" because BuildGraphWithPath passes node.ID).
 // basename is the output base filename (from TOML file).
 // format is the output format (e.g., "svg") - ignored; URLs always use "svg"
 // for browser navigation regardless of the format being generated.
+//
+// File layout under {basename}/:
+//
+//	C1 for ""               -> {basename}.svg           (dir: .)
+//	C2 for "mainapp"        -> mainapp.svg              (dir: .)
+//	C3 for "mainapp.api"    -> mainapp/api.svg          (dir: mainapp/)
+//	C4 for "mainapp.api.v2" -> mainapp/api/v2.svg       (dir: mainapp/api/)
+//
+// The current file's directory (all segments but the last) and the target
+// file's directory (all segments but the last) are compared to compute a
+// bidirectional relative URL that handles ancestor, sibling, and descendant
+// targets uniformly. Returns the empty string when targetPath == currentPath
+// (self-link guard — see Gap 1 symptom B) so the renderer omits the URL.
 func ComputeExploreURL(currentPath, targetPath, basename, _ string) string {
 	// Always use SVG for clickable links (browser navigation)
 	const linkFormat = "svg"
 
-	// Convert dotted target path to URL-encoded directory/file segments
-	targetParts := strings.Split(targetPath, ".")
-	encodedTarget := make([]string, len(targetParts))
-	for i, part := range targetParts {
-		encodedTarget[i] = URLEncodePath(part)
+	// Self-link guard (Gap 1 symptom B): a node whose ID equals the current
+	// diagram's path would otherwise emit a broken href=".svg". Return empty so
+	// the caller (createNode) skips SetURL entirely.
+	if currentPath != "" && targetPath == currentPath {
+		return ""
 	}
 
-	// C1 case: file is at {basename}.{fmt}, target is at {basename}/{path}.svg
+	// Split dotted paths into segments and URL-encode each segment.
+	currentParts := strings.Split(currentPath, ".")
+	targetParts := strings.Split(targetPath, ".")
+
+	encodeAll := func(parts []string) []string {
+		encoded := make([]string, len(parts))
+		for i, part := range parts {
+			encoded[i] = URLEncodePath(part)
+		}
+		return encoded
+	}
+
+	encodedTarget := encodeAll(targetParts)
+
+	// C1 case: current file is {basename}.svg at the root; target file is the
+	// full encoded target path under {basename}/.
 	if currentPath == "" {
 		return basename + "/" + strings.Join(encodedTarget, "/") + "." + linkFormat
 	}
 
-	// For C2/C3, compute proper relative path from current file's directory to target file.
-	//
-	// File layout under {basename}/:
-	//   C2 for "mainapp"        -> mainapp.dot              (dir: .)
-	//   C3 for "mainapp.api"    -> mainapp/api.dot          (dir: mainapp/)
-	//   C4 for "mainapp.api.v2" -> mainapp/api/v2.dot       (dir: mainapp/api/)
-	//
-	// The current file's directory is all parts except the last.
-	// The target file's path is the full encoded target path.
-	currentParts := strings.Split(currentPath, ".")
+	// For C2/C3+, compute a bidirectional relative URL from the current file's
+	// directory to the target file. Both are treated as files whose directory is
+	// all segments except the last (the filename segment).
+	curFileDir := currentParts[:len(currentParts)-1] // directory containing current file
+	tgtFileDir := targetParts[:len(targetParts)-1]   // directory containing target file
 
-	// Current file's directory parts (all but last which is filename)
-	currentDirParts := currentParts[:len(currentParts)-1]
-
-	// Find common directory prefix length
+	// Length of the common directory prefix shared by the two directories.
 	commonDirLen := 0
-	for i := 0; i < len(currentDirParts) && i < len(encodedTarget); i++ {
-		if currentDirParts[i] == targetParts[i] {
+	for i := 0; i < len(curFileDir) && i < len(tgtFileDir); i++ {
+		if curFileDir[i] == tgtFileDir[i] {
 			commonDirLen++
 		} else {
 			break
 		}
 	}
 
-	// Levels to go up from current directory to common ancestor
-	levelsUp := len(currentDirParts) - commonDirLen
+	// Levels to climb from the current file's directory to the common ancestor.
+	levelsUp := len(curFileDir) - commonDirLen
 
-	upPath := ""
-	for range levelsUp {
-		upPath += "../"
+	upPath := strings.Repeat("../", levelsUp)
+
+	// Remaining directory segments to descend from the common ancestor into the
+	// target file's directory, then the URL-encoded filename segment.
+	downDirSegs := encodedTarget[commonDirLen : len(targetParts)-1]
+	lastTarget := encodedTarget[len(targetParts)-1]
+
+	var downPath string
+	if len(downDirSegs) > 0 {
+		downPath = strings.Join(downDirSegs, "/") + "/" + lastTarget + "." + linkFormat
+	} else {
+		downPath = lastTarget + "." + linkFormat
 	}
-
-	// Path down from common ancestor to target (all target parts after common prefix)
-	downPath := strings.Join(encodedTarget[commonDirLen:], "/") + "." + linkFormat
 
 	return upPath + downPath
 }
