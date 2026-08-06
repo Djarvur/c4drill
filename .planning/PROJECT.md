@@ -22,6 +22,10 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - ✓ Apply styling: colors, borders, edge routing styles — v1.0
 - ✓ Single CLI command interface — v1.0
 
+### Validated in Phase 3 (v1.8)
+
+- ✓ Backward compatibility: TOML files without `properties.expanded` render collapsed C1; `--expanded` output identical to v1.7 at DOT level (public fixture + canonicalDOT golden enforcement)
+
 ### Validated in Phase 2 (v1.8)
 
 - ✓ C2/C3 files: auto-generated for units with subunits (uniform rule incl. boxes; unit-key file naming)
@@ -46,6 +50,8 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 **Phase 1 complete (2026-08-06):** C1 view scoping refined — pair-only duplicate-edge collapse with binary penwidth, deepest-visible-ancestor resolution on both source and target sides, within-cluster edges for expanded units, minlen gated to original-pair edges, legacy boundary-node code removed. Verified 9/9 must-haves.
 
 **Phase 2 complete (2026-08-06):** C2/C3 auto-generation confirmed and locked — uniform auto-detect (boxes included), unit-key file naming, one expansion level in C1, OR expansion precedence with silent ignore, expanded-but-empty units render as plain nodes (C1 + C2/C3 branches), actors as boundary nodes in deeper views. Verified 6/6 must-haves.
+
+**Phase 3 complete (2026-08-06) — v1.8 milestone COMPLETE:** Backward compatibility locked — sanitized public fixture (`testdata/multilevel.toml`) + CLI-generated DOT golden baseline with order-insensitive `canonicalDOT` enforcement; COMPAT-01 (collapsed C1 without properties.expanded) and COMPAT-02 (`--expanded` identical to v1.7 at DOT level) regression-tested; `--expanded` ignores properties.expanded (v1.7 contract). Verified 12/12 must-haves. All 9 v1.8 requirements shipped.
 
 ### Shipped in v1.7
 
