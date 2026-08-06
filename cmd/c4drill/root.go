@@ -21,15 +21,16 @@ import (
 
 // Static errors for better error handling.
 var (
-	errInvalidFormat    = errors.New("invalid format: must be dot or svg")
+	errInvalidFormat    = errors.New("invalid format: must be dot, svg, or html")
 	errValidationFailed = errors.New("validation failed")
 	errGenerateView     = errors.New("failed to generate view")
 	errBuildGraph       = errors.New("failed to build graph")
 )
 
 const (
-	formatDot = "dot"
-	formatSVG = "svg"
+	formatDot  = "dot"
+	formatSVG  = "svg"
+	formatHTML = "html"
 )
 
 //nolint:gochecknoglobals // Cobra flags require package-level variables for PersistentFlags registration
@@ -68,7 +69,7 @@ Output:
 	}
 
 	cmd.PersistentFlags().StringVarP(&format, "format", "f", formatSVG,
-		"Output format (dot|svg)")
+		"Output format (dot|svg|html)")
 	cmd.PersistentFlags().StringVarP(&outputDir, "output", "o", "",
 		"Output directory (default: same as input file)")
 	cmd.PersistentFlags().BoolVar(&expanded, "expanded", false,
@@ -92,7 +93,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	}
 
 	// Validate flags early (before file I/O)
-	if format != formatDot && format != formatSVG {
+	if format != formatDot && format != formatSVG && format != formatHTML {
 		return fmt.Errorf("%w: %q", errInvalidFormat, format)
 	}
 
@@ -222,15 +223,19 @@ func processView(m *parser.Model, unitPath, basename string, writer *output.Writ
 		return fmt.Errorf("%w: %q", errBuildGraph, unitPath)
 	}
 
-	// Render with output directory for icon extraction (SVG only)
+	// Render with output directory for icon extraction (SVG/HTML use the same
+	// graphviz SVG pipeline; HTML post-processes the bytes into a wrapper doc)
 	var (
 		data []byte
 		err  error
 	)
 
-	if format == formatSVG {
+	switch format {
+	case formatSVG:
 		data, err = render.RenderSVGWithOutput(g, writer.BaseDir())
-	} else {
+	case formatHTML:
+		data, err = render.RenderHTML(g)
+	default:
 		data, err = render.Render(g, format)
 	}
 

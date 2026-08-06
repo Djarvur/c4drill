@@ -112,6 +112,95 @@ func TestRenderFormatDispatch(t *testing.T) {
 		assert.Equal(t, svgOutput, renderOutput,
 			"Render(g, 'svg') should return same result as RenderSVG(g)")
 	})
+
+	t.Run("html format returns same result as RenderHTML", func(t *testing.T) {
+		g := testGraph("test_node")
+
+		renderOutput, err := render.Render(g, "html")
+		require.NoError(t, err, "Render with html format should not return error")
+
+		htmlOutput, err := render.RenderHTML(g)
+		require.NoError(t, err, "RenderHTML should not return error")
+
+		assert.Equal(t, htmlOutput, renderOutput,
+			"Render(g, 'html') should return same result as RenderHTML(g)")
+	})
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestRenderHTML(t *testing.T) {
+	t.Run("produces a self-contained HTML document", func(t *testing.T) {
+		g := testGraph("test_node")
+
+		output, err := render.RenderHTML(g)
+		require.NoError(t, err, "RenderHTML should not error for valid graph")
+		require.NotEmpty(t, output, "RenderHTML should return non-empty bytes")
+
+		s := string(output)
+		assert.True(t, strings.HasPrefix(s, "<!DOCTYPE html>"),
+			"HTML output should start with <!DOCTYPE html>")
+		assert.Contains(t, s, "<svg", "HTML output should contain the inlined SVG")
+		assert.Contains(t, s, "</html>", "HTML output should close the <html> tag")
+		assert.NotContains(t, s, "<?xml",
+			"XML declaration must be stripped (invalid inside HTML body)")
+	})
+
+	t.Run("injects the Safari nav shim", func(t *testing.T) {
+		g := testGraph("test_node")
+
+		output, err := render.RenderHTML(g)
+		require.NoError(t, err)
+
+		s := string(output)
+		// The shim is what makes SVG <a> links clickable in Safari/WebKit.
+		assert.Contains(t, s, "window.location.href",
+			"HTML output must contain the nav shim that navigates via window.location")
+		assert.Contains(t, s, "querySelectorAll",
+			"HTML output must attach listeners to svg a elements")
+	})
+
+	t.Run("rewrites .svg hrefs to .html", func(t *testing.T) {
+		// A graph with an ExploreURL that the SVG renderer turns into an
+		// xlink:href="X.svg" anchor. The HTML wrapper must rewrite to .html.
+		g := &graph.Graph{
+			Title:     "With Link",
+			Direction: "TB",
+			Nodes: []*graph.Node{
+				{
+					ID:    "expandable_system",
+					Label: &graph.Label{Name: "Expandable"},
+					Shape: graph.ShapeHTML,
+					Style: &graph.NodeStyle{
+						FillColor:   "#438DD5",
+						BorderColor: "#3C7FC0",
+						FontColor:   "#FFFFFF",
+					},
+					ExploreURL: "expandable_system.svg",
+				},
+			},
+		}
+
+		// Sanity: the raw SVG output contains the .svg href
+		svgBytes, err := render.RenderSVG(g)
+		require.NoError(t, err)
+		require.Contains(t, string(svgBytes), `expandable_system.svg`,
+			"precondition: raw SVG must contain the .svg href")
+
+		htmlBytes, err := render.RenderHTML(g)
+		require.NoError(t, err)
+
+		s := string(htmlBytes)
+		assert.Contains(t, s, `expandable_system.html`,
+			"HTML output must rewrite .svg href to .html")
+		assert.NotContains(t, s, `expandable_system.svg"`,
+			"HTML output must not retain the .svg href suffix")
+	})
+
+	t.Run("returns error for nil graph", func(t *testing.T) {
+		output, err := render.RenderHTML(nil)
+		require.Error(t, err, "RenderHTML with nil graph should error")
+		assert.Nil(t, output, "RenderHTML with nil graph should return nil bytes")
+	})
 }
 
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues

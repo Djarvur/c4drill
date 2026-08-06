@@ -353,7 +353,7 @@ technology = "Redis"
 c4drill <input.toml> [flags]
 
 Flags:
-  -f, --format string   Output format (dot|svg) (default "svg")
+  -f, --format string   Output format (dot|svg|html) (default "svg")
   -o, --output string   Output directory (default ".")
       --version         Print version information
   -h, --help            Show help
@@ -362,6 +362,9 @@ Flags:
 ### Output Format
 
 - **svg** (default): Rendered SVG diagrams with clickable navigation links
+- **html**: Self-contained HTML files (SVG inlined) with working navigation in
+  Safari/WebKit, which silently ignores SVG `<a>` hyperlinks. Use `-f html`
+  when diagrams will be opened in Safari or viewed via `file://`.
 - **dot**: Raw GraphViz DOT format for customization
 
 ### Exit Codes
