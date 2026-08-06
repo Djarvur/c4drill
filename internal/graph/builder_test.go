@@ -250,6 +250,31 @@ func TestBuildGraphClusters(t *testing.T) {
 	assert.Len(t, cluster.Nodes, 2)
 }
 
+// D-07: a top-level unit listed in properties.expanded with NO subunits renders
+// as a plain collapsed node — expansion only takes effect when there are
+// subunits to show, so no empty cluster box is produced.
+func TestBuildGraphExpandedEmptyUnitRendersPlainNode(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test", Expanded: []string{"app"}},
+		Units: map[string]*model.Unit{
+			"app": {
+				Type: model.TypeSystem,
+				Name: "App",
+			},
+		},
+	}
+
+	v := view.GenerateC1View(m)
+	g := graph.BuildGraph(v)
+
+	// D-07: no subunits -> plain collapsed node, not an empty cluster box
+	require.Len(t, g.Clusters, 0)
+	require.Len(t, g.Nodes, 1)
+	assert.Equal(t, "app", g.Nodes[0].ID)
+}
+
 func TestBuildGraphMultipleLinks(t *testing.T) {
 	t.Parallel()
 
