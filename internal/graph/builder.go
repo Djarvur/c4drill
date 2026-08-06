@@ -330,6 +330,10 @@ func buildEdges(v *view.View) []*Edge {
 	edges := make([]*Edge, 0)
 	seen := make(map[string]bool) // Track processed links
 
+	// Count contributing links per pair (D-05) before the edge loop so
+	// collapsed pairs (2+) can be thickened (D-04).
+	pairCounts := countPairMultiplicity(v)
+
 	// Process edges in definition order
 	for _, path := range v.UnitOrder {
 		entry := v.Units[path]
@@ -347,34 +351,104 @@ func buildEdges(v *view.View) []*Edge {
 		}
 
 		// Process outgoing links
-		outEdges := processOutgoingLinks(path, outLinks, v.Units, seen)
+		outEdges := processOutgoingLinks(v, path, outLinks, seen, pairCounts)
 		edges = append(edges, outEdges...)
 
 		// Process incoming links (linkFrom)
-		inEdges := processIncomingLinks(path, inLinks, v.Units, seen)
+		inEdges := processIncomingLinks(v, path, inLinks, seen, pairCounts)
 		edges = append(edges, inEdges...)
 	}
 
 	return edges
 }
 
-// processOutgoingLinks processes outgoing links from a unit.
-func processOutgoingLinks(
-	path string,
-	links []model.Link,
-	viewUnits map[string]*view.Entry,
-	seen map[string]bool,
-) []*Edge {
-	edges := make([]*Edge, 0)
-	sourceEntry := viewUnits[path] // Get source entry for color lookup
+// countPairMultiplicity counts how many contributing links land on each
+// (source, target) pair (D-05). The count drives the binary penwidth of
+// collapsed edges (D-04). The validator mirrors every outgoing link into the
+// target's LinksFrom (internal/validator/index.go) with identical attributes,
+// so incoming entries for pairs that already have outgoing contributions are
+// duplicates, not additional relationships — they are not counted.
+func countPairMultiplicity(v *view.View) map[string]int {
+	pairCounts := make(map[string]int)
 
-	for _, link := range links {
-		if !isTargetInView(viewUnits, link.Peer) {
+	// Expanded mode keeps the v1.7 dedup/penwidth behavior (D-02, COMPAT-02).
+	if v.AllExpanded {
+		return pairCounts
+	}
+
+	// Pass 1 — outgoing: count every outgoing link per pair.
+	for _, path := range v.UnitOrder {
+		entry := v.Units[path]
+		if entry == nil {
 			continue
 		}
 
-		edge := createEdge(path, link.Peer, link, sourceEntry)
-		edgeKey := path + "->" + link.Peer + ":" + link.Technology + ":" + link.Description
+		outLinks := entry.Unit.Links
+		if entry.ResolvedLinks != nil {
+			outLinks = entry.ResolvedLinks
+		}
+
+		for _, link := range outLinks {
+			key := path + "->" + link.Peer
+			pairCounts[key]++
+		}
+	}
+
+	// Pass 2 — incoming (mirror-aware): count only pairs without outgoing
+	// contributions so validator mirrors are not double-counted (D-05).
+	for _, path := range v.UnitOrder {
+		entry := v.Units[path]
+		if entry == nil {
+			continue
+		}
+
+		inLinks := entry.Unit.LinksFrom
+		if entry.ResolvedLinksFrom != nil {
+			inLinks = entry.ResolvedLinksFrom
+		}
+
+		for _, link := range inLinks {
+			key := link.Peer + "->" + path
+			if pairCounts[key] == 0 {
+				pairCounts[key]++
+			}
+		}
+	}
+
+	return pairCounts
+}
+
+// processOutgoingLinks processes outgoing links from a unit.
+func processOutgoingLinks(
+	v *view.View,
+	path string,
+	links []model.Link,
+	seen map[string]bool,
+	pairCounts map[string]int,
+) []*Edge {
+	edges := make([]*Edge, 0)
+	sourceEntry := v.Units[path] // Get source entry for color lookup
+
+	for _, link := range links {
+		if !isTargetInView(v.Units, link.Peer) {
+			continue
+		}
+
+		// D-01/D-02: pair-only dedup key in resolved views; expanded mode
+		// keeps the v1.7 technology+description key (COMPAT-02).
+		edgeKey := path + "->" + link.Peer
+		if v.AllExpanded {
+			edgeKey += ":" + link.Technology + ":" + link.Description
+		}
+
+		// D-04/D-02: binary penwidth — collapsed pairs (2+ links) thicken to
+		// 2.0 in resolved views; expanded mode keeps the v1.7 2.0 prominence.
+		penWidth := 0.0
+		if v.AllExpanded || pairCounts[edgeKey] >= 2 {
+			penWidth = 2.0
+		}
+
+		edge := createEdge(path, link.Peer, link, sourceEntry, penWidth)
 
 		if markSeen(seen, edgeKey) {
 			edges = append(edges, edge)
@@ -386,21 +460,35 @@ func processOutgoingLinks(
 
 // processIncomingLinks processes incoming links (linkFrom) to a unit.
 func processIncomingLinks(
+	v *view.View,
 	path string,
 	linksFrom []model.Link,
-	viewUnits map[string]*view.Entry,
 	seen map[string]bool,
+	pairCounts map[string]int,
 ) []*Edge {
 	edges := make([]*Edge, 0)
 
 	for _, link := range linksFrom {
-		if !isTargetInView(viewUnits, link.Peer) {
+		if !isTargetInView(v.Units, link.Peer) {
 			continue
 		}
 
-		sourceEntry := viewUnits[link.Peer] // Source is link.Peer for incoming links
-		edge := createEdge(link.Peer, path, link, sourceEntry)
-		edgeKey := link.Peer + "->" + path + ":" + link.Technology + ":" + link.Description
+		// D-01/D-02: pair-only dedup key in resolved views; expanded mode
+		// keeps the v1.7 technology+description key (COMPAT-02).
+		edgeKey := link.Peer + "->" + path
+		if v.AllExpanded {
+			edgeKey += ":" + link.Technology + ":" + link.Description
+		}
+
+		// D-04/D-02: binary penwidth — collapsed pairs (2+ links) thicken to
+		// 2.0 in resolved views; expanded mode keeps the v1.7 2.0 prominence.
+		penWidth := 0.0
+		if v.AllExpanded || pairCounts[edgeKey] >= 2 {
+			penWidth = 2.0
+		}
+
+		sourceEntry := v.Units[link.Peer] // Source is link.Peer for incoming links
+		edge := createEdge(link.Peer, path, link, sourceEntry, penWidth)
 
 		if markSeen(seen, edgeKey) {
 			edges = append(edges, edge)
@@ -420,7 +508,9 @@ func isTargetInView(units map[string]*view.Entry, target string) bool {
 // createEdge creates an edge from a link with defaults applied.
 // Per D-01: Edge color comes from source unit's border color.
 // Per D-03: If link.Color is set, it overrides the source border color.
-func createEdge(source, target string, link model.Link, sourceEntry *view.Entry) *Edge {
+// Per D-04: penWidth carries the binary multiplicity thickness (0 = default,
+// 2.0 = collapsed pair).
+func createEdge(source, target string, link model.Link, sourceEntry *view.Entry, penWidth float64) *Edge {
 	edge := &Edge{
 		Source: source,
 		Target: target,
@@ -431,6 +521,7 @@ func createEdge(source, target string, link model.Link, sourceEntry *view.Entry)
 		},
 		Style:     link.Style,
 		ArrowHead: ArrowDirection(link.Arrow),
+		PenWidth:  penWidth,
 	}
 
 	// Apply defaults
