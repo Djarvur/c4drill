@@ -1289,66 +1289,86 @@ func parseDOTBlock(dot string, pos int) ([]dotStatement, int, bool) {
 	var stmts []dotStatement
 
 	for pos < len(dot) {
-		// Skip whitespace.
-		for pos < len(dot) && (dot[pos] == ' ' || dot[pos] == '\t' || dot[pos] == '\n' || dot[pos] == '\r') {
-			pos++
-		}
+		pos = skipDOTWhitespace(dot, pos)
 		if pos >= len(dot) {
 			return stmts, pos, false
 		}
 
-		switch dot[pos] {
-		case '}':
+		if dot[pos] == '}' {
 			return stmts, pos + 1, true
-		case '{': // Stray block opener (unexpected after the header) — skip.
-			pos++
-		default:
-			// Subgraph: recurse until its matching "}".
-			if strings.HasPrefix(dot[pos:], "subgraph") {
-				open := strings.Index(dot[pos:], "{")
-				if open < 0 {
-					return stmts, pos, false
-				}
-
-				head := strings.TrimSpace(dot[pos : pos+open])
-				children, next, ok := parseDOTBlock(dot, pos+open+1)
-				if !ok {
-					return stmts, next, false
-				}
-
-				stmts = append(stmts, dotStatement{kind: "subgraph", head: head, children: children})
-				pos = next
-
-				continue
-			}
-
-			// Attribute statement: ends with "];" — the ";" alone is not a
-			// safe terminator because HTML entity values (e.g. "&#x1F464;")
-			// contain semicolons.
-			end := strings.Index(dot[pos:], "];")
-			if end < 0 {
-				return stmts, pos, false
-			}
-
-			text := dot[pos : pos+end]
-			pos += end + 2
-
-			open := strings.Index(text, "[")
-			if open < 0 {
-				stmts = append(stmts, dotStatement{kind: "bare", head: strings.TrimSpace(text)})
-
-				continue
-			}
-
-			stmts = append(stmts, dotStatement{
-				kind:  "attr",
-				head:  strings.TrimSpace(text[:open]),
-				attrs: normalizeDOTAttrs(text[open+1 : len(text)-1]),
-			})
 		}
+
+		var (
+			stmt dotStatement
+			ok   bool
+		)
+
+		if strings.HasPrefix(dot[pos:], "subgraph") {
+			stmt, pos, ok = parseDOTSubgraph(dot, pos)
+		} else {
+			stmt, pos, ok = parseDOTAttrStatement(dot, pos)
+		}
+
+		if !ok {
+			return stmts, pos, false
+		}
+
+		stmts = append(stmts, stmt)
 	}
 
 	return stmts, pos, true
+}
+
+// skipDOTWhitespace advances pos past spaces, tabs and newlines.
+func skipDOTWhitespace(dot string, pos int) int {
+	for pos < len(dot) && (dot[pos] == ' ' || dot[pos] == '\t' || dot[pos] == '\n' || dot[pos] == '\r') {
+		pos++
+	}
+
+	return pos
+}
+
+// parseDOTSubgraph parses a "subgraph ... { ... }" statement, recursing into
+// its children. It returns the statement and the position past its closing "}".
+func parseDOTSubgraph(dot string, pos int) (dotStatement, int, bool) {
+	open := strings.Index(dot[pos:], "{")
+	if open < 0 {
+		return dotStatement{}, pos, false
+	}
+
+	head := strings.TrimSpace(dot[pos : pos+open])
+
+	children, next, ok := parseDOTBlock(dot, pos+open+1)
+	if !ok {
+		return dotStatement{}, next, false
+	}
+
+	return dotStatement{kind: "subgraph", head: head, children: children}, next, true
+}
+
+// parseDOTAttrStatement parses one attribute statement (graph/node/edge
+// defaults, node or edge statement). It returns the statement and the position
+// past its "];" terminator. The ";" alone is not a safe terminator because
+// HTML entity values (e.g. "&#x1F464;") contain semicolons.
+func parseDOTAttrStatement(dot string, pos int) (dotStatement, int, bool) {
+	end := strings.Index(dot[pos:], "];")
+	if end < 0 {
+		return dotStatement{}, pos, false
+	}
+
+	text := dot[pos : pos+end]
+	next := pos + end + 2
+
+	open := strings.Index(text, "[")
+	if open < 0 {
+		return dotStatement{kind: "bare", head: strings.TrimSpace(text)}, next, true
+	}
+
+	return dotStatement{
+		kind:  "attr",
+		head:  strings.TrimSpace(text[:open]),
+		attrs: normalizeDOTAttrs(text[open+1 : len(text)-1]),
+	}, next, true
 }
 
 // isGeometryAttr reports whether an attribute is layout geometry emitted by the
@@ -2168,6 +2188,7 @@ func TestBuildExpandedGraphIgnoresPropertiesExpanded(t *testing.T) {
 	nodeIDs, labels := collectExpandedGraphNodes(g)
 	assert.Contains(t, nodeIDs, "mainSystem.sshAuth.systemd.logind", "deep 4-level leaf must render as a node")
 	assert.Contains(t, nodeIDs, "mainSystem.storages.externalStorage.client", "client unit must render as a node")
+
 	for _, name := range labels {
 		assert.NotContains(t, name, "[+]", "expanded mode must not render collapsed indicators (D-04)")
 	}
@@ -2178,17 +2199,19 @@ func TestBuildExpandedGraphIgnoresPropertiesExpanded(t *testing.T) {
 func countModelUnits(m *parser.Model) int {
 	count := 0
 
-	var countUnit func(unit *model.Unit)
-	countUnit = func(unit *model.Unit) {
-		count++
-
-		for _, sub := range unit.Subunits {
-			countUnit(sub)
-		}
+	for _, unit := range m.Units {
+		count += 1 + countUnitSubunits(unit)
 	}
 
-	for _, unit := range m.Units {
-		countUnit(unit)
+	return count
+}
+
+// countUnitSubunits recursively counts a unit's subunits at all nesting levels.
+func countUnitSubunits(unit *model.Unit) int {
+	count := 0
+
+	for _, sub := range unit.Subunits {
+		count += 1 + countUnitSubunits(sub)
 	}
 
 	return count
@@ -2201,33 +2224,35 @@ func collectExpandedGraphNodes(g *graph.Graph) ([]string, []string) {
 	nodeIDs := make([]string, 0)
 	labels := make([]string, 0)
 
-	var walkNodes func(nodes []*graph.Node)
-	walkNodes = func(nodes []*graph.Node) {
-		for _, node := range nodes {
-			nodeIDs = append(nodeIDs, node.ID)
-
-			if node.Label != nil {
-				labels = append(labels, node.Label.Name)
-			}
-		}
-	}
-
-	var walkClusters func(clusters []*graph.Cluster)
-	walkClusters = func(clusters []*graph.Cluster) {
-		for _, cluster := range clusters {
-			if cluster.Label != nil {
-				labels = append(labels, cluster.Label.Name)
-			}
-
-			walkNodes(cluster.Nodes)
-			walkClusters(cluster.Clusters)
-		}
-	}
-
-	walkNodes(g.Nodes)
-	walkClusters(g.Clusters)
+	collectNodeIDsAndLabels(g.Nodes, &nodeIDs, &labels)
+	collectClusterNodeIDsAndLabels(g.Clusters, &nodeIDs, &labels)
 
 	return nodeIDs, labels
+}
+
+// collectClusterNodeIDsAndLabels recursively collects node IDs and label names
+// from a cluster list (Cluster.Nodes + nested Cluster.Clusters).
+func collectClusterNodeIDsAndLabels(clusters []*graph.Cluster, nodeIDs *[]string, labels *[]string) {
+	for _, cluster := range clusters {
+		if cluster.Label != nil {
+			*labels = append(*labels, cluster.Label.Name)
+		}
+
+		collectNodeIDsAndLabels(cluster.Nodes, nodeIDs, labels)
+		collectClusterNodeIDsAndLabels(cluster.Clusters, nodeIDs, labels)
+	}
+}
+
+// collectNodeIDsAndLabels appends node IDs and non-nil label names to the
+// given slices.
+func collectNodeIDsAndLabels(nodes []*graph.Node, nodeIDs *[]string, labels *[]string) {
+	for _, node := range nodes {
+		*nodeIDs = append(*nodeIDs, node.ID)
+
+		if node.Label != nil {
+			*labels = append(*labels, node.Label.Name)
+		}
+	}
 }
 
 // edgeBlockFromDOT extracts the full DOT attribute block for the edge between

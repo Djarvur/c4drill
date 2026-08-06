@@ -617,8 +617,10 @@ func TestCompat01_ValidTomlAllCollapsed(t *testing.T) {
 	err := cmd.Execute()
 	require.NoError(t, err)
 
+	//nolint:gosec // G304: Test reads from temp directory created by t.TempDir()
 	dotData, err := os.ReadFile(filepath.Join(tmpDir, "valid.dot"))
 	require.NoError(t, err)
+
 	dot := string(dotData)
 
 	assert.Contains(t, dot, "user\t[", "user node present in C1")
@@ -646,13 +648,16 @@ func TestCompat02_MultilevelFixtureFiveNodeC1(t *testing.T) {
 	err := cmd.Execute()
 	require.NoError(t, err)
 
+	//nolint:gosec // G304: Test reads from temp directory created by t.TempDir()
 	dotData, err := os.ReadFile(filepath.Join(tmpDir, "multilevel.dot"))
 	require.NoError(t, err)
+
 	dot := string(dotData)
 
 	for _, unit := range []string{"actorA", "actorB", "actorC", "externalSys", "mainSystem"} {
 		assert.Contains(t, dot, unit+"\t[", "the five top-level units render as C1 nodes")
 	}
+
 	assert.NotContains(t, dot, "subgraph cluster_", "all top-level units collapsed -> no clusters")
 	assert.NotContains(t, dot, "mainSystem.sshAuth", "deep subunit paths must not appear as C1 nodes")
 	assert.Contains(t, dot, "Main System [+]", "mainSystem collapsed indicator")
