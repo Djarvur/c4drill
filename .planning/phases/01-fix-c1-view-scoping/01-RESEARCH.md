@@ -263,9 +263,9 @@ standard nil-guard + no-panic contract in new code.
 | A1 | "Default width" in D-04 = GraphViz default 1.0 (current code forces 2.0 on all edges) | Penwidth semantics | Output width changes in resolved views — but this IS the refinement intent; --expanded stays 2.0 per COMPAT-02 |
 | A2 | `view.View.AllExpanded` flag is the cleanest `--expanded` discriminator | Pattern 3 | Alternative: pass mode into buildEdges as a parameter — planner may choose either; behavior identical |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Where to record multiplicity for D-05/D-04?**
+1. **Where to record multiplicity for D-05/D-04?** (RESOLVED: per-pair count map computed in `buildEdges` — adopted as `countPairMultiplicity` in 01-01 Task 2)
    - What we know: resolution happens in `internal/view` (scope.go), edge construction in `internal/graph` (builder.go). The penwidth needs the count at createEdge time.
    - What's unclear: whether the count lives on `view.Entry.ResolvedLinks` items (parallel slice / struct wrapper) or on the synthesized link (e.g., a `Multiplicity int` on the edge-side record).
    - Recommendation: planner picks the least invasive — a per-pair count map computed in `buildEdges` from the resolved+direct link lists, keyed by pair, consulted at `createEdge`. Avoids touching the model package.

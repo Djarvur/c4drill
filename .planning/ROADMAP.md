@@ -46,10 +46,17 @@ Two bugs in `internal/view/scope.go`:
 - `internal/graph/builder_test.go` — New tests for edge resolution
 
 **Plans:** 3 plans
-
 Plans:
+**Wave 1**
+
 - [ ] 01-01-PLAN.md — Pair-only edge collapse with binary penwidth (D-01..D-06)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 01-02-PLAN.md — Remove legacy boundary nodes, activate AllExpanded, gate minlen (D-12, D-02, D-13)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 01-03-PLAN.md — Deepest-visible-ancestor resolution both sides (D-07..D-11)
 
 ---
@@ -63,6 +70,7 @@ Plans:
 ### Root Cause Analysis
 
 `collectExpandedPaths` in `cmd/c4drill/root.go` only checks per-unit `Expanded` field for self-referencing paths, ignoring `m.Properties.Expanded`. It should:
+
 - Use `m.Properties.Expanded` to determine which top-level units are expanded in C1
 - Auto-detect ALL units with subunits and generate C2/C3 diagrams for them
 
