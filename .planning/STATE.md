@@ -3,16 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: milestone
 current_plan: 2
-status: milestone_complete
-last_updated: 2026-08-06T12:24:13.769Z
+status: executing
+last_updated: "2026-08-06T13:29:40.050Z"
 last_activity: 2026-08-06
 progress:
   total_phases: 3
   completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 7
+  completed_plans: 7
   percent: 100
-stopped_at: Milestone complete (Phase 03 was final phase)
 ---
 
 # v1.8: Proper C1/C2/C3 View Generation
@@ -20,15 +19,15 @@ stopped_at: Milestone complete (Phase 03 was final phase)
 ## Current Position
 
 Phase: 03 (compatibility-validation) — EXECUTING
-Plan: 2 of 2
+Plan: 4 of 4 (03-04 gap-closure COMPLETE)
 **Phase:** 03
-**Status:** Milestone complete
-**Current Plan:** Not started
-**Total Plans in Phase:** 2
+**Status:** Executing Phase 03
+**Current Plan:** 4 (complete)
+**Total Plans in Phase:** 4 (3 original + 03-04 gap-closure)
 **Last Activity:** 2026-08-06
 **Progress:** [██████████] 100%
-**Last session:** 2026-08-06T12:02:44.759Z
-**Stopped At:** Completed 03-02-PLAN.md
+**Last session:** 2026-08-06T13:28:18Z
+**Stopped At:** Completed 03-04-PLAN.md (C2/C3 navigation gap closure)
 **Resume File:** None
 
 ## Status: **COMPLETE**
@@ -64,6 +63,7 @@ Fixed the two root-cause bugs:
 | Phase 02-auto-generate-c2-c3-diagrams P01 | 26min | 3 tasks | 4 files |
 | Phase 03-compatibility-validation P01 | 5min | 2 tasks | 2 files |
 | Phase 03-compatibility-validation P02 | 8min | 3 tasks | 3 files |
+| Phase 03-compatibility-validation P04 | 19min | 3 tasks | 8 files |
 
 ## Decisions
 
@@ -86,6 +86,10 @@ Fixed the two root-cause bugs:
 - [Phase 03]: canonicalDOT strips layout geometry (bb/pos/lp/lheight/lwidth/height/width) and sorts statements/attributes recursively — validated: 2 independent runs + committed golden canonicalize identically; C1 outputs still differ
 - [Phase 03]: DOT statement terminator is '];' not ';' — person-node HTML labels contain '&#x1F464;' entities whose semicolons truncate naive scans
 - [Phase 03]: TestCompat01 does NOT assert absence of valid/app.dot — Phase 2 auto-detect generates the C2 sub-diagram
+- [Phase 03-04]: GraphViz HTML-like labels do NOT support <a href> tags (empirically verified: labels containing them are silently dropped at render time). Clickable HTML labels use <TD HREF=url>, rendered as <a xlink:href> in SVG. Gap 2 implemented via this idiom, not the plan's <a href>+StrdupHTML premise.
+- [Phase 03-04]: canonicalDOT golden (multilevel.expanded.dot) regenerated — the graph label is now always HTML-wrapped (label=<...>); benign format change, URLs/edges/clusters unaffected (expanded diagram carries no navigation).
+- [Phase 03-04]: Pre-existing C3 breadcrumb bug fixed (Rule 2): computeBreadcrumbURL's index-0 special case assumed first segment = C1 root, so C3 'mainSystem' crumb 404'd on ../multilevel.svg; now delegates to ComputeExploreURL's bidirectional logic -> ../mainSystem.svg.
+- [Phase 03-04]: All clickable navigation URLs force .svg regardless of render format (ComputeBackLinkURL/computeBreadcrumbURL ignore the format param, mirroring ComputeExploreURL) — signatures kept to avoid builder ripple.
 
 ### Blockers
 

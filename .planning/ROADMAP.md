@@ -13,7 +13,7 @@ Fix view generation so C1 shows only top-level units, C2/C3 diagrams are auto-ge
 |---|-------|------|--------------|------------------|
 | 1 | Fix C1 View Scoping | 3/3 | Complete    | 2026-08-06 |
 | 2 | Auto-generate C2/C3 | 1/1 | Complete    | 2026-08-06 |
-| 3 | Compatibility & Validation | 2/2 | Complete    | 2026-08-06 |
+| 3 | Compatibility & Validation | 3/3 | Complete   | 2026-08-06 |
 
 ---
 
@@ -114,7 +114,7 @@ Plans:
 - `cmd/c4drill/root_test.go` — Integration tests
 - `internal/view/integration_test.go` — View integration tests
 
-**Plans:** 3 plans
+**Plans:** 4 plans (3 original + 03-04 gap-closure)
 Plans:
 **Wave 1**
 
@@ -126,7 +126,7 @@ Plans:
 
 **Wave 3** *(gap closure — UAT 03-UAT.md diagnosed 3 navigation gaps breaking COMPAT-02)*
 
-- [ ] 03-04-PLAN.md — Close C2/C3 navigation gaps: ComputeExploreURL dotted-path fix (Gap 1), graph-label StrdupHTML for clickable breadcrumb links (Gap 2), force .svg in navigation URLs (Gap 3)
+- [x] 03-04-PLAN.md — Close C2/C3 navigation gaps: ComputeExploreURL dotted-path fix (Gap 1), graph-label StrdupHTML for clickable breadcrumb links (Gap 2), force .svg in navigation URLs (Gap 3)
 
 ---
 
@@ -141,7 +141,7 @@ Plans:
 | VIEW-03 | Phase 2 | Pending |
 | VIEW-04 | Phase 2 | Pending |
 | VIEW-05 | Phase 2 | Pending |
-| COMPAT-01 | Phase 3 | Pending |
-| COMPAT-02 | Phase 3 | Pending |
+| COMPAT-01 | Phase 3 | Complete |
+| COMPAT-02 | Phase 3 | Complete |
 
 **Coverage:** 9/9 requirements mapped ✓
