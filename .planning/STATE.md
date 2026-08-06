@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: milestone
 current_plan: 3
-status: executing
-last_updated: "2026-08-06T09:25:04.419Z"
+status: verifying
+last_updated: "2026-08-06T09:42:01.756Z"
 last_activity: 2026-08-06
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
-  percent: 0
+  completed_plans: 3
+  percent: 33
 ---
 
 # v1.8: Proper C1/C2/C3 View Generation
@@ -19,13 +19,13 @@ progress:
 ## Current Position
 
 **Phase:** 1 (01-fix-c1-view-scoping)
-**Status:** Ready to execute
+**Status:** Phase complete — ready for verification
 **Current Plan:** 3
 **Total Plans in Phase:** 3
 **Last Activity:** 2026-08-06
-**Progress:** [███████░░░] 67%
-**Last session:** 2026-08-06T09:23:36.311Z
-**Stopped At:** None
+**Progress:** [██████████] 100%
+**Last session:** 2026-08-06T09:42:01.724Z
+**Stopped At:** Completed 01-03-PLAN.md
 **Resume File:** None
 
 ## Status: **COMPLETE**
@@ -57,6 +57,7 @@ Fixed the two root-cause bugs:
 |-------|------|----------|-------|
 | Phase 01-fix-c1-view-scoping P01 | 10min | 3 tasks | 5 files |
 | Phase 01-fix-c1-view-scoping P02 | 5min | 3 tasks | 3 files |
+| Phase 01-fix-c1-view-scoping P03 | 6min | 3 tasks | 5 files |
 
 ## Decisions
 
@@ -67,3 +68,7 @@ Fixed the two root-cause bugs:
 - [Phase 01-fix-c1-view-scoping]: D-12 implemented by deleting the legacy recursive boundary path — validator is the single gatekeeper for undefined peers
 - [Phase 01-fix-c1-view-scoping]: D-13 minlen gating at all 6 resolved-link synthesis sites: synthesized links copy Length only when both drawn endpoints are the link's original units; resolved edges carry no minlen
 - [Phase 01-fix-c1-view-scoping]: D-02 activated — GenerateExpandedView sets View.AllExpanded=true restoring v1.7 dedup key and 2.0 penwidth in expanded mode (COMPAT-02)
+- [Phase 01-fix-c1-view-scoping]: Visible subunits (direct children of expanded top-level C1 units) are added to v.Units + UnitOrder and marked in v.VisiblePaths; BuildGraph skips them as top-level nodes because buildCluster already renders them inside the parent cluster (Pitfall 5)
+- [Phase 01-fix-c1-view-scoping]: resolveAndAddBoundary sources from resolveToViewAncestor(v, path) — the deepest VISIBLE ancestor of the source path; append condition resolved != resolvedSource keeps within-cluster edges (D-10) and suppresses parent edges (D-08)
+- [Phase 01-fix-c1-view-scoping]: D-13 gate first operand updated to path == resolvedSource: a visible subunit's own links stay length-eligible when the peer also resolves unchanged
+- [Phase 01-fix-c1-view-scoping]: resolveToTopLevel unified onto resolveToViewAncestor with the peer-as-is fallback for truly-external units (boundary-node contract preserved)
