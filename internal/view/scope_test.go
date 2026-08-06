@@ -749,6 +749,42 @@ func TestGenerateC2View_ExternalBoundaryFromSubunitLinks(t *testing.T) {
 	assert.True(t, v.Units["externaldb"].IsExternal)
 }
 
+// D-08: actors are NOT filtered from deeper views — a linked personExternal
+// renders as an external boundary node in the C2 view. Must use
+// TypePersonExternal, not TypePerson (IsExternalType is false for TypePerson).
+func TestGenerateC2View_ActorBoundaryFromSubunitLinks(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"webUser": {
+				Type: model.TypePersonExternal,
+				Name: "Web User",
+			},
+			"system": {
+				Type: model.TypeSystem,
+				Name: "System",
+				Subunits: map[string]*model.Unit{
+					"api": {
+						Type: model.TypeContainer,
+						Name: "API",
+						Links: []model.Link{
+							{Peer: "webUser"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC2View(m, "system")
+
+	require.NotNil(t, v)
+	assert.Contains(t, v.Units, "webUser")
+	assert.True(t, v.Units["webUser"].IsExternal)
+}
+
 func TestGenerateC2View_IsExpandedForChildUnits(t *testing.T) {
 	t.Parallel()
 

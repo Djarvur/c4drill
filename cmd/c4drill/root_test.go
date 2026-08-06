@@ -389,6 +389,76 @@ technology = "HTTPS"
 	assert.FileExists(t, filepath.Join(outputDir, "expanded", "mainapp.svg"), "C2 diagram for mainapp should exist")
 }
 
+// D-01/D-02/D-03: uniform auto-detect incl. boxes; unit-key file naming.
+// Any unit with subunits gets a sub-diagram — C1 boxes included (D-01), deep
+// box parity for containerBox (D-02), files named by TOML section key with
+// dotted-path directory layout (D-03). No per-unit expanded needed anywhere.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestFullPipeline_BoxWithSubunitsGeneratesSubDiagram(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	testPath := filepath.Join(tmpDir, "boxtest.toml")
+	content := `
+[properties]
+name = "Box Test"
+
+[boxname]
+type = "box"
+name = "Box"
+
+[boxname.child]
+type = "system"
+name = "Child"
+
+[[boxname.child.link]]
+peer = "system.cbox.comp"
+technology = "HTTP"
+
+[system]
+type = "system"
+name = "System"
+
+[system.cbox]
+type = "containerBox"
+name = "Containers"
+
+[system.cbox.comp]
+type = "container"
+name = "Container"
+
+[[system.cbox.comp.linkFrom]]
+peer = "boxname.child"
+technology = "HTTP"
+`
+	err := os.WriteFile(testPath, []byte(content), 0o600)
+	require.NoError(t, err)
+
+	outputDir := filepath.Join(tmpDir, "output")
+	cmd := NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+
+	if err := cmd.PersistentFlags().Set("output", outputDir); err != nil {
+		t.Fatalf("failed to set output flag: %v", err)
+	}
+
+	cmd.SetArgs([]string{testPath})
+
+	err = cmd.Execute()
+	require.NoError(t, err, "Should succeed for box model")
+
+	// C1 diagram for the whole model
+	assert.FileExists(t, filepath.Join(outputDir, "boxtest.svg"), "C1 diagram should exist")
+
+	// D-01: C2 sub-diagram for the box (unit-key naming, no display names)
+	assert.FileExists(t, filepath.Join(outputDir, "boxtest", "boxname.svg"), "C2 diagram for box should exist")
+
+	// D-02/D-03: C3 sub-diagram for the containerBox at its dotted-path location
+	assert.FileExists(t, filepath.Join(outputDir, "boxtest", "system", "cbox.svg"), "C3 diagram for containerBox should exist")
+}
+
 // =============================================================================
 // Tests using test fixtures from testdata/ directory
 // =============================================================================
