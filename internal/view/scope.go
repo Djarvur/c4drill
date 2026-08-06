@@ -628,6 +628,25 @@ func addResolvedBoundaryNode(v *View, m *parser.Model, peer, scopePath string) {
 		return
 	}
 
+	// D-01: bound the walk-up at the expanded unit's parent level so
+	// cross-container links resolve to the sibling container, not the parent
+	// system. The expanded unit (v.ExpandedUnit) is the single source of truth
+	// for "what container/system is this view about"; its parent contains both
+	// the expanded unit and its siblings. A peer that would strip down to that
+	// parent is a sibling and is the boundary, not an external top-level unit.
+	//
+	// We use v.ExpandedUnit rather than scopePath because scopePath (the link
+	// host's immediate parent) varies by recursion depth — at a deeply nested
+	// link host its own parent is inside the view, not the view root, so the
+	// bound would fire at the wrong level. v.ExpandedUnit is stable across the
+	// whole view. For C2 v.ExpandedUnit is a top-level name (no dot) so
+	// scopeParent is "" and the guard never fires — C2 boundary behavior is
+	// unchanged (BOUND-02). C1 never calls this.
+	expandedParent := ""
+	if idx := strings.LastIndex(v.ExpandedUnit, "."); idx > 0 {
+		expandedParent = v.ExpandedUnit[:idx]
+	}
+
 	// Walk up the peer's path to find the nearest visible ancestor
 	for {
 		idx := strings.LastIndex(peer, ".")
@@ -635,7 +654,13 @@ func addResolvedBoundaryNode(v *View, m *parser.Model, peer, scopePath string) {
 			break
 		}
 
-		peer = peer[:idx]
+		stripped := peer[:idx]
+		if stripped == expandedParent {
+			// Stripping would cross above the expanded unit's parent — the
+			// current peer (e.g. a sibling container) is the boundary node.
+			break
+		}
+		peer = stripped
 
 		if _, exists := v.Units[peer]; exists {
 			// An ancestor is in the view — peer is an internal nested reference
