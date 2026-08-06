@@ -781,10 +781,12 @@ func TestGenerateExpandedView_RecursivelyIncludesNestedSubunits(t *testing.T) {
 	assert.Equal(t, "mainapp.api.handler", v.Units["mainapp.api.handler"].FullPath)
 }
 
-func TestGenerateExpandedView_AddsExternalBoundaryNodesForLinkedUnits(t *testing.T) {
+func TestGenerateExpandedView_SkipsExternalBoundaryNodesForLinkedUnits(t *testing.T) {
 	t.Parallel()
 
-	// Test 4: GenerateExpandedView adds external boundary nodes for linked units
+	// D-12: GenerateExpandedView no longer synthesizes boundary nodes for
+	// linked units missing from the model — the validator is the single
+	// gatekeeper for undefined peers (internal/validator/rules.go).
 	m := &parser.Model{
 		Properties: model.Properties{Name: "Test"},
 		Units: map[string]*model.Unit{
@@ -812,9 +814,8 @@ func TestGenerateExpandedView_AddsExternalBoundaryNodesForLinkedUnits(t *testing
 	assert.Contains(t, v.Units, "api")
 	assert.Contains(t, v.Units, "api.handler")
 
-	// Should include external boundary node for linked unit
-	assert.Contains(t, v.Units, "cloudstorage")
-	assert.True(t, v.Units["cloudstorage"].IsExternal)
+	// Should NOT include an external boundary node for the linked unit
+	assert.NotContains(t, v.Units, "cloudstorage")
 }
 
 func TestGenerateExpandedView_HasSubunitsReflectsActualState(t *testing.T) {

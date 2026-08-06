@@ -1023,6 +1023,113 @@ func TestBuildGraphEdgeLength(t *testing.T) {
 	})
 }
 
+// TestBuildGraphResolvedEdgeMinLen tests D-13: a link's length (minlen) takes
+// effect only when BOTH drawn endpoints are the link's original units. When
+// either endpoint is resolved to an ancestor, the synthesized edge carries no
+// minlen.
+func TestBuildGraphResolvedEdgeMinLen(t *testing.T) {
+	t.Parallel()
+
+	// Test 1: Resolved edge drops minlen — the peer resolves to the top-level
+	// ancestor, so the authored length must NOT apply.
+	t.Run("resolved edge drops minlen", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"webUser": {
+					Type: model.TypePersonExternal,
+					Name: "Web User",
+					Links: []model.Link{
+						{Peer: "system.api.handler", Length: 2},
+					},
+				},
+				"system": {
+					Type: model.TypeSystem,
+					Name: "System",
+					Subunits: map[string]*model.Unit{
+						"api": {
+							Type: model.TypeSystem,
+							Name: "API",
+							Subunits: map[string]*model.Unit{
+								"handler": {
+									Type: model.TypeComponent,
+									Name: "Handler",
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Edges, 1)
+		assert.Zero(t, g.Edges[0].MinLen)
+	})
+
+	// Test 2: Direct pair keeps minlen — both drawn endpoints are the link's
+	// original units, so the authored length applies.
+	t.Run("direct pair keeps minlen", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type: model.TypeSystem,
+					Name: "App",
+					Links: []model.Link{
+						{Peer: "db", Length: 2},
+					},
+				},
+				"db": {
+					Type: model.TypeDb,
+					Name: "Database",
+				},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Edges, 1)
+		assert.Equal(t, 2, g.Edges[0].MinLen)
+	})
+}
+
+// TestBuildExpandedGraphBaselineDOT guards COMPAT-02: expanded-mode DOT output
+// must keep the v1.7 minlen and penwidth 2.0 prominence on every edge
+// (RESEARCH Pitfall 2).
+func TestBuildExpandedGraphBaselineDOT(t *testing.T) {
+	t.Parallel()
+
+	m, err := parser.ParseFile("../../cyp-auth-infra/saira-20260320.c2.full.toml")
+	require.NoError(t, err)
+
+	valErrors := validator.Validate(m)
+	require.Empty(t, valErrors, "model should be valid")
+
+	v := view.GenerateExpandedView(m)
+	g := graph.BuildExpandedGraph(v)
+
+	// Expanded mode keeps the v1.7 2.0 prominence on every edge (D-02/D-04).
+	for _, edge := range g.Edges {
+		assert.Equal(t, 2.0, edge.PenWidth,
+			"expanded-mode edge %s -> %s should keep penwidth 2.0", edge.Source, edge.Target)
+	}
+
+	dotData, err := render.RenderDOT(g)
+	require.NoError(t, err)
+
+	dot := string(dotData)
+	assert.Contains(t, dot, "minlen=", "DOT output should contain minlen for the expanded graph")
+	assert.Contains(t, dot, "penwidth=2", "DOT output should contain penwidth=2 for the expanded graph")
+}
+
 //nolint:funlen // Test functions with model setup are naturally longer
 func TestBuildGraphDeterministicOrder(t *testing.T) {
 	t.Parallel()
