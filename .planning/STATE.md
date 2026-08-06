@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: milestone
 current_plan: 2
-status: executing
-last_updated: "2026-08-06T11:49:24.151Z"
+status: verifying
+last_updated: "2026-08-06T12:02:44.790Z"
 last_activity: 2026-08-06
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 6
-  completed_plans: 5
-  percent: 67
+  completed_plans: 6
+  percent: 100
 ---
 
 # v1.8: Proper C1/C2/C3 View Generation
@@ -21,13 +21,13 @@ progress:
 Phase: 03 (compatibility-validation) — EXECUTING
 Plan: 2 of 2
 **Phase:** 3
-**Status:** Ready to execute
+**Status:** Phase complete — ready for verification
 **Current Plan:** 2
 **Total Plans in Phase:** 2
 **Last Activity:** 2026-08-06
-**Progress:** [████████░░] 83%
-**Last session:** 2026-08-06T11:48:45.368Z
-**Stopped At:** Phase 3 context gathered
+**Progress:** [██████████] 100%
+**Last session:** 2026-08-06T12:02:44.759Z
+**Stopped At:** Completed 03-02-PLAN.md
 **Resume File:** None
 
 ## Status: **COMPLETE**
@@ -62,6 +62,7 @@ Fixed the two root-cause bugs:
 | Phase 01-fix-c1-view-scoping P03 | 6min | 3 tasks | 5 files |
 | Phase 02-auto-generate-c2-c3-diagrams P01 | 26min | 3 tasks | 4 files |
 | Phase 03-compatibility-validation P01 | 5min | 2 tasks | 2 files |
+| Phase 03-compatibility-validation P02 | 8min | 3 tasks | 3 files |
 
 ## Decisions
 
@@ -80,6 +81,10 @@ Fixed the two root-cause bugs:
 - [Phase 02-auto-generate-c2-c3-diagrams]: Box pipeline fixture must include inter-unit links — validator ValidateOrphanUnits rejects link-less leaf units
 - [Phase ?]: Committed both test-data assets despite render-pipeline order nondeterminism: semantic content (D-02 contract) stable across runs; only sibling ordering and layout geometry flip (pinned go-graphviz fork map-order). 03-02 MUST compare order-insensitively (sort-normalize per RESEARCH Pitfall 1), NOT byte-exact require.Equal
 - [Phase ?]: No production code touched: scope guard clean; nondeterminism lives in the pinned external fork (onokonem/go-graphviz cgraph/gvc WASM layout), out of scope for test-data-only plan
+- [Phase 03]: Golden comparison is NOT byte-exact require.Equal — replaced with order-insensitive canonicalDOT semantic comparison per DI-1 (5/5 pipeline runs differ byte-wise; sibling cluster/node order + layout geometry flip; semantic content stable)
+- [Phase 03]: canonicalDOT strips layout geometry (bb/pos/lp/lheight/lwidth/height/width) and sorts statements/attributes recursively — validated: 2 independent runs + committed golden canonicalize identically; C1 outputs still differ
+- [Phase 03]: DOT statement terminator is '];' not ';' — person-node HTML labels contain '&#x1F464;' entities whose semicolons truncate naive scans
+- [Phase 03]: TestCompat01 does NOT assert absence of valid/app.dot — Phase 2 auto-detect generates the C2 sub-diagram
 
 ### Blockers
 
