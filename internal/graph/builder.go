@@ -41,8 +41,10 @@ func BuildGraph(v *view.View) *Graph {
 				continue
 			}
 
-			// Internal nodes go inside the boundary cluster
-			if entry.IsExpanded {
+			// Internal nodes go inside the boundary cluster. D-07 (same guard as
+			// the C1 branch): expansion only takes effect when there are subunits
+			// to show — an expanded-but-empty unit renders as a plain node.
+			if entry.IsExpanded && len(entry.Unit.Subunits) > 0 {
 				cluster := buildCluster(entry)
 				boundaryCluster.Clusters = append(boundaryCluster.Clusters, cluster)
 			} else {
