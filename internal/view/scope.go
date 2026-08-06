@@ -826,17 +826,13 @@ func resolveDescendantCrossLinks(v *View, subunitEntry *Entry, entryPath string,
 // and adds it as a ResolvedLink on the subunit entry if it points to a different entity.
 // originalSource is the path of the unit that actually authored the link — minlen
 // (D-13) survives only when it is also the drawn source (sourcePath).
+// Every contributing link is appended without dedup (WR-01): D-05 multiplicity
+// counting in buildEdges needs the full pre-dedup set, and the builder's
+// pair-only markSeen performs the edge dedup (D-01 first-wins).
 func addResolvedCrossLink(v *View, subunitEntry *Entry, sourcePath string, originalSource string, link model.Link) {
 	resolvedPeer := resolveToViewAncestor(v, link.Peer)
 	if resolvedPeer == "" || resolvedPeer == sourcePath {
 		return
-	}
-
-	// Check if this exact resolved link already exists (avoid duplicates)
-	for _, existing := range subunitEntry.ResolvedLinks {
-		if existing.Peer == resolvedPeer {
-			return
-		}
 	}
 
 	// D-13: minlen applies only when both drawn endpoints are the link's
@@ -863,17 +859,13 @@ func addResolvedCrossLink(v *View, subunitEntry *Entry, sourcePath string, origi
 // ResolvedLinksFrom on the subunit entry if it points to a different entity.
 // originalSource is the path of the unit that actually authored the link — minlen
 // (D-13) survives only when it is also the drawn source (sourcePath).
+// Every contributing link is appended without dedup (WR-01): D-05 multiplicity
+// counting in buildEdges needs the full pre-dedup set, and the builder's
+// pair-only markSeen performs the edge dedup (D-01 first-wins).
 func addResolvedCrossLinkFrom(v *View, subunitEntry *Entry, sourcePath string, originalSource string, link model.Link) {
 	resolvedPeer := resolveToViewAncestor(v, link.Peer)
 	if resolvedPeer == "" || resolvedPeer == sourcePath {
 		return
-	}
-
-	// Check if this exact resolved link already exists (avoid duplicates)
-	for _, existing := range subunitEntry.ResolvedLinksFrom {
-		if existing.Peer == resolvedPeer {
-			return
-		}
 	}
 
 	// D-13: minlen applies only when both drawn endpoints are the link's
