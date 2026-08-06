@@ -88,6 +88,12 @@ Plans:
 - `internal/view/scope.go` — Ensure `GenerateC1View` uses `properties.expanded` for top-level expansion
 - `cmd/c4drill/root_test.go` — Test C2/C3 file generation
 
+**Plans:** 1 plan
+Plans:
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — D-07 plain-node guard + lock D-01..D-06/D-08 with regression tests
+
 ---
 
 ## Phase 3: Compatibility & Validation
