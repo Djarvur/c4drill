@@ -45,6 +45,13 @@ Two bugs in `internal/view/scope.go`:
 - `internal/view/scope_test.go` — New tests for C1 scoping
 - `internal/graph/builder_test.go` — New tests for edge resolution
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Pair-only edge collapse with binary penwidth (D-01..D-06)
+- [ ] 01-02-PLAN.md — Remove legacy boundary nodes, activate AllExpanded, gate minlen (D-12, D-02, D-13)
+- [ ] 01-03-PLAN.md — Deepest-visible-ancestor resolution both sides (D-07..D-11)
+
 ---
 
 ## Phase 2: Auto-generate C2/C3 Diagrams
