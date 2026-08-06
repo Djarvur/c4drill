@@ -1,12 +1,12 @@
 digraph "" {
-	graph [bb="0,0,2010.1,2732.4",
+	graph [bb="0,0,2010.1,2736.4",
 		fontname=Helvetica,
 		fontsize=14,
-		label="Multilevel Test System",
+		label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0"><TR><TD>Multilevel Test System</TD></TR></TABLE>>,
 		labelloc=t,
-		lheight=0.23,
-		lp="1005.1,2720",
-		lwidth=1.94,
+		lheight=0.29,
+		lp="1005.1,2722",
+		lwidth=2.00,
 		rankdir=TB
 	];
 	node [color=black,
@@ -73,6 +73,58 @@ digraph "" {
 					style=rounded,
 					width=1.9947];
 			}
+			subgraph "cluster_cluster_mainSystem.sshAuth.pam" {
+				graph [bb="604.06,2226.8,876.06,2470.8",
+					color="#3C7FC0",
+					fontcolor="#3C7FC0",
+					fontname=Helvetica,
+					label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>PAM</b></td></tr><tr align="center"><td valign="middle"><i>[C]</i></td></tr></table>>,
+					lheight=0.47,
+					lp="740.06,2450",
+					lwidth=0.43,
+					style=rounded
+				];
+				"mainSystem.sshAuth.pam.unix"	[color="#78A8D8",
+					fontcolor="#78A8D8",
+					height=0.81111,
+					label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>pam_unix.so</b></td></tr><tr align="center"><td valign="top">Standard<BR/>authentication</td></tr></table>>,
+					pos="664.06,2264",
+					shape=box,
+					style=rounded,
+					width=1.433];
+				"mainSystem.sshAuth.pam.common"	[color="#78A8D8",
+					fontcolor="#78A8D8",
+					height=1.2778,
+					label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>Libc logic</b></td></tr><tr align="center"><td valign="top">Runs the<BR/>authentication<BR/>scenario and module<BR/>calls</td></tr></table>>,
+					pos="685.06,2375.2",
+					shape=box,
+					style=rounded,
+					width=2.0274];
+				"mainSystem.sshAuth.pam.common" -> "mainSystem.sshAuth.pam.unix"	[key="mainSystem.sshAuth.pam.common_to_mainSystem.sshAuth.pam.unix",
+					color="#78A8D8",
+					fontcolor="#78A8D8",
+					fontsize=10,
+					label="",
+					penwidth=2,
+					pos="e,669.55,2293.5 676.34,2328.8 674.9,2321.4 673.42,2313.7 672,2306.3",
+					style=solid];
+				"mainSystem.sshAuth.pam.cypAuth"	[color="#78A8D8",
+					fontcolor="#78A8D8",
+					height=0.81111,
+					label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>pam_cyp_auth.so</b></td></tr><tr align="center"><td valign="top">Authenticates<BR/>through localIDP</td></tr></table>>,
+					pos="801.06,2264",
+					shape=box,
+					style=rounded,
+					width=1.8647];
+				"mainSystem.sshAuth.pam.common" -> "mainSystem.sshAuth.pam.cypAuth"	[key="mainSystem.sshAuth.pam.common_to_mainSystem.sshAuth.pam.cypAuth",
+					color="#78A8D8",
+					fontcolor="#78A8D8",
+					fontsize=10,
+					label="",
+					penwidth=2,
+					pos="e,770.75,2293.5 733.25,2328.8 742.57,2320.1 752.25,2311 761.27,2302.5",
+					style=solid];
+			}
 			subgraph "cluster_cluster_mainSystem.sshAuth.authProxy" {
 				graph [bb="707.06,1531.4,1045.1,2218.8",
 					color="#3C7FC0",
@@ -84,34 +136,6 @@ digraph "" {
 					lwidth=1.04,
 					style=rounded
 				];
-				subgraph "cluster_cluster_mainSystem.sshAuth.authProxy.varlinkAPIs" {
-					graph [bb="715.06,2036.4,1031.1,2169.2",
-						color="#78A8D8",
-						fontcolor="#78A8D8",
-						fontname=Helvetica,
-						label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>Varlink APIs</b></td></tr></table>>,
-						lheight=0.23,
-						lp="873.06,2156.8",
-						lwidth=1.13,
-						style="rounded,dashed"
-					];
-					"mainSystem.sshAuth.authProxy.varlinkAPIs.authVarlinkAPI"	[color="#78A8D8",
-						fontcolor="#78A8D8",
-						height=1.0444,
-						label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>Auth Varlink API</b></td></tr><tr align="center"><td valign="middle"><i>[go, Varlink]</i></td></tr><tr align="center"><td valign="top">API for user<BR/>authentication</td></tr></table>>,
-						pos="960.06,2090.4",
-						shape=box,
-						style=rounded,
-						width=1.7456];
-					"mainSystem.sshAuth.authProxy.varlinkAPIs.sessionVarlinkAPI"	[color="#78A8D8",
-						fontcolor="#78A8D8",
-						height=1.2778,
-						label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>Session Varlink API</b></td></tr><tr align="center"><td valign="middle"><i>[go, Varlink]</i></td></tr><tr align="center"><td valign="top">API for managing SSH<BR/>sessions<BR/>(open/close)</td></tr></table>>,
-						pos="801.06,2090.4",
-						shape=box,
-						style=rounded,
-						width=2.1784];
-				}
 				subgraph "cluster_cluster_mainSystem.sshAuth.authProxy.localIDPClients" {
 					graph [bb="715.06,1539.4,1037.1,1672.2",
 						color="#78A8D8",
@@ -139,6 +163,34 @@ digraph "" {
 						shape=box,
 						style=rounded,
 						width=2.1451];
+				}
+				subgraph "cluster_cluster_mainSystem.sshAuth.authProxy.varlinkAPIs" {
+					graph [bb="715.06,2036.4,1031.1,2169.2",
+						color="#78A8D8",
+						fontcolor="#78A8D8",
+						fontname=Helvetica,
+						label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>Varlink APIs</b></td></tr></table>>,
+						lheight=0.23,
+						lp="873.06,2156.8",
+						lwidth=1.13,
+						style="rounded,dashed"
+					];
+					"mainSystem.sshAuth.authProxy.varlinkAPIs.authVarlinkAPI"	[color="#78A8D8",
+						fontcolor="#78A8D8",
+						height=1.0444,
+						label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>Auth Varlink API</b></td></tr><tr align="center"><td valign="middle"><i>[go, Varlink]</i></td></tr><tr align="center"><td valign="top">API for user<BR/>authentication</td></tr></table>>,
+						pos="960.06,2090.4",
+						shape=box,
+						style=rounded,
+						width=1.7456];
+					"mainSystem.sshAuth.authProxy.varlinkAPIs.sessionVarlinkAPI"	[color="#78A8D8",
+						fontcolor="#78A8D8",
+						height=1.2778,
+						label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>Session Varlink API</b></td></tr><tr align="center"><td valign="middle"><i>[go, Varlink]</i></td></tr><tr align="center"><td valign="top">API for managing SSH<BR/>sessions<BR/>(open/close)</td></tr></table>>,
+						pos="801.06,2090.4",
+						shape=box,
+						style=rounded,
+						width=2.1784];
 				}
 				"mainSystem.sshAuth.authProxy.sessionManager"	[color="#78A8D8",
 					fontcolor="#78A8D8",
@@ -189,58 +241,6 @@ digraph "" {
 					label="",
 					penwidth=2,
 					pos="e,799.62,1994.4 800.37,2044.1 800.19,2032.2 800,2019.3 799.81,2007.1",
-					style=solid];
-			}
-			subgraph "cluster_cluster_mainSystem.sshAuth.pam" {
-				graph [bb="604.06,2226.8,876.06,2470.8",
-					color="#3C7FC0",
-					fontcolor="#3C7FC0",
-					fontname=Helvetica,
-					label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>PAM</b></td></tr><tr align="center"><td valign="middle"><i>[C]</i></td></tr></table>>,
-					lheight=0.47,
-					lp="740.06,2450",
-					lwidth=0.43,
-					style=rounded
-				];
-				"mainSystem.sshAuth.pam.common"	[color="#78A8D8",
-					fontcolor="#78A8D8",
-					height=1.2778,
-					label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>Libc logic</b></td></tr><tr align="center"><td valign="top">Runs the<BR/>authentication<BR/>scenario and module<BR/>calls</td></tr></table>>,
-					pos="685.06,2375.2",
-					shape=box,
-					style=rounded,
-					width=2.0274];
-				"mainSystem.sshAuth.pam.cypAuth"	[color="#78A8D8",
-					fontcolor="#78A8D8",
-					height=0.81111,
-					label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>pam_cyp_auth.so</b></td></tr><tr align="center"><td valign="top">Authenticates<BR/>through localIDP</td></tr></table>>,
-					pos="801.06,2264",
-					shape=box,
-					style=rounded,
-					width=1.8647];
-				"mainSystem.sshAuth.pam.common" -> "mainSystem.sshAuth.pam.cypAuth"	[key="mainSystem.sshAuth.pam.common_to_mainSystem.sshAuth.pam.cypAuth",
-					color="#78A8D8",
-					fontcolor="#78A8D8",
-					fontsize=10,
-					label="",
-					penwidth=2,
-					pos="e,770.75,2293.5 733.25,2328.8 742.57,2320.1 752.25,2311 761.27,2302.5",
-					style=solid];
-				"mainSystem.sshAuth.pam.unix"	[color="#78A8D8",
-					fontcolor="#78A8D8",
-					height=0.81111,
-					label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>pam_unix.so</b></td></tr><tr align="center"><td valign="top">Standard<BR/>authentication</td></tr></table>>,
-					pos="664.06,2264",
-					shape=box,
-					style=rounded,
-					width=1.433];
-				"mainSystem.sshAuth.pam.common" -> "mainSystem.sshAuth.pam.unix"	[key="mainSystem.sshAuth.pam.common_to_mainSystem.sshAuth.pam.unix",
-					color="#78A8D8",
-					fontcolor="#78A8D8",
-					fontsize=10,
-					label="",
-					penwidth=2,
-					pos="e,669.55,2293.5 676.34,2328.8 674.9,2321.4 673.42,2313.7 672,2306.3",
 					style=solid];
 			}
 			"mainSystem.sshAuth.sshd"	[color="#3C7FC0",
@@ -300,13 +300,13 @@ digraph "" {
 				pos="e,469.04,1788.8 603.14,2052.6 611.99,2011.3 618.55,1945.1 583.06,1905 569.6,1889.8 554.47,1909 538.06,1897 506.1,1873.7 485.61,1833.9 \
 473.24,1800.7",
 				style=solid];
-			"mainSystem.sshAuth.authProxy.sessionManager" -> "mainSystem.sshAuth.systemd.logind"	[key="mainSystem.sshAuth.authProxy.sessionManager_to_mainSystem.sshAuth.systemd.logind",
+			"mainSystem.sshAuth.pam.unix" -> "mainSystem.sshAuth.nss"	[key="mainSystem.sshAuth.pam.unix_to_mainSystem.sshAuth.nss",
 				color="#78A8D8",
 				fontcolor="#78A8D8",
 				fontsize=10,
 				label="",
 				penwidth=2,
-				pos="e,640.12,1797.4 735.68,1918.6 719.72,1908.9 706.19,1900.3 703.06,1897 679.03,1871.8 659.67,1838.4 645.62,1809.2",
+				pos="e,608.4,2128.5 652.34,2234.7 641.73,2209 625.89,2170.7 613.25,2140.2",
 				style=solid];
 			"mainSystem.sshAuth.pam.cypAuth" -> "mainSystem.sshAuth.authProxy.varlinkAPIs.authVarlinkAPI"	[key="mainSystem.sshAuth.pam.cypAuth_to_mainSystem.sshAuth.authProxy.varlinkAPIs.authVarlinkAPI",
 				color="#78A8D8",
@@ -324,13 +324,13 @@ digraph "" {
 				penwidth=2,
 				pos="e,801.06,2136.6 801.06,2234.7 801.06,2211.5 801.06,2178.1 801.06,2149.4",
 				style=solid];
-			"mainSystem.sshAuth.pam.unix" -> "mainSystem.sshAuth.nss"	[key="mainSystem.sshAuth.pam.unix_to_mainSystem.sshAuth.nss",
+			"mainSystem.sshAuth.authProxy.sessionManager" -> "mainSystem.sshAuth.systemd.logind"	[key="mainSystem.sshAuth.authProxy.sessionManager_to_mainSystem.sshAuth.systemd.logind",
 				color="#78A8D8",
 				fontcolor="#78A8D8",
 				fontsize=10,
 				label="",
 				penwidth=2,
-				pos="e,608.4,2128.5 652.34,2234.7 641.73,2209 625.89,2170.7 613.25,2140.2",
+				pos="e,640.12,1797.4 735.68,1918.6 719.72,1908.9 706.19,1900.3 703.06,1897 679.03,1871.8 659.67,1838.4 645.62,1809.2",
 				style=solid];
 		}
 		subgraph "cluster_cluster_mainSystem.localIDP" {
@@ -579,14 +579,6 @@ digraph "" {
 						style=rounded,
 						width=2.1238];
 				}
-				"mainSystem.storages.externalStorage.client"	[color="#78A8D8",
-					fontcolor="#78A8D8",
-					height=1.5111,
-					label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>External Client</b></td></tr><tr align="center"><td valign="middle"><i>[go]</i></td></tr><tr align="center"><td valign="top">Authenticates<BR/>through the external<BR/>IDP, refreshes<BR/>sessions</td></tr></table>>,
-					pos="393.06,411.05",
-					shape=box,
-					style=rounded,
-					width=1.9518];
 				"mainSystem.storages.externalStorage.sessionManager"	[color="#78A8D8",
 					fontcolor="#78A8D8",
 					height=1.4333,
@@ -595,14 +587,6 @@ digraph "" {
 					shape=box,
 					style=rounded,
 					width=1.9192];
-				"mainSystem.storages.externalStorage.sessionManager" -> "mainSystem.storages.externalStorage.client"	[key="mainSystem.storages.externalStorage.sessionManager_to_mainSystem.storages.externalStorage.client",
-					color="#78A8D8",
-					fontcolor="#78A8D8",
-					fontsize=10,
-					label="",
-					penwidth=2,
-					pos="e,420.79,465.86 451.86,526.16 443.86,510.63 434.94,493.33 426.52,476.99",
-					style=solid];
 				"mainSystem.storages.externalStorage.sessionStorage"	[color="#78A8D8",
 					fontcolor="#78A8D8",
 					height=1.9708,
@@ -634,6 +618,22 @@ digraph "" {
 					label="",
 					penwidth=2,
 					pos="e,290.31,465.8 408.82,539.13 379.19,522.34 344.48,501.92 314.06,482 309.68,479.13 305.22,476.13 300.75,473.06",
+					style=solid];
+				"mainSystem.storages.externalStorage.client"	[color="#78A8D8",
+					fontcolor="#78A8D8",
+					height=1.5111,
+					label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>External Client</b></td></tr><tr align="center"><td valign="middle"><i>[go]</i></td></tr><tr align="center"><td valign="top">Authenticates<BR/>through the external<BR/>IDP, refreshes<BR/>sessions</td></tr></table>>,
+					pos="393.06,411.05",
+					shape=box,
+					style=rounded,
+					width=1.9518];
+				"mainSystem.storages.externalStorage.sessionManager" -> "mainSystem.storages.externalStorage.client"	[key="mainSystem.storages.externalStorage.sessionManager_to_mainSystem.storages.externalStorage.client",
+					color="#78A8D8",
+					fontcolor="#78A8D8",
+					fontsize=10,
+					label="",
+					penwidth=2,
+					pos="e,420.79,465.86 451.86,526.16 443.86,510.63 434.94,493.33 426.52,476.99",
 					style=solid];
 				"mainSystem.storages.externalStorage.dynamicUserDb"	[color="#78A8D8",
 					fontcolor="#78A8D8",

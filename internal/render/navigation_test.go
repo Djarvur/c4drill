@@ -39,7 +39,10 @@ func TestBuildNavigationLabel(t *testing.T) {
 		result := render.BuildNavigationLabel(nav)
 		assert.Contains(t, result, "Back to Main System")
 		assert.Contains(t, result, "../mainsystem.svg")
-		assert.Contains(t, result, "<a href=")
+		// Gap 2 (03-04): clickable items use <TD HREF="..."> (GraphViz HTML-label
+		// idiom); <a href> tags are not supported and are dropped at render time.
+		assert.Contains(t, result, `<TD HREF="../mainsystem.svg">Back to Main System</TD>`)
+		assert.Contains(t, result, "<TABLE")
 	})
 
 	t.Run("breadcrumbs only produces correct format", func(t *testing.T) {
@@ -51,11 +54,12 @@ func TestBuildNavigationLabel(t *testing.T) {
 			},
 		}
 		result := render.BuildNavigationLabel(nav)
-		// Ancestor should be clickable
-		assert.Contains(t, result, "<a href=\"../mainsystem.svg\">Main System</a>")
-		// Current level (empty URL) should be plain text
-		assert.Contains(t, result, "API Container")
-		assert.Contains(t, result, " > ")
+		// Ancestor should be clickable via TD HREF
+		assert.Contains(t, result, `<TD HREF="../mainsystem.svg">Main System</TD>`)
+		// Current level (empty URL) should be a plain TD, not a clickable TD
+		assert.Contains(t, result, "<TD>API Container</TD>")
+		// Breadcrumb separator is a separate cell with the &gt; entity
+		assert.Contains(t, result, "<TD>&gt;</TD>")
 	})
 
 	t.Run("backlink and breadcrumbs combined with separator", func(t *testing.T) {
@@ -77,8 +81,8 @@ func TestBuildNavigationLabel(t *testing.T) {
 		assert.Contains(t, result, "Main System")
 		assert.Contains(t, result, "API Container")
 		assert.Contains(t, result, "Auth Service")
-		// Should have separator between backlink and breadcrumbs
-		assert.Contains(t, result, " | ")
+		// Separator between backlink and breadcrumbs is a "|" cell
+		assert.Contains(t, result, "<TD>|</TD>")
 	})
 
 	t.Run("current level with empty URL is plain text not link", func(t *testing.T) {
@@ -90,11 +94,11 @@ func TestBuildNavigationLabel(t *testing.T) {
 			},
 		}
 		result := render.BuildNavigationLabel(nav)
-		// Ancestor should have link
-		assert.Contains(t, result, "<a href=\"../ancestor.svg\">Ancestor</a>")
-		// Current should NOT have link (plain text only)
-		assert.NotContains(t, result, "<a href=\"\">Current</a>")
-		assert.Contains(t, result, "Current")
+		// Ancestor should have a clickable TD
+		assert.Contains(t, result, `<TD HREF="../ancestor.svg">Ancestor</TD>`)
+		// Current should be a plain TD (no HREF)
+		assert.Contains(t, result, "<TD>Current</TD>")
+		assert.NotContains(t, result, `<TD HREF="">Current</TD>`)
 	})
 
 	t.Run("multiple ancestors all clickable", func(t *testing.T) {
@@ -107,11 +111,11 @@ func TestBuildNavigationLabel(t *testing.T) {
 			},
 		}
 		result := render.BuildNavigationLabel(nav)
-		// Both ancestors should be clickable
-		assert.Contains(t, result, "<a href=\"../../root.svg\">Root</a>")
-		assert.Contains(t, result, "<a href=\"../parent.svg\">Parent</a>")
-		// Should have separator between items
-		assert.Contains(t, result, " > ")
+		// Both ancestors should be clickable via TD HREF
+		assert.Contains(t, result, `<TD HREF="../../root.svg">Root</TD>`)
+		assert.Contains(t, result, `<TD HREF="../parent.svg">Parent</TD>`)
+		// Breadcrumb separator cell between items
+		assert.Contains(t, result, "<TD>&gt;</TD>")
 	})
 
 	t.Run("backlink with empty URL produces no link", func(t *testing.T) {

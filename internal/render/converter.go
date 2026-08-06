@@ -2,6 +2,7 @@ package render
 
 import (
 	"fmt"
+	"html"
 	"strings"
 	"unicode"
 
@@ -81,7 +82,9 @@ func buildCgraph(
 	}
 
 	// Configure graph-level settings
-	configureGraphSettings(cg, g)
+	if err := configureGraphSettings(cg, g); err != nil {
+		return nil, fmt.Errorf("configure graph settings: %w", err)
+	}
 
 	// Build node lookup map
 	nodeMap := make(map[string]*cgraph.Node)
@@ -147,7 +150,7 @@ func createEdges(cg *cgraph.Graph, edges []*graph.Edge, nodeMap map[string]*cgra
 }
 
 // configureGraphSettings applies graph-level settings from graph.Graph.
-func configureGraphSettings(cg *cgraph.Graph, g *graph.Graph) {
+func configureGraphSettings(cg *cgraph.Graph, g *graph.Graph) error {
 	// Layout direction
 	if g.Direction == "LR" {
 		cg.SetRankDir(cgraph.LRRank)
@@ -172,46 +175,47 @@ func configureGraphSettings(cg *cgraph.Graph, g *graph.Graph) {
 	cg.Attr(1, "fontname", "Helvetica") // nodes
 	cg.Attr(2, "fontname", "Helvetica") // edges
 
-	// Build combined label with navigation and title
-	var labelParts []string
+	// Build combined HTML graph label with navigation and title (Gap 2).
+	//
+	// GraphViz HTML-like labels do NOT support <a href> tags — a label
+	// containing them is silently dropped at render time, which is why the
+	// pre-fix navigation bar appeared as escaped literal text
+	// (&lt;a href=&quot;...&quot;&gt;) when the label was plain text, and
+	// disappeared entirely when wrapped as an HTML label with raw <a href>.
+	// Clickable links inside an HTML label are expressed via the HREF
+	// attribute on a <TD> element (rendered as <a xlink:href> in SVG). The
+	// navigation TDs are produced by navigationTDs; the plain-text title is
+	// HTML-escaped before embedding (threat T-03-04-02). Both are placed in a
+	// single borderless TABLE so the label renders as one visible block with
+	// the navigation row above the title row.
+	navTDs := navigationTDs(g.Navigation)
+	hasTitle := g.Title != ""
 
-	// Navigation bar (back-link + breadcrumbs) for C2/C3
-	if g.Navigation != nil {
-		navLabel := BuildNavigationLabel(g.Navigation)
-		if navLabel != "" {
-			labelParts = append(labelParts, navLabel)
-		}
+	if len(navTDs) == 0 && !hasTitle {
+		return nil
 	}
 
-	// Graph title
-	if g.Title != "" {
-		labelParts = append(labelParts, g.Title)
+	var rows []string
+	if len(navTDs) > 0 {
+		rows = append(rows, "<TR>"+strings.Join(navTDs, "")+"</TR>")
 	}
 
-	// Set combined label
-	if len(labelParts) > 0 {
-		cg.SetLabel(joinLabels(labelParts))
-		cg.SetLabelLocation(cgraph.TopLocation)
-	}
-}
-
-// joinLabels combines multiple label parts with newlines.
-func joinLabels(parts []string) string {
-	result := ""
-
-	var resultSb120 strings.Builder
-
-	for i, part := range parts {
-		if i > 0 {
-			resultSb120.WriteString("\n")
-		}
-
-		resultSb120.WriteString(part)
+	if hasTitle {
+		rows = append(rows, "<TR>"+plainTD(html.EscapeString(g.Title))+"</TR>")
 	}
 
-	result += resultSb120.String()
+	combinedHTML := "<TABLE BORDER=\"0\" CELLBORDER=\"0\" CELLSPACING=\"0\">" +
+		strings.Join(rows, "") + "</TABLE>"
 
-	return result
+	htmlStr, err := cg.StrdupHTML(combinedHTML)
+	if err != nil {
+		return fmt.Errorf("create HTML graph label: %w", err)
+	}
+
+	cg.SetLabel(htmlStr)
+	cg.SetLabelLocation(cgraph.TopLocation)
+
+	return nil
 }
 
 // createNode creates a cgraph.Node from a graph.Node.

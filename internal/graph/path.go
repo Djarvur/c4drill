@@ -39,16 +39,7 @@ func ComputeExploreURL(currentPath, targetPath, basename, _ string) string {
 	// Split dotted paths into segments and URL-encode each segment.
 	currentParts := strings.Split(currentPath, ".")
 	targetParts := strings.Split(targetPath, ".")
-
-	encodeAll := func(parts []string) []string {
-		encoded := make([]string, len(parts))
-		for i, part := range parts {
-			encoded[i] = URLEncodePath(part)
-		}
-		return encoded
-	}
-
-	encodedTarget := encodeAll(targetParts)
+	encodedTarget := encodePathSegments(targetParts)
 
 	// C1 case: current file is {basename}.svg at the root; target file is the
 	// full encoded target path under {basename}/.
@@ -61,16 +52,7 @@ func ComputeExploreURL(currentPath, targetPath, basename, _ string) string {
 	// all segments except the last (the filename segment).
 	curFileDir := currentParts[:len(currentParts)-1] // directory containing current file
 	tgtFileDir := targetParts[:len(targetParts)-1]   // directory containing target file
-
-	// Length of the common directory prefix shared by the two directories.
-	commonDirLen := 0
-	for i := 0; i < len(curFileDir) && i < len(tgtFileDir); i++ {
-		if curFileDir[i] == tgtFileDir[i] {
-			commonDirLen++
-		} else {
-			break
-		}
-	}
+	commonDirLen := commonDirectoryPrefixLength(curFileDir, tgtFileDir)
 
 	// Levels to climb from the current file's directory to the common ancestor.
 	levelsUp := len(curFileDir) - commonDirLen
@@ -95,8 +77,15 @@ func ComputeExploreURL(currentPath, targetPath, basename, _ string) string {
 // ComputeBackLinkURL calculates the relative path from current diagram back to parent.
 // currentPath is the dotted path of the current diagram.
 // basename is the output base filename.
-// format is the output format.
-func ComputeBackLinkURL(currentPath, basename, format string) string {
+// format is the output format being generated; it is IGNORED — clickable
+// navigation URLs always use ".svg" for browser navigation regardless of the
+// render format (matching ComputeExploreURL), so a .dot diagram still links to
+// the browser-navigable .svg sibling. The parameter is retained to avoid
+// rippling signature changes through the builder call sites.
+func ComputeBackLinkURL(currentPath, basename, _ string) string {
+	// Always use SVG for clickable links (browser navigation) — Gap 3.
+	const linkFormat = "svg"
+
 	// C1 has no parent
 	if currentPath == "" {
 		return ""
@@ -105,13 +94,13 @@ func ComputeBackLinkURL(currentPath, basename, format string) string {
 	parts := strings.Split(currentPath, ".")
 	if len(parts) == 1 {
 		// C2 level - go back to C1
-		return "../" + basename + "." + format
+		return "../" + basename + "." + linkFormat
 	}
 	// C3+ level - go back one level to parent directory
 	// The parent file is named after the parent unit (last but one part)
 	parentName := parts[len(parts)-2]
 
-	return "../" + URLEncodePath(parentName) + "." + format
+	return "../" + URLEncodePath(parentName) + "." + linkFormat
 }
 
 // BuildBreadcrumbPath creates breadcrumb items from a dotted path.
@@ -141,27 +130,54 @@ func BuildBreadcrumbPath(dottedPath, basename, format string) []BreadcrumbItem {
 }
 
 // computeBreadcrumbURL computes the URL for a breadcrumb ancestor at the given index.
-func computeBreadcrumbURL(parts []string, ancestorIndex int, basename, format string) string {
-	// Number of levels to go up = total depth - ancestor level
-	levelsUp := len(parts) - ancestorIndex - 1
+// format is the output format being generated; it is IGNORED — clickable
+// navigation URLs always use ".svg" for browser navigation regardless of the
+// render format (matching ComputeExploreURL), so a .dot diagram still links to
+// the browser-navigable .svg sibling. The parameter is retained to avoid
+// rippling signature changes through the builder call sites.
+//
+// The relative path from the current diagram's directory to the ancestor file
+// is computed with the same bidirectional algorithm as ComputeExploreURL so
+// that intermediate ancestors (e.g. the C2 "mainSystem" ancestor inside a C3
+// "mainSystem.sshAuth" diagram) resolve correctly. The pre-fix code assumed
+// the index-0 segment was always the C1 root, which 404'd for C3+ breadcrumbs.
+func computeBreadcrumbURL(parts []string, ancestorIndex int, basename, _ string) string {
+	// Reconstruct the ancestor's full dotted path and reuse ComputeExploreURL's
+	// bidirectional relative-path logic. parts is the current diagram's path
+	// split into segments, so the ancestor path is parts[:ancestorIndex+1].
+	currentPath := strings.Join(parts, ".")
+	ancestorPath := strings.Join(parts[:ancestorIndex+1], ".")
 
-	up := ""
-	for range levelsUp {
-		up += "../"
-	}
-
-	if ancestorIndex == 0 {
-		// First level ancestor - link to C1 basename
-		return up + basename + "." + format
-	}
-
-	// Build path to ancestor
-	ancestorPath := strings.Join(parts[:ancestorIndex+1], "/")
-
-	return up + URLEncodePath(ancestorPath) + "." + format
+	return ComputeExploreURL(currentPath, ancestorPath, basename, "svg")
 }
 
 // URLEncodePath URL-encodes a path segment for use in URLs.
 func URLEncodePath(path string) string {
 	return url.PathEscape(path)
+}
+
+// encodePathSegments URL-encodes each segment of a dotted-path split.
+func encodePathSegments(parts []string) []string {
+	encoded := make([]string, len(parts))
+	for i, part := range parts {
+		encoded[i] = URLEncodePath(part)
+	}
+
+	return encoded
+}
+
+// commonDirectoryPrefixLength returns the length of the shared leading segment
+// prefix of two directory-segment slices.
+func commonDirectoryPrefixLength(a, b []string) int {
+	commonDirLen := 0
+
+	for i := 0; i < len(a) && i < len(b); i++ {
+		if a[i] != b[i] {
+			break
+		}
+
+		commonDirLen++
+	}
+
+	return commonDirLen
 }

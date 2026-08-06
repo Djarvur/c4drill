@@ -474,10 +474,13 @@ func TestIntegration_SVG_C1NoNavigation(t *testing.T) {
 }
 
 // TestIntegration_Navigation_SVGRendersClickableLinks guards Gap 2: the graph
-// label that carries the navigation bar must be passed through cg.StrdupHTML
-// (mirroring the node-label pattern) so the <a href> tags render as clickable
-// links in SVG output instead of being HTML-escaped to literal text. Also
-// verifies the DOT HTML-label form for parity.
+// label that carries the navigation bar must render as a visible, clickable
+// navigation bar in SVG output. GraphViz HTML-like labels do not support
+// <a href> tags (the label is silently dropped), so clickable items are
+// expressed via the HREF attribute on a <TD> element, which GraphViz renders
+// as an <a xlink:href="..."> anchor in SVG. The pre-fix bug showed the bar as
+// escaped literal text (&lt;a href=&quot;...&quot;&gt;) because the graph
+// label was plain text containing raw <a href> markup.
 //
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestIntegration_Navigation_SVGRendersClickableLinks(t *testing.T) {
@@ -488,24 +491,31 @@ func TestIntegration_Navigation_SVGRendersClickableLinks(t *testing.T) {
 	require.NotNil(t, g)
 	require.NotNil(t, g.Navigation, "C2 graph must carry navigation")
 
-	// SVG: the navigation bar must contain literal <a href= (clickable), not the
-	// HTML-escaped &lt;a href= form.
+	// SVG: the navigation bar must render as clickable anchors. GraphViz emits
+	// <a xlink:href="..."> for TD HREF cells; the pre-fix bug emitted the bar
+	// as escaped text (&lt;a href=) instead.
 	svgBytes, err := render.RenderSVG(g)
 	require.NoError(t, err)
 
 	svgStr := string(svgBytes)
-	assert.Contains(t, svgStr, `<a href=`,
-		"SVG navigation bar must contain literal <a href= (Gap 2)")
+	assert.Contains(t, svgStr, `<a xlink:href=`,
+		"SVG navigation bar must render clickable anchors via <a xlink:href= (Gap 2)")
 	assert.NotContains(t, svgStr, `&lt;a href=`,
 		"SVG navigation bar must NOT contain escaped &lt;a href= (Gap 2)")
+	// The readable back-link text must still be present (not dropped).
+	assert.Contains(t, svgStr, "Back to",
+		"SVG navigation bar must contain the readable back-link text")
 
-	// DOT: the HTML label form should carry the unescaped <a href= markup.
+	// DOT: the HTML label carries the navigation as a <TABLE> with <TD HREF=...>
+	// cells (the source form GraphViz accepts).
 	dotBytes, err := render.RenderDOT(g)
 	require.NoError(t, err)
 
 	dotStr := string(dotBytes)
-	assert.Contains(t, dotStr, `<a href=`,
-		"DOT navigation label must contain literal <a href= (HTML label, Gap 2)")
+	assert.Contains(t, dotStr, `<TD HREF=`,
+		"DOT navigation label must carry clickable TD HREF cells (Gap 2)")
+	assert.NotContains(t, dotStr, `&lt;a href=`,
+		"DOT navigation label must NOT contain escaped &lt;a href= (Gap 2)")
 }
 
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
