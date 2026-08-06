@@ -671,6 +671,73 @@ func TestGenerateC3View_ExternalBoundaryFromSubunitLinks(t *testing.T) {
 	assert.True(t, v.Units["externalservice"].IsExternal)
 }
 
+// TestGenerateC3View_SiblingContainerIsBoundaryNotParent locks in DEFERRED-04 /
+// BOUND-01: when a component inside the expanded container links to a SIBLING
+// container (a peer that shares the same parent system), the C3 view must
+// surface the sibling container as the boundary node — NOT the parent system.
+//
+// Before the fix, addResolvedBoundaryNode walked past the sibling level
+// (mainSystem.rbac -> mainSystem -> break) and created a boundary node for the
+// parent system "mainSystem", which is confusing: the parent is the expanded
+// container's own ancestor, not an external boundary.
+func TestGenerateC3View_SiblingContainerIsBoundaryNotParent(t *testing.T) {
+	t.Parallel()
+
+	// Model mirrors the multilevel.toml sibling case:
+	//   mainSystem (system)
+	//     .localIDP (container)        <- the C3 view target
+	//       .grpcAPIs (componentBox)
+	//         .authAPI (component) -> Links {mainSystem.rbac}   <- cross-container sibling link
+	//     .rbac (container)            <- the sibling that should become the boundary node
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"mainSystem": {
+				Type: model.TypeSystem,
+				Name: "Main System",
+				Subunits: map[string]*model.Unit{
+					"localIDP": {
+						Type: model.TypeContainer,
+						Name: "Local IDP",
+						Subunits: map[string]*model.Unit{
+							"grpcAPIs": {
+								Type: model.TypeComponentBox,
+								Name: "gRPC APIs",
+								Subunits: map[string]*model.Unit{
+									"authAPI": {
+										Type: model.TypeComponent,
+										Name: "Authenticate API",
+										Links: []model.Link{
+											{Peer: "mainSystem.rbac"}, // cross-container sibling link
+										},
+									},
+								},
+							},
+						},
+					},
+					"rbac": {
+						Type: model.TypeContainer,
+						Name: "RBAC",
+					},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC3View(m, "mainSystem.localIDP")
+	require.NotNil(t, v)
+
+	// The sibling container is the boundary node.
+	assert.Contains(t, v.Units, "mainSystem.rbac")
+	// The sibling boundary node carries the real unit data (Name "RBAC").
+	require.NotNil(t, v.Units["mainSystem.rbac"])
+	require.NotNil(t, v.Units["mainSystem.rbac"].Unit)
+	assert.Equal(t, "RBAC", v.Units["mainSystem.rbac"].Unit.Name)
+
+	// The parent system is NOT surfaced as a boundary node for this view.
+	assert.NotContains(t, v.Units, "mainSystem")
+}
+
 func TestGenerateC3View_EdgesFromExpandedUnit(t *testing.T) {
 	t.Parallel()
 
