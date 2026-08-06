@@ -11,7 +11,7 @@ Fix view generation so C1 shows only top-level units, C2/C3 diagrams are auto-ge
 
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
-| 1 | Fix C1 View Scoping | C1 shows only top-level units with resolved edges | VIEW-01, VIEW-02, EDGE-01, EDGE-02 | 4 |
+| 1 | Fix C1 View Scoping | 2/3 | In Progress|  |
 | 2 | Auto-generate C2/C3 | Create sub-diagrams for units with subunits | VIEW-03, VIEW-04, VIEW-05 | 3 |
 | 3 | Compatibility & Validation | Existing TOML files and --expanded still work | COMPAT-01, COMPAT-02 | 2 |
 
@@ -53,7 +53,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-02-PLAN.md — Remove legacy boundary nodes, activate AllExpanded, gate minlen (D-12, D-02, D-13)
+- [x] 01-02-PLAN.md — Remove legacy boundary nodes, activate AllExpanded, gate minlen (D-12, D-02, D-13)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
