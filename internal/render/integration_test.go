@@ -473,6 +473,41 @@ func TestIntegration_SVG_C1NoNavigation(t *testing.T) {
 	assert.NotContains(t, svgStr, "Back to", "C1 SVG should not contain back-link")
 }
 
+// TestIntegration_Navigation_SVGRendersClickableLinks guards Gap 2: the graph
+// label that carries the navigation bar must be passed through cg.StrdupHTML
+// (mirroring the node-label pattern) so the <a href> tags render as clickable
+// links in SVG output instead of being HTML-escaped to literal text. Also
+// verifies the DOT HTML-label form for parity.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestIntegration_Navigation_SVGRendersClickableLinks(t *testing.T) {
+	// C2 graph with a back-link/breadcrumb navigation bar.
+	m := buildNavTestModelNested()
+	v := view.GenerateC2View(m, "mainsystem")
+	g := graph.BuildGraphWithPath(v, "mainsystem", "test", "svg")
+	require.NotNil(t, g)
+	require.NotNil(t, g.Navigation, "C2 graph must carry navigation")
+
+	// SVG: the navigation bar must contain literal <a href= (clickable), not the
+	// HTML-escaped &lt;a href= form.
+	svgBytes, err := render.RenderSVG(g)
+	require.NoError(t, err)
+
+	svgStr := string(svgBytes)
+	assert.Contains(t, svgStr, `<a href=`,
+		"SVG navigation bar must contain literal <a href= (Gap 2)")
+	assert.NotContains(t, svgStr, `&lt;a href=`,
+		"SVG navigation bar must NOT contain escaped &lt;a href= (Gap 2)")
+
+	// DOT: the HTML label form should carry the unescaped <a href= markup.
+	dotBytes, err := render.RenderDOT(g)
+	require.NoError(t, err)
+
+	dotStr := string(dotBytes)
+	assert.Contains(t, dotStr, `<a href=`,
+		"DOT navigation label must contain literal <a href= (HTML label, Gap 2)")
+}
+
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestIntegration_FullPipeline_Navigation(t *testing.T) {
 	// Full pipeline: model -> view -> graph -> render -> SVG

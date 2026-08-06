@@ -2,6 +2,7 @@ package graph_test
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Djarvur/c4drill/internal/graph"
@@ -188,6 +189,23 @@ func TestComputeBackLinkURL(t *testing.T) {
 		url := graph.ComputeBackLinkURL("mainapp.api (v2)", "diagram", "svg")
 		assert.Equal(t, "../mainapp.svg", url)
 	})
+
+	// 03-04 Gap 3: navigation URLs must always use .svg regardless of the render
+	// format being generated, so a .dot diagram still produces browser-navigable
+	// .svg links in its breadcrumb/back-link bar (matching ComputeExploreURL).
+	t.Run("back-link always uses svg regardless of format", func(t *testing.T) {
+		t.Parallel()
+
+		url := graph.ComputeBackLinkURL("mainapp", "diagram", "dot")
+		assert.Equal(t, "../diagram.svg", url)
+	})
+
+	t.Run("C3 back-link always uses svg regardless of format", func(t *testing.T) {
+		t.Parallel()
+
+		url := graph.ComputeBackLinkURL("mainapp.api", "diagram", "dot")
+		assert.Equal(t, "../mainapp.svg", url)
+	})
 }
 
 func TestBuildBreadcrumbPath(t *testing.T) {
@@ -226,6 +244,20 @@ func TestBuildBreadcrumbPath(t *testing.T) {
 		// Third level (current) - no URL
 		assert.Equal(t, "auth", items[2].Name)
 		assert.Empty(t, items[2].URL)
+	})
+
+	// 03-04 Gap 3: breadcrumb ancestor URLs must always end with .svg regardless
+	// of the render format parameter (matching ComputeExploreURL).
+	t.Run("breadcrumb URL always uses svg regardless of format", func(t *testing.T) {
+		t.Parallel()
+
+		items := graph.BuildBreadcrumbPath("mainapp.api", "diagram", "dot")
+		require.Len(t, items, 2)
+
+		// Ancestor (mainapp) has a URL; it must end with .svg even though the
+		// format parameter is "dot".
+		assert.True(t, strings.HasSuffix(items[0].URL, ".svg"),
+			"breadcrumb ancestor URL must end with .svg regardless of format; got %q", items[0].URL)
 	})
 }
 
