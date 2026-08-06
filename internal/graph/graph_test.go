@@ -75,13 +75,13 @@ func TestClusterStruct(t *testing.T) {
 
 	// Test 4: Cluster struct contains ID, Label, Nodes, Style
 	c := &graph.Cluster{
-		ID:    "cluster_mainapp",
+		ID:    "mainapp",
 		Label: &graph.Label{Name: "Main App"},
 		Nodes: []*graph.Node{},
 		Style: &graph.NodeStyle{FillColor: "#438DD5"},
 	}
 
-	assert.Equal(t, "cluster_mainapp", c.ID)
+	assert.Equal(t, "mainapp", c.ID)
 	assert.NotNil(t, c.Label)
 	assert.NotNil(t, c.Nodes)
 	assert.NotNil(t, c.Style)

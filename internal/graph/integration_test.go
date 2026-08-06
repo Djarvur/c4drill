@@ -127,7 +127,7 @@ func TestIntegrationBuildGraphFromC2ViewWithClusters(t *testing.T) {
 	require.Len(t, g.Clusters, 1)
 
 	cluster := g.Clusters[0]
-	assert.Equal(t, "cluster_mainsystem", cluster.ID)
+	assert.Equal(t, "mainsystem", cluster.ID)
 	assert.Equal(t, "Main System", cluster.Label.Name)
 
 	// Cluster should contain 2 child nodes
@@ -369,7 +369,7 @@ func TestIntegrationCollapsedIndicatorOnNodesWithSubunits(t *testing.T) {
 	var expandedCluster *graph.Cluster
 
 	for _, cluster := range g.Clusters {
-		if cluster.ID == "cluster_expanded" {
+		if cluster.ID == "expanded" {
 			expandedCluster = cluster
 
 			break
@@ -562,7 +562,7 @@ func TestIntegration_ExploreURL_ExpandedSystem(t *testing.T) {
 	var mainsystemCluster *graph.Cluster
 
 	for _, cluster := range g.Clusters {
-		if cluster.ID == "cluster_mainsystem" {
+		if cluster.ID == "mainsystem" {
 			mainsystemCluster = cluster
 
 			break

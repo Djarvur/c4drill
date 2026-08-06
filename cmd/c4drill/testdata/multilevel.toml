@@ -1,6 +1,7 @@
 [properties]
 name = "Multilevel Test System"
 description = "Sanitized multi-level test architecture"
+expanded = ["mainSystem"]
 
 # External entities (C1)
 

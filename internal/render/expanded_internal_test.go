@@ -157,7 +157,7 @@ func TestExpandedViewNestedClusters(t *testing.T) {
 
 	// CASE-01: server.pam cluster should exist
 	// The cluster naming follows "cluster_" + path pattern
-	assert.Contains(t, dotStr, "cluster_cluster_server.pam",
+	assert.Contains(t, dotStr, "cluster_server.pam",
 		"DOT should contain nested cluster for server.pam (CASE-01)")
 
 	// CASE-02: server.pam.unix and server.pam.cyp nodes should exist
@@ -234,9 +234,9 @@ func TestClusterHTMLLabels(t *testing.T) {
 
 	for i, line := range lines {
 		// Look for cluster_server.pam subgraph
-		hasCluster := strings.Contains(line, "cluster_cluster_server.pam")
+		hasCluster := strings.Contains(line, "cluster_server.pam")
 
-		hasSubgraph := strings.Contains(line, "subgraph cluster_cluster_server.pam")
+		hasSubgraph := strings.Contains(line, "subgraph cluster_server.pam")
 		if hasCluster || hasSubgraph {
 			// Check subsequent lines for HTML label
 			for j := i; j < len(lines) && j < i+10; j++ {

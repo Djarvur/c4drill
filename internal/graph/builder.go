@@ -196,7 +196,7 @@ func buildNestedCluster(entry *view.Entry, path string, v *view.View) *Cluster {
 	}
 
 	cluster := &Cluster{
-		ID:         "cluster_" + path,
+		ID:         path,
 		Label:      buildClusterLabel(entry),
 		Nodes:      make([]*Node, 0),
 		Clusters:   make([]*Cluster, 0),
@@ -289,7 +289,7 @@ func buildCluster(entry *view.Entry) *Cluster {
 	}
 
 	cluster := &Cluster{
-		ID:         "cluster_" + entry.FullPath,
+		ID:         entry.FullPath,
 		Label:      buildClusterLabel(entry),
 		Nodes:      make([]*Node, 0),
 		Style:      style,

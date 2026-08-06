@@ -477,7 +477,7 @@ func TestBuildGraphExpandedC1VisibleSubunitEdges(t *testing.T) {
 	// The cluster renders the visible subunit node
 	require.Len(t, g.Clusters, 1)
 	cluster := g.Clusters[0]
-	assert.Equal(t, "cluster_"+linuxSystemPath, cluster.ID)
+	assert.Equal(t, linuxSystemPath, cluster.ID)
 
 	found := false
 

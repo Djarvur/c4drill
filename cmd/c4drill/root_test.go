@@ -660,13 +660,15 @@ func TestCompat02_MultilevelFixtureFiveNodeC1(t *testing.T) {
 
 	dot := string(dotData)
 
-	for _, unit := range []string{"actorA", "actorB", "actorC", "externalSys", "mainSystem"} {
-		assert.Contains(t, dot, unit+"\t[", "the five top-level units render as C1 nodes")
+	for _, unit := range []string{"actorA", "actorB", "actorC", "externalSys"} {
+		assert.Contains(t, dot, unit+"\t[", "the four external/top-level units render as C1 nodes")
 	}
 
-	assert.NotContains(t, dot, "subgraph cluster_", "all top-level units collapsed -> no clusters")
-	assert.NotContains(t, dot, "mainSystem.sshAuth", "deep subunit paths must not appear as C1 nodes")
-	assert.Contains(t, dot, "Main System [+]", "mainSystem collapsed indicator")
+	// mainSystem is expanded (properties.expanded = ["mainSystem"]) so it
+	// appears as a cluster, not a collapsed node.
+	assert.Contains(t, dot, "subgraph cluster_mainSystem", "mainSystem expanded -> cluster present")
+	assert.NotContains(t, dot, "Main System [+]", "mainSystem is expanded, not collapsed")
+	assert.Contains(t, dot, "mainSystem.sshAuth", "expanded mainSystem shows its containers")
 
 	// C2 sub-diagram for mainSystem (auto-detected: has subunits).
 	_, err = os.Stat(filepath.Join(tmpDir, "multilevel", "mainSystem.dot"))

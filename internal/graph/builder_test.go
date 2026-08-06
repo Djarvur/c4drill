@@ -246,7 +246,7 @@ func TestBuildGraphClusters(t *testing.T) {
 	require.Len(t, g.Clusters, 1)
 
 	cluster := g.Clusters[0]
-	assert.Equal(t, "cluster_app", cluster.ID)
+	assert.Equal(t, "app", cluster.ID)
 
 	// Test 14: Cluster contains nodes for expanded unit's children
 	assert.Len(t, cluster.Nodes, 2)
@@ -314,7 +314,7 @@ func TestBuildGraphC2ExpandedContainerRendersCluster(t *testing.T) {
 	// D-04: boundary cluster only, with the expanded container's cluster inside
 	require.Len(t, g.Clusters, 1)
 	require.Len(t, g.Clusters[0].Clusters, 1)
-	assert.Equal(t, "cluster_app.api", g.Clusters[0].Clusters[0].ID)
+	assert.Equal(t, "app.api", g.Clusters[0].Clusters[0].ID)
 	assert.Len(t, g.Clusters[0].Clusters[0].Nodes, 2)
 }
 
@@ -512,7 +512,7 @@ func TestBuildExpandedGraph(t *testing.T) {
 
 		// Top-level unit with subunits should become a cluster
 		require.Len(t, g.Clusters, 1)
-		assert.Equal(t, "cluster_mainapp", g.Clusters[0].ID)
+		assert.Equal(t, "mainapp", g.Clusters[0].ID)
 	})
 
 	// Test 2: buildNestedCluster recursively builds nested clusters for subunits
@@ -549,12 +549,12 @@ func TestBuildExpandedGraph(t *testing.T) {
 
 		// Top-level cluster
 		topCluster := g.Clusters[0]
-		assert.Equal(t, "cluster_mainapp", topCluster.ID)
+		assert.Equal(t, "mainapp", topCluster.ID)
 
 		// Nested cluster for api (has subunits)
 		require.Len(t, topCluster.Clusters, 1)
 		nestedCluster := topCluster.Clusters[0]
-		assert.Equal(t, "cluster_mainapp.api", nestedCluster.ID)
+		assert.Equal(t, "mainapp.api", nestedCluster.ID)
 	})
 
 	// Test 3: buildNestedCluster adds leaf subunits as nodes (not clusters)
@@ -644,17 +644,17 @@ func TestBuildExpandedGraph(t *testing.T) {
 
 		// Level 1: system
 		l1 := g.Clusters[0]
-		assert.Equal(t, "cluster_system", l1.ID)
+		assert.Equal(t, "system", l1.ID)
 		require.Len(t, l1.Clusters, 1)
 
 		// Level 2: container
 		l2 := l1.Clusters[0]
-		assert.Equal(t, "cluster_system.container", l2.ID)
+		assert.Equal(t, "system.container", l2.ID)
 		require.Len(t, l2.Clusters, 1)
 
 		// Level 3: component
 		l3 := l2.Clusters[0]
-		assert.Equal(t, "cluster_system.container.component", l3.ID)
+		assert.Equal(t, "system.container.component", l3.ID)
 		// subcomponent is a leaf, so it's a node
 		require.Len(t, l3.Nodes, 1)
 		assert.Equal(t, "system.container.component.subcomponent", l3.Nodes[0].ID)
@@ -689,7 +689,7 @@ func TestBuildExpandedGraph(t *testing.T) {
 
 		// System with subunits -> cluster
 		require.Len(t, g.Clusters, 1)
-		assert.Equal(t, "cluster_system", g.Clusters[0].ID)
+		assert.Equal(t, "system", g.Clusters[0].ID)
 
 		// DB without subunits -> node
 		require.Len(t, g.Nodes, 1)
@@ -1714,8 +1714,8 @@ func TestBuildGraphDeterministicOrder(t *testing.T) {
 
 		// Top-level clusters should be in definition order (zeta, alpha)
 		require.Len(t, g.Clusters, 2)
-		require.Equal(t, "cluster_zeta", g.Clusters[0].ID, "first cluster should be zeta (definition order)")
-		require.Equal(t, "cluster_alpha", g.Clusters[1].ID, "second cluster should be alpha (definition order)")
+		require.Equal(t, "zeta", g.Clusters[0].ID, "first cluster should be zeta (definition order)")
+		require.Equal(t, "alpha", g.Clusters[1].ID, "second cluster should be alpha (definition order)")
 
 		// Top-level nodes should be in alphabetical order
 		require.Len(t, g.Nodes, 1)
@@ -1790,7 +1790,7 @@ func TestBuildGraphDeterministicOrder(t *testing.T) {
 
 		require.Len(t, g.Clusters, 1)
 		topCluster := g.Clusters[0]
-		require.Equal(t, "cluster_system", topCluster.ID)
+		require.Equal(t, "system", topCluster.ID)
 
 		// Top-level subunits should be in definition order (zeta as cluster, then alpha, gamma as nodes)
 		// Nodes in cluster: alpha, gamma (in definition order after zeta cluster)
@@ -1801,7 +1801,7 @@ func TestBuildGraphDeterministicOrder(t *testing.T) {
 		// Nested clusters: zeta
 		require.Len(t, topCluster.Clusters, 1)
 		zetaCluster := topCluster.Clusters[0]
-		require.Equal(t, "cluster_system.zeta", zetaCluster.ID)
+		require.Equal(t, "system.zeta", zetaCluster.ID)
 
 		// Zeta's subunits should be in definition order (sub3, sub1, sub2)
 		require.Len(t, zetaCluster.Nodes, 3)
