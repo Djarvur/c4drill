@@ -3,8 +3,10 @@ package view_test
 import (
 	"testing"
 
+	"github.com/Djarvur/c4drill/internal/graph"
 	"github.com/Djarvur/c4drill/internal/model"
 	"github.com/Djarvur/c4drill/internal/parser"
+	"github.com/Djarvur/c4drill/internal/render"
 	"github.com/Djarvur/c4drill/internal/view"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -452,6 +454,77 @@ func TestIntegrationC1ViewNoNestedBoundaryPollution(t *testing.T) {
 
 	// linuxSystem should have [+] indicator
 	assert.True(t, v.Units["linuxSystem"].HasSubunits)
+}
+
+// TestBuildGraphExpandedC1VisibleSubunitEdges verifies at graph level that
+// visible subunits of an expanded C1 unit render inside the parent cluster
+// (skipped as top-level nodes — duplicate node IDs would break DOT), and that
+// resolved edges point at the visible subunit node (D-07) rather than the parent.
+func TestBuildGraphExpandedC1VisibleSubunitEdges(t *testing.T) {
+	t.Parallel()
+
+	v := view.GenerateC1View(expandedC1Model(nil))
+	require.NotNil(t, v)
+
+	g := graph.BuildGraph(v)
+	require.NotNil(t, g)
+
+	// Skip logic: the visible subunit is NOT a top-level node
+	for _, node := range g.Nodes {
+		assert.NotEqual(t, "linuxSystem.sshAuth", node.ID, "visible subunit must not render as top-level node")
+	}
+
+	// The cluster renders the visible subunit node
+	require.Len(t, g.Clusters, 1)
+	cluster := g.Clusters[0]
+	assert.Equal(t, "cluster_linuxSystem", cluster.ID)
+
+	found := false
+	for _, node := range cluster.Nodes {
+		if node.ID == "linuxSystem.sshAuth" {
+			found = true
+		}
+	}
+	assert.True(t, found, "cluster must contain node linuxSystem.sshAuth")
+
+	// D-07: the edge points at the visible subunit, not the parent
+	edgeFound := false
+	for _, edge := range g.Edges {
+		if edge.Source == "webUser" && edge.Target == "linuxSystem.sshAuth" {
+			edgeFound = true
+		}
+	}
+	assert.True(t, edgeFound, "expected edge webUser -> linuxSystem.sshAuth")
+
+	// RenderDOT must succeed — duplicate node IDs would break rendering
+	dot, err := render.RenderDOT(g)
+	require.NoError(t, err)
+	assert.NotEmpty(t, dot)
+}
+
+// TestBuildGraphExpandedC1VisibleSubunitExploreLink documents the side effect
+// of visible-subunit entries in v.Units: BuildGraphWithPath can now look up
+// the entry when deciding explore links, so a visible subunit WITH subunits
+// (sshAuth) gets an ExploreURL for drill-down to its C2 diagram (which
+// auto-generation produces since it has subunits).
+func TestBuildGraphExpandedC1VisibleSubunitExploreLink(t *testing.T) {
+	t.Parallel()
+
+	v := view.GenerateC1View(expandedC1Model(nil))
+	require.NotNil(t, v)
+
+	g := graph.BuildGraphWithPath(v, "", "diagram", "svg")
+	require.NotNil(t, g)
+	require.Len(t, g.Clusters, 1)
+
+	var sshAuthNode *graph.Node
+	for _, node := range g.Clusters[0].Nodes {
+		if node.ID == "linuxSystem.sshAuth" {
+			sshAuthNode = node
+		}
+	}
+	require.NotNil(t, sshAuthNode, "cluster must contain node linuxSystem.sshAuth")
+	assert.NotEmpty(t, sshAuthNode.ExploreURL)
 }
 
 // keys returns the keys of a map for error messages.

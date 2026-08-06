@@ -944,3 +944,173 @@ func TestGenerateC1ViewDefinitionOrder(t *testing.T) {
 	assert.Equal(t, "alpha", v.UnitOrder[1], "second should be alpha")
 	assert.Equal(t, "gamma", v.UnitOrder[2], "third should be gamma")
 }
+
+// expandedC1Model builds a C1 fixture model with an expanded linuxSystem
+// top-level unit: webUser links into a hidden grandchild
+// (linuxSystem.sshAuth.sshd), keycloak is a peer target, and linuxSystem
+// exposes sshAuth (with child sshd) and webAPI as visible subunits.
+// sshAuthLinks configures the subunit's own links.
+func expandedC1Model(sshAuthLinks []model.Link) *parser.Model {
+	return &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"webUser": {
+				Type: model.TypePersonExternal,
+				Name: "Web User",
+				Links: []model.Link{
+					{Peer: "linuxSystem.sshAuth.sshd"},
+				},
+			},
+			"keycloak": {
+				Type: model.TypeSystemExternal,
+				Name: "Keycloak",
+			},
+			"linuxSystem": {
+				Type:     model.TypeSystem,
+				Name:     "Linux System",
+				Expanded: []string{"linuxSystem"},
+				Subunits: map[string]*model.Unit{
+					"sshAuth": {
+						Type:     model.TypeContainerBox,
+						Name:     "SSH Auth",
+						Links:    sshAuthLinks,
+						Subunits: map[string]*model.Unit{
+							"sshd": {
+								Type: model.TypeContainer,
+								Name: "SSHD",
+							},
+						},
+					},
+					"webAPI": {
+						Type: model.TypeContainer,
+						Name: "Web API",
+					},
+				},
+			},
+		},
+	}
+}
+
+// expandedC1BoxModel is the D-11 box-grouping variant of expandedC1Model:
+// the expanded top-level unit is a TypeBox instead of a TypeSystem.
+func expandedC1BoxModel(sshAuthLinks []model.Link) *parser.Model {
+	m := expandedC1Model(sshAuthLinks)
+	m.Units["linuxSystem"].Type = model.TypeBox
+
+	return m
+}
+
+func TestGenerateC1View_ExpandedUnitExposesVisibleSubunits(t *testing.T) {
+	t.Parallel()
+
+	v := view.GenerateC1View(expandedC1Model(nil))
+	require.NotNil(t, v)
+
+	// Direct subunits of an expanded top-level unit become visible entries
+	assert.Contains(t, v.Units, "linuxSystem.sshAuth")
+	assert.Contains(t, v.Units, "linuxSystem.webAPI")
+	assert.True(t, v.VisiblePaths["linuxSystem.sshAuth"])
+	assert.True(t, v.VisiblePaths["linuxSystem.webAPI"])
+
+	// Grandchildren stay hidden (buildCluster renders one level only)
+	assert.False(t, v.VisiblePaths["linuxSystem.sshAuth.sshd"])
+	assert.NotContains(t, v.Units, "linuxSystem.sshAuth.sshd")
+}
+
+// D-07: a link to a hidden grandchild resolves to the deepest VISIBLE
+// ancestor — the visible subunit node inside the expanded cluster.
+func TestGenerateC1View_ResolvesToVisibleSubunit(t *testing.T) {
+	t.Parallel()
+
+	v := view.GenerateC1View(expandedC1Model(nil))
+	require.NotNil(t, v)
+
+	webUser := v.Units["webUser"]
+	require.NotNil(t, webUser)
+	require.NotNil(t, webUser.ResolvedLinks)
+	require.Len(t, webUser.ResolvedLinks, 1)
+	assert.Equal(t, "linuxSystem.sshAuth", webUser.ResolvedLinks[0].Peer)
+	assert.NotEqual(t, "linuxSystem", webUser.ResolvedLinks[0].Peer)
+}
+
+// D-09: the edge source also resolves to its deepest visible ancestor — a
+// link authored inside an expanded cluster starts at the visible subunit.
+func TestGenerateC1View_SourceResolvesToVisibleSubunit(t *testing.T) {
+	t.Parallel()
+
+	v := view.GenerateC1View(expandedC1Model([]model.Link{{Peer: "keycloak"}}))
+	require.NotNil(t, v)
+
+	sshAuth := v.Units["linuxSystem.sshAuth"]
+	require.NotNil(t, sshAuth)
+	require.NotNil(t, sshAuth.ResolvedLinks)
+	require.Len(t, sshAuth.ResolvedLinks, 1)
+	assert.Equal(t, "keycloak", sshAuth.ResolvedLinks[0].Peer)
+}
+
+// D-10: a link whose source and target are both visible inside the same
+// expanded cluster renders as a within-cluster edge; D-08: no parent-level
+// edge is synthesized for it.
+func TestGenerateC1View_WithinClusterEdge(t *testing.T) {
+	t.Parallel()
+
+	v := view.GenerateC1View(expandedC1Model([]model.Link{{Peer: "linuxSystem.webAPI"}}))
+	require.NotNil(t, v)
+
+	sshAuth := v.Units["linuxSystem.sshAuth"]
+	require.NotNil(t, sshAuth)
+	require.NotNil(t, sshAuth.ResolvedLinks)
+	require.Len(t, sshAuth.ResolvedLinks, 1)
+	assert.Equal(t, "linuxSystem.webAPI", sshAuth.ResolvedLinks[0].Peer)
+
+	// D-08: the parent entry carries no edge for this link
+	assert.Nil(t, v.Units["linuxSystem"].ResolvedLinks)
+}
+
+// D-08: a link to a hidden grandchild produces ONLY the subunit edge — no
+// redundant parent-level edge is added.
+func TestGenerateC1View_NoRedundantParentEdge(t *testing.T) {
+	t.Parallel()
+
+	v := view.GenerateC1View(expandedC1Model(nil))
+	require.NotNil(t, v)
+
+	webUser := v.Units["webUser"]
+	require.NotNil(t, webUser)
+	require.Len(t, webUser.ResolvedLinks, 1)
+	assert.Equal(t, "linuxSystem.sshAuth", webUser.ResolvedLinks[0].Peer)
+}
+
+// D-11: box grouping units follow the SAME resolution rules as systems — no
+// special-casing for TypeBox.
+func TestGenerateC1View_BoxResolutionParity(t *testing.T) {
+	t.Parallel()
+
+	v := view.GenerateC1View(expandedC1BoxModel([]model.Link{
+		{Peer: "keycloak"},
+		{Peer: "linuxSystem.webAPI"},
+	}))
+	require.NotNil(t, v)
+
+	// Visible subunits exposed
+	assert.Contains(t, v.Units, "linuxSystem.sshAuth")
+	assert.True(t, v.VisiblePaths["linuxSystem.sshAuth"])
+
+	// Target resolves to the visible child (D-07)
+	webUser := v.Units["webUser"]
+	require.NotNil(t, webUser)
+	require.NotNil(t, webUser.ResolvedLinks)
+	require.Len(t, webUser.ResolvedLinks, 1)
+	assert.Equal(t, "linuxSystem.sshAuth", webUser.ResolvedLinks[0].Peer)
+
+	// Source resolves to the visible child (D-09)
+	sshAuth := v.Units["linuxSystem.sshAuth"]
+	require.NotNil(t, sshAuth)
+	require.NotNil(t, sshAuth.ResolvedLinks)
+	require.Len(t, sshAuth.ResolvedLinks, 2)
+	assert.Equal(t, "keycloak", sshAuth.ResolvedLinks[0].Peer)
+
+	// Within-cluster edge recorded (D-10); no parent-level edge (D-08)
+	assert.Equal(t, "linuxSystem.webAPI", sshAuth.ResolvedLinks[1].Peer)
+	assert.Nil(t, v.Units["linuxSystem"].ResolvedLinks)
+}

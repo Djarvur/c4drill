@@ -42,6 +42,10 @@ type View struct {
 	// (--expanded mode). When true, edge deduplication keeps the technology+description
 	// key and all edges render at penwidth 2.0 (COMPAT-02).
 	AllExpanded bool
+	// VisiblePaths tracks paths of subunits rendered as nodes INSIDE an expanded
+	// top-level cluster (C1). They are in Units for edge building but must not be
+	// rendered as top-level nodes.
+	VisiblePaths map[string]bool
 }
 
 // Entry represents a unit entry within a view.
