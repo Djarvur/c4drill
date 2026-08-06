@@ -264,6 +264,65 @@ func TestGenerateC1View_IsExpandedWhenUnitExpandsSelf(t *testing.T) {
 	assert.False(t, v.Units["db"].IsExpanded)
 }
 
+// D-05: expansion precedence is OR — a top-level unit expands in C1 if
+// properties.expanded contains its path OR its own expanded list
+// self-references it (union, no conflict).
+func TestGenerateC1View_IsExpandedOrSemantics(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test", Expanded: []string{"sysprops"}},
+		Units: map[string]*model.Unit{
+			// Expanded via properties.expanded only (no per-unit self-reference)
+			"sysprops": {
+				Type: model.TypeSystem,
+				Name: "Sys",
+				Subunits: map[string]*model.Unit{
+					"api": {Type: model.TypeContainer},
+				},
+			},
+			// Expanded via per-unit self-reference only
+			"sysself": {
+				Type:     model.TypeSystem,
+				Name:     "Self",
+				Expanded: []string{"sysself"},
+				Subunits: map[string]*model.Unit{
+					"api": {Type: model.TypeContainer},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC1View(m)
+
+	require.NotNil(t, v)
+	assert.True(t, v.Units["sysprops"].IsExpanded, "properties.expanded side of the OR")
+	assert.True(t, v.Units["sysself"].IsExpanded, "per-unit self-reference side of the OR")
+}
+
+// D-06: properties.expanded entries that match no top-level unit are silently
+// ignored — no error, and the non-matching entry has no effect on other units.
+func TestGenerateC1View_SilentlyIgnoresUnknownExpandedEntries(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test", Expanded: []string{"bogus"}},
+		Units: map[string]*model.Unit{
+			"app": {
+				Type: model.TypeSystem,
+				Subunits: map[string]*model.Unit{
+					"api": {Type: model.TypeContainer},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC1View(m)
+
+	require.NotNil(t, v, "non-matching expanded entry must not error")
+	assert.False(t, v.Units["app"].IsExpanded, "non-matching entry has no effect; app renders collapsed")
+}
+
 func TestGenerateC1View_NilModelReturnsNil(t *testing.T) {
 	t.Parallel()
 

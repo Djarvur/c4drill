@@ -275,6 +275,43 @@ func TestBuildGraphExpandedEmptyUnitRendersPlainNode(t *testing.T) {
 	assert.Equal(t, "app", g.Nodes[0].ID)
 }
 
+// D-04: per-unit expanded containers render their components as a cluster
+// inside their system's C2 diagram (builder.go:45 C2/C3 branch). This test
+// also guards Task 1's edit scope: it fails if the C2/C3 branch is altered.
+func TestBuildGraphC2ExpandedContainerRendersCluster(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"app": {
+				Type:     model.TypeSystem,
+				Name:     "App",
+				Expanded: []string{"api"}, // Expand the api subunit
+				Subunits: map[string]*model.Unit{
+					"api": {
+						Type: model.TypeContainer,
+						Name: "API",
+						Subunits: map[string]*model.Unit{
+							"auth":  {Type: model.TypeComponent},
+							"store": {Type: model.TypeComponent},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC2View(m, "app")
+	g := graph.BuildGraph(v)
+
+	// D-04: boundary cluster only, with the expanded container's cluster inside
+	require.Len(t, g.Clusters, 1)
+	require.Len(t, g.Clusters[0].Clusters, 1)
+	assert.Equal(t, "cluster_app.api", g.Clusters[0].Clusters[0].ID)
+	assert.Len(t, g.Clusters[0].Clusters[0].Nodes, 2)
+}
+
 func TestBuildGraphMultipleLinks(t *testing.T) {
 	t.Parallel()
 
