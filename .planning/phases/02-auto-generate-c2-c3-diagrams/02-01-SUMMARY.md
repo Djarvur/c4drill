@@ -148,3 +148,7 @@ None — no security-relevant surface added beyond the plan's threat model. The 
 ---
 *Phase: 02-auto-generate-c2-c3-diagrams*
 *Completed: 2026-08-06*
+
+## Self-Check: PASSED
+
+All 5 plan files present (builder.go, builder_test.go, scope_test.go, root_test.go, SUMMARY.md); all 6 commits verified in git log (eb77ae3 RED, ad39e93 GREEN, c6c131a, ad34af4, 9e6b1f0, a20d5cb).

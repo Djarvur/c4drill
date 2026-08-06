@@ -12,7 +12,7 @@ Fix view generation so C1 shows only top-level units, C2/C3 diagrams are auto-ge
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
 | 1 | Fix C1 View Scoping | 3/3 | Complete    | 2026-08-06 |
-| 2 | Auto-generate C2/C3 | Create sub-diagrams for units with subunits | VIEW-03, VIEW-04, VIEW-05 | 3 |
+| 2 | Auto-generate C2/C3 | 1/1 | Complete   | 2026-08-06 |
 | 3 | Compatibility & Validation | Existing TOML files and --expanded still work | COMPAT-01, COMPAT-02 | 2 |
 
 ---
@@ -92,7 +92,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — D-07 plain-node guard + lock D-01..D-06/D-08 with regression tests
+- [x] 02-01-PLAN.md — D-07 plain-node guard + lock D-01..D-06/D-08 with regression tests
 
 ---
 

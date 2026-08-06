@@ -9,9 +9,9 @@
 
 - [x] **VIEW-01**: C1 diagram shows only top-level units — no nested subunits appear as nodes
 - [x] **VIEW-02**: Links to deeply nested targets resolve to the nearest visible ancestor in the current view level
-- [ ] **VIEW-03**: C2 diagram auto-generated for each system/box with subunits (written to `{basename}/{unit}.{format}`)
-- [ ] **VIEW-04**: C3 diagram auto-generated for each container with subunits (written to `{basename}/{unit}.{format}`)
-- [ ] **VIEW-05**: `properties.expanded` controls which top-level units appear expanded (as clusters) in C1
+- [x] **VIEW-03**: C2 diagram auto-generated for each system/box with subunits (written to `{basename}/{unit}.{format}`)
+- [x] **VIEW-04**: C3 diagram auto-generated for each container with subunits (written to `{basename}/{unit}.{format}`)
+- [x] **VIEW-05**: `properties.expanded` controls which top-level units appear expanded (as clusters) in C1
 
 ### Edge Resolution
 
@@ -59,9 +59,9 @@
 |-------------|-------|--------|
 | VIEW-01 | Phase 1 | Complete |
 | VIEW-02 | Phase 1 | Complete |
-| VIEW-03 | Phase 2 | Pending |
-| VIEW-04 | Phase 2 | Pending |
-| VIEW-05 | Phase 2 | Pending |
+| VIEW-03 | Phase 2 | Complete |
+| VIEW-04 | Phase 2 | Complete |
+| VIEW-05 | Phase 2 | Complete |
 | EDGE-01 | Phase 1 | Complete |
 | EDGE-02 | Phase 1 | Complete |
 | COMPAT-01 | Phase 3 | Pending |
