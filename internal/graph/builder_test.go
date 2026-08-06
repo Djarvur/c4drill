@@ -1726,6 +1726,89 @@ func TestBuildEdgesPenwidthC2C3CollapsedPairs(t *testing.T) {
 	})
 }
 
+// TestBuildEdgesPenwidthLinkFromContributions verifies WR-02: D-05 counts
+// authored linkFrom relationships toward pair multiplicity, while validator-
+// synthesized mirrors (internal/validator/index.go) are excluded so they never
+// double-count an outgoing link. Without the discrimination, an authored
+// linkFrom on an already-outgoing pair is indistinguishable from a mirror and
+// the multiplicity signal becomes authoring-dependent.
+func TestBuildEdgesPenwidthLinkFromContributions(t *testing.T) {
+	t.Parallel()
+
+	t.Run("authored linkFrom contributes to multiplicity", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type: model.TypeSystem,
+					Name: "App",
+					Links: []model.Link{
+						{Peer: "db", Technology: "SQL"},
+					},
+				},
+				"db": {
+					Type: model.TypeDb,
+					Name: "Database",
+					LinksFrom: []model.Link{
+						{Peer: "app", Technology: "auth"},
+					},
+				},
+			},
+		}
+
+		// Run validation like the command does. The validator synthesizes
+		// mirrors for outgoing links, but skips the mirror here because db
+		// already has an authored linkFrom to app (FindLinkByPeer).
+		require.Empty(t, validator.Validate(m))
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Edges, 1)
+		assert.Equal(t, "app", g.Edges[0].Source)
+		assert.Equal(t, "db", g.Edges[0].Target)
+		assert.InDelta(t, 2.0, g.Edges[0].PenWidth, 0.001, "authored linkFrom counts toward multiplicity (D-05)")
+	})
+
+	t.Run("validator mirror does not double-count", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type: model.TypeSystem,
+					Name: "App",
+					Links: []model.Link{
+						{Peer: "db", Technology: "SQL"},
+					},
+				},
+				"db": {
+					Type: model.TypeDb,
+					Name: "Database",
+					Links: []model.Link{
+						{Peer: "app", Technology: "HTTP"},
+					},
+				},
+			},
+		}
+
+		// Run validation like the command does — mirrors are added to LinksFrom
+		// in both directions.
+		require.Empty(t, validator.Validate(m))
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Edges, 2)
+		for _, edge := range g.Edges {
+			assert.Zero(t, edge.PenWidth, "mirrors are synthetic duplicates, not contributing links (D-05)")
+		}
+	})
+}
+
 // TestBuildEdgesExpandedExemption verifies D-02/COMPAT-02: --expanded mode keeps
 // the v1.7 technology+description dedup key and 2.0 penwidth prominence.
 // GenerateExpandedView does not set AllExpanded yet (plan 01-02), so the view
