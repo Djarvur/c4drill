@@ -270,10 +270,14 @@ func TestBuildGraphExpandedEmptyUnitRendersPlainNode(t *testing.T) {
 	g := graph.BuildGraph(v)
 
 	// D-07: no subunits -> plain collapsed node, not an empty cluster box
-	require.Len(t, g.Clusters, 0)
+	require.Empty(t, g.Clusters)
 	require.Len(t, g.Nodes, 1)
 	assert.Equal(t, "app", g.Nodes[0].ID)
 }
+
+// Fixture subunit-name constant for the D-04 cluster test below — repeated
+// fixture literals stay below the goconst threshold.
+const authComponentName = "auth"
 
 // D-04: per-unit expanded containers render their components as a cluster
 // inside their system's C2 diagram (builder.go:45 C2/C3 branch). This test
@@ -293,8 +297,8 @@ func TestBuildGraphC2ExpandedContainerRendersCluster(t *testing.T) {
 						Type: model.TypeContainer,
 						Name: "API",
 						Subunits: map[string]*model.Unit{
-							"auth":  {Type: model.TypeComponent},
-							"store": {Type: model.TypeComponent},
+							authComponentName: {Type: model.TypeComponent},
+							"store":           {Type: model.TypeComponent},
 						},
 					},
 				},

@@ -758,9 +758,9 @@ func TestGenerateC2View_ActorBoundaryFromSubunitLinks(t *testing.T) {
 	m := &parser.Model{
 		Properties: model.Properties{Name: "Test"},
 		Units: map[string]*model.Unit{
-			"webUser": {
+			webUserPath: {
 				Type: model.TypePersonExternal,
-				Name: "Web User",
+				Name: webUserName,
 			},
 			"system": {
 				Type: model.TypeSystem,
@@ -770,7 +770,7 @@ func TestGenerateC2View_ActorBoundaryFromSubunitLinks(t *testing.T) {
 						Type: model.TypeContainer,
 						Name: "API",
 						Links: []model.Link{
-							{Peer: "webUser"},
+							{Peer: webUserPath},
 						},
 					},
 				},
@@ -781,8 +781,8 @@ func TestGenerateC2View_ActorBoundaryFromSubunitLinks(t *testing.T) {
 	v := view.GenerateC2View(m, "system")
 
 	require.NotNil(t, v)
-	assert.Contains(t, v.Units, "webUser")
-	assert.True(t, v.Units["webUser"].IsExternal)
+	assert.Contains(t, v.Units, webUserPath)
+	assert.True(t, v.Units[webUserPath].IsExternal)
 }
 
 func TestGenerateC2View_IsExpandedForChildUnits(t *testing.T) {

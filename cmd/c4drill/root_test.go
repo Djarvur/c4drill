@@ -456,7 +456,8 @@ technology = "HTTP"
 	assert.FileExists(t, filepath.Join(outputDir, "boxtest", "boxname.svg"), "C2 diagram for box should exist")
 
 	// D-02/D-03: C3 sub-diagram for the containerBox at its dotted-path location
-	assert.FileExists(t, filepath.Join(outputDir, "boxtest", "system", "cbox.svg"), "C3 diagram for containerBox should exist")
+	cboxSVG := filepath.Join(outputDir, "boxtest", "system", "cbox.svg")
+	assert.FileExists(t, cboxSVG, "C3 diagram for containerBox should exist")
 }
 
 // =============================================================================
