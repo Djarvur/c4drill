@@ -1,0 +1,499 @@
+[properties]
+name = "Multilevel Test System"
+description = "Sanitized multi-level test architecture"
+
+# External entities (C1)
+
+[actorA]
+name = "Actor A"
+type = "personExternal"
+link = [
+  {peer = "mainSystem.localIDP.grpcAPIs.authAPI"},
+  {peer = "mainSystem.localIDP.grpcAPIs.sessionAPI"},
+]
+
+[actorB]
+name = "Actor B"
+type = "personExternal"
+link = [
+  {peer = "mainSystem.sshAuth.sshd"},
+]
+
+[actorC]
+name = "Actor C"
+type = "personExternal"
+link = [
+  {peer = "mainSystem.rbac"},
+  {peer = "mainSystem.dacProxy"},
+  {peer = "mainSystem.localIDP.grpcAPIs.sessionAPI"},
+]
+
+[externalSys]
+name = "External IDP"
+type = "systemExternal"
+technology = "External IDP"
+description = "External IDP"
+
+# Main System (C1)
+
+[mainSystem]
+name = "Main System"
+type = "system"
+description = "Linux server with authentication components"
+
+## SSH Auth group (C2 - containerBox)
+
+[mainSystem.sshAuth]
+name = "SSH Auth"
+type = "containerBox"
+
+### SSHD (C2 - container)
+
+[mainSystem.sshAuth.sshd]
+name = "SSHD"
+type = "container"
+technology = "C"
+description = "OpenSSH server"
+link = [
+  {peer = "mainSystem.sshAuth.nss"},
+  {peer = "mainSystem.sshAuth.pam.common"},
+]
+
+### Systemd (C2 - container)
+
+[mainSystem.sshAuth.systemd]
+name = "Systemd"
+type = "container"
+technology = "C"
+description = "Systemd components for user and session management"
+
+[mainSystem.sshAuth.systemd.logind]
+name = "Logind"
+type = "component"
+technology = "C"
+description = "Provides active SSH session info, revokes sessions by SysSID"
+
+[mainSystem.sshAuth.systemd.userdbd]
+name = "Userdbd"
+type = "component"
+technology = "C"
+description = "Systemd component that fetches users via Varlink"
+link = [
+  {peer = "mainSystem.storages.localStorage.lookupAPI"},
+  {peer = "mainSystem.storages.externalStorage.varlinkAPIs.lookupAPI"},
+]
+
+### NSS (C2 - container)
+
+[mainSystem.sshAuth.nss]
+name = "NSS"
+type = "container"
+technology = "C"
+description = "Provides user and group information"
+link = [
+  {peer = "mainSystem.sshAuth.etcStorage"},
+  {peer = "mainSystem.sshAuth.systemd.userdbd"},
+]
+
+### Etc Storage (C2 - containerDb)
+
+[mainSystem.sshAuth.etcStorage]
+name = "System Users Storage"
+type = "containerDb"
+technology = "files"
+description = "/etc/passwd, /etc/shadow, /etc/group"
+
+### PAM (C2 - container)
+
+[mainSystem.sshAuth.pam]
+name = "PAM"
+type = "container"
+technology = "C"
+
+[mainSystem.sshAuth.pam.common]
+name = "Libc logic"
+type = "component"
+description = "Runs the authentication scenario and module calls"
+link = [
+  {peer = "mainSystem.sshAuth.pam.cypAuth"},
+  {peer = "mainSystem.sshAuth.pam.unix"},
+]
+
+[mainSystem.sshAuth.pam.cypAuth]
+name = "pam_cyp_auth.so"
+type = "component"
+description = "Authenticates through localIDP"
+link = [
+  {peer = "mainSystem.sshAuth.authProxy.varlinkAPIs.authVarlinkAPI"},
+  {peer = "mainSystem.sshAuth.authProxy.varlinkAPIs.sessionVarlinkAPI"},
+]
+
+[mainSystem.sshAuth.pam.unix]
+name = "pam_unix.so"
+type = "component"
+description = "Standard authentication"
+link = [
+  {peer = "mainSystem.sshAuth.nss"},
+]
+
+### Auth Proxy (C2 - container)
+
+[mainSystem.sshAuth.authProxy]
+name = "Auth Proxy"
+type = "container"
+technology = "go"
+
+[mainSystem.sshAuth.authProxy.varlinkAPIs]
+name = "Varlink APIs"
+type = "componentBox"
+
+[mainSystem.sshAuth.authProxy.varlinkAPIs.authVarlinkAPI]
+name = "Auth Varlink API"
+type = "component"
+technology = "go, Varlink"
+description = "API for user authentication"
+link = [
+  {peer = "mainSystem.sshAuth.authProxy.localIDPClients.authAPI"},
+]
+
+[mainSystem.sshAuth.authProxy.varlinkAPIs.sessionVarlinkAPI]
+name = "Session Varlink API"
+type = "component"
+technology = "go, Varlink"
+description = "API for managing SSH sessions (open/close)"
+link = [
+  {peer = "mainSystem.sshAuth.authProxy.sessionManager"},
+]
+
+[mainSystem.sshAuth.authProxy.sessionManager]
+name = "SSH-Session Manager"
+type = "component"
+technology = "go"
+description = "Tracks active SSH sessions"
+link = [
+  {peer = "mainSystem.sshAuth.authProxy.sessionDb"},
+  {peer = "mainSystem.sshAuth.authProxy.localIDPClients.sessionAPI", length=2},
+  {peer = "mainSystem.sshAuth.systemd.logind"},
+]
+
+[mainSystem.sshAuth.authProxy.sessionDb]
+name = "SSH-Session Storage"
+type = "componentDb"
+technology = "go, in-mem"
+description = "Stores LocalSID:SysSID mapping"
+
+[mainSystem.sshAuth.authProxy.localIDPClients]
+name = "Local IDP Client"
+type = "componentBox"
+
+[mainSystem.sshAuth.authProxy.localIDPClients.authAPI]
+name = "LocalIDP Auth Client"
+type = "component"
+technology = "go"
+description = "Client for authentication requests"
+link = [
+  {peer = "mainSystem.localIDP.grpcAPIs.authAPI"},
+]
+
+[mainSystem.sshAuth.authProxy.localIDPClients.sessionAPI]
+name = "LocalIDP Session Client"
+type = "component"
+technology = "go"
+description = "Validates sessions in LocalIDP"
+link = [
+  {peer = "mainSystem.localIDP.grpcAPIs.sessionAPI"},
+]
+
+## Local IDP (C2 - container)
+
+[mainSystem.localIDP]
+name = "Local IDP"
+type = "container"
+technology = "go"
+
+[mainSystem.localIDP.grpcAPIs]
+name = "gRPC APIs"
+type = "componentBox"
+
+[mainSystem.localIDP.grpcAPIs.authAPI]
+name = "Authenticate API"
+type = "component"
+technology = "go, gRPC/HTTP"
+description = "API for authentication"
+link = [
+  {peer = "mainSystem.localIDP.sessionManager"},
+  {peer = "mainSystem.rbac"},
+]
+
+[mainSystem.localIDP.grpcAPIs.sessionAPI]
+name = "Session API"
+type = "component"
+technology = "go, gRPC/HTTP"
+description = "API for managing sessions by LocalSID"
+link = [
+  {peer = "mainSystem.localIDP.sessionManager"},
+]
+
+[mainSystem.localIDP.sessionManager]
+name = "Session Manager"
+type = "component"
+technology = "go"
+description = "Manages LocalSID sessions"
+link = [
+  {peer = "mainSystem.localIDP.authProvidersClient"},
+  {peer = "mainSystem.localIDP.sessionManagerDb"},
+]
+
+[mainSystem.localIDP.sessionManagerDb]
+name = "Session Storage"
+type = "componentDb"
+technology = "go, in-mem"
+description = "Stores active local sessions with LocalSID"
+
+[mainSystem.localIDP.authValidateScenario]
+name = "Auth Validate Scenario"
+type = "component"
+technology = "go"
+description = "Describes the pre-authentication validation scenario"
+link = [
+  {peer = "mainSystem.authModules.otp.validateAPI", length=2},
+  {peer = "mainSystem.authModules.userlock.validateAPI", length=2},
+]
+
+[mainSystem.localIDP.authProvidersClient]
+name = "Auth Providers Client"
+type = "component"
+technology = "go, Varlink"
+description = "Talks to the storage router"
+link = [
+  {peer = "mainSystem.localIDP.authValidateScenario"},
+  {peer = "mainSystem.storages.localStorage.authAPI", length=2},
+  {peer = "mainSystem.storages.externalStorage.varlinkAPIs.authAPI"},
+]
+
+## RBAC (C2 - container)
+
+[mainSystem.rbac]
+name = "RBAC"
+type = "container"
+technology = "go"
+description = "Service for managing user roles"
+link = [
+  {peer = "mainSystem.dacService_lookupAPI"},
+]
+
+## DAC Lookup API (C2 - container)
+
+[mainSystem.dacService_lookupAPI]
+name = "DAC Lookup API"
+type = "container"
+technology = "go, Varlink -> gRPC"
+description = "Fetches user/group info, converts Varlink to gRPC"
+link = [
+  {peer = "mainSystem.storages.localStorage.lookupAPI"},
+  {peer = "mainSystem.storages.externalStorage.varlinkAPIs.lookupAPI"},
+]
+
+## DAC Proxy (C2 - container)
+
+[mainSystem.dacProxy]
+name = "DAC Management API"
+type = "container"
+technology = "go"
+link = [
+  {peer = "mainSystem.authModules.otp.settingsAPI"},
+  {peer = "mainSystem.authModules.userlock.settingsAPI"},
+  {peer = "mainSystem.dacService_lookupAPI"},
+  {peer = "mainSystem.storages.localStorage.managementAPI"},
+]
+
+## Storages group (C2 - containerBox)
+
+[mainSystem.storages]
+name = "Storages Registry"
+type = "containerBox"
+
+### Local Storage Provider (C2 - container)
+
+[mainSystem.storages.localStorage]
+name = "Local Storage Provider"
+type = "container"
+
+[mainSystem.storages.localStorage.authAPI]
+name = "Local Storage Auth API"
+type = "component"
+technology = "go"
+description = "API for authentication and session management (optional)"
+link = [
+  {peer = "mainSystem.storages.localStorage.provider"},
+]
+
+[mainSystem.storages.localStorage.lookupAPI]
+name = "Local Storage Lookup API"
+type = "component"
+technology = "go"
+description = "API for user and group lookups"
+link = [
+  {peer = "mainSystem.storages.localStorage.provider"},
+]
+
+[mainSystem.storages.localStorage.managementAPI]
+name = "Local Storage Management API"
+type = "component"
+technology = "go"
+description = "API for managing users and groups"
+link = [
+  {peer = "mainSystem.storages.localStorage.provider"},
+]
+
+[mainSystem.storages.localStorage.provider]
+name = "Local Users Storage Provider"
+type = "component"
+technology = "go"
+description = "User storage provider with user management business logic"
+link = [
+  {peer = "mainSystem.storages.localStorage.storage"},
+]
+
+[mainSystem.storages.localStorage.storage]
+name = "Local Users Storage"
+type = "componentDb"
+technology = "files"
+description = "JSON file with local users; persistent user storage"
+
+### External Storage Provider (C2 - container)
+
+[mainSystem.storages.externalStorage]
+name = "External Storage Provider"
+type = "container"
+
+[mainSystem.storages.externalStorage.varlinkAPIs]
+name = "Varlink APIs"
+type = "componentBox"
+
+[mainSystem.storages.externalStorage.varlinkAPIs.authAPI]
+name = "External Auth API"
+type = "component"
+technology = "go"
+description = "API for authentication and session management by ExtSID"
+link = [
+  {peer = "mainSystem.storages.externalStorage.sessionManager"},
+]
+
+[mainSystem.storages.externalStorage.varlinkAPIs.lookupAPI]
+name = "External Lookup API"
+type = "component"
+technology = "go"
+description = "API for user and group (role) lookups"
+link = [
+  {peer = "mainSystem.storages.externalStorage.dynamicUserManager"},
+]
+
+[mainSystem.storages.externalStorage.client]
+name = "External Client"
+type = "component"
+technology = "go"
+description = "Authenticates through the external IDP, refreshes sessions"
+link = [
+  {peer = "externalSys", length=3},
+]
+
+[mainSystem.storages.externalStorage.sessionManager]
+name = "External Session Manager"
+type = "component"
+technology = "go, in-mem"
+description = "Manages external session bindings by ExtSID"
+link = [
+  {peer = "mainSystem.storages.externalStorage.sessionStorage"},
+  {peer = "mainSystem.storages.externalStorage.client"},
+  {peer = "mainSystem.storages.externalStorage.dynamicUserManager"},
+]
+
+[mainSystem.storages.externalStorage.sessionStorage]
+name = "External Sessions Storage"
+type = "componentDb"
+technology = "go, in-mem"
+description = "Stores LocalSID:ExtSID mapping and session metadata"
+
+[mainSystem.storages.externalStorage.dynamicUserManager]
+name = "Dynamic User Manager"
+type = "component"
+technology = "go"
+description = "Allocates UIDs, prepares/cleans up resources for dynamic users"
+link = [
+  {peer = "mainSystem.storages.externalStorage.dynamicUserDb"},
+]
+
+[mainSystem.storages.externalStorage.dynamicUserDb]
+name = "Dynamic User Storage"
+type = "componentDb"
+technology = "go, in-mem"
+description = "Stores allocated UIDs and attributes for dynamic users; manages dynamic user home directories"
+
+## Auth Modules group (C2 - containerBox)
+
+[mainSystem.authModules]
+name = "Auth Scenario Modules"
+type = "containerBox"
+
+### OTP (C2 - container)
+
+[mainSystem.authModules.otp]
+name = "OTP"
+type = "container"
+technology = "go"
+
+[mainSystem.authModules.otp.settingsAPI]
+name = "Management/Admin API"
+type = "component"
+technology = "go, gRPC"
+description = "API for managing user OTP records"
+link = [
+  {peer = "mainSystem.authModules.otp.db"},
+]
+
+[mainSystem.authModules.otp.validateAPI]
+name = "Validate API"
+type = "component"
+technology = "go, gRPC"
+description = "API for one-time password validation"
+link = [
+  {peer = "mainSystem.authModules.otp.db"},
+]
+
+[mainSystem.authModules.otp.db]
+name = "OTP Records Storage"
+type = "componentDb"
+technology = "files"
+description = "OTP record storage"
+
+### Userlock (C2 - container)
+
+[mainSystem.authModules.userlock]
+name = "Userlock"
+type = "container"
+technology = "go"
+
+[mainSystem.authModules.userlock.settingsAPI]
+name = "Management/Admin API"
+type = "component"
+technology = "go, gRPC"
+description = "API for managing lockout policies"
+link = [
+  {peer = "mainSystem.authModules.userlock.db"},
+]
+
+[mainSystem.authModules.userlock.validateAPI]
+name = "Validate API"
+type = "component"
+technology = "go, gRPC"
+description = "API for user lockout checks and lock-state updates"
+link = [
+  {peer = "mainSystem.authModules.userlock.db"},
+]
+
+[mainSystem.authModules.userlock.db]
+name = "Policy and Lock Storage"
+type = "componentDb"
+technology = "files"
+description = "Lockout policy and user lock storage"
