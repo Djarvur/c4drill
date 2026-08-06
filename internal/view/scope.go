@@ -190,6 +190,14 @@ func isExpandedInC1(m *parser.Model, unit *model.Unit, unitPath string) bool {
 // createExternalBoundaryNode creates an Entry representing an external boundary node.
 // If the unit exists in the model (e.g., a nested subunit), it uses the original unit data
 // to preserve attributes like links with length. Otherwise, it creates a minimal placeholder.
+//
+// IsExternal is ALWAYS true for boundary nodes — they are outside the expanded
+// unit's scope by definition, regardless of their unit type. The graph builder
+// uses IsExternal to place nodes at the top level (outside the boundary cluster),
+// which ensures GraphViz draws edges between boundary nodes and the cluster's
+// children. Setting IsExternal=false for non-External-type units (e.g. a regular
+// container that is a sibling of the expanded unit) caused boundary nodes to be
+// placed INSIDE the cluster, which suppressed edge rendering in some layouts.
 func createExternalBoundaryNode(m *parser.Model, name string, _ string) *Entry {
 	// Try to find the actual unit in the model
 	actualUnit := findUnitByPath(m, name)
@@ -200,7 +208,7 @@ func createExternalBoundaryNode(m *parser.Model, name string, _ string) *Entry {
 			FullPath:    name,
 			IsExpanded:  false,
 			HasSubunits: len(actualUnit.Subunits) > 0,
-			IsExternal:  IsExternalType(actualUnit.Type),
+			IsExternal:  true, // boundary nodes are always external to the view scope
 		}
 	}
 
