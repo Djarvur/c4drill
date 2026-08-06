@@ -2143,6 +2143,93 @@ func TestBuildEdgesExpandedExemption(t *testing.T) {
 	assert.InDelta(t, 2.0, g.Edges[1].PenWidth, 0.001)
 }
 
+// TestBuildExpandedGraphIgnoresPropertiesExpanded locks D-04: --expanded mode
+// ignores properties.expanded entirely — the flag expands EVERYTHING in one
+// file (v1.7 contract).
+func TestBuildExpandedGraphIgnoresPropertiesExpanded(t *testing.T) {
+	t.Parallel()
+
+	m, err := parser.ParseFile("../../cmd/c4drill/testdata/multilevel.toml")
+	require.NoError(t, err)
+
+	require.Empty(t, validator.Validate(m), "model should be valid")
+
+	// Poison the global expansion hint: if a future change makes
+	// GenerateExpandedView consult this, the view shrinks (D-04).
+	m.Properties.Expanded = []string{"mainSystem"}
+
+	v := view.GenerateExpandedView(m)
+	total := countModelUnits(m)
+	require.Len(t, v.Units, total, "expanded view must contain ALL units even with properties.expanded set (D-04)")
+
+	g := graph.BuildExpandedGraph(v)
+	require.NotNil(t, g)
+
+	nodeIDs, labels := collectExpandedGraphNodes(g)
+	assert.Contains(t, nodeIDs, "mainSystem.sshAuth.systemd.logind", "deep 4-level leaf must render as a node")
+	assert.Contains(t, nodeIDs, "mainSystem.storages.externalStorage.client", "client unit must render as a node")
+	for _, name := range labels {
+		assert.NotContains(t, name, "[+]", "expanded mode must not render collapsed indicators (D-04)")
+	}
+}
+
+// countModelUnits recursively counts all units in the model: each top-level
+// unit plus every subunit at all nesting levels.
+func countModelUnits(m *parser.Model) int {
+	count := 0
+
+	var countUnit func(unit *model.Unit)
+	countUnit = func(unit *model.Unit) {
+		count++
+
+		for _, sub := range unit.Subunits {
+			countUnit(sub)
+		}
+	}
+
+	for _, unit := range m.Units {
+		countUnit(unit)
+	}
+
+	return count
+}
+
+// collectExpandedGraphNodes returns all node IDs and label names in an expanded
+// graph, walking top-level nodes plus a recursive walk of clusters
+// (Cluster.Nodes + Cluster.Clusters per graph.go:105-120).
+func collectExpandedGraphNodes(g *graph.Graph) ([]string, []string) {
+	nodeIDs := make([]string, 0)
+	labels := make([]string, 0)
+
+	var walkNodes func(nodes []*graph.Node)
+	walkNodes = func(nodes []*graph.Node) {
+		for _, node := range nodes {
+			nodeIDs = append(nodeIDs, node.ID)
+
+			if node.Label != nil {
+				labels = append(labels, node.Label.Name)
+			}
+		}
+	}
+
+	var walkClusters func(clusters []*graph.Cluster)
+	walkClusters = func(clusters []*graph.Cluster) {
+		for _, cluster := range clusters {
+			if cluster.Label != nil {
+				labels = append(labels, cluster.Label.Name)
+			}
+
+			walkNodes(cluster.Nodes)
+			walkClusters(cluster.Clusters)
+		}
+	}
+
+	walkNodes(g.Nodes)
+	walkClusters(g.Clusters)
+
+	return nodeIDs, labels
+}
+
 // edgeBlockFromDOT extracts the full DOT attribute block for the edge between
 // source and target. The go-graphviz writer wraps edge attributes across
 // multiple lines, so the block runs from the edge's first line (e.g.,
