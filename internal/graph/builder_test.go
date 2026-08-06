@@ -1832,8 +1832,10 @@ func TestBuildGraphWithPathSetsNavigation(t *testing.T) {
 		assert.Nil(t, g.Navigation)
 	})
 
-	// Test 3: BuildGraphWithPath computes correct back-link URL
-	t.Run("C2 view has navigation with back-link", func(t *testing.T) {
+	// Test 3: BuildGraphWithPath computes correct breadcrumb navigation.
+	// The back-link was dropped (breadcrumb-only nav); the root ancestor in the
+	// breadcrumb trail now carries the up-navigation URL.
+	t.Run("C2 view has breadcrumb navigation to root", func(t *testing.T) {
 		t.Parallel()
 
 		m := &parser.Model{
@@ -1856,8 +1858,13 @@ func TestBuildGraphWithPathSetsNavigation(t *testing.T) {
 		g := graph.BuildGraphWithPath(v, "mainsystem", "diagram", "svg")
 
 		require.NotNil(t, g.Navigation)
-		require.NotNil(t, g.Navigation.BackLink)
-		assert.Equal(t, "../diagram.svg", g.Navigation.BackLink.URL)
+		// C2 breadcrumb: [root (Test), current (mainsystem)]
+		require.Len(t, g.Navigation.Breadcrumbs, 2)
+		// Root ancestor points back to the C1 diagram.
+		assert.NotEmpty(t, g.Navigation.Breadcrumbs[0].URL,
+			"root breadcrumb ancestor must carry a URL to the C1 diagram")
+		// BackLink is intentionally nil (breadcrumb-only nav).
+		assert.Nil(t, g.Navigation.BackLink)
 	})
 
 	// Test 4: BuildGraphWithPath builds breadcrumb trail with correct URLs
@@ -1889,20 +1896,25 @@ func TestBuildGraphWithPathSetsNavigation(t *testing.T) {
 		g := graph.BuildGraphWithPath(v, "mainsystem.api", "diagram", "svg")
 
 		require.NotNil(t, g.Navigation)
-		// Should have breadcrumbs: mainsystem > api
-		require.Len(t, g.Navigation.Breadcrumbs, 2)
+		// Should have breadcrumbs: [Root Test] > Main System > API (current).
+		// The root C1 context is always prepended so users can navigate all
+		// the way up from any C2/C3 diagram.
+		require.Len(t, g.Navigation.Breadcrumbs, 3)
 
-		// First breadcrumb (mainsystem) should have URL
-		assert.Equal(t, "mainsystem", g.Navigation.Breadcrumbs[0].Name)
+		// Root context (Test) with URL back to C1
+		assert.Equal(t, "Test", g.Navigation.Breadcrumbs[0].Name)
 		assert.NotEmpty(t, g.Navigation.Breadcrumbs[0].URL)
 
-		// Second breadcrumb (api - current) should NOT have URL
-		assert.Equal(t, "api", g.Navigation.Breadcrumbs[1].Name)
-		assert.Empty(t, g.Navigation.Breadcrumbs[1].URL)
+		// Middle ancestor (Main System) with URL, pretty name
+		assert.Equal(t, "Main System", g.Navigation.Breadcrumbs[1].Name)
+		assert.NotEmpty(t, g.Navigation.Breadcrumbs[1].URL)
 
-		// Back-link should go to parent (mainsystem)
-		require.NotNil(t, g.Navigation.BackLink)
-		assert.Equal(t, "../mainsystem.svg", g.Navigation.BackLink.URL)
+		// Current (API) — no URL, pretty name
+		assert.Equal(t, "API", g.Navigation.Breadcrumbs[2].Name)
+		assert.Empty(t, g.Navigation.Breadcrumbs[2].URL)
+
+		// BackLink is intentionally nil (breadcrumb-only nav).
+		assert.Nil(t, g.Navigation.BackLink)
 	})
 }
 

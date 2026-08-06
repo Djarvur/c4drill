@@ -1,6 +1,7 @@
 package render_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/Djarvur/c4drill/internal/graph"
@@ -10,100 +11,59 @@ import (
 )
 
 // Note: Tests in this file do NOT use t.Parallel() because the go-graphviz
-// library uses a WASM-based rendering engine that has concurrency issues.
+// library uses a WASM-based rendering engine that concurrency issues.
+
+// navFontTag is the muted-font wrapper applied to every nav cell, asserted as
+// a substring in the styled TDs below. Kept in sync with navigation.go.
+const navFontOpen = `<FONT POINT-SIZE="10" COLOR="#666666">`
 
 //nolint:paralleltest,funlen // go-graphviz WASM engine has concurrency issues
 func TestBuildNavigationLabel(t *testing.T) {
-	t.Run("empty navigation returns empty string", func(t *testing.T) {
+	t.Run("nil navigation returns empty string", func(t *testing.T) {
 		result := render.BuildNavigationLabel(nil)
 		assert.Empty(t, result)
 	})
 
-	t.Run("navigation with nil backlink and empty breadcrumbs returns empty string", func(t *testing.T) {
+	t.Run("empty breadcrumbs returns empty string", func(t *testing.T) {
 		nav := &graph.Navigation{
-			BackLink:    nil,
 			Breadcrumbs: []graph.BreadcrumbItem{},
 		}
 		result := render.BuildNavigationLabel(nav)
 		assert.Empty(t, result)
 	})
 
-	t.Run("backlink only produces correct format", func(t *testing.T) {
+	t.Run("single breadcrumb (current level only) renders plain", func(t *testing.T) {
 		nav := &graph.Navigation{
-			BackLink: &graph.BackLink{
-				Name: "Main System",
-				URL:  "../mainsystem.svg",
+			Breadcrumbs: []graph.BreadcrumbItem{
+				{Name: "Current", URL: ""},
 			},
-			Breadcrumbs: nil,
 		}
 		result := render.BuildNavigationLabel(nav)
-		assert.Contains(t, result, "Back to Main System")
-		assert.Contains(t, result, "../mainsystem.svg")
-		// Gap 2 (03-04): clickable items use <TD HREF="..."> (GraphViz HTML-label
-		// idiom); <a href> tags are not supported and are dropped at render time.
-		assert.Contains(t, result, `<TD HREF="../mainsystem.svg">Back to Main System</TD>`)
-		assert.Contains(t, result, "<TABLE")
+		assert.Contains(t, result, "Current")
+		// Current level is plain (no HREF, no <U>)
+		assert.Contains(t, result, navFontOpen+"Current</FONT>")
+		assert.NotContains(t, result, "HREF=")
+		assert.NotContains(t, result, "<U>")
 	})
 
-	t.Run("breadcrumbs only produces correct format", func(t *testing.T) {
+	t.Run("ancestor + current: ancestor clickable and underlined", func(t *testing.T) {
 		nav := &graph.Navigation{
-			BackLink: nil,
 			Breadcrumbs: []graph.BreadcrumbItem{
 				{Name: "Main System", URL: "../mainsystem.svg"},
 				{Name: "API Container", URL: ""},
 			},
 		}
 		result := render.BuildNavigationLabel(nav)
-		// Ancestor should be clickable via TD HREF
-		assert.Contains(t, result, `<TD HREF="../mainsystem.svg">Main System</TD>`)
-		// Current level (empty URL) should be a plain TD, not a clickable TD
-		assert.Contains(t, result, "<TD>API Container</TD>")
-		// Breadcrumb separator is a separate cell with the &gt; entity
-		assert.Contains(t, result, "<TD>&gt;</TD>")
+		// Ancestor is clickable via TD HREF, underlined, with trailing " >" separator
+		// merged into the same cell (avoids GraphViz column-stretching gaps).
+		assert.Contains(t, result, `<TD HREF="../mainsystem.svg">`+navFontOpen+`<U>Main System</U> &gt;</FONT></TD>`)
+		// Current level is plain (no HREF, no underline, no trailing separator)
+		assert.Contains(t, result, "<TD>"+navFontOpen+"API Container</FONT></TD>")
+		assert.NotContains(t, result, "<U>API Container</U>")
 	})
 
-	t.Run("backlink and breadcrumbs combined with separator", func(t *testing.T) {
+	t.Run("multiple ancestors all clickable and underlined", func(t *testing.T) {
 		nav := &graph.Navigation{
-			BackLink: &graph.BackLink{
-				Name: "Main System",
-				URL:  "../mainsystem.svg",
-			},
-			Breadcrumbs: []graph.BreadcrumbItem{
-				{Name: "Main System", URL: "../../mainsystem.svg"},
-				{Name: "API Container", URL: "../api.svg"},
-				{Name: "Auth Service", URL: ""},
-			},
-		}
-		result := render.BuildNavigationLabel(nav)
-		// Should have backlink
-		assert.Contains(t, result, "Back to Main System")
-		// Should have breadcrumb trail
-		assert.Contains(t, result, "Main System")
-		assert.Contains(t, result, "API Container")
-		assert.Contains(t, result, "Auth Service")
-		// Separator between backlink and breadcrumbs is a "|" cell
-		assert.Contains(t, result, "<TD>|</TD>")
-	})
-
-	t.Run("current level with empty URL is plain text not link", func(t *testing.T) {
-		nav := &graph.Navigation{
-			BackLink: nil,
-			Breadcrumbs: []graph.BreadcrumbItem{
-				{Name: "Ancestor", URL: "../ancestor.svg"},
-				{Name: "Current", URL: ""},
-			},
-		}
-		result := render.BuildNavigationLabel(nav)
-		// Ancestor should have a clickable TD
-		assert.Contains(t, result, `<TD HREF="../ancestor.svg">Ancestor</TD>`)
-		// Current should be a plain TD (no HREF)
-		assert.Contains(t, result, "<TD>Current</TD>")
-		assert.NotContains(t, result, `<TD HREF="">Current</TD>`)
-	})
-
-	t.Run("multiple ancestors all clickable", func(t *testing.T) {
-		nav := &graph.Navigation{
-			BackLink: nil,
 			Breadcrumbs: []graph.BreadcrumbItem{
 				{Name: "Root", URL: "../../root.svg"},
 				{Name: "Parent", URL: "../parent.svg"},
@@ -111,59 +71,58 @@ func TestBuildNavigationLabel(t *testing.T) {
 			},
 		}
 		result := render.BuildNavigationLabel(nav)
-		// Both ancestors should be clickable via TD HREF
-		assert.Contains(t, result, `<TD HREF="../../root.svg">Root</TD>`)
-		assert.Contains(t, result, `<TD HREF="../parent.svg">Parent</TD>`)
-		// Breadcrumb separator cell between items
-		assert.Contains(t, result, "<TD>&gt;</TD>")
+		// Both ancestors carry trailing " >" inside their cells
+		assert.Contains(t, result, `<TD HREF="../../root.svg">`+navFontOpen+`<U>Root</U> &gt;</FONT></TD>`)
+		assert.Contains(t, result, `<TD HREF="../parent.svg">`+navFontOpen+`<U>Parent</U> &gt;</FONT></TD>`)
+		// Current is plain, no trailing separator
+		assert.Contains(t, result, "<TD>"+navFontOpen+"Current</FONT></TD>")
 	})
 
-	t.Run("backlink with empty URL produces no link", func(t *testing.T) {
+	t.Run("no back-link (breadcrumb-only)", func(t *testing.T) {
 		nav := &graph.Navigation{
-			BackLink: &graph.BackLink{
-				Name: "Main System",
-				URL:  "",
+			Breadcrumbs: []graph.BreadcrumbItem{
+				{Name: "Main System", URL: "../mainsystem.svg"},
+				{Name: "Current", URL: ""},
 			},
-			Breadcrumbs: nil,
 		}
 		result := render.BuildNavigationLabel(nav)
-		// Empty URL backlink should not produce output
-		assert.Empty(t, result)
+		// The old "Back to X" affordance is gone; breadcrumb alone covers nav.
+		assert.NotContains(t, result, "Back to")
+		assert.NotContains(t, result, "|", "no '|' separator without back-link")
+	})
+
+	t.Run("all nav cells carry muted font styling", func(t *testing.T) {
+		nav := &graph.Navigation{
+			Breadcrumbs: []graph.BreadcrumbItem{
+				{Name: "Root", URL: "../root.svg"},
+				{Name: "Current", URL: ""},
+			},
+		}
+		result := render.BuildNavigationLabel(nav)
+		// Every nav cell (both <TD HREF=...> and <TD>) should contain the muted
+		// <FONT> wrapper. Count cells by "<TD" (matches both forms) and verify
+		// each is followed by a <FONT> tag before its </TD>.
+		cellOpenCount := strings.Count(result, "<TD")
+		fontCount := strings.Count(result, navFontOpen)
+		assert.Equal(t, cellOpenCount, fontCount,
+			"every nav cell (%d) should have exactly one muted <FONT> wrapper (%d)", cellOpenCount, fontCount)
 	})
 
 	// WR-01 (03-04): a URL containing '&' must be HTML-escaped when embedded in
 	// the HREF="..." attribute. url.PathEscape does NOT escape '&' (it is a
-	// valid path character), and GraphViz's HTML-like label parser rejects a raw
-	// '&' that is not part of a valid entity, silently dropping the navigation
-	// anchor. The back-link TD HREF site must therefore emit '&amp;'.
-	t.Run("backlink URL with ampersand is HTML-escaped in HREF (WR-01)", func(t *testing.T) {
-		nav := &graph.Navigation{
-			BackLink: &graph.BackLink{
-				Name: "R&D",
-				URL:  "../r&d.svg",
-			},
-			Breadcrumbs: nil,
-		}
-		result := render.BuildNavigationLabel(nav)
-		// The HREF attribute must contain the HTML-escaped URL.
-		assert.Contains(t, result, `<TD HREF="../r&amp;d.svg">`)
-		// The raw, unescaped '&' must NOT appear inside the HREF attribute —
-		// GraphViz would drop the TD. (The display label 'Back to R&D' is a
-		// separate concern; here we assert only the HREF.)
-		assert.NotContains(t, result, `HREF="../r&d.svg"`)
-	})
-
-	// WR-01 (03-04): the breadcrumb TD HREF site must also HTML-escape '&'.
+	// valid path character), and GraphViz's HTML-like label parser rejects a
+	// raw '&' that is not part of a valid entity, silently dropping the nav
+	// anchor. The breadcrumb TD HREF must therefore emit '&amp;'.
 	t.Run("breadcrumb URL with ampersand is HTML-escaped in HREF (WR-01)", func(t *testing.T) {
 		nav := &graph.Navigation{
-			BackLink: nil,
 			Breadcrumbs: []graph.BreadcrumbItem{
 				{Name: "R&D", URL: "../r&d.svg"},
 				{Name: "Current", URL: ""},
 			},
 		}
 		result := render.BuildNavigationLabel(nav)
-		assert.Contains(t, result, `<TD HREF="../r&amp;d.svg">`)
+		assert.Contains(t, result, `HREF="../r&amp;d.svg"`,
+			"the HREF attribute value must be HTML-escaped (ALIGN may follow)")
 		assert.NotContains(t, result, `HREF="../r&d.svg"`)
 	})
 
@@ -172,30 +131,24 @@ func TestBuildNavigationLabel(t *testing.T) {
 	// ", so a legitimately encoded URL is unaffected.
 	t.Run("already-encoded URL is unaffected by HTML-escape (WR-01)", func(t *testing.T) {
 		nav := &graph.Navigation{
-			BackLink: &graph.BackLink{
-				Name: "API",
-				URL:  "api%20(v2).svg",
+			Breadcrumbs: []graph.BreadcrumbItem{
+				{Name: "API", URL: "api%20(v2).svg"},
+				{Name: "Current", URL: ""},
 			},
-			Breadcrumbs: nil,
 		}
 		result := render.BuildNavigationLabel(nav)
-		// Parentheses are valid in HTML attributes and not altered by
-		// html.EscapeString; %20 stays literal.
-		assert.Contains(t, result, `<TD HREF="api%20(v2).svg">`)
+		assert.Contains(t, result, `HREF="api%20(v2).svg"`,
+			"already-encoded URL segments must survive HTML-escape (ALIGN may follow)")
 	})
 }
 
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestNavigationInGraphOutput(t *testing.T) {
-	t.Run("C2/C3 diagram with navigation has label in output", func(t *testing.T) {
+	t.Run("C2/C3 diagram with navigation has breadcrumb in label", func(t *testing.T) {
 		g := &graph.Graph{
 			Title:     "API Container",
 			Direction: "TB",
 			Navigation: &graph.Navigation{
-				BackLink: &graph.BackLink{
-					Name: "Main System",
-					URL:  "../mainsystem.svg",
-				},
 				Breadcrumbs: []graph.BreadcrumbItem{
 					{Name: "Main System", URL: "../mainsystem.svg"},
 					{Name: "API Container", URL: ""},
@@ -210,7 +163,9 @@ func TestNavigationInGraphOutput(t *testing.T) {
 		require.NoError(t, err)
 		// Navigation should appear in the label attribute in DOT output
 		assert.Contains(t, string(output), "label")
-		assert.Contains(t, string(output), "Back to Main System")
+		// Breadcrumb ancestor name is present (no more "Back to X")
+		assert.Contains(t, string(output), "Main System")
+		assert.NotContains(t, string(output), "Back to")
 	})
 
 	t.Run("C1 diagram without navigation has no navigation label", func(t *testing.T) {
@@ -228,5 +183,6 @@ func TestNavigationInGraphOutput(t *testing.T) {
 		// C1 should not have navigation-related label
 		dotStr := string(output)
 		assert.NotContains(t, dotStr, "Back to")
+		assert.NotContains(t, dotStr, navFontOpen)
 	})
 }

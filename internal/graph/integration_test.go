@@ -475,15 +475,20 @@ func TestIntegration_Navigation_C1NoBackLink(t *testing.T) {
 func TestIntegration_Navigation_C2BackLink(t *testing.T) {
 	t.Parallel()
 
-	// C2 view should have back-link to C1
+	// C2 view's breadcrumb root ancestor carries the up-navigation to C1.
+	// (The standalone BackLink field was dropped — breadcrumb-only nav.)
 	m := buildTestModelWithExpandableSystem()
 	v := view.GenerateC2View(m, "mainsystem")
 	g := graph.BuildGraphWithPath(v, "mainsystem", "test", "svg")
 
 	require.NotNil(t, g)
 	require.NotNil(t, g.Navigation, "C2 should have navigation")
-	require.NotNil(t, g.Navigation.BackLink, "C2 should have back-link")
-	assert.Equal(t, "../test.svg", g.Navigation.BackLink.URL)
+	require.NotEmpty(t, g.Navigation.Breadcrumbs, "C2 should have breadcrumbs")
+	// The root ancestor (first breadcrumb) points back to the C1 diagram.
+	assert.NotEmpty(t, g.Navigation.Breadcrumbs[0].URL,
+		"C2 breadcrumb root ancestor must link to C1")
+	// BackLink is intentionally nil now.
+	assert.Nil(t, g.Navigation.BackLink)
 }
 
 // TestIntegration_Navigation_C3Breadcrumbs tests that C3 view has breadcrumbs showing path.
@@ -588,7 +593,9 @@ func TestIntegration_ExploreURL_NonExpandableTypes(t *testing.T) {
 	}
 }
 
-// TestIntegration_Navigation_BackLinkName tests back-link uses parent name.
+// TestIntegration_Navigation_BackLinkName tests the breadcrumb root ancestor
+// uses the parent (root) name. (Previously asserted on the BackLink field,
+// which was dropped in favor of breadcrumb-only nav.)
 func TestIntegration_Navigation_BackLinkName(t *testing.T) {
 	t.Parallel()
 
@@ -598,9 +605,10 @@ func TestIntegration_Navigation_BackLinkName(t *testing.T) {
 
 	require.NotNil(t, g)
 	require.NotNil(t, g.Navigation)
-	require.NotNil(t, g.Navigation.BackLink)
-	// The back-link name should be derived from the parent context
-	assert.NotEmpty(t, g.Navigation.BackLink.Name)
+	require.NotEmpty(t, g.Navigation.Breadcrumbs, "C2 should have breadcrumbs")
+	// The root ancestor name should be derived from the root context title.
+	assert.NotEmpty(t, g.Navigation.Breadcrumbs[0].Name,
+		"C2 breadcrumb root ancestor must carry a name")
 }
 
 // TestIntegration_Navigation_BreadcrumbAncestorsClickable tests breadcrumb ancestors are clickable.

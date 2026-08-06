@@ -46,6 +46,11 @@ type View struct {
 	// top-level cluster (C1). They are in Units for edge building but must not be
 	// rendered as top-level nodes.
 	VisiblePaths map[string]bool
+	// AncestorNames maps a dotted unit path to its display (pretty) Name,
+	// populated by the view generators for every ancestor of the ExpandedUnit
+	// (plus the ExpandedUnit itself). Used by the graph builder to render
+	// breadcrumb items with human-readable names instead of raw path segments.
+	AncestorNames map[string]string
 }
 
 // Entry represents a unit entry within a view.

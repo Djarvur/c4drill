@@ -638,14 +638,14 @@ func shouldHaveExploreLink(node *Node, v *view.View) bool {
 }
 
 // buildNavigation creates the Navigation struct for C2/C3 views.
+//
+// The navigation is breadcrumb-only: the earlier BackLink field is no longer
+// populated because it always duplicated the breadcrumb's nearest-ancestor
+// entry (same destination, same label). The breadcrumb trail alone covers
+// up-navigation to any ancestor. ComputeBackLinkURL is still used internally
+// by buildBreadcrumbs to compute the root ancestor's URL.
 func buildNavigation(v *view.View, currentPath, basename, format string) *Navigation {
 	nav := &Navigation{}
-
-	// Back-link to parent
-	nav.BackLink = &BackLink{
-		Name: extractParentName(v, currentPath),
-		URL:  ComputeBackLinkURL(currentPath, basename, format),
-	}
 
 	// Build breadcrumbs from the expanded unit path
 	nav.Breadcrumbs = buildBreadcrumbs(v, basename, format)
@@ -653,47 +653,56 @@ func buildNavigation(v *view.View, currentPath, basename, format string) *Naviga
 	return nav
 }
 
-// extractParentName gets the display name of the parent unit.
-func extractParentName(v *view.View, _ string) string {
-	// Use the view's expanded unit path to determine parent name
-	if v.ExpandedUnit != "" {
-		parts := strings.Split(v.ExpandedUnit, ".")
-		if len(parts) > 1 {
-			// Return the parent part (second to last)
-			return parts[len(parts)-2]
-		}
-		// Single part means C2, parent is the root diagram
-		if v.RootTitle != "" {
-			return v.RootTitle
-		}
-
-		return v.ExpandedUnit
-	}
-
-	return v.Title
-}
-
 // buildBreadcrumbs creates breadcrumb items from the view.
-// For C2 views (single-segment ExpandedUnit), it prepends a root breadcrumb
-// pointing to the C1 diagram.
+//
+// The breadcrumb trail always includes the C1 root context as the first item,
+// followed by every ancestor of the ExpandedUnit, ending with the current
+// level (no URL). So a C3 view "mainSystem.sshAuth" produces:
+//
+//	[Root Context] > [Main System] > [SSH Auth (current)]
+//
+// Pretty display names are resolved from v.AncestorNames (populated by the
+// view generators); if a name is missing the raw dotted-path segment is used
+// as a fallback.
 func buildBreadcrumbs(v *view.View, basename, format string) []BreadcrumbItem {
 	crumbs := BuildBreadcrumbPath(v.ExpandedUnit, basename, format)
 
-	// For C2 views, the single-segment path produces only one breadcrumb
-	// (the current level). Prepend the root C1 diagram as parent breadcrumb.
-	if v.Level == view.LevelC2 && len(crumbs) > 0 {
-		rootName := v.RootTitle
-		if rootName == "" {
-			rootName = "Context"
+	// Resolve each crumb's display name from the view's ancestor-name map.
+	// BuildBreadcrumbPath sets Name to the raw path segment (e.g. "mainSystem");
+	// we replace it with the unit's pretty Name (e.g. "Main System") when known.
+	parts := strings.Split(v.ExpandedUnit, ".")
+	for i := range crumbs {
+		if i < len(parts) {
+			prefix := strings.Join(parts[:i+1], ".")
+			if pretty, ok := v.AncestorNames[prefix]; ok && pretty != "" {
+				crumbs[i].Name = pretty
+			}
 		}
-
-		rootCrumb := BreadcrumbItem{
-			Name: rootName,
-			URL:  ComputeBackLinkURL(v.ExpandedUnit, basename, format),
-		}
-
-		crumbs = append([]BreadcrumbItem{rootCrumb}, crumbs...)
 	}
+
+	// Prepend the root C1 context as the first breadcrumb so users can always
+	// navigate all the way up to C1 from any C2/C3 diagram. Compute the URL
+	// relative to the current path depth (C2: ../basename.svg, C3:
+	// ../../basename.svg, etc.).
+	rootName := v.RootTitle
+	if rootName == "" {
+		rootName = "Context"
+	}
+
+	// The root URL: go up one directory per path segment to reach the output
+	// root (where the C1 basename.svg lives). "svg" is hardcoded because
+	// clickable navigation URLs always use the browser-navigable .svg format
+	// (the Gap-3 contract; see ComputeBackLinkURL and ComputeExploreURL).
+	depth := len(parts)
+	up := strings.Repeat("../", depth)
+	rootURL := up + basename + ".svg"
+
+	rootCrumb := BreadcrumbItem{
+		Name: rootName,
+		URL:  rootURL,
+	}
+
+	crumbs = append([]BreadcrumbItem{rootCrumb}, crumbs...)
 
 	return crumbs
 }

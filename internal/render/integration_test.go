@@ -422,7 +422,9 @@ func TestIntegration_SVG_ExploreLink(t *testing.T) {
 
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestIntegration_SVG_BackLink(t *testing.T) {
-	// Build C2 graph with back-link
+	// Build C2 graph with breadcrumb navigation (back-link was dropped in favor
+	// of breadcrumb-only nav — the breadcrumb's nearest ancestor covers the
+	// same up-navigation without duplicating the destination).
 	m := buildNavTestModel()
 	v := view.GenerateC2View(m, "mainsystem")
 	g := graph.BuildGraphWithPath(v, "mainsystem", "test", "svg")
@@ -433,8 +435,10 @@ func TestIntegration_SVG_BackLink(t *testing.T) {
 
 	svgStr := string(svgBytes)
 
-	// Verify back-link text appears (navigation label)
-	assert.Contains(t, svgStr, "Back to", "SVG should contain back-link text")
+	// Verify breadcrumb text appears (navigation label). The C2 view's
+	// breadcrumb carries the root ancestor name ("Navigation Test").
+	assert.Contains(t, svgStr, "Navigation Test",
+		"SVG should contain breadcrumb ancestor name")
 }
 
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
@@ -469,8 +473,12 @@ func TestIntegration_SVG_C1NoNavigation(t *testing.T) {
 
 	svgStr := string(svgBytes)
 
-	// C1 should not have back-link
-	assert.NotContains(t, svgStr, "Back to", "C1 SVG should not contain back-link")
+	// C1 has no navigation bar — it has no muted-font (<FONT POINT-SIZE="10"
+	// COLOR="#666666">) styled text, which is the nav styling signature. The
+	// graph title itself ("Navigation Test") is expected to appear at the
+	// default 14pt font; that is not navigation.
+	assert.NotContains(t, svgStr, `POINT-SIZE="10"`,
+		"C1 SVG should not contain nav-styled text")
 }
 
 // TestIntegration_Navigation_SVGRendersClickableLinks guards Gap 2: the graph
@@ -502,9 +510,12 @@ func TestIntegration_Navigation_SVGRendersClickableLinks(t *testing.T) {
 		"SVG navigation bar must render clickable anchors via <a xlink:href= (Gap 2)")
 	assert.NotContains(t, svgStr, `&lt;a href=`,
 		"SVG navigation bar must NOT contain escaped &lt;a href= (Gap 2)")
-	// The readable back-link text must still be present (not dropped).
-	assert.Contains(t, svgStr, "Back to",
-		"SVG navigation bar must contain the readable back-link text")
+	// The breadcrumb ancestor text must be present and underlined (the new
+	// breadcrumb-only nav styling: muted font + <U> on clickable items).
+	assert.Contains(t, svgStr, "Navigation Test",
+		"SVG navigation bar must contain the breadcrumb ancestor name")
+	assert.Contains(t, svgStr, `text-decoration="underline"`,
+		"SVG breadcrumb links must be underlined")
 
 	// DOT: the HTML label carries the navigation as a <TABLE> with <TD HREF=...>
 	// cells (the source form GraphViz accepts).
@@ -543,7 +554,7 @@ func TestIntegration_FullPipeline_Navigation(t *testing.T) {
 			view:    view.GenerateC2View(m, "mainsystem"),
 			path:    "mainsystem",
 			hasNav:  true,
-			navText: "Back to",
+			navText: "Navigation Test", // breadcrumb root ancestor name
 		},
 		{
 			name:    "C3",
@@ -567,7 +578,11 @@ func TestIntegration_FullPipeline_Navigation(t *testing.T) {
 			if tc.hasNav {
 				assert.Contains(t, svgStr, tc.navText, "%s should contain navigation text", tc.name)
 			} else {
-				assert.NotContains(t, svgStr, "Back to", "%s should not have back-link", tc.name)
+				// C1 has no navigation bar — detect absence by the nav font
+				// styling signature (POINT-SIZE="10"). The graph title itself
+				// legitimately appears on C1 at the default font size.
+				assert.NotContains(t, svgStr, `POINT-SIZE="10"`,
+					"%s should not have nav-styled text", tc.name)
 			}
 		})
 	}

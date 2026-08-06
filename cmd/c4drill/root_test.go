@@ -31,7 +31,7 @@ func TestHelpText(t *testing.T) {
 	assert.Contains(t, output, "Examples:", "Help should include examples section")
 	assert.Contains(t, output, "--format", "Help should document --format flag")
 	assert.Contains(t, output, "--output", "Help should document --output flag")
-	assert.Contains(t, output, "dot|svg", "Help should show available formats")
+	assert.Contains(t, output, "dot|svg|html", "Help should show available formats")
 }
 
 // TestHelpSubcommand verifies that help subcommand shows same content as --help.
@@ -113,6 +113,11 @@ func TestFlagValidation(t *testing.T) {
 		{
 			name:        "dot format is valid",
 			format:      "dot",
+			expectError: false,
+		},
+		{
+			name:        "html format is valid",
+			format:      "html",
 			expectError: false,
 		},
 		{
@@ -904,4 +909,64 @@ func TestExpandedFlag_Off_StandardBehavior(t *testing.T) {
 	// Expanded file should NOT exist
 	_, err = os.Stat(filepath.Join(tmpDir, "expanded.expanded.svg"))
 	assert.True(t, os.IsNotExist(err), "Expanded file should NOT exist without --expanded")
+}
+
+// TestRootCmd_HTMLFormat (03-04 Safari-link-fix) verifies that `-f html`
+// produces self-contained HTML files at C1/C2/C3 paths, that the Safari nav
+// shim is present, that no raw .svg hrefs survive (all rewritten to .html so
+// wrapped diagrams cross-link to wrapped siblings), and that the XML
+// declaration is stripped. End-to-end click navigation is verified separately
+// via Safari/AppleScript in the UAT.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestRootCmd_HTMLFormat(t *testing.T) {
+	dir := generateMultilevelOutput(t, "html")
+
+	t.Run("produces HTML files at C1/C2/C3 paths", func(t *testing.T) {
+		assert.FileExists(t, filepath.Join(dir, "multilevel.html"),
+			"C1 HTML should exist")
+		assert.FileExists(t, filepath.Join(dir, "multilevel", "mainSystem.html"),
+			"C2 HTML should exist")
+		assert.FileExists(t, filepath.Join(dir, "multilevel", "mainSystem", "sshAuth.html"),
+			"C3 HTML should exist")
+	})
+
+	t.Run("HTML output is well-formed and contains the SVG", func(t *testing.T) {
+		c1 := readOutputFile(t, filepath.Join(dir, "multilevel.html"))
+
+		assert.True(t, strings.HasPrefix(c1, "<!DOCTYPE html>"),
+			"HTML output must start with <!DOCTYPE html>")
+		assert.Contains(t, c1, "<svg", "HTML output must inline the SVG")
+		assert.Contains(t, c1, "</html>", "HTML output must close <html>")
+		assert.NotContains(t, c1, "<?xml",
+			"XML declaration must be stripped (invalid inside HTML body)")
+	})
+
+	t.Run("injects the Safari navigation shim", func(t *testing.T) {
+		c2 := readOutputFile(t, filepath.Join(dir, "multilevel", "mainSystem.html"))
+
+		assert.Contains(t, c2, "window.location.href",
+			"C2 HTML must contain the nav shim that makes SVG <a> clickable in Safari")
+	})
+
+	t.Run("rewrites all .svg hrefs to .html", func(t *testing.T) {
+		c2 := readOutputFile(t, filepath.Join(dir, "multilevel", "mainSystem.html"))
+
+		// C2 has 4 explore links + back-link/breadcrumb, all originally .svg.
+		// Every href must end in .html, none in .svg.
+		assert.NotContains(t, c2, `.svg"`,
+			"C2 HTML must not contain any .svg href suffix (all rewritten to .html)")
+		// And at least one href pointing at a sibling HTML diagram.
+		assert.Contains(t, c2, `mainSystem/sshAuth.html`,
+			"C2 HTML explore link for sshAuth must be rewritten to .html")
+	})
+
+	t.Run("C3 back-link rewritten to .html", func(t *testing.T) {
+		c3 := readOutputFile(t, filepath.Join(dir, "multilevel", "mainSystem", "sshAuth.html"))
+
+		assert.Contains(t, c3, `../mainSystem.html`,
+			"C3 HTML back-link must point at ../mainSystem.html (rewritten from .svg)")
+		assert.NotContains(t, c3, `.svg"`,
+			"C3 HTML must not contain any .svg href suffix")
+	})
 }

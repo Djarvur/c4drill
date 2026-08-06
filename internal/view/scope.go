@@ -388,6 +388,7 @@ func GenerateC2View(m *parser.Model, systemPath string) *View {
 		ExpandedUnitModel: systemUnit,
 		UnitOrder:         make([]string, 0),
 		Units:             make(map[string]*Entry),
+		AncestorNames:     buildAncestorNames(m, systemPath),
 	}
 
 	// Determine iteration order: use SubunitOrder if available, otherwise fallback to map keys
@@ -469,6 +470,7 @@ func GenerateC3View(m *parser.Model, containerPath string) *View {
 		ExpandedUnitModel: containerUnit,
 		UnitOrder:         make([]string, 0),
 		Units:             make(map[string]*Entry),
+		AncestorNames:     buildAncestorNames(m, containerPath),
 	}
 
 	// Determine iteration order: use SubunitOrder if available, otherwise fallback to map keys
@@ -546,6 +548,30 @@ func findUnitByPath(m *parser.Model, path string) *model.Unit {
 	}
 
 	return unit
+}
+
+// buildAncestorNames returns a map from each prefix of dottedPath (including
+// the full path itself) to the unit's display Name. For example, path
+// "mainapp.api.v2" yields {"mainapp": <name>, "mainapp.api": <name>,
+// "mainapp.api.v2": <name>}. If a unit is not found at some prefix, that
+// prefix is omitted (the caller falls back to the raw segment elsewhere).
+// The root context title is NOT included here; the graph builder prepends it.
+func buildAncestorNames(m *parser.Model, dottedPath string) map[string]string {
+	if dottedPath == "" {
+		return nil
+	}
+
+	parts := strings.Split(dottedPath, ".")
+	names := make(map[string]string, len(parts))
+
+	for i := 1; i <= len(parts); i++ {
+		prefix := strings.Join(parts[:i], ".")
+		if u := findUnitByPath(m, prefix); u != nil && u.Name != "" {
+			names[prefix] = u.Name
+		}
+	}
+
+	return names
 }
 
 // addExternalBoundaryNodesForSubunits scans links from subunits (recursively) and adds

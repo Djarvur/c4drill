@@ -185,9 +185,20 @@ func configureGraphSettings(cg *cgraph.Graph, g *graph.Graph) error {
 	// Clickable links inside an HTML label are expressed via the HREF
 	// attribute on a <TD> element (rendered as <a xlink:href> in SVG). The
 	// navigation TDs are produced by navigationTDs; the plain-text title is
-	// HTML-escaped before embedding (threat T-03-04-02). Both are placed in a
-	// single borderless TABLE so the label renders as one visible block with
-	// the navigation row above the title row.
+	// HTML-escaped before embedding (threat T-03-04-02). The breadcrumb and
+	// title are placed in a single borderless TABLE.
+	//
+	// Two GraphViz quirks drive this layout:
+	//  1. Clickable breadcrumb items must be RIGHT-aligned within their cells.
+	//     GraphViz sizes each table column to the widest cell in that column;
+	//     left-anchored text in a wide cell leaves a gap before the next
+	//     separator. RIGHT-aligning the clickable cells puts the text flush
+	//     against the following ">" separator, eliminating the gap.
+	//  2. The title MUST be wrapped in an explicit <FONT POINT-SIZE="14"> tag.
+	//     When row 1 carries <FONT POINT-SIZE="10"> content and row 2 carries
+	//     plain (default-size) content, GraphViz silently drops the title row
+	//     from the rendered SVG. Wrapping both rows in explicit FONT tags (10
+	//     for nav, 14 for title) makes both render.
 	navTDs := navigationTDs(g.Navigation)
 	hasTitle := g.Title != ""
 
@@ -201,10 +212,19 @@ func configureGraphSettings(cg *cgraph.Graph, g *graph.Graph) error {
 	}
 
 	if hasTitle {
-		rows = append(rows, "<TR>"+plainTD(html.EscapeString(g.Title))+"</TR>")
+		// COLSPAN merges the title cell across all nav columns. The title is
+		// wrapped in <FONT POINT-SIZE="14"> so GraphViz renders it (quirk 2).
+		colspan := len(navTDs)
+		if colspan < 1 {
+			colspan = 1
+		}
+
+		titleTD := fmt.Sprintf(`<TD COLSPAN="%d" ALIGN="CENTER"><FONT POINT-SIZE="14">%s</FONT></TD>`,
+			colspan, html.EscapeString(g.Title))
+		rows = append(rows, "<TR>"+titleTD+"</TR>")
 	}
 
-	combinedHTML := "<TABLE BORDER=\"0\" CELLBORDER=\"0\" CELLSPACING=\"0\">" +
+	combinedHTML := "<TABLE BORDER=\"0\" CELLBORDER=\"0\" CELLSPACING=\"0\" ALIGN=\"CENTER\">" +
 		strings.Join(rows, "") + "</TABLE>"
 
 	htmlStr, err := cg.StrdupHTML(combinedHTML)
