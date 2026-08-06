@@ -16,7 +16,7 @@
 ### Edge Resolution
 
 - [ ] **EDGE-01**: Edges from nested subunits to targets outside the current view resolve to the visible ancestor
-- [ ] **EDGE-02**: Duplicate edges (multiple sub-links resolving to same ancestor pair) collapse into a single edge
+- [x] **EDGE-02**: Duplicate edges (multiple sub-links resolving to same ancestor pair) collapse into a single edge
 
 ### Backward Compatibility
 
@@ -63,7 +63,7 @@
 | VIEW-04 | Phase 2 | Pending |
 | VIEW-05 | Phase 2 | Pending |
 | EDGE-01 | Phase 1 | Pending |
-| EDGE-02 | Phase 1 | Pending |
+| EDGE-02 | Phase 1 | Complete |
 | COMPAT-01 | Phase 3 | Pending |
 | COMPAT-02 | Phase 3 | Pending |
 

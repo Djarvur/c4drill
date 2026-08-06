@@ -49,7 +49,7 @@ Two bugs in `internal/view/scope.go`:
 Plans:
 **Wave 1**
 
-- [ ] 01-01-PLAN.md — Pair-only edge collapse with binary penwidth (D-01..D-06)
+- [x] 01-01-PLAN.md — Pair-only edge collapse with binary penwidth (D-01..D-06)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -117,7 +117,7 @@ Plans:
 | VIEW-01 | Phase 1 | Pending |
 | VIEW-02 | Phase 1 | Pending |
 | EDGE-01 | Phase 1 | Pending |
-| EDGE-02 | Phase 1 | Pending |
+| EDGE-02 | Phase 1 | Complete |
 | VIEW-03 | Phase 2 | Pending |
 | VIEW-04 | Phase 2 | Pending |
 | VIEW-05 | Phase 2 | Pending |
