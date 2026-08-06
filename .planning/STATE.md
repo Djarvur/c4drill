@@ -2,10 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: milestone
-current_plan: 2
-status: executing
-last_updated: "2026-08-06T13:29:40.050Z"
-last_activity: 2026-08-06
+status: Awaiting next milestone
+last_updated: "2026-08-06T17:59:00.335Z"
+last_activity: 2026-08-06 — Milestone v1.8 completed and archived
 progress:
   total_phases: 3
   completed_phases: 3
@@ -18,17 +17,10 @@ progress:
 
 ## Current Position
 
-Phase: 03 (compatibility-validation) — EXECUTING
-Plan: 4 of 4 (03-04 gap-closure COMPLETE)
-**Phase:** 03
-**Status:** Executing Phase 03
-**Current Plan:** 4 (complete)
-**Total Plans in Phase:** 4 (3 original + 03-04 gap-closure)
-**Last Activity:** 2026-08-06
-**Progress:** [██████████] 100%
-**Last session:** 2026-08-06T13:28:18Z
-**Stopped At:** Completed 03-04-PLAN.md (C2/C3 navigation gap closure)
-**Resume File:** None
+Phase: Milestone v1.8 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-08-06 — Milestone v1.8 completed and archived
 
 ## Status: **COMPLETE**
 
@@ -99,3 +91,7 @@ Fixed the two root-cause bugs:
 - [Post-v1.8]: GraphViz HTML-label column-stretching — separate separator cells (<TD>&gt;</TD> between breadcrumb items) stretch to the column width (sized to the widest cell in that column across all rows), creating large visual gaps. Fix: merge the ">" separator INTO each item's cell as trailing inline text (<TD HREF=url>Name &gt;</TD>).
 - [Post-v1.8]: Navigation redesigned — back-link dropped (it duplicated the breadcrumb's nearest-ancestor entry: same destination, same label). Breadcrumb-only now. C3 root context breadcrumb added (was missing — C3 couldn't navigate to C1 directly). Pretty unit Names resolved via new View.AncestorNames map (populated by view generators which have model access; graph builder consumes).
 - [Post-v1.8]: canonicalDOT golden (multilevel.expanded.dot) regenerated AGAIN — nav redesign changed the graph label format (ALIGN="CENTER" on TABLE, FONT POINT-SIZE="14" wrapper on title). Benign format change, semantic content unaffected.
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

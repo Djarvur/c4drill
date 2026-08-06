@@ -87,6 +87,8 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 ## Context
 
+**Shipped v1.8** — Proper C1/C2/C3 view generation with auto-detected sub-diagrams, backward-compatible expanded mode, Safari-compatible HTML output, and breadcrumb-only navigation with pretty names. ~15,000 LOC Go.
+
 **Shipped v1.0** with 9,624 LOC Go across 48 files.
 
 C4 model is a lean approach to software architecture documentation created by Simon Brown. It uses four levels of abstraction:
