@@ -945,6 +945,17 @@ func TestGenerateC1ViewDefinitionOrder(t *testing.T) {
 	assert.Equal(t, "gamma", v.UnitOrder[2], "third should be gamma")
 }
 
+// Fixture path constants shared by the expanded-C1 tests (D-07..D-11) in this
+// package. Constants keep repeated fixture literals below the goconst threshold.
+const (
+	webUserPath     = "webUser"
+	keycloakPath    = "keycloak"
+	linuxSystemPath = "linuxSystem"
+	sshAuthPath     = "linuxSystem.sshAuth"
+	webAPIPath      = "linuxSystem.webAPI"
+	webUserName     = "Web User"
+)
+
 // expandedC1Model builds a C1 fixture model with an expanded linuxSystem
 // top-level unit: webUser links into a hidden grandchild
 // (linuxSystem.sshAuth.sshd), keycloak is a peer target, and linuxSystem
@@ -954,21 +965,21 @@ func expandedC1Model(sshAuthLinks []model.Link) *parser.Model {
 	return &parser.Model{
 		Properties: model.Properties{Name: "Test"},
 		Units: map[string]*model.Unit{
-			"webUser": {
+			webUserPath: {
 				Type: model.TypePersonExternal,
-				Name: "Web User",
+				Name: webUserName,
 				Links: []model.Link{
-					{Peer: "linuxSystem.sshAuth.sshd"},
+					{Peer: sshAuthPath + ".sshd"},
 				},
 			},
-			"keycloak": {
+			keycloakPath: {
 				Type: model.TypeSystemExternal,
 				Name: "Keycloak",
 			},
-			"linuxSystem": {
+			linuxSystemPath: {
 				Type:     model.TypeSystem,
 				Name:     "Linux System",
-				Expanded: []string{"linuxSystem"},
+				Expanded: []string{linuxSystemPath},
 				Subunits: map[string]*model.Unit{
 					"sshAuth": {
 						Type:     model.TypeContainerBox,
@@ -995,7 +1006,7 @@ func expandedC1Model(sshAuthLinks []model.Link) *parser.Model {
 // the expanded top-level unit is a TypeBox instead of a TypeSystem.
 func expandedC1BoxModel(sshAuthLinks []model.Link) *parser.Model {
 	m := expandedC1Model(sshAuthLinks)
-	m.Units["linuxSystem"].Type = model.TypeBox
+	m.Units[linuxSystemPath].Type = model.TypeBox
 
 	return m
 }
@@ -1007,14 +1018,14 @@ func TestGenerateC1View_ExpandedUnitExposesVisibleSubunits(t *testing.T) {
 	require.NotNil(t, v)
 
 	// Direct subunits of an expanded top-level unit become visible entries
-	assert.Contains(t, v.Units, "linuxSystem.sshAuth")
-	assert.Contains(t, v.Units, "linuxSystem.webAPI")
-	assert.True(t, v.VisiblePaths["linuxSystem.sshAuth"])
-	assert.True(t, v.VisiblePaths["linuxSystem.webAPI"])
+	assert.Contains(t, v.Units, sshAuthPath)
+	assert.Contains(t, v.Units, webAPIPath)
+	assert.True(t, v.VisiblePaths[sshAuthPath])
+	assert.True(t, v.VisiblePaths[webAPIPath])
 
 	// Grandchildren stay hidden (buildCluster renders one level only)
-	assert.False(t, v.VisiblePaths["linuxSystem.sshAuth.sshd"])
-	assert.NotContains(t, v.Units, "linuxSystem.sshAuth.sshd")
+	assert.False(t, v.VisiblePaths[sshAuthPath+".sshd"])
+	assert.NotContains(t, v.Units, sshAuthPath+".sshd")
 }
 
 // D-07: a link to a hidden grandchild resolves to the deepest VISIBLE
@@ -1025,12 +1036,12 @@ func TestGenerateC1View_ResolvesToVisibleSubunit(t *testing.T) {
 	v := view.GenerateC1View(expandedC1Model(nil))
 	require.NotNil(t, v)
 
-	webUser := v.Units["webUser"]
+	webUser := v.Units[webUserPath]
 	require.NotNil(t, webUser)
 	require.NotNil(t, webUser.ResolvedLinks)
 	require.Len(t, webUser.ResolvedLinks, 1)
-	assert.Equal(t, "linuxSystem.sshAuth", webUser.ResolvedLinks[0].Peer)
-	assert.NotEqual(t, "linuxSystem", webUser.ResolvedLinks[0].Peer)
+	assert.Equal(t, sshAuthPath, webUser.ResolvedLinks[0].Peer)
+	assert.NotEqual(t, linuxSystemPath, webUser.ResolvedLinks[0].Peer)
 }
 
 // D-09: the edge source also resolves to its deepest visible ancestor — a
@@ -1038,14 +1049,14 @@ func TestGenerateC1View_ResolvesToVisibleSubunit(t *testing.T) {
 func TestGenerateC1View_SourceResolvesToVisibleSubunit(t *testing.T) {
 	t.Parallel()
 
-	v := view.GenerateC1View(expandedC1Model([]model.Link{{Peer: "keycloak"}}))
+	v := view.GenerateC1View(expandedC1Model([]model.Link{{Peer: keycloakPath}}))
 	require.NotNil(t, v)
 
-	sshAuth := v.Units["linuxSystem.sshAuth"]
+	sshAuth := v.Units[sshAuthPath]
 	require.NotNil(t, sshAuth)
 	require.NotNil(t, sshAuth.ResolvedLinks)
 	require.Len(t, sshAuth.ResolvedLinks, 1)
-	assert.Equal(t, "keycloak", sshAuth.ResolvedLinks[0].Peer)
+	assert.Equal(t, keycloakPath, sshAuth.ResolvedLinks[0].Peer)
 }
 
 // D-10: a link whose source and target are both visible inside the same
@@ -1054,17 +1065,17 @@ func TestGenerateC1View_SourceResolvesToVisibleSubunit(t *testing.T) {
 func TestGenerateC1View_WithinClusterEdge(t *testing.T) {
 	t.Parallel()
 
-	v := view.GenerateC1View(expandedC1Model([]model.Link{{Peer: "linuxSystem.webAPI"}}))
+	v := view.GenerateC1View(expandedC1Model([]model.Link{{Peer: webAPIPath}}))
 	require.NotNil(t, v)
 
-	sshAuth := v.Units["linuxSystem.sshAuth"]
+	sshAuth := v.Units[sshAuthPath]
 	require.NotNil(t, sshAuth)
 	require.NotNil(t, sshAuth.ResolvedLinks)
 	require.Len(t, sshAuth.ResolvedLinks, 1)
-	assert.Equal(t, "linuxSystem.webAPI", sshAuth.ResolvedLinks[0].Peer)
+	assert.Equal(t, webAPIPath, sshAuth.ResolvedLinks[0].Peer)
 
 	// D-08: the parent entry carries no edge for this link
-	assert.Nil(t, v.Units["linuxSystem"].ResolvedLinks)
+	assert.Nil(t, v.Units[linuxSystemPath].ResolvedLinks)
 }
 
 // D-08: a link to a hidden grandchild produces ONLY the subunit edge — no
@@ -1075,10 +1086,10 @@ func TestGenerateC1View_NoRedundantParentEdge(t *testing.T) {
 	v := view.GenerateC1View(expandedC1Model(nil))
 	require.NotNil(t, v)
 
-	webUser := v.Units["webUser"]
+	webUser := v.Units[webUserPath]
 	require.NotNil(t, webUser)
 	require.Len(t, webUser.ResolvedLinks, 1)
-	assert.Equal(t, "linuxSystem.sshAuth", webUser.ResolvedLinks[0].Peer)
+	assert.Equal(t, sshAuthPath, webUser.ResolvedLinks[0].Peer)
 }
 
 // D-11: box grouping units follow the SAME resolution rules as systems — no
@@ -1087,30 +1098,30 @@ func TestGenerateC1View_BoxResolutionParity(t *testing.T) {
 	t.Parallel()
 
 	v := view.GenerateC1View(expandedC1BoxModel([]model.Link{
-		{Peer: "keycloak"},
-		{Peer: "linuxSystem.webAPI"},
+		{Peer: keycloakPath},
+		{Peer: webAPIPath},
 	}))
 	require.NotNil(t, v)
 
 	// Visible subunits exposed
-	assert.Contains(t, v.Units, "linuxSystem.sshAuth")
-	assert.True(t, v.VisiblePaths["linuxSystem.sshAuth"])
+	assert.Contains(t, v.Units, sshAuthPath)
+	assert.True(t, v.VisiblePaths[sshAuthPath])
 
 	// Target resolves to the visible child (D-07)
-	webUser := v.Units["webUser"]
+	webUser := v.Units[webUserPath]
 	require.NotNil(t, webUser)
 	require.NotNil(t, webUser.ResolvedLinks)
 	require.Len(t, webUser.ResolvedLinks, 1)
-	assert.Equal(t, "linuxSystem.sshAuth", webUser.ResolvedLinks[0].Peer)
+	assert.Equal(t, sshAuthPath, webUser.ResolvedLinks[0].Peer)
 
 	// Source resolves to the visible child (D-09)
-	sshAuth := v.Units["linuxSystem.sshAuth"]
+	sshAuth := v.Units[sshAuthPath]
 	require.NotNil(t, sshAuth)
 	require.NotNil(t, sshAuth.ResolvedLinks)
 	require.Len(t, sshAuth.ResolvedLinks, 2)
-	assert.Equal(t, "keycloak", sshAuth.ResolvedLinks[0].Peer)
+	assert.Equal(t, keycloakPath, sshAuth.ResolvedLinks[0].Peer)
 
 	// Within-cluster edge recorded (D-10); no parent-level edge (D-08)
-	assert.Equal(t, "linuxSystem.webAPI", sshAuth.ResolvedLinks[1].Peer)
-	assert.Nil(t, v.Units["linuxSystem"].ResolvedLinks)
+	assert.Equal(t, webAPIPath, sshAuth.ResolvedLinks[1].Peer)
+	assert.Nil(t, v.Units[linuxSystemPath].ResolvedLinks)
 }

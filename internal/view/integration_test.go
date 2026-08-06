@@ -471,30 +471,34 @@ func TestBuildGraphExpandedC1VisibleSubunitEdges(t *testing.T) {
 
 	// Skip logic: the visible subunit is NOT a top-level node
 	for _, node := range g.Nodes {
-		assert.NotEqual(t, "linuxSystem.sshAuth", node.ID, "visible subunit must not render as top-level node")
+		assert.NotEqual(t, sshAuthPath, node.ID, "visible subunit must not render as top-level node")
 	}
 
 	// The cluster renders the visible subunit node
 	require.Len(t, g.Clusters, 1)
 	cluster := g.Clusters[0]
-	assert.Equal(t, "cluster_linuxSystem", cluster.ID)
+	assert.Equal(t, "cluster_"+linuxSystemPath, cluster.ID)
 
 	found := false
+
 	for _, node := range cluster.Nodes {
-		if node.ID == "linuxSystem.sshAuth" {
+		if node.ID == sshAuthPath {
 			found = true
 		}
 	}
-	assert.True(t, found, "cluster must contain node linuxSystem.sshAuth")
+
+	assert.True(t, found, "cluster must contain node "+sshAuthPath)
 
 	// D-07: the edge points at the visible subunit, not the parent
 	edgeFound := false
+
 	for _, edge := range g.Edges {
-		if edge.Source == "webUser" && edge.Target == "linuxSystem.sshAuth" {
+		if edge.Source == webUserPath && edge.Target == sshAuthPath {
 			edgeFound = true
 		}
 	}
-	assert.True(t, edgeFound, "expected edge webUser -> linuxSystem.sshAuth")
+
+	assert.True(t, edgeFound, "expected edge webUser -> "+sshAuthPath)
 
 	// RenderDOT must succeed — duplicate node IDs would break rendering
 	dot, err := render.RenderDOT(g)
@@ -518,12 +522,14 @@ func TestBuildGraphExpandedC1VisibleSubunitExploreLink(t *testing.T) {
 	require.Len(t, g.Clusters, 1)
 
 	var sshAuthNode *graph.Node
+
 	for _, node := range g.Clusters[0].Nodes {
-		if node.ID == "linuxSystem.sshAuth" {
+		if node.ID == sshAuthPath {
 			sshAuthNode = node
 		}
 	}
-	require.NotNil(t, sshAuthNode, "cluster must contain node linuxSystem.sshAuth")
+
+	require.NotNil(t, sshAuthNode, "cluster must contain node "+sshAuthPath)
 	assert.NotEmpty(t, sshAuthNode.ExploreURL)
 }
 
