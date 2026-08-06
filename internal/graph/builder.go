@@ -34,12 +34,17 @@ func BuildGraph(v *view.View) *Graph {
 		for _, key := range v.UnitOrder {
 			entry := v.Units[key]
 
-			// External boundary nodes go at top level
-			if entry.IsExternal {
-				node := buildNode(entry)
-				g.Nodes = append(g.Nodes, node)
-				continue
-			}
+		// Boundary nodes (external entities and resolved siblings) go at top
+		// level — outside the expanded unit's cluster. IsBoundary covers both
+		// genuinely external units (actors, external systems) and sibling
+		// containers resolved as boundary nodes. IsExternal alone is not
+		// sufficient because regular containers/systems are IsExternal=false
+		// but still need top-level placement when they're boundary nodes.
+		if entry.IsBoundary || entry.IsExternal {
+			node := buildNode(entry)
+			g.Nodes = append(g.Nodes, node)
+			continue
+		}
 
 			// Internal nodes go inside the boundary cluster. D-07 (same guard as
 			// the C1 branch): expansion only takes effect when there are subunits

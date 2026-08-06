@@ -66,6 +66,13 @@ type Entry struct {
 	IsExternal bool
 	// HasSubunits indicates if this unit has children (for [+] indicator).
 	HasSubunits bool
+	// IsBoundary indicates this is a boundary node (outside the expanded unit's
+	// scope) that should be rendered at the top level, outside the boundary
+	// cluster. Unlike IsExternal (which reflects unit TYPE for styling),
+	// IsBoundary reflects VIEW SCOPE for placement — a regular container that
+	// is a sibling of the expanded unit is IsBoundary=true (render outside
+	// cluster) but IsExternal=false (keep its normal blue styling).
+	IsBoundary bool
 	// ResolvedLinks contains outgoing links resolved for the current view level.
 	// When non-nil, the graph builder uses these instead of Unit.Links.
 	ResolvedLinks []model.Link

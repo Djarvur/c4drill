@@ -191,13 +191,14 @@ func isExpandedInC1(m *parser.Model, unit *model.Unit, unitPath string) bool {
 // If the unit exists in the model (e.g., a nested subunit), it uses the original unit data
 // to preserve attributes like links with length. Otherwise, it creates a minimal placeholder.
 //
-// IsExternal is ALWAYS true for boundary nodes — they are outside the expanded
-// unit's scope by definition, regardless of their unit type. The graph builder
-// uses IsExternal to place nodes at the top level (outside the boundary cluster),
-// which ensures GraphViz draws edges between boundary nodes and the cluster's
-// children. Setting IsExternal=false for non-External-type units (e.g. a regular
-// container that is a sibling of the expanded unit) caused boundary nodes to be
-// placed INSIDE the cluster, which suppressed edge rendering in some layouts.
+// IsExternal reflects the unit's actual type (IsExternalType) so styling renders
+// genuinely external units (personExternal, systemExternal, etc.) in gray and
+// regular units (containers, systems) in their normal blue colors.
+//
+// IsBoundary is ALWAYS true for boundary nodes — it tells the graph builder to
+// place the node at the top level (outside the boundary cluster) regardless of
+// unit type, ensuring edges between boundary nodes and the cluster's children
+// render correctly.
 func createExternalBoundaryNode(m *parser.Model, name string, _ string) *Entry {
 	// Try to find the actual unit in the model
 	actualUnit := findUnitByPath(m, name)
@@ -208,7 +209,8 @@ func createExternalBoundaryNode(m *parser.Model, name string, _ string) *Entry {
 			FullPath:    name,
 			IsExpanded:  false,
 			HasSubunits: len(actualUnit.Subunits) > 0,
-			IsExternal:  true, // boundary nodes are always external to the view scope
+			IsExternal:  IsExternalType(actualUnit.Type),
+			IsBoundary:  true,
 		}
 	}
 
@@ -222,6 +224,7 @@ func createExternalBoundaryNode(m *parser.Model, name string, _ string) *Entry {
 		IsExpanded:  false,
 		HasSubunits: false,
 		IsExternal:  true,
+		IsBoundary:  true,
 	}
 }
 
