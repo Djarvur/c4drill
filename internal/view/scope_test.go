@@ -738,6 +738,112 @@ func TestGenerateC3View_SiblingContainerIsBoundaryNotParent(t *testing.T) {
 	assert.NotContains(t, v.Units, "mainSystem")
 }
 
+// TestGenerateC3View_CrossSubtreeLinkResolvesToSiblingBranch locks in the
+// deeper-nesting variant of DEFERRED-04: when a component inside a deeply
+// nested container links to a unit in a DIFFERENT subtree of the same parent
+// system (not a direct sibling), the boundary node must resolve to the
+// diverging ancestor, not walk all the way up to the parent system.
+//
+// Before the proper fix, addResolvedBoundaryNode's expandedParent guard only
+// caught direct siblings under the same parent. A peer from a different
+// subtree (e.g. mainSystem.sshAuth.* in a view of mainSystem.storages.*)
+// walked past the divergence point to mainSystem, creating a parent-system
+// boundary node.
+func TestGenerateC3View_CrossSubtreeLinkResolvesToSiblingBranch(t *testing.T) {
+	t.Parallel()
+
+	// Model:
+	//   mainSystem (system)
+	//     .storages (containerBox)
+	//       .localStorage (container)      <- the C3 view target
+	//         .lookupAPI (component) -> LinksFrom {mainSystem.dacProxy}
+	//     .sshAuth (container)             <- different subtree
+	//       .systemd (containerBox)
+	//         .userdbd (component) -> Links {mainSystem.storages.localStorage.lookupAPI}
+	//     .dacProxy (container)            <- direct child of mainSystem (sibling of storages)
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"mainSystem": {
+				Type: model.TypeSystem,
+				Name: "Main System",
+				Subunits: map[string]*model.Unit{
+					"storages": {
+						Type: model.TypeContainerBox,
+						Name: "Storages",
+						Subunits: map[string]*model.Unit{
+							"localStorage": {
+								Type: model.TypeContainer,
+								Name: "Local Storage",
+								Subunits: map[string]*model.Unit{
+									"lookupAPI": {
+										Type: model.TypeComponent,
+										Name: "Lookup API",
+										// Incoming links from outside the storages subtree —
+										// these trigger boundary node resolution.
+										LinksFrom: []model.Link{
+											{Peer: "mainSystem.sshAuth.systemd.userdbd"}, // cross-subtree
+											{Peer: "mainSystem.dacProxy"},                 // different branch
+										},
+									},
+								},
+							},
+						},
+					},
+					"sshAuth": {
+						Type: model.TypeContainer,
+						Name: "SSH Auth",
+						Subunits: map[string]*model.Unit{
+							"systemd": {
+								Type: model.TypeComponentBox,
+								Name: "Systemd",
+								Subunits: map[string]*model.Unit{
+									"userdbd": {
+										Type: model.TypeComponent,
+										Name: "Userdbd",
+										Links: []model.Link{
+											// Cross-subtree link: from sshAuth.systemd into storages.localStorage
+											{Peer: "mainSystem.storages.localStorage.lookupAPI"},
+										},
+									},
+								},
+							},
+						},
+					},
+					"dacProxy": {
+						Type: model.TypeContainer,
+						Name: "DAC Proxy",
+						Links: []model.Link{
+							// Direct sibling link: dacProxy (child of mainSystem) into storages.localStorage
+							{Peer: "mainSystem.storages.localStorage.lookupAPI"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC3View(m, "mainSystem.storages.localStorage")
+	require.NotNil(t, v)
+
+	// The sshAuth subtree link should resolve to mainSystem.sshAuth (the
+	// diverging ancestor), NOT mainSystem (the parent system).
+	assert.Contains(t, v.Units, "mainSystem.sshAuth",
+		"cross-subtree peer should resolve to the diverging ancestor (sshAuth), not the parent (mainSystem)")
+
+	// The dacProxy link should resolve to mainSystem.dacProxy (a direct
+	// sibling of storages under mainSystem — boundary at depth 1+1=2... wait,
+	// dacProxy is at depth 1 (mainSystem.dacProxy), expanded is at depth 2
+	// (mainSystem.storages.localStorage). Common prefix = [mainSystem] (length 1).
+	// Boundary = peer ancestor at depth 1+1=2 = mainSystem.dacProxy.
+	assert.Contains(t, v.Units, "mainSystem.dacProxy",
+		"different-subtree peer (dacProxy) should be the boundary node, not mainSystem")
+
+	// The parent system must NOT appear as a boundary node.
+	assert.NotContains(t, v.Units, "mainSystem",
+		"parent system must never be a boundary node in a C3 view of its descendant")
+}
+
 func TestGenerateC3View_EdgesFromExpandedUnit(t *testing.T) {
 	t.Parallel()
 

@@ -616,63 +616,103 @@ func addExternalBoundaryNodesForSubunits(v *View, m *parser.Model, subunits map[
 	}
 }
 
-// addResolvedBoundaryNode resolves a link peer to its nearest visible ancestor
-// in the view and adds it as a boundary node if it's outside the view's scope.
-// If the peer is already in the view, nothing happens.
-// If the peer is a nested path whose ancestor is in the view, nothing happens
-// (the ancestor is already visible).
-// If the peer is completely outside the scope, it's added as a boundary node.
+// addResolvedBoundaryNode resolves a link peer to the nearest boundary node
+// at the divergence level between the peer's path and the expanded unit's
+// path, then adds it to the view if it's outside the view's scope.
+//
+// The algorithm finds the common path prefix between the peer and the expanded
+// unit (v.ExpandedUnit), then takes the peer's ancestor one level below the
+// divergence point as the boundary node. This correctly handles:
+//
+//   - Sibling containers (same parent): mainSystem.rbac in a view of
+//     mainSystem.localIDP → boundary = mainSystem.rbac
+//   - Cross-subtree units (different branch under the same system):
+//     mainSystem.sshAuth.systemd.userdbd in a view of
+//     mainSystem.storages.localStorage → boundary = mainSystem.sshAuth
+//   - Fully external units (no common prefix): externalSys → boundary = externalSys
+//   - Internal nested references (peer under the expanded unit): return early
+//
+// For C2 views, v.ExpandedUnit is a top-level name (no dot). Any peer under a
+// different top-level unit diverges immediately → boundary is the peer's
+// top-level ancestor (correct sibling container behavior). C1 never calls this.
 func addResolvedBoundaryNode(v *View, m *parser.Model, peer, scopePath string) {
 	// If already in view, nothing to do
 	if _, exists := v.Units[peer]; exists {
 		return
 	}
 
-	// D-01: bound the walk-up at the expanded unit's parent level so
-	// cross-container links resolve to the sibling container, not the parent
-	// system. The expanded unit (v.ExpandedUnit) is the single source of truth
-	// for "what container/system is this view about"; its parent contains both
-	// the expanded unit and its siblings. A peer that would strip down to that
-	// parent is a sibling and is the boundary, not an external top-level unit.
-	//
-	// We use v.ExpandedUnit rather than scopePath because scopePath (the link
-	// host's immediate parent) varies by recursion depth — at a deeply nested
-	// link host its own parent is inside the view, not the view root, so the
-	// bound would fire at the wrong level. v.ExpandedUnit is stable across the
-	// whole view. For C2 v.ExpandedUnit is a top-level name (no dot) so
-	// scopeParent is "" and the guard never fires — C2 boundary behavior is
-	// unchanged (BOUND-02). C1 never calls this.
-	expandedParent := ""
-	if idx := strings.LastIndex(v.ExpandedUnit, "."); idx > 0 {
-		expandedParent = v.ExpandedUnit[:idx]
+	// If the peer is a descendant of the expanded unit, it's an internal
+	// nested reference — walk up to find the nearest visible ancestor.
+	if v.ExpandedUnit != "" && strings.HasPrefix(peer, v.ExpandedUnit+".") {
+		for {
+			idx := strings.LastIndex(peer, ".")
+			if idx <= 0 {
+				break
+			}
+
+			peer = peer[:idx]
+
+			if _, exists := v.Units[peer]; exists {
+				return // Ancestor is in the view — internal reference
+			}
+		}
 	}
 
-	// Walk up the peer's path to find the nearest visible ancestor
-	for {
-		idx := strings.LastIndex(peer, ".")
-		if idx <= 0 {
+	// Resolve the boundary node via path-prefix divergence: find how many
+	// path segments the peer shares with the expanded unit, then take the
+	// peer's ancestor one level below the divergence.
+	boundary := resolveBoundaryByDivergence(v.ExpandedUnit, peer)
+
+	// Add as boundary node if not already in the view
+	if _, exists := v.Units[boundary]; !exists {
+		v.Units[boundary] = createExternalBoundaryNode(m, boundary, scopePath)
+		v.UnitOrder = append(v.UnitOrder, boundary)
+	}
+}
+
+// resolveBoundaryByDivergence finds the boundary node for a peer by computing
+// the common path prefix between the peer and the expanded unit, then returning
+// the peer's ancestor at one level below the divergence point.
+//
+// Examples (expanded = "mainSystem.storages.localStorage"):
+//
+//	peer = "mainSystem.dacProxy"                          → "mainSystem.dacProxy"
+//	peer = "mainSystem.sshAuth.systemd.userdbd"           → "mainSystem.sshAuth"
+//	peer = "mainSystem.storages.externalStorage.lookupAPI"→ "mainSystem.storages.externalStorage"
+//	peer = "externalSys"                                  → "externalSys"
+func resolveBoundaryByDivergence(expandedUnit, peer string) string {
+	expandedParts := strings.Split(expandedUnit, ".")
+	peerParts := strings.Split(peer, ".")
+
+	// Find the common prefix length
+	common := 0
+	for i := 0; i < len(expandedParts) && i < len(peerParts); i++ {
+		if expandedParts[i] == peerParts[i] {
+			common++
+		} else {
 			break
 		}
-
-		stripped := peer[:idx]
-		if stripped == expandedParent {
-			// Stripping would cross above the expanded unit's parent — the
-			// current peer (e.g. a sibling container) is the boundary node.
-			break
-		}
-		peer = stripped
-
-		if _, exists := v.Units[peer]; exists {
-			// An ancestor is in the view — peer is an internal nested reference
-			return
-		}
 	}
 
-	// Peer has no ancestor in the view — it's external, add as boundary node
-	if _, exists := v.Units[peer]; !exists {
-		v.Units[peer] = createExternalBoundaryNode(m, peer, scopePath)
-		v.UnitOrder = append(v.UnitOrder, peer)
+	// If no common prefix, the peer is fully external — boundary is the
+	// top-level peer (or the peer itself if it has no dots).
+	if common == 0 {
+		if len(peerParts) > 1 {
+			return peerParts[0]
+		}
+
+		return peer
 	}
+
+	// Boundary is the peer's ancestor at depth common+1 (one level below
+	// the divergence). This is the nearest sibling-level ancestor outside
+	// the expanded unit's subtree.
+	boundaryDepth := common + 1
+	if boundaryDepth > len(peerParts) {
+		boundaryDepth = len(peerParts)
+	}
+
+	return strings.Join(peerParts[:boundaryDepth], ".")
 }
 
 // resolveBoundaryNodeLinks resolves links for external boundary nodes so that
