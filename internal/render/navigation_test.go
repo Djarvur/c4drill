@@ -130,6 +130,59 @@ func TestBuildNavigationLabel(t *testing.T) {
 		// Empty URL backlink should not produce output
 		assert.Empty(t, result)
 	})
+
+	// WR-01 (03-04): a URL containing '&' must be HTML-escaped when embedded in
+	// the HREF="..." attribute. url.PathEscape does NOT escape '&' (it is a
+	// valid path character), and GraphViz's HTML-like label parser rejects a raw
+	// '&' that is not part of a valid entity, silently dropping the navigation
+	// anchor. The back-link TD HREF site must therefore emit '&amp;'.
+	t.Run("backlink URL with ampersand is HTML-escaped in HREF (WR-01)", func(t *testing.T) {
+		nav := &graph.Navigation{
+			BackLink: &graph.BackLink{
+				Name: "R&D",
+				URL:  "../r&d.svg",
+			},
+			Breadcrumbs: nil,
+		}
+		result := render.BuildNavigationLabel(nav)
+		// The HREF attribute must contain the HTML-escaped URL.
+		assert.Contains(t, result, `<TD HREF="../r&amp;d.svg">`)
+		// The raw, unescaped '&' must NOT appear inside the HREF attribute —
+		// GraphViz would drop the TD. (The display label 'Back to R&D' is a
+		// separate concern; here we assert only the HREF.)
+		assert.NotContains(t, result, `HREF="../r&d.svg"`)
+	})
+
+	// WR-01 (03-04): the breadcrumb TD HREF site must also HTML-escape '&'.
+	t.Run("breadcrumb URL with ampersand is HTML-escaped in HREF (WR-01)", func(t *testing.T) {
+		nav := &graph.Navigation{
+			BackLink: nil,
+			Breadcrumbs: []graph.BreadcrumbItem{
+				{Name: "R&D", URL: "../r&d.svg"},
+				{Name: "Current", URL: ""},
+			},
+		}
+		result := render.BuildNavigationLabel(nav)
+		assert.Contains(t, result, `<TD HREF="../r&amp;d.svg">`)
+		assert.NotContains(t, result, `HREF="../r&d.svg"`)
+	})
+
+	// WR-01 (03-04): already URL-encoded segments (%20, %28) must be left
+	// untouched by the HTML-escape — html.EscapeString alters only <, >, &, ',
+	// ", so a legitimately encoded URL is unaffected.
+	t.Run("already-encoded URL is unaffected by HTML-escape (WR-01)", func(t *testing.T) {
+		nav := &graph.Navigation{
+			BackLink: &graph.BackLink{
+				Name: "API",
+				URL:  "api%20(v2).svg",
+			},
+			Breadcrumbs: nil,
+		}
+		result := render.BuildNavigationLabel(nav)
+		// Parentheses are valid in HTML attributes and not altered by
+		// html.EscapeString; %20 stays literal.
+		assert.Contains(t, result, `<TD HREF="api%20(v2).svg">`)
+	})
 }
 
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues

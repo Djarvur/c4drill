@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+//nolint:funlen // Test functions with many table-driven subtests are naturally longer
 func TestComputeExploreURL(t *testing.T) {
 	t.Parallel()
 
@@ -153,6 +154,25 @@ func TestComputeExploreURL(t *testing.T) {
 		// Relative URL: ../../mainapp.svg.
 		url := graph.ComputeExploreURL("mainapp.api.auth", "mainapp", "diagram", "svg")
 		assert.Equal(t, "../../mainapp.svg", url)
+	})
+
+	// 03-04 Gap 1 symptom B (WR-02): the self-link / empty-target guard must be
+	// symmetric. An empty targetPath cannot yield a valid exploration URL — it
+	// currently collapses to a broken ".svg" (C2 branch) or "basename/.svg"
+	// (C1 branch) because the guard only fires when currentPath != "".
+	// These subtests lock the corrected behavior: empty target => empty URL.
+	t.Run("empty target with non-empty current returns empty (WR-02)", func(t *testing.T) {
+		t.Parallel()
+
+		url := graph.ComputeExploreURL("mainapp", "", "diagram", "svg")
+		assert.Empty(t, url, "empty targetPath must not yield a broken '.svg' URL")
+	})
+
+	t.Run("empty target and empty current returns empty (WR-02)", func(t *testing.T) {
+		t.Parallel()
+
+		url := graph.ComputeExploreURL("", "", "diagram", "svg")
+		assert.Empty(t, url, "both-empty case must not yield a broken 'basename/.svg' URL")
 	})
 }
 
