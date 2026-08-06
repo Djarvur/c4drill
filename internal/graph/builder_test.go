@@ -1478,7 +1478,7 @@ func TestBuildEdgesPenwidth(t *testing.T) {
 		g := graph.BuildGraph(v)
 
 		require.Len(t, g.Edges, 1)
-		assert.Equal(t, 2.0, g.Edges[0].PenWidth, "collapsed pairs (2+ links) thicken to 2.0 (D-04)")
+		assert.InDelta(t, 2.0, g.Edges[0].PenWidth, 0.001, "collapsed pairs (2+ links) thicken to 2.0 (D-04)")
 	})
 }
 
@@ -1517,8 +1517,8 @@ func TestBuildEdgesExpandedExemption(t *testing.T) {
 	require.Len(t, g.Edges, 2)
 
 	// D-02: expanded-mode edges keep the v1.7 2.0 prominence.
-	assert.Equal(t, 2.0, g.Edges[0].PenWidth)
-	assert.Equal(t, 2.0, g.Edges[1].PenWidth)
+	assert.InDelta(t, 2.0, g.Edges[0].PenWidth, 0.001)
+	assert.InDelta(t, 2.0, g.Edges[1].PenWidth, 0.001)
 }
 
 // edgeBlockFromDOT extracts the full DOT attribute block for the edge between
@@ -1538,19 +1538,22 @@ func edgeBlockFromDOT(t *testing.T, dot []byte, source, target string) string {
 			continue
 		}
 
-		block := line
+		var block strings.Builder
+		block.WriteString(line)
+
 		for j := i + 1; j < len(lines); j++ {
-			block += "\n" + lines[j]
+			block.WriteString("\n")
+			block.WriteString(lines[j])
 
 			if strings.HasSuffix(strings.TrimSpace(lines[j]), "];") {
-				return block
+				return block.String()
 			}
 		}
 
-		return block
+		return block.String()
 	}
 
-	require.FailNow(t, "edge %s -> %s not found in DOT output", source, target)
+	require.FailNowf(t, "edge %s -> %s not found in DOT output", source, target)
 
 	return ""
 }
@@ -1559,6 +1562,7 @@ func edgeBlockFromDOT(t *testing.T, dot []byte, source, target string) string {
 // serialization: 1.0 for single edges in resolved views, 2.0 for collapsed
 // pairs in resolved views, 2.0 in expanded mode. DOT rendering is
 // parallel-safe (precedent: TestBuildExpandedGraphRealToml).
+//nolint:funlen // Test functions with model setup are naturally longer
 func TestBuildEdgesPenwidthRendered(t *testing.T) {
 	t.Parallel()
 

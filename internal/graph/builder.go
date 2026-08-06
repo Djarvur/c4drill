@@ -376,7 +376,14 @@ func countPairMultiplicity(v *view.View) map[string]int {
 		return pairCounts
 	}
 
-	// Pass 1 — outgoing: count every outgoing link per pair.
+	countOutgoingPairs(v, pairCounts)
+	countIncomingPairs(v, pairCounts)
+
+	return pairCounts
+}
+
+// countOutgoingPairs counts every outgoing link per (source, target) pair.
+func countOutgoingPairs(v *view.View, pairCounts map[string]int) {
 	for _, path := range v.UnitOrder {
 		entry := v.Units[path]
 		if entry == nil {
@@ -393,9 +400,12 @@ func countPairMultiplicity(v *view.View) map[string]int {
 			pairCounts[key]++
 		}
 	}
+}
 
-	// Pass 2 — incoming (mirror-aware): count only pairs without outgoing
-	// contributions so validator mirrors are not double-counted (D-05).
+// countIncomingPairs counts incoming links per pair, skipping pairs that
+// already have outgoing contributions so validator mirrors are not
+// double-counted (D-05).
+func countIncomingPairs(v *view.View, pairCounts map[string]int) {
 	for _, path := range v.UnitOrder {
 		entry := v.Units[path]
 		if entry == nil {
@@ -414,8 +424,6 @@ func countPairMultiplicity(v *view.View) map[string]int {
 			}
 		}
 	}
-
-	return pairCounts
 }
 
 // processOutgoingLinks processes outgoing links from a unit.
