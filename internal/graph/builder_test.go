@@ -2,6 +2,7 @@ package graph_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/Djarvur/c4drill/internal/graph"
@@ -1377,4 +1378,279 @@ func TestBuildGraphDefinitionOrder(t *testing.T) {
 	require.Len(t, g.Edges, 2)
 	require.Equal(t, "zulu", g.Edges[0].Source, "first edge source should be zulu")
 	require.Equal(t, "alpha", g.Edges[1].Source, "second edge source should be alpha")
+}
+
+// TestBuildEdgesPairCollapse verifies D-01/D-03/D-06: multiple links landing on the
+// same (source, target) pair collapse to a single edge in resolved views, with the
+// first contributing link's attributes winning and no count suffix on the label.
+func TestBuildEdgesPairCollapse(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"app": {
+				Type: model.TypeSystem,
+				Name: "App",
+				Links: []model.Link{
+					{Peer: "db", Technology: "SQL", Description: "first"},
+					{Peer: "db", Technology: "HTTP", Description: "second"},
+				},
+			},
+			"db": {
+				Type: model.TypeDb,
+				Name: "Database",
+			},
+		},
+	}
+
+	v := view.GenerateC1View(m)
+	require.NotNil(t, v)
+
+	g := graph.BuildGraph(v)
+
+	// D-01: multiple links on the same pair collapse to a single edge.
+	require.Len(t, g.Edges, 1)
+
+	// D-03: the first link in definition order wins.
+	assert.Equal(t, "SQL", g.Edges[0].Label.Technology)
+	assert.Equal(t, "first", g.Edges[0].Label.Description)
+
+	// D-06: labels stay plain — no count suffix, endpoints unchanged.
+	assert.Equal(t, "app", g.Edges[0].Source)
+	assert.Equal(t, "db", g.Edges[0].Target)
+}
+
+// TestBuildEdgesPenwidth verifies D-04: collapsed pairs (2+ contributing links)
+// get penwidth 2.0, single-relationship edges stay at the renderer default (0).
+func TestBuildEdgesPenwidth(t *testing.T) {
+	t.Parallel()
+
+	t.Run("single link stays at default penwidth", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type: model.TypeSystem,
+					Name: "App",
+					Links: []model.Link{
+						{Peer: "db", Technology: "SQL"},
+					},
+				},
+				"db": {
+					Type: model.TypeDb,
+					Name: "Database",
+				},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Edges, 1)
+		assert.Zero(t, g.Edges[0].PenWidth, "single-relationship edges stay at default width (D-04)")
+	})
+
+	t.Run("collapsed pair thickens to 2.0", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type: model.TypeSystem,
+					Name: "App",
+					Links: []model.Link{
+						{Peer: "db", Technology: "SQL"},
+						{Peer: "db", Technology: "HTTP"},
+					},
+				},
+				"db": {
+					Type: model.TypeDb,
+					Name: "Database",
+				},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Edges, 1)
+		assert.Equal(t, 2.0, g.Edges[0].PenWidth, "collapsed pairs (2+ links) thicken to 2.0 (D-04)")
+	})
+}
+
+// TestBuildEdgesExpandedExemption verifies D-02/COMPAT-02: --expanded mode keeps
+// the v1.7 technology+description dedup key and 2.0 penwidth prominence.
+// GenerateExpandedView does not set AllExpanded yet (plan 01-02), so the view
+// is constructed literally.
+func TestBuildEdgesExpandedExemption(t *testing.T) {
+	t.Parallel()
+
+	v := &view.View{
+		AllExpanded: true,
+		UnitOrder:   []string{"app", "db"},
+		Units: map[string]*view.Entry{
+			"app": {
+				Unit: &model.Unit{
+					Type: model.TypeSystem,
+					Name: "App",
+					Links: []model.Link{
+						{Peer: "db", Technology: "SQL"},
+						{Peer: "db", Technology: "HTTP"},
+					},
+				},
+				FullPath: "app",
+			},
+			"db": {
+				Unit:     &model.Unit{Type: model.TypeDb, Name: "Database"},
+				FullPath: "db",
+			},
+		},
+	}
+
+	g := graph.BuildGraph(v)
+
+	// D-02: expanded mode keeps the v1.7 tech+desc dedup key (2 edges for 2 links).
+	require.Len(t, g.Edges, 2)
+
+	// D-02: expanded-mode edges keep the v1.7 2.0 prominence.
+	assert.Equal(t, 2.0, g.Edges[0].PenWidth)
+	assert.Equal(t, 2.0, g.Edges[1].PenWidth)
+}
+
+// edgeBlockFromDOT extracts the full DOT attribute block for the edge between
+// source and target. The go-graphviz writer wraps edge attributes across
+// multiple lines, so the block runs from the edge's first line (e.g.,
+// "app -> db	[key=app_to_db,") to the line ending with "];". The DOT default
+// edge block always carries penwidth=1.0, so assertions must target the
+// per-edge block, not the whole document.
+func edgeBlockFromDOT(t *testing.T, dot []byte, source, target string) string {
+	t.Helper()
+
+	prefix := source + " -> " + target
+	lines := strings.Split(string(dot), "\n")
+
+	for i, line := range lines {
+		if !strings.HasPrefix(strings.TrimSpace(line), prefix) {
+			continue
+		}
+
+		block := line
+		for j := i + 1; j < len(lines); j++ {
+			block += "\n" + lines[j]
+
+			if strings.HasSuffix(strings.TrimSpace(lines[j]), "];") {
+				return block
+			}
+		}
+
+		return block
+	}
+
+	require.FailNow(t, "edge %s -> %s not found in DOT output", source, target)
+
+	return ""
+}
+
+// TestBuildEdgesPenwidthRendered verifies the penwidth values survive DOT
+// serialization: 1.0 for single edges in resolved views, 2.0 for collapsed
+// pairs in resolved views, 2.0 in expanded mode. DOT rendering is
+// parallel-safe (precedent: TestBuildExpandedGraphRealToml).
+func TestBuildEdgesPenwidthRendered(t *testing.T) {
+	t.Parallel()
+
+	t.Run("single edge renders penwidth=1 in resolved views", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type: model.TypeSystem,
+					Name: "App",
+					Links: []model.Link{
+						{Peer: "db", Technology: "SQL"},
+					},
+				},
+				"db": {
+					Type: model.TypeDb,
+					Name: "Database",
+				},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraph(v)
+
+		dotData, err := render.RenderDOT(g)
+		require.NoError(t, err)
+		edgeBlock := edgeBlockFromDOT(t, dotData, "app", "db")
+		assert.Contains(t, edgeBlock, "penwidth=1", "single edges render at 1.0 (D-04)")
+	})
+
+	t.Run("collapsed pair renders penwidth=2 in resolved views", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type: model.TypeSystem,
+					Name: "App",
+					Links: []model.Link{
+						{Peer: "db", Technology: "SQL"},
+						{Peer: "db", Technology: "HTTP"},
+					},
+				},
+				"db": {
+					Type: model.TypeDb,
+					Name: "Database",
+				},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraph(v)
+
+		dotData, err := render.RenderDOT(g)
+		require.NoError(t, err)
+		edgeBlock := edgeBlockFromDOT(t, dotData, "app", "db")
+		assert.Contains(t, edgeBlock, "penwidth=2", "collapsed pairs render at 2.0 (D-04)")
+	})
+
+	t.Run("expanded mode renders penwidth=2", func(t *testing.T) {
+		t.Parallel()
+
+		v := &view.View{
+			AllExpanded: true,
+			UnitOrder:   []string{"app", "db"},
+			Units: map[string]*view.Entry{
+				"app": {
+					Unit: &model.Unit{
+						Type: model.TypeSystem,
+						Name: "App",
+						Links: []model.Link{
+							{Peer: "db", Technology: "SQL", Description: "first"},
+							{Peer: "db", Technology: "HTTP", Description: "second"},
+						},
+					},
+					FullPath: "app",
+				},
+				"db": {
+					Unit:     &model.Unit{Type: model.TypeDb, Name: "Database"},
+					FullPath: "db",
+				},
+			},
+		}
+
+		g := graph.BuildGraph(v)
+
+		dotData, err := render.RenderDOT(g)
+		require.NoError(t, err)
+		edgeBlock := edgeBlockFromDOT(t, dotData, "app", "db")
+		assert.Contains(t, edgeBlock, "penwidth=2", "expanded mode keeps 2.0 (COMPAT-02)")
+	})
 }

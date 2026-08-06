@@ -38,6 +38,10 @@ type View struct {
 	// ExpandedUnitModel is the model unit for the expanded entity (for C2/C3 views).
 	// Used by the graph builder to create the boundary cluster label.
 	ExpandedUnitModel *model.Unit
+	// AllExpanded indicates this view contains ALL units at all nesting levels
+	// (--expanded mode). When true, edge deduplication keeps the technology+description
+	// key and all edges render at penwidth 2.0 (COMPAT-02).
+	AllExpanded bool
 }
 
 // Entry represents a unit entry within a view.
