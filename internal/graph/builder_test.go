@@ -2,6 +2,8 @@ package graph_test
 
 import (
 	"fmt"
+	"os"
+	"sort"
 	"strings"
 	"testing"
 
@@ -796,11 +798,13 @@ func TestBuildExpandedGraph(t *testing.T) {
 // This is a regression test for a bug where LinksFrom entries created by the validator
 // did not preserve link attributes like Length, causing edges to lose minlen values
 // when the target unit was processed before the source unit.
+// The fixture is the sanitized public copy of the private auth-infrastructure
+// structure (D-01), committed at cmd/c4drill/testdata/multilevel.toml.
 func TestBuildExpandedGraphRealToml(t *testing.T) {
 	t.Parallel()
 
 	// Use ParseFile like the command does
-	m, err := parser.ParseFile("../../cyp-auth-infra/saira-20260320.c2.full.toml")
+	m, err := parser.ParseFile("../../cmd/c4drill/testdata/multilevel.toml")
 	require.NoError(t, err)
 
 	// Run validation like the command does (this adds LinksFrom entries)
@@ -808,10 +812,10 @@ func TestBuildExpandedGraphRealToml(t *testing.T) {
 	require.Empty(t, valErrors, "model should be valid")
 
 	// Check that the client unit has the link with length attribute
-	client := m.Units["linuxSystem"].Subunits["storages"].Subunits["keycloakStorage"].Subunits["client"]
+	client := m.Units["mainSystem"].Subunits["storages"].Subunits["externalStorage"].Subunits["client"]
 	require.NotNil(t, client, "client unit should exist")
 	require.Len(t, client.Links, 1, "client should have 1 link")
-	assert.Equal(t, "keycloak", client.Links[0].Peer)
+	assert.Equal(t, "externalSys", client.Links[0].Peer)
 	expectedLength := client.Links[0].Length
 	require.Greater(t, expectedLength, 0, "link should have Length > 0")
 
@@ -819,16 +823,16 @@ func TestBuildExpandedGraphRealToml(t *testing.T) {
 	v := view.GenerateExpandedView(m)
 	g := graph.BuildExpandedGraph(v)
 
-	// Find the edge from client to keycloak
+	// Find the edge from client to externalSys
 	var foundEdge *graph.Edge
 	for _, edge := range g.Edges {
-		if edge.Source == "linuxSystem.storages.keycloakStorage.client" && edge.Target == "keycloak" {
+		if edge.Source == "mainSystem.storages.externalStorage.client" && edge.Target == "externalSys" {
 			foundEdge = edge
 			break
 		}
 	}
 
-	require.NotNil(t, foundEdge, "Edge from client to keycloak should exist")
+	require.NotNil(t, foundEdge, "Edge from client to externalSys should exist")
 	assert.Equal(t, expectedLength, foundEdge.MinLen, "Edge MinLen should match TOML length attribute")
 
 	// Also verify that the rendered DOT contains minlen
@@ -1203,12 +1207,17 @@ func TestBuildGraphResolvedEdgeMinLen(t *testing.T) {
 }
 
 // TestBuildExpandedGraphBaselineDOT guards COMPAT-02: expanded-mode DOT output
-// must keep the v1.7 minlen and penwidth 2.0 prominence on every edge
-// (RESEARCH Pitfall 2).
+// must stay semantically identical to the committed golden baseline
+// (cmd/c4drill/testdata/multilevel.expanded.dot, D-01/D-02 contract: node/edge
+// sets, attributes, cluster structure). The baseline is regenerated via
+// `go run ./cmd/c4drill cmd/c4drill/testdata/multilevel.toml --format dot --expanded`.
+// The comparison is order-insensitive (DI-1): the pinned go-graphviz fork emits
+// map-order-dependent sibling ordering and layout geometry, so the normalized
+// semantic form is compared, not the raw bytes.
 func TestBuildExpandedGraphBaselineDOT(t *testing.T) {
 	t.Parallel()
 
-	m, err := parser.ParseFile("../../cyp-auth-infra/saira-20260320.c2.full.toml")
+	m, err := parser.ParseFile("../../cmd/c4drill/testdata/multilevel.toml")
 	require.NoError(t, err)
 
 	valErrors := validator.Validate(m)
@@ -1226,9 +1235,195 @@ func TestBuildExpandedGraphBaselineDOT(t *testing.T) {
 	dotData, err := render.RenderDOT(g)
 	require.NoError(t, err)
 
-	dot := string(dotData)
-	assert.Contains(t, dot, "minlen=", "DOT output should contain minlen for the expanded graph")
-	assert.Contains(t, dot, "penwidth=2", "DOT output should contain penwidth=2 for the expanded graph")
+	expected, err := os.ReadFile("../../cmd/c4drill/testdata/multilevel.expanded.dot")
+	require.NoError(t, err)
+
+	// DI-1: the pinned go-graphviz fork emits map-order-dependent sibling
+	// ordering and layout geometry, so the golden comparison is
+	// order-insensitive — canonicalDOT normalizes both sides to a sorted,
+	// geometry-stripped semantic form (D-02 contract) before comparison.
+	require.Equal(t, canonicalDOT(t, string(expected)), canonicalDOT(t, string(dotData)),
+		"expanded DOT must match the committed golden baseline semantically (COMPAT-02)")
+}
+
+// canonicalDOT normalizes XDOT output into an order-insensitive semantic
+// serialization (DI-1). The pinned go-graphviz fork emits map-order-dependent
+// sibling statement order and layout geometry, so raw byte comparison against
+// the committed golden baseline is impossible; the normalized form keeps
+// statement kind, head, sorted attributes with layout geometry stripped, and
+// recursively sorted children — the D-02 equivalence contract.
+func canonicalDOT(t *testing.T, dot string) string {
+	t.Helper()
+
+	stmts, ok := parseDOTStatements(dot)
+	require.True(t, ok, "parsing DOT output for canonical comparison")
+
+	return serializeDOTStatements(stmts)
+}
+
+// dotStatement is one parsed statement of an XDOT document: an attribute block
+// (graph/node/edge defaults, node or edge statement) or a nested subgraph.
+type dotStatement struct {
+	kind     string
+	head     string
+	attrs    []string
+	children []dotStatement
+}
+
+// parseDOTStatements skips the "digraph ... {" header and parses the statement
+// list until the closing brace.
+func parseDOTStatements(dot string) ([]dotStatement, bool) {
+	idx := strings.Index(dot, "{")
+	if idx < 0 {
+		return nil, false
+	}
+
+	stmts, _, ok := parseDOTBlock(dot, idx+1)
+
+	return stmts, ok
+}
+
+// parseDOTBlock parses statements starting at pos until the matching "}".
+// It returns the parsed statements and the position just past the closing brace.
+func parseDOTBlock(dot string, pos int) ([]dotStatement, int, bool) {
+	var stmts []dotStatement
+
+	for pos < len(dot) {
+		// Skip whitespace.
+		for pos < len(dot) && (dot[pos] == ' ' || dot[pos] == '\t' || dot[pos] == '\n' || dot[pos] == '\r') {
+			pos++
+		}
+		if pos >= len(dot) {
+			return stmts, pos, false
+		}
+
+		switch dot[pos] {
+		case '}':
+			return stmts, pos + 1, true
+		case '{': // Stray block opener (unexpected after the header) — skip.
+			pos++
+		default:
+			// Subgraph: recurse until its matching "}".
+			if strings.HasPrefix(dot[pos:], "subgraph") {
+				open := strings.Index(dot[pos:], "{")
+				if open < 0 {
+					return stmts, pos, false
+				}
+
+				head := strings.TrimSpace(dot[pos : pos+open])
+				children, next, ok := parseDOTBlock(dot, pos+open+1)
+				if !ok {
+					return stmts, next, false
+				}
+
+				stmts = append(stmts, dotStatement{kind: "subgraph", head: head, children: children})
+				pos = next
+
+				continue
+			}
+
+			// Attribute statement: ends with "];" — the ";" alone is not a
+			// safe terminator because HTML entity values (e.g. "&#x1F464;")
+			// contain semicolons.
+			end := strings.Index(dot[pos:], "];")
+			if end < 0 {
+				return stmts, pos, false
+			}
+
+			text := dot[pos : pos+end]
+			pos += end + 2
+
+			open := strings.Index(text, "[")
+			if open < 0 {
+				stmts = append(stmts, dotStatement{kind: "bare", head: strings.TrimSpace(text)})
+
+				continue
+			}
+
+			stmts = append(stmts, dotStatement{
+				kind:  "attr",
+				head:  strings.TrimSpace(text[:open]),
+				attrs: normalizeDOTAttrs(text[open+1 : len(text)-1]),
+			})
+		}
+	}
+
+	return stmts, pos, true
+}
+
+// isGeometryAttr reports whether an attribute is layout geometry emitted by the
+// go-graphviz engine. Its values flip between runs and carry no D-02 semantic
+// content, so it is stripped from the canonical form.
+func isGeometryAttr(name string) bool {
+	switch name {
+	case "bb", "pos", "lp", "lheight", "lwidth", "height", "width":
+		return true
+	}
+
+	return false
+}
+
+// normalizeDOTAttrs splits an attribute block (between "[" and "]") into
+// individual attributes, strips layout geometry, and sorts the remainder.
+// Attributes are one per line in xdot output, so ",\n" is the separator;
+// block content never contains a newline inside a value.
+func normalizeDOTAttrs(block string) []string {
+	raw := strings.Split(block, ",\n")
+	attrs := make([]string, 0, len(raw))
+
+	for _, piece := range raw {
+		attr := strings.TrimSpace(piece)
+		if attr == "" {
+			continue
+		}
+
+		name, _, _ := strings.Cut(attr, "=")
+		if isGeometryAttr(name) {
+			continue
+		}
+
+		attrs = append(attrs, attr)
+	}
+
+	sort.Strings(attrs)
+
+	return attrs
+}
+
+// serializeDOTStatements serializes a statement list canonically: statements
+// are ordered by their canonical form so sibling order flips (DI-1) compare
+// equal, preserving duplicates for multiset semantics.
+func serializeDOTStatements(stmts []dotStatement) string {
+	sorted := make([]string, 0, len(stmts))
+	for _, stmt := range stmts {
+		sorted = append(sorted, serializeDOTStatement(stmt))
+	}
+
+	sort.Strings(sorted)
+
+	return strings.Join(sorted, "\x00")
+}
+
+// serializeDOTStatement serializes one statement: kind, head, sorted
+// attributes, then recursively serialized children.
+func serializeDOTStatement(stmt dotStatement) string {
+	var b strings.Builder
+
+	b.WriteString(stmt.kind)
+	b.WriteByte('\x00')
+	b.WriteString(stmt.head)
+
+	for _, attr := range stmt.attrs {
+		b.WriteByte('\x00')
+		b.WriteString(attr)
+	}
+
+	if len(stmt.children) > 0 {
+		b.WriteByte('\x00')
+		b.WriteString(serializeDOTStatements(stmt.children))
+	}
+
+	return b.String()
 }
 
 //nolint:funlen // Test functions with model setup are naturally longer
