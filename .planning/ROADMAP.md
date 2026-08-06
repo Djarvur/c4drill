@@ -114,7 +114,7 @@ Plans:
 - `cmd/c4drill/root_test.go` — Integration tests
 - `internal/view/integration_test.go` — View integration tests
 
-**Plans:** 2 plans
+**Plans:** 3 plans
 Plans:
 **Wave 1**
 
@@ -123,6 +123,10 @@ Plans:
 **Wave 2** *(blocked on Wave 1 — golden baseline must exist before the comparison test)*
 
 - [x] 03-02-PLAN.md — Repoint builder tests to public fixture, golden comparison, D-04 + COMPAT-01 regressions, render fixture cleanup
+
+**Wave 3** *(gap closure — UAT 03-UAT.md diagnosed 3 navigation gaps breaking COMPAT-02)*
+
+- [ ] 03-04-PLAN.md — Close C2/C3 navigation gaps: ComputeExploreURL dotted-path fix (Gap 1), graph-label StrdupHTML for clickable breadcrumb links (Gap 2), force .svg in navigation URLs (Gap 3)
 
 ---
 
