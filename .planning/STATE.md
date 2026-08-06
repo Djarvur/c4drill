@@ -2,25 +2,27 @@
 gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: C3 Boundary Node Fix
-status: planning
-last_updated: "2026-08-06T18:00:24.586Z"
-last_activity: 2026-08-06
+status: complete
+last_updated: "2026-08-06T18:14:14.477Z"
+last_activity: 2026-08-06 — Phase 04 Plan 01 complete
 progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 1
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
+  percent: 100
 ---
 
-# v1.8: Proper C1/C2/C3 View Generation
+# v1.9: C3 Boundary Node Fix
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-08-06 — Milestone v1.9 started
+Phase: 04-c3-boundary-node-fix (Complete)
+Plan: 01 (Complete)
+Status: COMPLETE
+Last activity: 2026-08-06 — Phase 04 Plan 01 executed (TDD, 3 tasks)
+
+## Status: **COMPLETE**
 
 ## Status: **COMPLETE**
 
@@ -56,9 +58,11 @@ Fixed the two root-cause bugs:
 | Phase 03-compatibility-validation P01 | 5min | 2 tasks | 2 files |
 | Phase 03-compatibility-validation P02 | 8min | 3 tasks | 3 files |
 | Phase 03-compatibility-validation P04 | 19min | 3 tasks | 8 files |
+| Phase 04-c3-boundary-node-fix P01 | 3min | 3 tasks | 2 files |
 
 ## Decisions
 
+- [Phase 04]: D-01 realized via v.ExpandedUnit (NOT scopePath): addResolvedBoundaryNode bounds its peer walk-up at the expanded unit's parent so C3 cross-container links resolve to sibling containers (e.g. mainSystem.rbac) not the parent system (mainSystem). The plan's scopePath premise only holds at the top-level call — addExternalBoundaryNodesForSubunits recurses and rebinds scopePath to each link-host's immediate parent, so a scopePath-derived bound fired at the wrong level and the RED test stayed failing. v.ExpandedUnit is the stable view root. Signature unchanged; C2 (top-level ExpandedUnit -> "") and C1 (not called) behavior preserved (BOUND-01/02/03). Commits d3a56ff (RED), 710440b (GREEN).
 - [Phase 01]: Pair-only edge dedup key (source->target) in resolved C1/C2/C3 views; --expanded keeps the v1.7 tech+desc key via new View.AllExpanded flag (D-01/D-02)
 - [Phase 01]: Penwidth carried on graph.Edge.PenWidth (0 = renderer default); converter renders PenWidth>0 as-is else 1.0 — collapsed pairs 2.0, single edges 1.0 (D-04)
 - [Phase 01]: countPairMultiplicity is mirror-aware: validator LinksFrom mirrors are not double-counted (D-05)

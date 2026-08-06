@@ -11,7 +11,7 @@ Fix DEFERRED-04: C3 boundary node resolution walks past the sibling level and cr
 
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
-| 4 | C3 Boundary Node Fix | Fix addResolvedBoundaryNode to stop at sibling level in C3 views | BOUND-01, BOUND-02, BOUND-03 | 3 |
+| 4 | C3 Boundary Node Fix | 1/1 | Complete   | 2026-08-06 |
 
 ---
 
@@ -34,7 +34,7 @@ Fix DEFERRED-04: C3 boundary node resolution walks past the sibling level and cr
 **Key decisions:**
 - D-01: The walk-up should stop when the peer path reaches the same parent level as the expanded container. A peer like `mainSystem.rbac` shares parent `mainSystem` with `mainSystem.localIDP`, so `rbac` is the boundary — not `mainSystem`.
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 04-01-PLAN.md — C3 boundary node fix (TDD: RED sibling regression test, GREEN D-01 scope-parent bound, full-suite + multilevel C3 fixture verify)
+- [x] 04-01-PLAN.md — C3 boundary node fix (TDD: RED sibling regression test, GREEN D-01 scope-parent bound, full-suite + multilevel C3 fixture verify)

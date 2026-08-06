@@ -15,9 +15,9 @@ When a C3 diagram (e.g., `mainSystem.localIDP`) contains a component that links 
 
 ### Boundary Resolution
 
-- [ ] **BOUND-01**: C3 diagram boundary nodes for cross-container links resolve to the sibling container, not the parent system
-- [ ] **BOUND-02**: C3 boundary resolution does not regress C1 or C2 boundary behavior (deepest-visible-ancestor still works)
-- [ ] **BOUND-03**: Regression test covers C3 cross-container boundary resolution (sibling as boundary node, not parent)
+- [x] **BOUND-01**: C3 diagram boundary nodes for cross-container links resolve to the sibling container, not the parent system
+- [x] **BOUND-02**: C3 boundary resolution does not regress C1 or C2 boundary behavior (deepest-visible-ancestor still works)
+- [x] **BOUND-03**: Regression test covers C3 cross-container boundary resolution (sibling as boundary node, not parent)
 
 ## Out of Scope
 
