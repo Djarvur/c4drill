@@ -38,11 +38,9 @@ created: 2026-08-06
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 02-01-01 | 01 | 1 | VIEW-03 | — | N/A | unit | `go test ./cmd/c4drill/ -count=1` | ✅ root_test.go | ⬜ pending |
-| 02-01-02 | 01 | 1 | VIEW-04 | — | N/A | unit | `go test ./cmd/c4drill/ -count=1` | ✅ | ⬜ pending |
-| 02-01-03 | 01 | 1 | VIEW-05 (D-07) | — | N/A | unit | `go test ./internal/graph/ -run Cluster -count=1` | ❌ W0 | ⬜ pending |
-| 02-01-04 | 01 | 1 | D-01 (box sub-diagram) | — | N/A | unit | `go test ./cmd/c4drill/ -count=1` | ⚠ verify | ⬜ pending |
-| 02-01-05 | 01 | 1 | D-08 (actors in C2) | — | N/A | unit | `go test ./internal/view/ -count=1` | ⚠ verify | ⬜ pending |
+| 02-01-01 | 01 | 1 | VIEW-05 (D-07) | T-02-01 | N/A (slice-length guard) | unit (TDD) | `go test ./internal/graph/ -run ExpandedEmpty -count=1` | ❌ W0 | ⬜ pending |
+| 02-01-02 | 01 | 1 | VIEW-05 (D-04/D-05/D-06) | T-02-02 | N/A | unit | `go test ./internal/view/ ./internal/graph/ -count=1` | ❌ W0 | ⬜ pending |
+| 02-01-03 | 01 | 1 | VIEW-03, VIEW-04 (D-01/D-02/D-03/D-08) | T-02-03 | N/A | unit | `go test ./cmd/c4drill/ ./internal/view/ -count=1` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
