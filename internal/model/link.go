@@ -59,6 +59,12 @@ type Link struct {
 	LabelPosition LabelPosition `toml:"labelPosition"`
 	// Length is the minimum edge length (rank spacing). 0 means default.
 	Length int `toml:"length"`
+	// Mirror marks a link synthesized by the validator as the reverse of an
+	// outgoing link (populateIncomingLinks), not authored in the model.
+	// Multiplicity counting (D-05) excludes mirrors so authored linkFrom
+	// relationships are never indistinguishable from them (WR-02).
+	// Never serialized — internal bookkeeping only.
+	Mirror bool `toml:"-"`
 }
 
 // FindLinkByPeer searches a slice of links for one with the given peer name.

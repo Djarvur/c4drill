@@ -326,6 +326,7 @@ func resolveAndAddBoundary(v *View, m *parser.Model, path string, unit *model.Un
 				LabelPosition: link.LabelPosition,
 				Color:         link.Color,
 				Length:        length,
+				Mirror:        link.Mirror,
 			}
 			sourceEntry.ResolvedLinksFrom = append(sourceEntry.ResolvedLinksFrom, resolvedLink)
 		}
@@ -695,6 +696,7 @@ func resolveBoundaryNodeLinks(v *View) {
 							Description:   link.Description,
 							LabelPosition: link.LabelPosition,
 							Length:        length,
+							Mirror:        link.Mirror,
 						})
 					}
 				}
@@ -885,5 +887,6 @@ func addResolvedCrossLinkFrom(v *View, subunitEntry *Entry, sourcePath string, o
 		LabelPosition: link.LabelPosition,
 		Color:         link.Color,
 		Length:        length,
+		Mirror:        link.Mirror,
 	})
 }

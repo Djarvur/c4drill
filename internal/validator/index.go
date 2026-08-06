@@ -63,7 +63,10 @@ func populateIncomingLinks(index map[string]*UnitInfo) {
 				continue
 			}
 
-			// Add reverse link entry, preserving all attributes from the original link
+			// Add reverse link entry, preserving all attributes from the original link.
+			// Mirror marks it as a synthetic duplicate so multiplicity counting
+			// (D-05) can exclude it while still counting authored linkFrom
+			// relationships on the same pair (WR-02).
 			targetInfo.Unit.LinksFrom = append(targetInfo.Unit.LinksFrom, model.Link{
 				Peer:          sourcePath,
 				Arrow:         link.Arrow,
@@ -74,6 +77,7 @@ func populateIncomingLinks(index map[string]*UnitInfo) {
 				Description:   link.Description,
 				LabelPosition: link.LabelPosition,
 				Length:        link.Length,
+				Mirror:        true,
 			})
 		}
 	}

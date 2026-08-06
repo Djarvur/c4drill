@@ -372,10 +372,10 @@ func buildEdges(v *view.View) []*Edge {
 
 // countPairMultiplicity counts how many contributing links land on each
 // (source, target) pair (D-05). The count drives the binary penwidth of
-// collapsed edges (D-04). The validator mirrors every outgoing link into the
-// target's LinksFrom (internal/validator/index.go) with identical attributes,
-// so incoming entries for pairs that already have outgoing contributions are
-// duplicates, not additional relationships — they are not counted.
+// collapsed edges (D-04). The validator synthesizes a mirror of every outgoing
+// link into the target's LinksFrom (internal/validator/index.go) with identical
+// attributes; mirrors are marked on the link so they can be excluded, while
+// authored linkFrom relationships are counted (WR-02).
 func countPairMultiplicity(v *view.View) map[string]int {
 	pairCounts := make(map[string]int)
 
@@ -410,9 +410,9 @@ func countOutgoingPairs(v *view.View, pairCounts map[string]int) {
 	}
 }
 
-// countIncomingPairs counts incoming links per pair, skipping pairs that
-// already have outgoing contributions so validator mirrors are not
-// double-counted (D-05).
+// countIncomingPairs counts every authored incoming link per pair (D-05).
+// Validator-synthesized mirrors carry the Mirror flag and are excluded — they
+// are synthetic duplicates of outgoing links, not additional relationships.
 func countIncomingPairs(v *view.View, pairCounts map[string]int) {
 	for _, path := range v.UnitOrder {
 		entry := v.Units[path]
@@ -426,10 +426,12 @@ func countIncomingPairs(v *view.View, pairCounts map[string]int) {
 		}
 
 		for _, link := range inLinks {
-			key := link.Peer + "->" + path
-			if pairCounts[key] == 0 {
-				pairCounts[key]++
+			if link.Mirror {
+				continue
 			}
+
+			key := link.Peer + "->" + path
+			pairCounts[key]++
 		}
 	}
 }
