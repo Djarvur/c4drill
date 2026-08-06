@@ -1027,6 +1027,7 @@ func TestBuildGraphEdgeLength(t *testing.T) {
 // effect only when BOTH drawn endpoints are the link's original units. When
 // either endpoint is resolved to an ancestor, the synthesized edge carries no
 // minlen.
+//nolint:funlen // Test functions with model setup are naturally longer
 func TestBuildGraphResolvedEdgeMinLen(t *testing.T) {
 	t.Parallel()
 
@@ -1118,7 +1119,7 @@ func TestBuildExpandedGraphBaselineDOT(t *testing.T) {
 
 	// Expanded mode keeps the v1.7 2.0 prominence on every edge (D-02/D-04).
 	for _, edge := range g.Edges {
-		assert.Equal(t, 2.0, edge.PenWidth,
+		assert.InDelta(t, 2.0, edge.PenWidth, 0.001,
 			"expanded-mode edge %s -> %s should keep penwidth 2.0", edge.Source, edge.Target)
 	}
 

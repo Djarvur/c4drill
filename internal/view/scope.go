@@ -633,6 +633,7 @@ func resolveBoundaryNodeLinks(v *View) {
 						})
 					}
 				}
+
 				if len(resolved) > 0 {
 					entry.ResolvedLinks = resolved
 				}
@@ -664,6 +665,7 @@ func resolveBoundaryNodeLinks(v *View) {
 						})
 					}
 				}
+
 				if len(resolved) > 0 {
 					entry.ResolvedLinksFrom = resolved
 				}
