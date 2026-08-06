@@ -55,7 +55,7 @@ Fixed the two root-cause bugs:
 
 | Phase | Plan | Duration | Notes |
 |-------|------|----------|-------|
-| Phase 01-fix-c1-view-scoping P01 | 22min | 3 tasks | 5 files |
+| Phase 01-fix-c1-view-scoping P01 | 10min | 3 tasks | 5 files |
 
 ## Decisions
 
