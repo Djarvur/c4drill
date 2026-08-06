@@ -87,7 +87,9 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 ## Context
 
-**Shipped v1.8** — Proper C1/C2/C3 view generation with auto-detected sub-diagrams, backward-compatible expanded mode, Safari-compatible HTML output, and breadcrumb-only navigation with pretty names. ~15,000 LOC Go.
+**Shipped v1.9** — C3 boundary node fix: cross-container links in C3 diagrams now resolve to the sibling container (e.g., RBAC) instead of the parent system (Main System). ~18,700 LOC Go.
+
+**Shipped v1.8** — Proper C1/C2/C3 view generation with auto-detected sub-diagrams, backward-compatible expanded mode, Safari-compatible HTML output, and breadcrumb-only navigation with pretty names.
 
 **Shipped v1.0** with 9,624 LOC Go across 48 files.
 

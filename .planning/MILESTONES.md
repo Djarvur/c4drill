@@ -1,5 +1,15 @@
 # Milestones
 
+## v1.9 C3 Boundary Node Fix (Shipped: 2026-08-06)
+
+**Phases completed:** 1 phases, 1 plans, 3 tasks
+
+**Key accomplishments:**
+
+- addResolvedBoundaryNode now stops its peer walk-up at the expanded container's parent, so C3 cross-container links surface the sibling container (e.g. mainSystem.rbac) as the boundary node instead of the parent system (mainSystem)
+
+---
+
 ## v1.8 Proper C1/C2/C3 View Generation (Shipped: 2026-08-06)
 
 **Phases completed:** 3 phases, 7 plans, 20 tasks
