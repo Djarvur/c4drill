@@ -316,6 +316,40 @@ func TestBuildGraphC2ExpandedContainerRendersCluster(t *testing.T) {
 	assert.Len(t, g.Clusters[0].Clusters[0].Nodes, 2)
 }
 
+// WR-01: the D-07 empty-cluster guard also applies to the C2/C3 branch — a
+// per-unit expanded entry naming a subunit WITHOUT subunits renders as a plain
+// node inside the boundary cluster, not an empty cluster box.
+func TestBuildGraphC2ExpandedEmptySubunitRendersPlainNode(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"app": {
+				Type:     model.TypeSystem,
+				Name:     "App",
+				Expanded: []string{"api"}, // Expanded entry, but api has no subunits
+				Subunits: map[string]*model.Unit{
+					"api": {
+						Type: model.TypeContainer,
+						Name: "API",
+					},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC2View(m, "app")
+	g := graph.BuildGraph(v)
+
+	// WR-01: no empty cluster box — the expanded-but-empty container renders
+	// as a plain node inside the boundary cluster.
+	require.Len(t, g.Clusters, 1)
+	require.Empty(t, g.Clusters[0].Clusters)
+	require.Len(t, g.Clusters[0].Nodes, 1)
+	assert.Equal(t, "app.api", g.Clusters[0].Nodes[0].ID)
+}
+
 func TestBuildGraphMultipleLinks(t *testing.T) {
 	t.Parallel()
 
