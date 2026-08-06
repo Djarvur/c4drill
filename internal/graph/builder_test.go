@@ -1590,6 +1590,142 @@ func TestBuildEdgesPenwidth(t *testing.T) {
 	})
 }
 
+// TestBuildEdgesPenwidthC2C3CollapsedPairs verifies WR-01: D-04/D-05 penwidth
+// thickening fires in C2/C3 views. resolveSubunitCrossLinks must preserve ALL
+// contributing links on ResolvedLinks (the builder's pair-only markSeen does
+// the edge dedup), so countPairMultiplicity sees collapsed-pair multiplicity
+// exactly as it does in C1.
+func TestBuildEdgesPenwidthC2C3CollapsedPairs(t *testing.T) {
+	t.Parallel()
+
+	t.Run("C2 direct duplicate links thicken to 2.0", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"mainsystem": {
+					Type: model.TypeSystem,
+					Name: "Main System",
+					Subunits: map[string]*model.Unit{
+						"api": {
+							Type: model.TypeContainer,
+							Name: "API",
+							Links: []model.Link{
+								{Peer: "mainsystem.db", Technology: "SQL"},
+								{Peer: "mainsystem.db", Technology: "HTTP"},
+							},
+						},
+						"db": {Type: model.TypeContainerDb, Name: "Database"},
+					},
+					SubunitOrder: []string{"api", "db"},
+				},
+			},
+		}
+
+		v := view.GenerateC2View(m, "mainsystem")
+		require.NotNil(t, v)
+
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Edges, 1, "two links on the same pair collapse to one edge")
+		assert.Equal(t, "mainsystem.api", g.Edges[0].Source)
+		assert.Equal(t, "mainsystem.db", g.Edges[0].Target)
+		assert.InDelta(t, 2.0, g.Edges[0].PenWidth, 0.001, "collapsed C2 pairs thicken to 2.0 (D-04)")
+	})
+
+	t.Run("C2 descendant-contributed links thicken to 2.0", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"mainsystem": {
+					Type: model.TypeSystem,
+					Name: "Main System",
+					Subunits: map[string]*model.Unit{
+						"api": {
+							Type: model.TypeContainer,
+							Name: "API",
+							Subunits: map[string]*model.Unit{
+								"a1": {
+									Type: model.TypeComponent,
+									Name: "A1",
+									Links: []model.Link{
+										{Peer: "mainsystem.db", Technology: "SQL"},
+									},
+								},
+								"a2": {
+									Type: model.TypeComponent,
+									Name: "A2",
+									Links: []model.Link{
+										{Peer: "mainsystem.db", Technology: "HTTP"},
+									},
+								},
+							},
+							SubunitOrder: []string{"a1", "a2"},
+						},
+						"db": {Type: model.TypeContainerDb, Name: "Database"},
+					},
+					SubunitOrder: []string{"api", "db"},
+				},
+			},
+		}
+
+		v := view.GenerateC2View(m, "mainsystem")
+		require.NotNil(t, v)
+
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Edges, 1, "two descendant links resolve to one api -> db pair")
+		assert.Equal(t, "mainsystem.api", g.Edges[0].Source)
+		assert.Equal(t, "mainsystem.db", g.Edges[0].Target)
+		assert.InDelta(t, 2.0, g.Edges[0].PenWidth, 0.001, "descendant contributions thicken the collapsed pair (D-05)")
+	})
+
+	t.Run("C3 direct duplicate links thicken to 2.0", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"mainsystem": {
+					Type: model.TypeSystem,
+					Name: "Main System",
+					Subunits: map[string]*model.Unit{
+						"api": {
+							Type: model.TypeContainer,
+							Name: "API",
+							Subunits: map[string]*model.Unit{
+								"handler": {
+									Type: model.TypeComponent,
+									Name: "Handler",
+									Links: []model.Link{
+										{Peer: "mainsystem.api.repo", Technology: "SQL"},
+										{Peer: "mainsystem.api.repo", Technology: "HTTP"},
+									},
+								},
+								"repo": {Type: model.TypeComponentDb, Name: "Repository"},
+							},
+							SubunitOrder: []string{"handler", "repo"},
+						},
+					},
+				},
+			},
+		}
+
+		v := view.GenerateC3View(m, "mainsystem.api")
+		require.NotNil(t, v)
+
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Edges, 1, "two links on the same pair collapse to one edge")
+		assert.Equal(t, "mainsystem.api.handler", g.Edges[0].Source)
+		assert.Equal(t, "mainsystem.api.repo", g.Edges[0].Target)
+		assert.InDelta(t, 2.0, g.Edges[0].PenWidth, 0.001, "collapsed C3 pairs thicken to 2.0 (D-04)")
+	})
+}
+
 // TestBuildEdgesExpandedExemption verifies D-02/COMPAT-02: --expanded mode keeps
 // the v1.7 technology+description dedup key and 2.0 penwidth prominence.
 // GenerateExpandedView does not set AllExpanded yet (plan 01-02), so the view

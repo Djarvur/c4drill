@@ -444,6 +444,47 @@ func TestGenerateC2View_NonExistentPathReturnsNil(t *testing.T) {
 	assert.Nil(t, v)
 }
 
+// TestGenerateC2View_ResolvedLinksKeepMultiplicity verifies WR-01: the C2
+// cross-link synthesis must NOT pre-dedup ResolvedLinks by resolved peer —
+// countPairMultiplicity (D-05) needs every contributing link so collapsed
+// pairs thicken to penwidth 2.0 (D-04). Edge dedup is the builder's job
+// (pair-only markSeen), not the view's.
+func TestGenerateC2View_ResolvedLinksKeepMultiplicity(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"mainsystem": {
+				Type: model.TypeSystem,
+				Name: "Main System",
+				Subunits: map[string]*model.Unit{
+					"api": {
+						Type: model.TypeContainer,
+						Name: "API",
+						Links: []model.Link{
+							{Peer: "mainsystem.db", Technology: "SQL"},
+							{Peer: "mainsystem.db", Technology: "HTTP"},
+						},
+					},
+					"db": {Type: model.TypeContainerDb, Name: "Database"},
+				},
+				SubunitOrder: []string{"api", "db"},
+			},
+		},
+	}
+
+	v := view.GenerateC2View(m, "mainsystem")
+	require.NotNil(t, v)
+
+	api := v.Units["mainsystem.api"]
+	require.NotNil(t, api)
+	require.NotNil(t, api.ResolvedLinks)
+	require.Len(t, api.ResolvedLinks, 2, "both contributing links must survive synthesis (D-05)")
+	assert.Equal(t, "mainsystem.db", api.ResolvedLinks[0].Peer)
+	assert.Equal(t, "mainsystem.db", api.ResolvedLinks[1].Peer)
+}
+
 // Tests for GenerateC3View
 
 func TestGenerateC3View_ReturnsViewWithLevelC3(t *testing.T) {
