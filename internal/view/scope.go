@@ -2,6 +2,7 @@ package view
 
 import (
 	"slices"
+	"sort"
 	"strings"
 
 	"github.com/Djarvur/c4drill/internal/model"
@@ -433,6 +434,9 @@ func GenerateC2View(m *parser.Model, systemPath string) *View {
 	// Add external boundary nodes for links from subunits (recursively)
 	addExternalBoundaryNodesForSubunits(v, m, systemUnit.Subunits, subunitOrder, systemPath)
 
+	// Sort boundary nodes to match model definition order (layout consistency).
+	sortBoundaryNodesByModelOrder(v, m)
+
 	// Resolve links for boundary nodes (external entities have deep links that need resolving)
 	resolveBoundaryNodeLinks(v)
 
@@ -515,6 +519,12 @@ func GenerateC3View(m *parser.Model, containerPath string) *View {
 	// Add external boundary nodes for links from subunits
 	addExternalBoundaryNodesForSubunits(v, m, containerUnit.Subunits, subunitOrder, containerPath)
 
+	// Sort boundary nodes (the tail of UnitOrder) to match the model's top-level
+	// definition order. This ensures the same boundary nodes appear in the same
+	// order regardless of which scanning path discovered them (C1 vs C2/C3),
+	// producing consistent DOT node ordering and GraphViz layouts.
+	sortBoundaryNodesByModelOrder(v, m)
+
 	// Resolve links for boundary nodes (external entities have deep links that need resolving)
 	resolveBoundaryNodeLinks(v)
 
@@ -583,6 +593,70 @@ func buildAncestorNames(m *parser.Model, dottedPath string) map[string]string {
 	}
 
 	return names
+}
+
+// sortBoundaryNodesByModelOrder reorders the boundary nodes at the tail of
+// v.UnitOrder to match the model's top-level definition order (m.UnitOrder).
+// This ensures the same boundary nodes appear in the same sequence regardless
+// of which scanning path discovered them (C1's addC1BoundaryNodes vs C2/C3's
+// addExternalBoundaryNodesForSubunits), producing consistent DOT node ordering
+// and GraphViz layouts for diagrams that show the same content.
+//
+// Non-boundary entries (the expanded unit's own subunits) keep their position
+// at the head of UnitOrder.
+func sortBoundaryNodesByModelOrder(v *View, m *parser.Model) {
+	// Split UnitOrder: internal entries (not IsBoundary/IsExternal) stay first,
+	// boundary entries get sorted by model definition order.
+	var internal, boundary []string
+	for _, path := range v.UnitOrder {
+		entry := v.Units[path]
+		if entry != nil && (entry.IsBoundary || entry.IsExternal) {
+			boundary = append(boundary, path)
+		} else {
+			internal = append(internal, path)
+		}
+	}
+
+	// Sort boundary nodes by their position in the model's top-level UnitOrder.
+	// Boundary nodes are top-level paths (e.g., "actorA", "externalSys") or
+	// resolved ancestors (e.g., "mainSystem.rbac"). Extract the top-level key
+	// and use its index in m.UnitOrder as the sort key.
+	topIndex := make(map[string]int)
+	for i, name := range m.UnitOrder {
+		topIndex[name] = i
+	}
+
+	sort.SliceStable(boundary, func(i, j int) bool {
+		// Extract top-level segment from each boundary path
+		keyI := boundary[i]
+		if idx := strings.Index(keyI, "."); idx > 0 {
+			keyI = keyI[:idx]
+		}
+
+		keyJ := boundary[j]
+		if idx := strings.Index(keyJ, "."); idx > 0 {
+			keyJ = keyJ[:idx]
+		}
+
+		// Unknown keys sort after known ones, preserving relative order
+		oi, okI := topIndex[keyI]
+		oj, okJ := topIndex[keyJ]
+		if !okI && !okJ {
+			return boundary[i] < boundary[j]
+		}
+
+		if !okI {
+			return false
+		}
+
+		if !okJ {
+			return true
+		}
+
+		return oi < oj
+	})
+
+	v.UnitOrder = append(internal, boundary...)
 }
 
 // addExternalBoundaryNodesForSubunits scans links from subunits (recursively) and adds
