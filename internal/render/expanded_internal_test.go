@@ -12,32 +12,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// loadCYPAuthInfraModel loads the cyp-auth-infra.toml test fixture.
+// loadCYPAuthInfraModel returns the synthetic model matching the private
+// auth-infrastructure fixture structure. The private fixture is gitignored;
+// the synthetic model keeps render tests deterministic on every machine (D-01).
 func loadCYPAuthInfraModel(t *testing.T) *parser.Model {
 	t.Helper()
-
-	// Try multiple possible locations for the test fixture
-	paths := []string{
-		"../../cyp-auth-infra/cyp-auth-infra.toml",
-		"cyp-auth-infra/cyp-auth-infra.toml",
-		"./cyp-auth-infra/cyp-auth-infra.toml",
-	}
-
-	for _, path := range paths {
-		m, err := parser.ParseFile(path)
-		if err == nil {
-			return m
-		}
-	}
-
-	// If file not found, create a synthetic model matching the structure
-	// This ensures tests can run without the fixture file
-	t.Logf("Creating synthetic model (fixture not found)")
 
 	return createSyntheticCYPModel(t)
 }
 
-// createSyntheticCYPModel creates a model matching cyp-auth-infra.toml structure.
+// createSyntheticCYPModel creates a model matching the private
+// auth-infrastructure fixture structure.
 //
 //nolint:funlen // Test helper that creates multiple related units
 func createSyntheticCYPModel(t *testing.T) *parser.Model {
