@@ -22,10 +22,10 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - ✓ Apply styling: colors, borders, edge routing styles — v1.0
 - ✓ Single CLI command interface — v1.0
 
-### Active
+### Validated in Phase 2 (v1.8)
 
-- [ ] C2/C3 files: auto-generated for units with subunits
-- [ ] properties.expanded controls default expansion
+- ✓ C2/C3 files: auto-generated for units with subunits (uniform rule incl. boxes; unit-key file naming)
+- ✓ properties.expanded controls default expansion (OR semantics; expanded-but-empty renders as plain node)
 
 ### Validated in Phase 1 (v1.8)
 
@@ -44,6 +44,8 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - properties.expanded controls which top-level units are expanded by default
 
 **Phase 1 complete (2026-08-06):** C1 view scoping refined — pair-only duplicate-edge collapse with binary penwidth, deepest-visible-ancestor resolution on both source and target sides, within-cluster edges for expanded units, minlen gated to original-pair edges, legacy boundary-node code removed. Verified 9/9 must-haves.
+
+**Phase 2 complete (2026-08-06):** C2/C3 auto-generation confirmed and locked — uniform auto-detect (boxes included), unit-key file naming, one expansion level in C1, OR expansion precedence with silent ignore, expanded-but-empty units render as plain nodes (C1 + C2/C3 branches), actors as boundary nodes in deeper views. Verified 6/6 must-haves.
 
 ### Shipped in v1.7
 
