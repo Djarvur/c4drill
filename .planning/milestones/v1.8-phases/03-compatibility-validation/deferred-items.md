@@ -52,3 +52,28 @@ the parent system.
 ### Not blocking
 This is cosmetic and pre-existing (predates the nav redesign and html format
 work). The nav/html work is correct and should not be blocked on this fix.
+
+## DEFERRED-05: Cluster box encompasses boundary nodes (cosmetic)
+
+**Discovered:** 2026-08-06 (post-v1.9, during boundary-node edge fix)
+**Severity:** cosmetic (cluster bounding box drawn too large; nodes and edges are correct)
+**Package:** go-graphviz WASM engine (upstream, not our code)
+
+### Symptom
+In C3 diagrams, the cluster box (border around the expanded unit) is drawn around boundary nodes too — making it look like boundary nodes (sibling containers, external units) are inside the expanded unit.
+
+### Root cause
+go-graphviz's WASM cgraph engine calls `agsubnode` when creating edges between root-level nodes and cluster-internal nodes. This is standard cgraph behavior (edges require both endpoints in the same subgraph context), but it reassigns the root node to the cluster subgraph, causing GraphViz to include it in the cluster bounding box.
+
+### What works (verified)
+- Boundary nodes ARE top-level in the graph structure (verified via debug)
+- Edges DO render between boundary nodes and cluster children (all 16 sub-diagrams have ≥3 edges)
+- Node colors are correct (external types gray, regular types blue)
+
+### Fix options (all significant)
+- (a) Fork the go-graphviz WASM to avoid agsubnode on edge creation
+- (b) Use lhead/ltail to draw edges to cluster boundaries instead of internal nodes
+- (c) Replace the cluster subgraph with a manually-drawn boundary box
+
+### Not blocking
+Cosmetic only — the diagram is functionally correct (nodes, edges, links all work). The visual box being too large is misleading but doesn't break navigation or data representation.
