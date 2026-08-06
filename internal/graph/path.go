@@ -23,16 +23,20 @@ import (
 // The current file's directory (all segments but the last) and the target
 // file's directory (all segments but the last) are compared to compute a
 // bidirectional relative URL that handles ancestor, sibling, and descendant
-// targets uniformly. Returns the empty string when targetPath == currentPath
-// (self-link guard — see Gap 1 symptom B) so the renderer omits the URL.
+// targets uniformly. Returns the empty string when targetPath is empty or
+// equals currentPath (self-link / empty-target guard — see Gap 1 symptom B,
+// WR-02) so the renderer omits the URL rather than emitting a broken ".svg".
 func ComputeExploreURL(currentPath, targetPath, basename, _ string) string {
 	// Always use SVG for clickable links (browser navigation)
 	const linkFormat = "svg"
 
-	// Self-link guard (Gap 1 symptom B): a node whose ID equals the current
-	// diagram's path would otherwise emit a broken href=".svg". Return empty so
-	// the caller (createNode) skips SetURL entirely.
-	if currentPath != "" && targetPath == currentPath {
+	// Self-link / empty-target guard (Gap 1 symptom B, generalized — WR-02): a
+	// target equal to the current path, or an empty target, cannot yield a valid
+	// exploration URL — without this, an empty target collapses to a broken
+	// ".svg" (C2 branch) or "basename/.svg" (C1 branch). Return empty so the
+	// caller (createNode) skips SetURL entirely. The guard is symmetric: it must
+	// fire for empty targets regardless of whether currentPath is empty.
+	if targetPath == "" || targetPath == currentPath {
 		return ""
 	}
 

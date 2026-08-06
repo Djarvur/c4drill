@@ -15,8 +15,9 @@ import (
 // label is silently dropped at render time. Clickable links inside an HTML
 // label are expressed via the HREF attribute on a <TD> element, which GraphViz
 // renders as an <a xlink:href="..."> anchor in SVG output (and an imagemap/URL
-// in other formats). The plain-text back-link label and breadcrumb names are
-// HTML-escaped so a name containing <, >, or & cannot break the label.
+// in other formats). The plain-text back-link label, breadcrumb names, AND the
+// HREF URLs are HTML-escaped so a name or URL containing <, >, or & cannot
+// break the label (WR-01: url.PathEscape does not escape '&').
 //
 // Format rendered: "Back to {parent} | Ancestor1 > Ancestor2 > Current"
 // where the back-link and ancestor items are clickable TDs and the separators
@@ -49,7 +50,13 @@ func navigationTDs(nav *graph.Navigation) []string {
 	// Back-link
 	if nav.BackLink != nil && nav.BackLink.URL != "" {
 		label := html.EscapeString("Back to " + nav.BackLink.Name)
-		tds = append(tds, fmt.Sprintf(`<TD HREF="%s">%s</TD>`, nav.BackLink.URL, label))
+		// HTML-escape the URL too (WR-01): url.PathEscape does NOT escape '&',
+		// and GraphViz's HTML-like label parser rejects a raw '&' that is not a
+		// valid entity, silently dropping the navigation TD. html.EscapeString
+		// escapes only <, >, &, ', " — already-encoded segments (%20, %28) are
+		// unaffected, so legitimate URLs are left intact.
+		href := html.EscapeString(nav.BackLink.URL)
+		tds = append(tds, fmt.Sprintf(`<TD HREF="%s">%s</TD>`, href, label))
 	}
 
 	// Breadcrumbs
@@ -88,7 +95,10 @@ func breadcrumbItemTD(item graph.BreadcrumbItem) string {
 		return plainTD(escaped)
 	}
 
-	return fmt.Sprintf(`<TD HREF="%s">%s</TD>`, item.URL, escaped)
+	// HTML-escape the URL for the HREF attribute (WR-01): url.PathEscape does
+	// not escape '&', which GraphViz's HTML-like label parser rejects, silently
+	// dropping the breadcrumb anchor. See navigationTDs for the full rationale.
+	return fmt.Sprintf(`<TD HREF="%s">%s</TD>`, html.EscapeString(item.URL), escaped)
 }
 
 // plainTD wraps a literal HTML fragment (already escaped or a known entity)
