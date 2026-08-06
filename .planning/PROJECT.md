@@ -24,9 +24,12 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 ### Active
 
-- [ ] C1 view: only top-level units, edges resolved to visible ancestors
 - [ ] C2/C3 files: auto-generated for units with subunits
 - [ ] properties.expanded controls default expansion
+
+### Validated in Phase 1 (v1.8)
+
+- ✓ C1 view: only top-level units, edges resolved to visible ancestors (pair-only edge collapse, deepest-visible-ancestor resolution both sides, binary penwidth for collapsed edges)
 
 ## Current Milestone: v1.8 Proper C1/C2/C3 View Generation
 
@@ -39,6 +42,8 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - C3 diagrams: auto-generated for each container with subunits
 - Edge resolution: links to deeply nested targets resolve to the nearest visible ancestor
 - properties.expanded controls which top-level units are expanded by default
+
+**Phase 1 complete (2026-08-06):** C1 view scoping refined — pair-only duplicate-edge collapse with binary penwidth, deepest-visible-ancestor resolution on both source and target sides, within-cluster edges for expanded units, minlen gated to original-pair edges, legacy boundary-node code removed. Verified 9/9 must-haves.
 
 ### Shipped in v1.7
 
@@ -157,4 +162,4 @@ link = { "target_unit" = { reverse = false, equal = false, color = "black", styl
 - **Shapes**: Person, DB, Queue, System each have distinct record shapes
 
 ---
-*Last updated: 2026-03-29 after v1.8 milestone started*
+*Last updated: 2026-08-06 after Phase 1 (v1.8) completed*
