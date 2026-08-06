@@ -13,7 +13,7 @@ Fix view generation so C1 shows only top-level units, C2/C3 diagrams are auto-ge
 |---|-------|------|--------------|------------------|
 | 1 | Fix C1 View Scoping | 3/3 | Complete    | 2026-08-06 |
 | 2 | Auto-generate C2/C3 | 1/1 | Complete    | 2026-08-06 |
-| 3 | Compatibility & Validation | 2/2 | Complete   | 2026-08-06 |
+| 3 | Compatibility & Validation | 2/2 | Complete    | 2026-08-06 |
 
 ---
 
