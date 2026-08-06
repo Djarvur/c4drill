@@ -1,0 +1,12 @@
+# Deferred Items — Phase 03 (compatibility-validation)
+
+Out-of-scope discoveries from plan 03-01 execution. Per executor scope boundary: NOT fixed here; logged for the manager/planner.
+
+## DI-1: Render pipeline output is order-nondeterministic (byte-unstable XDOT)
+
+- **Found during:** 03-01 Task 2 (golden baseline determinism check)
+- **Evidence:** 5 pipeline runs (`go run ./cmd/c4drill <fixture> --format dot --expanded`) — every run pairwise differs. Sibling cluster order under a parent flips (e.g. `systemd` vs `pam` under `sshAuth`), node order within a cluster flips, and layout geometry (`bb`, `pos`, `lp`) is order-dependent. Verified identically with the private `cyp-auth-infra/saira-20260320.c2.full.toml` (2/2 runs differ) — pre-existing, NOT caused by the new fixture. The private 1041-line baseline was generated once; its "determinism" claim was never empirically verified.
+- **Root cause:** map-order iteration inside the pinned external fork `github.com/onokonem/go-graphviz v0.0.0-20260321130544-f364b5235161` (cgraph subgraph/node storage + gvc WASM layout engine), i.e. `go.mod` `replace` target. c4drill's own code (builder/converter) is slice/definition-order deterministic.
+- **What IS stable:** semantic content — node/edge sets, `key=` dedup attributes, labels, `minlen`/`penwidth` values, cluster structure (the D-02 contract). Verified: minlen=3 x1, penwidth=2 x56, minlen=2 x4, deep node present, zero `[+]` in every run.
+- **Impact on 03-02 (BLOCKING as designed):** 03-02-PLAN.md lines 103-105 plan `require.Equal(t, string(expected), string(dotData))` byte-equality against `cmd/c4drill/testdata/multilevel.expanded.dot`. This WILL fail. 03-02 must use an order-insensitive comparison instead (per RESEARCH.md Pitfall 1: "sort-normalize before compare"): e.g. sort-normalize DOT block-level lines on both sides, or strip layout geometry (`pos=`, `bb=`, `lp=`, `lheight=`, `lwidth=`, `height=`, `width=`) and compare semantic tokens, or assert structurally (node set, edge set with attributes, cluster containment) instead of string equality.
+- **Deferred fix options (Rule 4 — user decision required in a future phase, if byte-equality is ever needed):** (a) fork+fix the pinned go-graphviz fork to preserve cgraph insertion order; (b) repin to a different go-graphviz version/fork; (c) drop byte-equality entirely and rely on semantic comparison (recommended, matches D-02).

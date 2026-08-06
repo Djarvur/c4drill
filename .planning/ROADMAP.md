@@ -13,7 +13,7 @@ Fix view generation so C1 shows only top-level units, C2/C3 diagrams are auto-ge
 |---|-------|------|--------------|------------------|
 | 1 | Fix C1 View Scoping | 3/3 | Complete    | 2026-08-06 |
 | 2 | Auto-generate C2/C3 | 1/1 | Complete    | 2026-08-06 |
-| 3 | Compatibility & Validation | Existing TOML files and --expanded still work | COMPAT-01, COMPAT-02 | 2 |
+| 3 | Compatibility & Validation | 1/2 | In Progress|  |
 
 ---
 
@@ -118,7 +118,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 03-01-PLAN.md — Sanitized public fixture (multilevel.toml) + committed golden DOT baseline (D-01/D-02)
+- [x] 03-01-PLAN.md — Sanitized public fixture (multilevel.toml) + committed golden DOT baseline (D-01/D-02)
 
 **Wave 2** *(blocked on Wave 1 — golden baseline must exist before the comparison test)*
 

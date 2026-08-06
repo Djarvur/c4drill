@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: milestone
-current_plan: Not started
+current_plan: 2
 status: executing
-last_updated: "2026-08-06T11:40:53.438Z"
+last_updated: "2026-08-06T11:49:24.151Z"
 last_activity: 2026-08-06
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
   percent: 67
 ---
 
@@ -18,17 +18,17 @@ progress:
 
 ## Current Position
 
-Phase: 02 (auto-generate-c2-c3-diagrams) — EXECUTING
-Plan: 1 of 1
+Phase: 03 (compatibility-validation) — EXECUTING
+Plan: 2 of 2
 **Phase:** 3
 **Status:** Ready to execute
-**Current Plan:** Not started
+**Current Plan:** 2
 **Total Plans in Phase:** 2
 **Last Activity:** 2026-08-06
-**Progress:** [██████████] 100%
-**Last session:** 2026-08-06T11:16:13.044Z
+**Progress:** [████████░░] 83%
+**Last session:** 2026-08-06T11:48:45.368Z
 **Stopped At:** Phase 3 context gathered
-**Resume File:** .planning/phases/03-compatibility-validation/03-CONTEXT.md
+**Resume File:** None
 
 ## Status: **COMPLETE**
 
@@ -61,6 +61,7 @@ Fixed the two root-cause bugs:
 | Phase 01-fix-c1-view-scoping P02 | 5min | 3 tasks | 3 files |
 | Phase 01-fix-c1-view-scoping P03 | 6min | 3 tasks | 5 files |
 | Phase 02-auto-generate-c2-c3-diagrams P01 | 26min | 3 tasks | 4 files |
+| Phase 03-compatibility-validation P01 | 5min | 2 tasks | 2 files |
 
 ## Decisions
 
@@ -77,3 +78,9 @@ Fixed the two root-cause bugs:
 - [Phase 01-fix-c1-view-scoping]: resolveToTopLevel unified onto resolveToViewAncestor with the peer-as-is fallback for truly-external units (boundary-node contract preserved)
 - [Phase 02-auto-generate-c2-c3-diagrams]: D-07 guard lives in the graph layer (BuildGraph C1 branch), not in isExpandedInC1 — scope.go stays read-only (Phase 1 WR-01 constraint)
 - [Phase 02-auto-generate-c2-c3-diagrams]: Box pipeline fixture must include inter-unit links — validator ValidateOrphanUnits rejects link-less leaf units
+- [Phase ?]: Committed both test-data assets despite render-pipeline order nondeterminism: semantic content (D-02 contract) stable across runs; only sibling ordering and layout geometry flip (pinned go-graphviz fork map-order). 03-02 MUST compare order-insensitively (sort-normalize per RESEARCH Pitfall 1), NOT byte-exact require.Equal
+- [Phase ?]: No production code touched: scope guard clean; nondeterminism lives in the pinned external fork (onokonem/go-graphviz cgraph/gvc WASM layout), out of scope for test-data-only plan
+
+### Blockers
+
+- 03-02 golden comparison as designed (byte-exact require.Equal vs multilevel.expanded.dot) WILL fail: render pipeline output is order-nondeterministic (sibling cluster/node order + layout geometry flip per run; pinned go-graphviz fork map-order). Use order-insensitive comparison (sort-normalize / strip geometry / structural asserts). See deferred-items.md DI-1

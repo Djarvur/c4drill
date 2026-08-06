@@ -21,7 +21,7 @@
 ### Backward Compatibility
 
 - [ ] **COMPAT-01**: Existing TOML files without `properties.expanded` generate correct C1 with all units collapsed
-- [ ] **COMPAT-02**: `--expanded` flag continues to produce single all-nested diagram unchanged
+- [x] **COMPAT-02**: `--expanded` flag continues to produce single all-nested diagram unchanged
 
 ## v1.0 Requirements (Shipped)
 
@@ -65,7 +65,7 @@
 | EDGE-01 | Phase 1 | Complete |
 | EDGE-02 | Phase 1 | Complete |
 | COMPAT-01 | Phase 3 | Pending |
-| COMPAT-02 | Phase 3 | Pending |
+| COMPAT-02 | Phase 3 | Complete |
 
 **Coverage:**
 - v1.8 requirements: 9 total
