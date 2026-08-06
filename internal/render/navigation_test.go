@@ -54,10 +54,12 @@ func TestBuildNavigationLabel(t *testing.T) {
 			},
 		}
 		result := render.BuildNavigationLabel(nav)
-		// First item (ancestor): no leading separator, clickable, underlined
+		// Ancestor: clickable, underlined, no separator prefix
 		assert.Contains(t, result, `<TD HREF="../mainsystem.svg">`+navFontOpen+`<U>Main System</U></FONT></TD>`)
-		// Second item (current): leading → separator, plain (no HREF, no underline)
-		assert.Contains(t, result, "<TD>"+navFontOpen+"&#8594;API Container</FONT></TD>")
+		// Separator in its own TD
+		assert.Contains(t, result, "<TD>"+navFontOpen+"&#8594;</FONT></TD>")
+		// Current: plain (no HREF, no underline)
+		assert.Contains(t, result, "<TD>"+navFontOpen+"API Container</FONT></TD>")
 		assert.NotContains(t, result, "<U>API Container</U>")
 	})
 
@@ -70,12 +72,12 @@ func TestBuildNavigationLabel(t *testing.T) {
 			},
 		}
 		result := render.BuildNavigationLabel(nav)
-		// First item: no leading separator
 		assert.Contains(t, result, `<TD HREF="../../root.svg">`+navFontOpen+`<U>Root</U></FONT></TD>`)
-		// Second item: leading → separator
-		assert.Contains(t, result, `<TD HREF="../parent.svg">`+navFontOpen+`&#8594;<U>Parent</U></FONT></TD>`)
-		// Third item (current): leading → separator, plain
-		assert.Contains(t, result, "<TD>"+navFontOpen+"&#8594;Current</FONT></TD>")
+		assert.Contains(t, result, `<TD HREF="../parent.svg">`+navFontOpen+`<U>Parent</U></FONT></TD>`)
+		// Separators in their own TDs
+		assert.Contains(t, result, "<TD>"+navFontOpen+"&#8594;</FONT></TD>")
+		// Current is plain
+		assert.Contains(t, result, "<TD>"+navFontOpen+"Current</FONT></TD>")
 	})
 
 	t.Run("no back-link (breadcrumb-only)", func(t *testing.T) {

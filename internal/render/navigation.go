@@ -63,12 +63,10 @@ func navigationTDs(nav *graph.Navigation) []string {
 	return breadcrumbTDs(nav.Breadcrumbs)
 }
 
-// breadcrumbTDs turns breadcrumb items into <TD> cells. The "→" separator
-// between items is merged INTO the preceding item's cell (as trailing inline
-// text) rather than emitted as a separate cell. This avoids GraphViz's column-
-// sizing behavior: separate separator cells stretch to the column width and
-// create large visual gaps between breadcrumb items. Merging the separator
-// into the item cell packs the breadcrumb tightly.
+// breadcrumbTDs turns breadcrumb items into <TD> cells, with a "→" separator
+// in its OWN TD between items. Separate separator TDs give tighter, more
+// consistent spacing than merged separators because each TD sizes to its
+// content and GraphViz doesn't stretch them as much.
 //
 // The last item (current level) has no trailing separator.
 func breadcrumbTDs(items []graph.BreadcrumbItem) []string {
@@ -79,16 +77,11 @@ func breadcrumbTDs(items []graph.BreadcrumbItem) []string {
 	var tds []string
 
 	for i, item := range items {
-		// Leading separator on all items except the first (merged into the
-		// item's cell as a prefix, avoiding inter-cell gaps that GraphViz
-		// adds between trailing separators and the next cell's content).
-		isFirst := i == 0
-		prefix := ""
-		if !isFirst {
-			prefix = "&#8594;"
+		if i > 0 {
+			tds = append(tds, plainNavTD("&#8594;"))
 		}
 
-		tds = append(tds, breadcrumbItemTD(item, prefix))
+		tds = append(tds, breadcrumbItemTD(item))
 	}
 
 	return tds
@@ -96,19 +89,18 @@ func breadcrumbTDs(items []graph.BreadcrumbItem) []string {
 
 // breadcrumbItemTD renders a single breadcrumb item as a clickable or plain TD.
 // Clickable items are wrapped in <U> (underline) inside the muted <FONT> so
-// they are recognisable as links. The leading separator (→) is prepended
-// inside the same cell to keep the breadcrumb compact.
-func breadcrumbItemTD(item graph.BreadcrumbItem, prefix string) string {
+// they are recognisable as links.
+func breadcrumbItemTD(item graph.BreadcrumbItem) string {
 	escaped := html.EscapeString(item.Name)
 	if item.URL == "" {
-		return plainNavTD(prefix + escaped)
+		return plainNavTD(escaped)
 	}
 
 	// HTML-escape the URL for the HREF attribute (WR-01): url.PathEscape does
 	// not escape '&', which GraphViz's HTML-like label parser rejects, silently
 	// dropping the breadcrumb anchor.
-	return fmt.Sprintf(`<TD HREF="%s">%s%s<U>%s</U>%s</TD>`,
-		html.EscapeString(item.URL), navFontOpen, prefix, escaped, "</FONT>")
+	return fmt.Sprintf(`<TD HREF="%s">%s<U>%s</U>%s</TD>`,
+		html.EscapeString(item.URL), navFontOpen, escaped, "</FONT>")
 }
 
 // plainNavTD wraps a literal HTML fragment (already escaped or a known entity)
