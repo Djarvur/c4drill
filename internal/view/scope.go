@@ -88,11 +88,12 @@ func GenerateC1View(m *parser.Model) *View {
 	}
 
 	v := &View{
-		Level:     LevelC1,
-		Title:     m.Properties.Name,
-		Edges:     m.Properties.Edges,
-		UnitOrder: make([]string, 0),
-		Units:     make(map[string]*Entry),
+		Level:        LevelC1,
+		Title:        m.Properties.Name,
+		Edges:        m.Properties.Edges,
+		UnitOrder:    make([]string, 0),
+		Units:        make(map[string]*Entry),
+		VisiblePaths: make(map[string]bool),
 	}
 
 	// Determine iteration order: use UnitOrder if available, otherwise fallback to map keys
@@ -121,6 +122,46 @@ func GenerateC1View(m *parser.Model) *View {
 			IsExternal:  IsExternalType(unit.Type),
 		}
 		v.UnitOrder = append(v.UnitOrder, name)
+	}
+
+	// Populate visible subunits: direct subunits of expanded top-level units
+	// are rendered as nodes INSIDE the parent cluster (buildCluster renders
+	// one level). They are added to v.Units + VisiblePaths so resolution
+	// (D-07/D-09/D-10) can reach them, while BuildGraph skips them as
+	// top-level nodes (Pitfall 5).
+	for _, name := range unitOrder {
+		entry := v.Units[name]
+		if entry == nil || !entry.IsExpanded {
+			continue
+		}
+
+		// Determine iteration order: use SubunitOrder if available, otherwise fallback to map keys
+		var subunitOrder []string
+		if len(entry.Unit.SubunitOrder) > 0 {
+			subunitOrder = entry.Unit.SubunitOrder
+		} else {
+			for subName := range entry.Unit.Subunits {
+				subunitOrder = append(subunitOrder, subName)
+			}
+		}
+
+		for _, subName := range subunitOrder {
+			subUnit := entry.Unit.Subunits[subName]
+			if subUnit == nil {
+				continue
+			}
+
+			fullPath := name + "." + subName
+			v.Units[fullPath] = &Entry{
+				Unit:        subUnit,
+				FullPath:    fullPath,
+				IsExpanded:  isUnitExpanded(entry.Unit, subName),
+				HasSubunits: len(subUnit.Subunits) > 0,
+				IsExternal:  IsExternalType(subUnit.Type),
+			}
+			v.UnitOrder = append(v.UnitOrder, fullPath)
+			v.VisiblePaths[fullPath] = true
+		}
 	}
 
 	// Add boundary nodes: scan ALL links (including nested subunits) but resolve
@@ -208,13 +249,12 @@ func addC1BoundaryNodes(v *View, m *parser.Model) {
 // If the resolved peer isn't in the view, it creates a boundary node.
 // Resolved links are collected on the top-level source entry's ResolvedLinks/ResolvedLinksFrom.
 func resolveAndAddBoundary(v *View, m *parser.Model, path string, unit *model.Unit) {
-	// Find the top-level ancestor of this path (source for resolved links)
-	sourceAncestor := path
-	if idx := strings.Index(path, "."); idx > 0 {
-		sourceAncestor = path[:idx]
-	}
+	// Find the deepest VISIBLE ancestor of this path (source for resolved
+	// links) — a visible subunit entry inside an expanded cluster when the
+	// source is one of its descendants, the top-level unit otherwise (D-09).
+	resolvedSource := resolveToViewAncestor(v, path)
 
-	sourceEntry := v.Units[sourceAncestor]
+	sourceEntry := v.Units[resolvedSource]
 
 	// Process outgoing links
 	for _, link := range unit.Links {
@@ -228,12 +268,14 @@ func resolveAndAddBoundary(v *View, m *parser.Model, path string, unit *model.Un
 			v.UnitOrder = append(v.UnitOrder, resolved)
 		}
 
-		// Add resolved outgoing link to the source ancestor
-		if sourceEntry != nil && resolved != sourceAncestor {
+		// Add resolved outgoing link to the source entry (D-10: within-cluster
+		// edges pass because resolved != resolvedSource; D-08: no parent edge
+		// is synthesized when the link resolved to a child).
+		if sourceEntry != nil && resolved != resolvedSource {
 			// D-13: minlen applies only when both drawn endpoints are the
 			// link's original units — resolved links carry no length.
 			length := 0
-			if path == sourceAncestor && link.Peer == resolved {
+			if path == resolvedSource && link.Peer == resolved {
 				length = link.Length
 			}
 
@@ -264,12 +306,13 @@ func resolveAndAddBoundary(v *View, m *parser.Model, path string, unit *model.Un
 			v.UnitOrder = append(v.UnitOrder, resolved)
 		}
 
-		// Add resolved incoming link to the source ancestor
-		if sourceEntry != nil && resolved != sourceAncestor {
+		// Add resolved incoming link to the source entry (D-10/D-08 semantics
+		// mirror the outgoing pass above).
+		if sourceEntry != nil && resolved != resolvedSource {
 			// D-13: minlen applies only when both drawn endpoints are the
 			// link's original units — resolved links carry no length.
 			length := 0
-			if path == sourceAncestor && link.Peer == resolved {
+			if path == resolvedSource && link.Peer == resolved {
 				length = link.Length
 			}
 
@@ -308,26 +351,16 @@ func resolveAndAddBoundary(v *View, m *parser.Model, path string, unit *model.Un
 	}
 }
 
-// resolveToTopLevel resolves a peer path to its nearest visible top-level ancestor.
-// Returns the top-level unit name if the peer or one of its ancestors is in the view.
-// Returns "" if the peer and source share the same top-level ancestor (internal link).
+// resolveToTopLevel resolves a peer path to its nearest VISIBLE ancestor in
+// the view — a top-level unit, or a visible subunit inside an expanded cluster
+// (D-07). Truly-external peers with no ancestor in the view are returned
+// as-is so they become boundary nodes (unchanged fallback behavior).
 func resolveToTopLevel(v *View, peer string) string {
-	// If the peer itself is directly in the view, return it
-	if _, exists := v.Units[peer]; exists {
-		return peer
+	resolved := resolveToViewAncestor(v, peer)
+	if resolved != "" {
+		return resolved
 	}
 
-	// Walk up the peer's path to find the top-level ancestor
-	parts := strings.SplitN(peer, ".", 2)
-	topLevel := parts[0]
-
-	// If the top-level ancestor is in the view, return it
-	if _, exists := v.Units[topLevel]; exists {
-		return topLevel
-	}
-
-	// Not found at all — this is a truly external unit, return it as-is
-	// (it will become a boundary node)
 	return peer
 }
 

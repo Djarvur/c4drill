@@ -56,6 +56,14 @@ func BuildGraph(v *view.View) *Graph {
 	} else {
 		// C1 view: build nodes and clusters in definition order (from view.UnitOrder)
 		for _, key := range v.UnitOrder {
+			// Visible subunits are rendered inside their parent cluster by
+			// buildCluster — skipping prevents duplicate node IDs in DOT.
+			// Nil-map reads are safe, so views without VisiblePaths (C2/C3,
+			// expanded, hand-built) are unaffected.
+			if v.VisiblePaths[key] {
+				continue
+			}
+
 			entry := v.Units[key]
 			if entry.IsExpanded {
 				cluster := buildCluster(entry)
