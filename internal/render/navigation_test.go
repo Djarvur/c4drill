@@ -54,9 +54,9 @@ func TestBuildNavigationLabel(t *testing.T) {
 			},
 		}
 		result := render.BuildNavigationLabel(nav)
-		// Ancestor is clickable via TD HREF, underlined, with trailing " >" separator
+		// Ancestor is clickable via TD HREF, underlined, with trailing "→" separator
 		// merged into the same cell (avoids GraphViz column-stretching gaps).
-		assert.Contains(t, result, `<TD HREF="../mainsystem.svg">`+navFontOpen+`<U>Main System</U> &gt;</FONT></TD>`)
+		assert.Contains(t, result, `<TD HREF="../mainsystem.svg">`+navFontOpen+`<U>Main System</U>&#8594;</FONT></TD>`)
 		// Current level is plain (no HREF, no underline, no trailing separator)
 		assert.Contains(t, result, "<TD>"+navFontOpen+"API Container</FONT></TD>")
 		assert.NotContains(t, result, "<U>API Container</U>")
@@ -72,8 +72,8 @@ func TestBuildNavigationLabel(t *testing.T) {
 		}
 		result := render.BuildNavigationLabel(nav)
 		// Both ancestors carry trailing " >" inside their cells
-		assert.Contains(t, result, `<TD HREF="../../root.svg">`+navFontOpen+`<U>Root</U> &gt;</FONT></TD>`)
-		assert.Contains(t, result, `<TD HREF="../parent.svg">`+navFontOpen+`<U>Parent</U> &gt;</FONT></TD>`)
+		assert.Contains(t, result, `<TD HREF="../../root.svg">`+navFontOpen+`<U>Root</U>&#8594;</FONT></TD>`)
+		assert.Contains(t, result, `<TD HREF="../parent.svg">`+navFontOpen+`<U>Parent</U>&#8594;</FONT></TD>`)
 		// Current is plain, no trailing separator
 		assert.Contains(t, result, "<TD>"+navFontOpen+"Current</FONT></TD>")
 	})

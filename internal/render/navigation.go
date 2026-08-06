@@ -63,7 +63,7 @@ func navigationTDs(nav *graph.Navigation) []string {
 	return breadcrumbTDs(nav.Breadcrumbs)
 }
 
-// breadcrumbTDs turns breadcrumb items into <TD> cells. The ">" separator
+// breadcrumbTDs turns breadcrumb items into <TD> cells. The "→" separator
 // between items is merged INTO the preceding item's cell (as trailing inline
 // text) rather than emitted as a separate cell. This avoids GraphViz's column-
 // sizing behavior: separate separator cells stretch to the column width and
@@ -80,11 +80,11 @@ func breadcrumbTDs(items []graph.BreadcrumbItem) []string {
 
 	for i, item := range items {
 		// Determine whether a trailing separator is needed (all items except
-		// the last get a " > " appended inside their cell).
+		// the last get a "→" appended inside their cell).
 		isLast := i == len(items)-1
 		separator := ""
 		if !isLast {
-			separator = " &gt;"
+			separator = "&#8594;"
 		}
 
 		tds = append(tds, breadcrumbItemTD(item, separator))
