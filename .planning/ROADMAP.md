@@ -114,6 +114,16 @@ Plans:
 - `cmd/c4drill/root_test.go` — Integration tests
 - `internal/view/integration_test.go` — View integration tests
 
+**Plans:** 2 plans
+Plans:
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — Sanitized public fixture (multilevel.toml) + committed golden DOT baseline (D-01/D-02)
+
+**Wave 2** *(blocked on Wave 1 — golden baseline must exist before the comparison test)*
+
+- [ ] 03-02-PLAN.md — Repoint builder tests to public fixture, golden comparison, D-04 + COMPAT-01 regressions, render fixture cleanup
+
 ---
 
 ## Requirement Coverage
