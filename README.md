@@ -393,7 +393,7 @@ TOML → Parse → Validate → Generate Views → Build Graphs → Render → W
 - **Validator**: Enforces C4 rules and reference integrity
 - **View Generator**: Creates C1/C2/C3 views from model
 - **Graph Builder**: Constructs graphviz-compatible structures
-- **Renderer**: Outputs DOT or SVG via go-graphviz
+- **Renderer**: Outputs DOT, SVG, or HTML via go-graphviz
 - **Writer**: Creates output directory hierarchy
 
 ## License
