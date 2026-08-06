@@ -1,6 +1,7 @@
 package graph_test
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/Djarvur/c4drill/internal/graph"
@@ -67,6 +68,90 @@ func TestComputeExploreURL(t *testing.T) {
 
 		url := graph.ComputeExploreURL("mainapp.api", "mainapp.web", "diagram", "svg")
 		assert.Equal(t, "web.svg", url)
+	})
+
+	// 03-04 Gap 1: C3 to C2 ancestor target must yield an UPWARD relative path
+	// (the current code emits a downward ".svg"-style path that does NOT resolve
+	// to the C2 file from the C3 file's directory). currentPath="mainSystem.sshAuth"
+	// lives at {basename}/mainSystem/sshAuth.svg (dir {basename}/mainSystem/);
+	// the C2 mainSystem.svg lives at {basename}/mainSystem.svg, so the relative
+	// URL must be "../mainSystem.svg".
+	t.Run("C3 to C2 ancestor target yields upward relative path", func(t *testing.T) {
+		t.Parallel()
+
+		url := graph.ComputeExploreURL("mainSystem.sshAuth", "mainSystem", "multilevel", "svg")
+		assert.Equal(t, "../mainSystem.svg", url)
+	})
+
+	// 03-04 Gap 1 symptom B: a node whose targetPath equals currentPath (the C3
+	// collapsed-ancestor node "mainSystem" rendered inside the C3
+	// "mainSystem.sshAuth" diagram) currently emits a broken href=".svg". The
+	// self-link guard returns empty so the renderer omits the URL attribute.
+	t.Run("self-link target returns empty (Gap 1 symptom B guard)", func(t *testing.T) {
+		t.Parallel()
+
+		url := graph.ComputeExploreURL("mainSystem", "mainSystem", "multilevel", "svg")
+		assert.Empty(t, url)
+	})
+
+	// 03-04 Gap 1: a deeper self-link (e.g. C4 ancestor node equal to currentPath)
+	// must also return empty.
+	t.Run("self-link returns empty for nested path", func(t *testing.T) {
+		t.Parallel()
+
+		url := graph.ComputeExploreURL("mainapp.api.auth", "mainapp.api.auth", "diagram", "svg")
+		assert.Empty(t, url)
+	})
+
+	// 03-04 Gap 1 regression: C2->C3 descendant href must RESOLVE against the real
+	// file tree (multilevel/mainSystem.svg -> multilevel/mainSystem/sshAuth.svg).
+	// We assert the emitted url joined with the C2 file's directory points at an
+	// existing file — NOT a hardcoded exact string, because the descendant
+	// convention is already locked by nested_path_with_multiple_levels above.
+	t.Run("C2 to C3 descendant href resolves against real tree", func(t *testing.T) {
+		t.Parallel()
+
+		// C2 file mainSystem.svg lives at {basename}/mainSystem.svg -> dir {basename}/.
+		// Compute the relative href the renderer would emit.
+		href := graph.ComputeExploreURL("mainSystem", "mainSystem.sshAuth", "multilevel", "svg")
+		require.NotEmpty(t, href)
+
+		// Reconstruct the expected target file path under {basename}/ and assert
+		// that dir(C2 file) + href equals it (file-resolution, no hardcoded string).
+		c2FileDir := "multilevel" // {basename}/
+		expectedTarget := "multilevel/mainSystem/sshAuth.svg"
+		resolved := filepath.Join(c2FileDir, href)
+		assert.Equal(t, expectedTarget, filepath.Clean(resolved),
+			"C2->C3 descendant href must resolve to the C3 sibling file")
+	})
+
+	// 03-04 Gap 1 regression: C3->C3 sibling descendant href must keep resolving
+	// after the ancestor fix (guards against the bidirectional fix regressing
+	// sibling resolution).
+	t.Run("C3 to C3 sibling descendant href resolves", func(t *testing.T) {
+		t.Parallel()
+
+		// C3 file sshAuth.svg lives at {basename}/mainSystem/sshAuth.svg
+		// -> dir {basename}/mainSystem/.
+		href := graph.ComputeExploreURL("mainSystem.sshAuth", "mainSystem.web", "multilevel", "svg")
+		require.NotEmpty(t, href)
+
+		c3FileDir := "multilevel/mainSystem"
+		expectedTarget := "multilevel/mainSystem/web.svg"
+		resolved := filepath.Join(c3FileDir, href)
+		assert.Equal(t, expectedTarget, filepath.Clean(resolved),
+			"C3->C3 sibling href must resolve to the sibling file")
+	})
+
+	// 03-04 Gap 1 regression: C4->C2 ancestor (two levels up) must yield ../../.
+	t.Run("C4 to C2 ancestor yields two levels up", func(t *testing.T) {
+		t.Parallel()
+
+		// currentPath="mainapp.api.auth" -> file at {basename}/mainapp/api/auth.svg
+		// -> dir {basename}/mainapp/api/. Target mainapp.svg at {basename}/mainapp.svg.
+		// Relative URL: ../../mainapp.svg.
+		url := graph.ComputeExploreURL("mainapp.api.auth", "mainapp", "diagram", "svg")
+		assert.Equal(t, "../../mainapp.svg", url)
 	})
 }
 
