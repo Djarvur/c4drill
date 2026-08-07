@@ -255,9 +255,9 @@ func buildNode(entry *view.Entry) *Node {
 		Icon:        IconForType(entry.Unit.Type),
 	}
 
-	// Add [+] indicator for collapsed units with subunits
+	// Add 🔍 indicator for collapsed units with subunits
 	if entry.HasSubunits && !entry.IsExpanded {
-		label.Name += " [+]"
+		label.Name += " 🔍"
 	}
 
 	// For C1 boxes, use content-based styling

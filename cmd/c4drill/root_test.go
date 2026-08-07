@@ -631,7 +631,7 @@ func TestCompat01_ValidTomlAllCollapsed(t *testing.T) {
 
 	assert.Contains(t, dot, "user\t[", "user node present in C1")
 	assert.Contains(t, dot, "app\t[", "app node present in C1")
-	assert.Contains(t, dot, "Application [+]", "app has subunits and no expansion hint -> collapsed with [+] in C1")
+	assert.Contains(t, dot, "Application 🔍", "app has subunits and no expansion hint -> collapsed with 🔍 in C1")
 	assert.NotContains(t, dot, "subgraph cluster_", "no clusters when everything is collapsed (COMPAT-01)")
 	assert.NotContains(t, dot, "app.api", "subunits must not appear in C1 when collapsed")
 }
@@ -667,7 +667,7 @@ func TestCompat02_MultilevelFixtureFiveNodeC1(t *testing.T) {
 	// mainSystem is expanded (properties.expanded = ["mainSystem"]) so it
 	// appears as a cluster, not a collapsed node.
 	assert.Contains(t, dot, "subgraph cluster_mainSystem", "mainSystem expanded -> cluster present")
-	assert.NotContains(t, dot, "Main System [+]", "mainSystem is expanded, not collapsed")
+	assert.NotContains(t, dot, "Main System 🔍", "mainSystem is expanded, not collapsed")
 	assert.Contains(t, dot, "mainSystem.sshAuth", "expanded mainSystem shows its containers")
 
 	// C2 sub-diagram for mainSystem (auto-detected: has subunits).

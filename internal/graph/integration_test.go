@@ -311,7 +311,7 @@ func TestIntegrationMultipleLinksBetweenSameUnits(t *testing.T) {
 	assert.True(t, dbToApp, "Should have db->app edge")
 }
 
-// TestIntegrationCollapsedIndicatorOnNodesWithSubunits tests that the [+] indicator
+// TestIntegrationCollapsedIndicatorOnNodesWithSubunits tests that the 🔍 indicator
 // appears on nodes with subunits that are not expanded.
 func TestIntegrationCollapsedIndicatorOnNodesWithSubunits(t *testing.T) {
 	t.Parallel()
@@ -349,7 +349,7 @@ func TestIntegrationCollapsedIndicatorOnNodesWithSubunits(t *testing.T) {
 		},
 	}
 
-	// Test 6: [+] indicator appears on nodes with subunits
+	// Test 6: 🔍 indicator appears on nodes with subunits
 	v := view.GenerateC1View(m)
 	require.NotNil(t, v)
 
@@ -361,8 +361,8 @@ func TestIntegrationCollapsedIndicatorOnNodesWithSubunits(t *testing.T) {
 		nodeMap[node.ID] = node
 	}
 
-	// Collapsed system with subunits should have [+]
-	assert.Contains(t, nodeMap["collapsed"].Label.Name, "[+]", "Collapsed system should have [+] indicator")
+	// Collapsed system with subunits should have 🔍
+	assert.Contains(t, nodeMap["collapsed"].Label.Name, "🔍", "Collapsed system should have 🔍 indicator")
 
 	// Expanded system becomes a cluster, not a node (so check cluster label)
 	// The expanded system itself becomes a cluster
@@ -377,10 +377,10 @@ func TestIntegrationCollapsedIndicatorOnNodesWithSubunits(t *testing.T) {
 	}
 
 	require.NotNil(t, expandedCluster, "Expanded system should be a cluster")
-	assert.NotContains(t, expandedCluster.Label.Name, "[+]", "Expanded cluster label should not have [+]")
+	assert.NotContains(t, expandedCluster.Label.Name, "🔍", "Expanded cluster label should not have 🔍")
 
-	// Simple system without subunits should not have [+]
-	assert.NotContains(t, nodeMap["simple"].Label.Name, "[+]", "Simple system should not have [+] indicator")
+	// Simple system without subunits should not have 🔍
+	assert.NotContains(t, nodeMap["simple"].Label.Name, "🔍", "Simple system should not have 🔍 indicator")
 }
 
 // TestIntegrationGraphWithAllUnitTypes tests that the graph correctly handles

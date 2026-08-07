@@ -139,8 +139,8 @@ func TestBuildGraphCollapsedIndicator(t *testing.T) {
 
 	require.Len(t, g.Nodes, 1)
 
-	// Test 7: Node.Label.Name includes [+] for collapsed units with subunits
-	assert.Contains(t, g.Nodes[0].Label.Name, "[+]")
+	// Test 7: Node.Label.Name includes 🔍 for collapsed units with subunits
+	assert.Contains(t, g.Nodes[0].Label.Name, "🔍")
 }
 
 func TestBuildGraphEdges(t *testing.T) {
@@ -2347,7 +2347,7 @@ func TestBuildExpandedGraphIgnoresPropertiesExpanded(t *testing.T) {
 	assert.Contains(t, nodeIDs, "mainSystem.storages.externalStorage.client", "client unit must render as a node")
 
 	for _, name := range labels {
-		assert.NotContains(t, name, "[+]", "expanded mode must not render collapsed indicators (D-04)")
+		assert.NotContains(t, name, "🔍", "expanded mode must not render collapsed indicators (D-04)")
 	}
 }
 
