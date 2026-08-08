@@ -4,6 +4,7 @@ package parser
 import (
 	"os"
 	"slices"
+	"strings"
 
 	"github.com/Djarvur/c4drill/internal/model"
 	"github.com/pelletier/go-toml/v2"
@@ -39,6 +40,43 @@ type Model struct {
 	UnitOrder []string
 	// Units contains all top-level units keyed by section name.
 	Units map[string]*model.Unit
+	// Templates holds parsed [template.<name>] tables keyed by <name>.
+	// Populated by Parse from rawMap (not direct unmarshal) — see Plan 31-01.
+	// Consumed by internal/template.Expand (Plan 31-02). Empty for hand-authored
+	// models with no [template.*] tables.
+	Templates map[string]*TemplateDef `toml:"-"`
+	// Instantiations holds parsed [[use]] array-of-tables entries in document
+	// order. Populated by Parse from rawMap. Consumed by internal/template.Expand.
+	// Empty for hand-authored models with no [[use]] tables.
+	Instantiations []Instantiation `toml:"-"`
+}
+
+// TemplateDef holds a parsed [template.<name>] table: its declared named
+// parameters and the parsed *model.Unit subtree (including any declared
+// [[template.<name>.link]] arrays parsed into Unit.Links and subunit subtrees
+// parsed into Unit.Subunits). Params are NOT substituted at parse time — that
+// is internal/template.Expand's job (Plan 31-02).
+type TemplateDef struct {
+	// Params lists the declared parameter names from the `params = [...]` array.
+	Params []string
+	// Unit is the parsed template subtree. Its fields carry literal ${param}
+	// tokens awaiting substitution. Populated manually via parseUnitWithOrder
+	// (NOT direct toml unmarshal), so no toml tag is needed here.
+	Unit *model.Unit
+}
+
+// Instantiation captures a single [[use]] array-of-tables entry: the template
+// name to instantiate, the optional parent placement path, and the supplied
+// named parameters (including "name" as a regular parameter per D-04).
+type Instantiation struct {
+	// Template is the name of the [template.<name>] table to instantiate.
+	Template string `toml:"template"`
+	// Parent is the optional dotted placement path (empty = top-level).
+	// The produced unit's full path = Parent + "." + Name-param (or just the
+	// Name-param if Parent is empty) per D-04.
+	Parent string `toml:"parent"`
+	// Params carries all supplied named parameters, including "name".
+	Params map[string]string `toml:"params"`
 }
 
 // Parse parses TOML data into a Model.
@@ -46,7 +84,7 @@ type Model struct {
 // Definition order of units and subunits is preserved.
 func Parse(data []byte) (*Model, error) {
 	// First pass: capture definition order using unstable API
-	unitOrder, subunitOrders, err := captureDefinitionOrder(data)
+	unitOrder, subunitOrders, templateSubunitOrders, err := captureDefinitionOrder(data)
 	if err != nil {
 		return nil, wrapDecodeError(err)
 	}
@@ -76,6 +114,18 @@ func Parse(data []byte) (*Model, error) {
 		}
 	}
 
+	// BC-1 (D-08, Plan 31-01): extract reserved tables BEFORE the unit loop so
+	// they neither register as phantom units nor get re-parsed as units. These
+	// mirror the properties extraction above: pull the raw value, re-marshal,
+	// unmarshal into the dedicated Model field.
+	if err := extractTemplates(rawMap, templateSubunitOrders, m); err != nil {
+		return nil, err
+	}
+
+	if err := extractInstantiations(rawMap, m); err != nil {
+		return nil, err
+	}
+
 	// Process units in the captured order (not rawMap iteration order)
 	for _, name := range unitOrder {
 		value, ok := rawMap[name]
@@ -84,6 +134,7 @@ func Parse(data []byte) (*Model, error) {
 		}
 
 		subunitOrder := subunitOrders[name]
+
 		unit, err := parseUnitWithOrder(name, value, "", subunitOrder, subunitOrders)
 		if err != nil {
 			return nil, err
@@ -95,14 +146,186 @@ func Parse(data []byte) (*Model, error) {
 	return m, nil
 }
 
+// extractTemplates pulls rawMap["template"] into m.Templates. Each template
+// name's value is re-parsed via parseUnitWithOrder so its declared
+// [[template.<name>.link]] arrays become model.Unit.Links and any subunit
+// subtree ([template.<name>.<child>]) becomes model.Unit.Subunits, identical
+// to hand-authored unit semantics. Params are captured separately. Substitution
+// is NOT applied here (Plan 31-02's job).
+func extractTemplates(
+	rawMap map[string]any,
+	templateSubunitOrders map[string][]string,
+	m *Model,
+) error {
+	tmplRoot, ok := rawMap["template"]
+	if !ok {
+		return nil
+	}
+
+	tmplMap, ok := tmplRoot.(map[string]any)
+	if !ok {
+		return &ParseError{
+			Message: "invalid [template] format: expected a table",
+			Context: "template",
+		}
+	}
+
+	m.Templates = make(map[string]*TemplateDef, len(tmplMap))
+
+	for name, val := range tmplMap {
+		tmpl, err := parseTemplateDef(name, val, templateSubunitOrders)
+		if err != nil {
+			return err
+		}
+
+		m.Templates[name] = tmpl
+	}
+
+	return nil
+}
+
+// parseTemplateDef parses a single [template.<name>] table into a TemplateDef.
+// It separates the declared `params` array from the unit subtree (the unit
+// parser treats unknown keys as subunits, and `params` is not a Unit field),
+// then re-parses the remainder into a *model.Unit with subunit order preserved
+// relative to the template namespace. Substitution is NOT applied.
+func parseTemplateDef(
+	name string,
+	val any,
+	templateSubunitOrders map[string][]string,
+) (*TemplateDef, error) {
+	tmplUnitMap, ok := val.(map[string]any)
+	if !ok {
+		return nil, &ParseError{
+			Message: "invalid template format: expected a table",
+			Context: "template." + name,
+		}
+	}
+
+	// Strip `params` from a copy of the map so the subtree parser sees only
+	// Unit fields + declared subunits.
+	var params []string
+
+	unitMapCopy := make(map[string]any, len(tmplUnitMap))
+
+	for k, v := range tmplUnitMap {
+		if k == "params" {
+			if rawParams, ok := v.([]any); ok {
+				params = toStringSlice(rawParams)
+			}
+
+			continue
+		}
+
+		unitMapCopy[k] = v
+	}
+
+	// Re-parse the subtree into a *model.Unit. The subunit order is
+	// captured relative to the template's own namespace (keyed by `name`
+	// and `name.child`) so template subunits preserve authoring order.
+	subOrder := templateSubunitOrders[name]
+
+	unit, err := parseUnitWithOrder(name, unitMapCopy, "", subOrder, templateSubunitOrders)
+	if err != nil {
+		return nil, err
+	}
+
+	return &TemplateDef{Params: params, Unit: unit}, nil
+}
+
+// toStringSlice coerces a raw TOML array into a []string. Non-string elements
+// are skipped. Used for the template `params = [...]` array.
+func toStringSlice(arr []any) []string {
+	out := make([]string, 0, len(arr))
+	for _, item := range arr {
+		if s, ok := item.(string); ok {
+			out = append(out, s)
+		}
+	}
+
+	return out
+}
+
+// extractInstantiations pulls rawMap["use"] into m.Instantiations, preserving
+// the array-of-tables document order. Each [[use]] table's fixed fields
+// (template, parent) are decoded directly; the remaining keys are the supplied
+// named parameters (including "name" as a regular parameter per D-04).
+func extractInstantiations(rawMap map[string]any, m *Model) error {
+	useRoot, ok := rawMap["use"]
+	if !ok {
+		return nil
+	}
+
+	useArr, ok := useRoot.([]any)
+	if !ok {
+		return &ParseError{
+			Message: "invalid [[use]] format: expected an array of tables",
+			Context: "use",
+		}
+	}
+
+	m.Instantiations = make([]Instantiation, 0, len(useArr))
+
+	for _, entry := range useArr {
+		useMap, ok := entry.(map[string]any)
+		if !ok {
+			return &ParseError{
+				Message: "invalid [[use]] entry: expected a table",
+				Context: "use",
+			}
+		}
+
+		inst := Instantiation{Params: make(map[string]string)}
+
+		for k, v := range useMap {
+			s, ok := v.(string)
+			if !ok {
+				// Non-string values are not supported for [[use]] params
+				// (all template params are string-substituted). Surface as
+				// a parse error naming the offending key.
+				return &ParseError{
+					Message: "invalid [[use]] field: expected a string value",
+					Context: "use." + k,
+				}
+			}
+
+			switch k {
+			case "template":
+				inst.Template = s
+			case "parent":
+				inst.Parent = s
+			default:
+				inst.Params[k] = s
+			}
+		}
+
+		m.Instantiations = append(m.Instantiations, inst)
+	}
+
+	return nil
+}
+
+// Reserved top-level table names (BC-1, D-08). Bare names — no namespace
+// prefix (D-06). template is a parent namespace ([template.<name>]); use and
+// include are array-of-tables ([[use]] / [[include]]).
+const (
+	reservedProperties = "properties"
+	reservedTemplate   = "template"
+	reservedUse        = "use"
+	reservedInclude    = "include"
+)
+
 // captureDefinitionOrder uses the unstable API to capture the order of units and subunits.
-// Returns: unitOrder (top-level), subunitOrders (nested), error.
-func captureDefinitionOrder(data []byte) ([]string, map[string][]string, error) {
+// Returns: unitOrder (top-level), subunitOrders (nested, hand-authored),
+// templateSubunitOrders (nested, WITHIN the [template.*] namespace), error.
+func captureDefinitionOrder(data []byte) ([]string, map[string][]string, map[string][]string, error) {
 	unitOrder := make([]string, 0)
 	subunitOrders := make(map[string][]string)
+	templateSubunitOrders := make(map[string][]string)
 
 	seenUnits := make(map[string]bool)
 	seenSubunits := make(map[string]bool)
+	seenTemplateSubunits := make(map[string]bool)
 
 	p := unstable.Parser{}
 	p.Reset(data)
@@ -113,50 +336,130 @@ func captureDefinitionOrder(data []byte) ([]string, map[string][]string, error) 
 			continue // Skip non-table expressions
 		}
 
-		// Extract the table key parts
-		keyIter := expr.Key()
-		var parts []string
-		for keyIter.Next() {
-			parts = append(parts, string(keyIter.Node().Data))
-		}
+		parts := extractKeyParts(expr.Key())
 
 		if len(parts) == 0 {
 			continue
 		}
 
 		// Skip [properties] section
-		if len(parts) == 1 && parts[0] == "properties" {
+		if len(parts) == 1 && parts[0] == reservedProperties {
 			continue
 		}
 
-		if len(parts) == 1 {
-			// Top-level unit [name]
-			name := parts[0]
-			if !seenUnits[name] {
-				unitOrder = append(unitOrder, name)
-				seenUnits[name] = true
-			}
-		} else if len(parts) == 2 {
-			// Subunit [parent.child]
-			parent := parts[0]
-			child := parts[1]
-			key := parent + "." + child
-			if !seenSubunits[key] {
-				subunitOrders[parent] = append(subunitOrders[parent], child)
-				seenSubunits[key] = true
-			}
+		// BC-1 (D-08, Plan 31-01): skip reserved top-level tables so they
+		// neither register phantom units nor leak into the unit loop.
+		// - [[use]] and [[include]] are array-of-tables whose first key segment
+		//   is the bare name; skip them wholesale (use is extracted into
+		//   Model.Instantiations below; include is reserved for Phase 32).
+		if len(parts) == 1 && (parts[0] == reservedUse || parts[0] == reservedInclude) {
+			continue
 		}
-		// Ignore deeper nesting (len(parts) > 2) - not supported
+
+		// [template.*] subtrees: do NOT enter unitOrder/subunitOrders, but DO
+		// capture the subunit structure within the template namespace so the
+		// extraction pass can preserve authoring order. Paths of the form
+		// [template.<name>] define a template root; [template.<name>.<child>]
+		// and deeper define its subunit subtree.
+		if parts[0] == reservedTemplate {
+			recordTemplateSubunit(parts, templateSubunitOrders, seenTemplateSubunits)
+
+			continue
+		}
+
+		recordHandAuthored(parts, &unitOrder, subunitOrders, seenUnits, seenSubunits)
 	}
 
 	if err := p.Error(); err != nil {
-		return nil, nil, err
+		//nolint:wrapcheck // unstable.Parser error is wrapped by Parse's caller via wrapDecodeError
+		return nil, nil, nil, err
 	}
 
-	return unitOrder, subunitOrders, nil
+	return unitOrder, subunitOrders, templateSubunitOrders, nil
+}
+
+// extractKeyParts reads the dotted key segments from an unstable iterator.
+// Returns nil for an empty key.
+func extractKeyParts(keyIter unstable.Iterator) []string {
+	var parts []string
+
+	for keyIter.Next() {
+		parts = append(parts, string(keyIter.Node().Data))
+	}
+
+	return parts
+}
+
+// recordTemplateSubunit records the subunit structure WITHIN a [template.*]
+// namespace. For [template.svc.api] (parts: template, svc, api), records
+// svc -> [api]. For deeper paths like [template.svc.api.handler], records
+// svc.api -> [handler]. The template root itself ([template.svc], len==2) has
+// no subunit to record — it is the root the extraction pass parses directly.
+// Only paths with at least one segment after the template name are recorded.
+func recordTemplateSubunit(
+	parts []string,
+	templateSubunitOrders map[string][]string,
+	seen map[string]bool,
+) {
+	const minTemplateSubunitParts = 3 // template + name + child
+	if len(parts) < minTemplateSubunitParts {
+		return
+	}
+
+	// parts[0] == "template"; parts[1] is the template name; parts[2:] is the
+	// subunit path within the template. parent is the path RELATIVE to the
+	// template namespace (e.g. "svc" for [template.svc.api], "svc.api" for
+	// [template.svc.api.handler]).
+	parent := strings.Join(parts[1:len(parts)-1], ".")
+	child := parts[len(parts)-1]
+	key := parent + "." + child
+
+	if !seen[key] {
+		templateSubunitOrders[parent] = append(templateSubunitOrders[parent], child)
+		seen[key] = true
+	}
+}
+
+// recordHandAuthored records a hand-authored top-level unit ([name], len==1)
+// or subunit ([parent.child], len==2) into the appropriate order slice.
+// Deeper nesting (len > 2) is ignored — not supported for hand-authored units.
+// unitOrder is passed by pointer because append may reallocate the slice.
+func recordHandAuthored(
+	parts []string,
+	unitOrder *[]string,
+	subunitOrders map[string][]string,
+	seenUnits, seenSubunits map[string]bool,
+) {
+	const subunitParts = 2 // parent + child
+
+	if len(parts) == 1 {
+		// Top-level unit [name]
+		name := parts[0]
+		if !seenUnits[name] {
+			*unitOrder = append(*unitOrder, name)
+			seenUnits[name] = true
+		}
+
+		return
+	}
+
+	if len(parts) == subunitParts {
+		// Subunit [parent.child]
+		parent := parts[0]
+		child := parts[1]
+		key := parent + "." + child
+
+		if !seenSubunits[key] {
+			subunitOrders[parent] = append(subunitOrders[parent], child)
+			seenSubunits[key] = true
+		}
+	}
+	// Ignore deeper nesting (len(parts) > 2) - not supported
 }
 
 // parseUnitWithOrder parses a unit with explicit subunit order.
+//
+//nolint:gocognit,nestif,funlen // pre-existing; metrics surface only after Plan 31-01 grew the package
 func parseUnitWithOrder(
 	name string,
 	value any,
