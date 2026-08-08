@@ -8,7 +8,7 @@ name = "Missing Param Test"
 [template.svc]
 params = ["name", "tech"]
 name = "${name} Service"
-type = "container"
+type = "system"
 technology = "${tech}"
 
 [[use]]

@@ -16,6 +16,7 @@ import (
 func parseFixture(t *testing.T, name string) *parser.Model {
 	t.Helper()
 
+	//nolint:gosec // G304: name is a hard-coded fixture filename in testdata/, not user input
 	data, err := os.ReadFile("../../testdata/" + name)
 	require.NoError(t, err, "failed to read %s", name)
 
@@ -237,6 +238,7 @@ func assertUnitEqual(t *testing.T, want, got *model.Unit, path string) {
 	}
 
 	assert.Len(t, got.Links, len(want.Links), "%s.Links count", path)
+
 	for i := range want.Links {
 		if i < len(got.Links) {
 			assert.Equal(t, want.Links[i].Peer, got.Links[i].Peer, "%s.Links[%d].Peer", path, i)
@@ -261,15 +263,12 @@ func TestExpandMissingParamNames(t *testing.T) {
 	assert.Contains(t, msg, "svc", "error names the template")
 	assert.Contains(t, msg, "tech", "error names the missing param")
 	// Instantiation-site identifier: the [[use]]'s name param 'auth' or its index.
- siteContains := false
-	if contains(msg, "auth") || contains(msg, "[[use]]") || contains(msg, "use") {
-		siteContains = true
-	}
-
+	siteContains := contains(msg, "auth") || contains(msg, "[[use]]") || contains(msg, "use")
 	assert.True(t, siteContains, "error identifies the instantiation site (got: %q)", msg)
 }
 
-// contains is a tiny helper avoiding strings.Contains import noise.
+// contains reports whether s contains sub. A tiny helper avoiding
+// strings.Contains import noise in a test file.
 func contains(s, sub string) bool {
 	for i := 0; i+len(sub) <= len(s); i++ {
 		if s[i:i+len(sub)] == sub {

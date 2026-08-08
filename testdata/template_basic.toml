@@ -1,12 +1,14 @@
 # Fixture for TMPL-01/02/03/05: one template, one [[use]] with all params.
 # Exercises basic instantiation, full-field substitution, and validator-pass.
+# The template declares type=system (valid at top-level C1) so the produced
+# unit validates when placed at top-level (no parent).
 [properties]
 name = "Basic Template Test"
 
 [template.svc]
 params = ["name", "tech"]
 name = "${name} Service"
-type = "container"
+type = "system"
 technology = "${tech}"
 description = "${name} handles requests"
 color = "${name}-color"

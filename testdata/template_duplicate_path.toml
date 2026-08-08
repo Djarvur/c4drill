@@ -7,7 +7,7 @@ name = "Duplicate Path Test"
 [template.svc]
 params = ["name"]
 name = "${name} Service"
-type = "container"
+type = "system"
 
 [[use]]
 template = "svc"

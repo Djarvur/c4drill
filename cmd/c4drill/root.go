@@ -15,6 +15,7 @@ import (
 	"github.com/Djarvur/c4drill/internal/parser"
 	"github.com/Djarvur/c4drill/internal/peer"
 	"github.com/Djarvur/c4drill/internal/render"
+	"github.com/Djarvur/c4drill/internal/template"
 	"github.com/Djarvur/c4drill/internal/validator"
 	"github.com/Djarvur/c4drill/internal/view"
 	"github.com/spf13/cobra"
@@ -83,6 +84,8 @@ Output:
 
 // runRoot is the main execution function for the root command.
 // It validates flags early, then orchestrates the full pipeline.
+//
+//nolint:funlen // linear pipeline stage sequence; one statement per stage
 func runRoot(cmd *cobra.Command, args []string) error {
 	// Show help if no input file provided
 	if len(args) == 0 {
@@ -115,10 +118,22 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("parse: %w", err)
 	}
 
-	// Stage 1.6: Resolve relative peers (Phase 30; runs after future
-	// template.Expand, before humanize + Validate). Rewrites every bare
-	// Link.Peer to an absolute dotted path so the validator sees only
-	// absolute paths. A miss at root is a hard error naming the peer + host.
+	// Stage 1.5: Expand templates (Phase 31; runs after Parse, before
+	// peer.Resolve + Validate). Turns every [[use]] instantiation into a
+	// concrete, parametrized unit subtree drained into m.Units/m.UnitOrder,
+	// producing a model structurally indistinguishable from a hand-authored
+	// one. A no-op (returns m unchanged) when the model has no templates —
+	// guaranteeing no regression for hand-authored-only input. Pipeline
+	// ordering: Parse -> template.Expand -> peer.Resolve -> Validate.
+	m, err = template.Expand(m)
+	if err != nil {
+		return fmt.Errorf("expand: %w", err)
+	}
+
+	// Stage 1.6: Resolve relative peers (Phase 30; runs after
+	// template.Expand, before Validate). Rewrites every bare Link.Peer to an
+	// absolute dotted path so the validator sees only absolute paths. A miss
+	// at root is a hard error naming the peer + host.
 	if err := peer.Resolve(m); err != nil {
 		return fmt.Errorf("resolve peers: %w", err)
 	}
