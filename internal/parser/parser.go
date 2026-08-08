@@ -49,6 +49,23 @@ type Model struct {
 	// order. Populated by Parse from rawMap. Consumed by internal/template.Expand.
 	// Empty for hand-authored models with no [[use]] tables.
 	Instantiations []Instantiation `toml:"-"`
+	// Includes holds parsed [[include]] array-of-tables entries in document
+	// order. Populated by Parse from rawMap (Plan 32-01). Consumed by
+	// internal/include.Resolve (Plan 32-02). Empty for single-file models with
+	// no [[include]] tables.
+	Includes []IncludeDirective `toml:"-"`
+}
+
+// IncludeDirective captures a single [[include]] array-of-tables entry: the
+// referenced file path (relative to the including file's directory, resolved
+// by internal/include.Resolve) and the optional once flag (INC-06: a once=true
+// file is included at most once even when reached via multiple paths).
+type IncludeDirective struct {
+	// Path is the TOML file to merge in, relative to the including file's dir.
+	Path string `toml:"path"`
+	// Once opts into the visited-set dedup: an already-included file is skipped
+	// on subsequent [[include]] directives (INC-06).
+	Once bool `toml:"once"`
 }
 
 // TemplateDef holds a parsed [template.<name>] table: its declared named
@@ -123,6 +140,16 @@ func Parse(data []byte) (*Model, error) {
 	}
 
 	if err := extractInstantiations(rawMap, m); err != nil {
+		return nil, err
+	}
+
+	// Phase 32 (Plan 32-01): extract [[include]] array-of-tables into m.Includes.
+	// The BC-1 skip in captureDefinitionOrder already prevents [[include]] from
+	// registering a phantom 'include' unit; extractIncludes also deletes the
+	// key from rawMap as belt-and-suspenders so the directive cannot reach the
+	// unit loop even if the skip were ever removed. Non-strict toml stays
+	// (BC-3) — go-toml/v2 silently accepts the bare [[include]] key (D-06).
+	if err := extractIncludes(rawMap, m); err != nil {
 		return nil, err
 	}
 
@@ -303,6 +330,88 @@ func extractInstantiations(rawMap map[string]any, m *Model) error {
 	}
 
 	return nil
+}
+
+// extractIncludes pulls rawMap["include"] into m.Includes, preserving the
+// array-of-tables document order. Each [[include]] table has two fields:
+// `path` (required) and `once` (optional, defaults false). Mirrors
+// extractInstantiations (NOT the properties marshal/unmarshal pattern, which
+// does not work for top-level arrays). Deletes rawMap["include"] afterwards as
+// belt-and-suspenders against the unit loop — captureDefinitionOrder's BC-1
+// skip already keeps [[include]] out of unitOrder.
+func extractIncludes(rawMap map[string]any, m *Model) error {
+	incRoot, ok := rawMap["include"]
+	if !ok {
+		return nil
+	}
+
+	incArr, ok := incRoot.([]any)
+	if !ok {
+		return &ParseError{
+			Message: "invalid [[include]] format: expected an array of tables",
+			Context: "include",
+		}
+	}
+
+	m.Includes = make([]IncludeDirective, 0, len(incArr))
+
+	for _, entry := range incArr {
+		directive, err := parseIncludeDirective(entry)
+		if err != nil {
+			return err
+		}
+
+		m.Includes = append(m.Includes, directive)
+	}
+
+	delete(rawMap, "include")
+
+	return nil
+}
+
+// parseIncludeDirective decodes a single [[include]] table into an
+// IncludeDirective. `path` must be a string; `once` must be a boolean. Unknown
+// keys are accepted (non-strict toml, BC-3) to avoid coupling the parser to
+// future fields.
+func parseIncludeDirective(entry any) (IncludeDirective, error) {
+	incMap, ok := entry.(map[string]any)
+	if !ok {
+		return IncludeDirective{}, &ParseError{
+			Message: "invalid [[include]] entry: expected a table",
+			Context: "include",
+		}
+	}
+
+	directive := IncludeDirective{}
+
+	for k, v := range incMap {
+		switch k {
+		case "path":
+			s, ok := v.(string)
+			if !ok {
+				return IncludeDirective{}, &ParseError{
+					Message: "invalid [[include]] field: path must be a string",
+					Context: "include.path",
+				}
+			}
+
+			directive.Path = s
+		case "once":
+			b, ok := v.(bool)
+			if !ok {
+				return IncludeDirective{}, &ParseError{
+					Message: "invalid [[include]] field: once must be a boolean",
+					Context: "include.once",
+				}
+			}
+
+			directive.Once = b
+		default:
+			// Unknown keys accepted (BC-3 non-strict toml); nothing to do.
+		}
+	}
+
+	return directive, nil
 }
 
 // Reserved top-level table names (BC-1, D-08). Bare names — no namespace
