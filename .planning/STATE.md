@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.10
 milestone_name: Model Composition
-status: planning
-last_updated: "2026-08-08"
-last_activity: 2026-08-08
+status: Roadmap created; Phase 28 ready for discuss → plan
+last_updated: "2026-08-08T16:44:37.960Z"
+last_activity: 2026-08-08 — v1.10 roadmap written (ROADMAP.md + REQUIREMENTS traceability)
 progress:
   total_phases: 6
   completed_phases: 0
@@ -36,6 +36,7 @@ Progress: [░░░░░░░░░░] 0% of v1.10
 ## Performance Metrics
 
 **Velocity (v1.8/v1.9 carry-forward):**
+
 - Last 8 plans averaged ~10 min/plan; range 3-26 min.
 - v1.9 Phase 27 was 1 plan / 3 tasks / ~3 min.
 
@@ -74,6 +75,6 @@ The five todos in `.planning/todos/pending/` (reference field, ergonomics, type-
 
 ## Session Continuity
 
-Last session: 2026-08-08
-Stopped at: v1.10 ROADMAP.md + STATE.md + REQUIREMENTS.md traceability written.
-Resume file: None — next action is `/gsd:discuss-phase 28` (or `/gsd:plan-phase 28` if discuss is skipped; Phases 31 & 32 MUST run discuss first).
+Last session: 2026-08-08T16:44:37.934Z
+Stopped at: Phase 31 context gathered
+Resume file: .planning/phases/31-template-expansion/31-CONTEXT.md
