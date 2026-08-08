@@ -204,6 +204,43 @@ func TestExpandThreeInstantiationsHS1(t *testing.T) {
 	assertExpandedEqual(t, expanded, expanded2)
 }
 
+// TestExpandReferenceParamSubstitution (TMPL-10): the reference field
+// substitutes params correctly so reference URLs can be parameterized
+// (e.g. reference = "https://wiki/${name}" -> "https://wiki/auth").
+func TestExpandReferenceParamSubstitution(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Reference Param Test"
+
+[template.svc]
+params = ["name"]
+name = "${name} Service"
+type = "system"
+reference = "https://wiki.example.com/${name}"
+
+[[use]]
+template = "svc"
+name = "auth"
+`)
+
+	m, err := parser.Parse(data)
+	require.NoError(t, err, "Parse should not error")
+
+	expanded, err := template.Expand(m)
+	require.NoError(t, err, "Expand should not error")
+
+	require.Contains(t, expanded.Units, "auth", "auth present")
+	auth := expanded.Units["auth"]
+	assert.Equal(t,
+		"https://wiki.example.com/auth",
+		auth.Reference,
+		"Reference field substituted (TMPL-10)",
+	)
+	assert.NotContains(t, auth.Reference, "${", "no residual token in Reference")
+}
+
 // assertExpandedEqual asserts two expanded models have equal Units maps by
 // comparing each unit's exported fields. Used for idempotency checks.
 func assertExpandedEqual(t *testing.T, a, b *parser.Model) {
