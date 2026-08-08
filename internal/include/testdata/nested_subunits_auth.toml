@@ -1,0 +1,13 @@
+# Included half of the D-10 subunit fixture (Plan 32-02).
+# These subunit tables attach to the [linuxSystem] parent declared in
+# nested_subunits_main.toml (cross-file subunit merge, D-10).
+
+[linuxSystem.auth]
+type = "container"
+name = "Auth Container"
+technology = "Go"
+
+[linuxSystem.db]
+type = "containerDb"
+name = "Auth Database"
+technology = "PostgreSQL"
