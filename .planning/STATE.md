@@ -96,6 +96,12 @@ Fixed the two root-cause bugs:
 - [Post-v1.8]: Navigation redesigned — back-link dropped (it duplicated the breadcrumb's nearest-ancestor entry: same destination, same label). Breadcrumb-only now. C3 root context breadcrumb added (was missing — C3 couldn't navigate to C1 directly). Pretty unit Names resolved via new View.AncestorNames map (populated by view generators which have model access; graph builder consumes).
 - [Post-v1.8]: canonicalDOT golden (multilevel.expanded.dot) regenerated AGAIN — nav redesign changed the graph label format (ALIGN="CENTER" on TABLE, FONT POINT-SIZE="14" wrapper on title). Benign format change, semantic content unaffected.
 
+## Accumulated Context
+
+### Pending Todos
+
+- **Add 'reference' field to C4 units with 📖 marker** (`tooling`) — `.planning/todos/pending/2026-08-08-add-reference-field-to-units.md`. Optional per-unit URL field (LikeC4 `link` port; only LikeC4 feature adopted). Units with non-empty `reference` render a 📖 symbol. Rejected: custom kinds, tags, icons, metadata, deployment model, user-authored views.
+
 ## Operator Next Steps
 
 - Start the next milestone with /gsd-new-milestone
