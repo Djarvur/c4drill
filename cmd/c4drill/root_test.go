@@ -7,6 +7,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Djarvur/c4drill/internal/model"
+	"github.com/Djarvur/c4drill/internal/parser"
+	"github.com/Djarvur/c4drill/internal/peer"
+	"github.com/Djarvur/c4drill/internal/validator"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -971,8 +975,138 @@ func TestRootCmd_HTMLFormat(t *testing.T) {
 		c3 := readOutputFile(t, filepath.Join(dir, "multilevel", "mainSystem", "sshAuth.html"))
 
 		assert.Contains(t, c3, `../mainSystem.html`,
-			"C3 HTML back-link must point at ../mainSystem.html (rewritten from .svg)")
+			"C3 back-link must point at ../mainSystem.html (rewritten from .svg)")
 		assert.NotContains(t, c3, `.svg"`,
 			"C3 HTML must not contain any .svg href suffix")
 	})
+}
+
+// --- Phase 30: relative-peer resolution integration tests ---
+//
+// These prove the end-to-end behavior the CLI gains from wiring peer.Resolve
+// into the runRoot pipeline (Plan 30-02): the pipeline ordering makes bare
+// peers resolvable BEFORE the validator sees them, and an unresolvable bare
+// peer produces a clean non-zero CLI exit (no panic). They complement Plan
+// 30-01's unit tests, which cover the resolution algorithm in isolation.
+
+// TestPipelineResolveBeforeValidate proves the pipeline ordering (XC-01):
+// peer.Resolve runs between Parse and Validate, so a model with BARE peers
+// (which the validator could not resolve on its own) validates cleanly once
+// Resolve has rewritten them to absolute paths. It also sanity-checks that
+// the fixture actually exercises the feature (>= 1 bare peer pre-resolve).
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestPipelineResolveBeforeValidate(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("testdata", "peer_walkup.toml"))
+	require.NoError(t, err, "failed to read peer_walkup.toml fixture")
+
+	m, err := parser.Parse(data)
+	require.NoError(t, err, "peer_walkup.toml must parse cleanly")
+
+	// Sanity: the fixture must declare at least one bare peer (no '.') so
+	// the test actually exercises the resolver. Without this guard a future
+	// edit that dots every peer would silently turn this into a no-op test.
+	bareCount := countBarePeers(m)
+	assert.GreaterOrEqual(t, bareCount, 1,
+		"peer_walkup.toml must declare at least one bare peer to exercise the resolver")
+
+	// Resolve relative peers (this is the call wired into runRoot Stage 1.6).
+	require.NoError(t, peer.Resolve(m),
+		"peer_walkup.toml's bare peers must all resolve (sibling/aunt/root/nearest-first)")
+
+	// Validate: the validator now sees absolute peers only, so it must
+	// report no reference errors. This would FAIL if peer.Resolve were
+	// removed or reordered to run after Validate (the bare peers would be
+	// reported as undefined units).
+	valErrors := validator.Validate(m)
+	assert.Empty(t, valErrors,
+		"validator must see absolute peers post-resolve — bare-peer walkup fixture should validate cleanly")
+}
+
+// TestCLIUnresolvablePeerExits proves the CLI error path for an unresolvable
+// bare peer: invoking runRoot via the cobra root command returns a non-nil
+// error whose message names the resolve stage and the peer, and the process
+// does not panic. This is the end-to-end form of Plan 30-01's
+// TestResolveUnresolvableError.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestCLIUnresolvablePeerExits(t *testing.T) {
+	cmd := NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	cmd.SetArgs([]string{filepath.Join("testdata", "peer_unresolvable.toml")})
+
+	err := cmd.Execute()
+	require.Error(t, err, "unresolvable bare peer must produce a non-nil CLI error")
+
+	msg := err.Error()
+	assert.Contains(t, msg, "resolve peers",
+		"error must surface the resolve stage (the fmt.Errorf wrapper)")
+	assert.Contains(t, msg, "nonexistent",
+		"error must name the unresolvable peer")
+	// No panic = the require.Error above already caught it; cobra returns
+	// errors, it does not panic on RunE failure.
+}
+
+// TestCLICorpusRendersUnchanged proves ERGO-02 end-to-end: every existing
+// cmd/c4drill/testdata corpus fixture with peers parses, resolves, and
+// validates without error. peer.Resolve must be a no-op for their rendered
+// output (their bare peers all reference top-level units → identity rewrite).
+// Complements Plan 30-01's parser-corpus peer-set unit test by covering the
+// cmd corpus through the full Parse→Resolve→Validate chain.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestCLICorpusRendersUnchanged(t *testing.T) {
+	corpus := []string{"valid.toml", "expanded.toml", "multilevel.toml"}
+
+	for _, fix := range corpus {
+		t.Run(fix, func(t *testing.T) {
+			data, err := os.ReadFile(filepath.Join("testdata", fix))
+			require.NoError(t, err, "failed to read corpus fixture %s", fix)
+
+			m, err := parser.Parse(data)
+			require.NoError(t, err, "corpus fixture %s must parse cleanly", fix)
+
+			require.NoError(t, peer.Resolve(m),
+				"peer.Resolve must be a no-op (error-wise) on corpus fixture %s — bare peers reference top-level units", fix)
+
+			valErrors := validator.Validate(m)
+			assert.Empty(t, valErrors,
+				"corpus fixture %s must validate cleanly post-resolve (ERGO-02 backward-compat)", fix)
+		})
+	}
+}
+
+// countBarePeers walks m.Units + Subunits counting Link.Peer values that
+// contain no '.' (the relative form peer.Resolve rewrites), across both
+// Links and authored LinksFrom. Used by TestPipelineResolveBeforeValidate to
+// confirm its fixture actually exercises the resolver.
+func countBarePeers(m *parser.Model) int {
+	count := 0
+
+	var walk func(units map[string]*model.Unit)
+	walk = func(units map[string]*model.Unit) {
+		for _, unit := range units {
+			for _, l := range unit.Links {
+				if !strings.Contains(l.Peer, ".") {
+					count++
+				}
+			}
+			for _, lf := range unit.LinksFrom {
+				if lf.Mirror {
+					continue
+				}
+				if !strings.Contains(lf.Peer, ".") {
+					count++
+				}
+			}
+			if len(unit.Subunits) > 0 {
+				walk(unit.Subunits)
+			}
+		}
+	}
+	walk(m.Units)
+
+	return count
 }
