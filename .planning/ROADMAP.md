@@ -92,7 +92,7 @@ Plans:
 **Plans**: 2 plans
 **Wave 1**
 
-- [ ] 30-01-PLAN.md — TDD: `internal/peer/Resolve` (bare→absolute rewrite; D-13/D-14/D-15/D-16 walk-up; ERGO-01/02 unit tests + corpus backward-compat)
+- [x] 30-01-PLAN.md — TDD: `internal/peer/Resolve` (bare→absolute rewrite; D-13/D-14/D-15/D-16 walk-up; ERGO-01/02 unit tests + corpus backward-compat)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -166,7 +166,7 @@ Phases 28, 29, 30 are independent and parallelizable. Phases 31 → 32 are seque
 |-------|-----------|----------------|--------|-----------|
 | 28. Reference field | v1.10 | 1/1 | Complete    | 2026-08-08 |
 | 29. Optional name humanization | v1.10 | 2/2 | Complete    | 2026-08-08 |
-| 30. Relative-peer resolution | v1.10 | 0/TBD | Not started | - |
+| 30. Relative-peer resolution | v1.10 | 1/2 | In Progress|  |
 | 31. Template expansion | v1.10 | 0/TBD | Not started | - |
 | 32. Include directive | v1.10 | 0/TBD | Not started | - |
 | 33. Docs sweep + goldens | v1.10 | 0/TBD | Not started | - |
