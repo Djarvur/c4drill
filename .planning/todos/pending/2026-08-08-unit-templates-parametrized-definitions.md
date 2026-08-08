@@ -13,9 +13,13 @@ files:
 
 Real C4 models often contain many near-identical units. Today each must be spelled out in full — a repetitive, error-prone authoring burden. The user wants a templating mechanism: define an almost-complete unit once with parametrized fields, then instantiate it with concrete parameter values to produce concrete units in the diagram. Primary use case: "handy to define the number of almost-identical units."
 
-Reference: go-metadot (`/Users/nil/DiskD/W/Djarvur/go-metadot`) implements this as a `define`/`enddef`/`&NAME args` macro system. **IMPORTANT: the Go port does NOT implement macros** — it parses them into AST structs but silently drops them at `internal/graph/graph.go:535` ("Эти элементы должны быть обработаны на уровне парсера"). The working implementation lives in the Perl original `metadot.pl`; that is the real spec.
+Two reference implementations inform the design. Both are "textual macro" systems whose idioms should be adapted to C4Drill's structured TOML, not copied literally.
 
-### go-metadot macro mechanics (reference, NOT a binding spec)
+### Reference 1: go-metadot macros
+
+go-metadot (`/Users/nil/DiskD/W/Djarvur/go-metadot`) implements this as a `define`/`enddef`/`&NAME args` macro system. **IMPORTANT: the Go port does NOT implement macros** — it parses them into AST structs but silently drops them at `internal/graph/graph.go:535` ("Эти элементы должны быть обработаны на уровне парсера"). The working implementation lives in the Perl original `metadot.pl`; that is the real spec.
+
+#### go-metadot macro mechanics (reference, NOT a binding spec)
 
 The Perl macro engine is a **line-oriented text preprocessor** interleaved with parsing:
 - `define NAME` … body lines … `enddef` — body captured verbatim (`metadot.pl:888` `appendToDefine`)
@@ -26,7 +30,40 @@ The Perl macro engine is a **line-oriented text preprocessor** interleaved with 
 - No defaults, all-string params, no arity validation, recursion cap 100, no nested `define` (fatal), forward references to later defines do NOT work
 - Substitution is purely textual: a param can be used in labels, identifiers, styles, goto targets, concatenated with suffixes
 
-**Why this matters for C4Drill:** go-metadot is a line-oriented DSL; C4Drill is structured TOML. A faithful line-level port does NOT fit. The adaptation must choose where in the pipeline substitution happens — see Solution.
+### Reference 2: PlantUML `!procedure`
+
+PlantUML's preprocessor ([docs](https://plantuml.com/preprocessing)) has a mature, widely-used procedure/macro system. It is the more ergonomic of the two references and the better model for C4Drill's named-parameter direction.
+
+#### PlantUML `!procedure` mechanics (reference, NOT a binding spec)
+
+- **Define:** `!procedure $name($arg1, $arg2) … !endprocedure`. Procedure and argument names are `$`-prefixed.
+- **Call:** invoke by name with parens: `$name("foo1", "foo2")`.
+- **Arguments — named AND positional, with defaults:** PlantUML supports both positional calls and Python-style keyword calls (`$element(myalias, $size=10, $technology="Java")`). Defaults allowed: `!function $inc($value, $step=1)` — "only arguments at the end of the parameter list can have default values."
+- **Body emits diagram text directly** — a procedure is void (no return); whatever it contains is spliced into the diagram. A body can emit multiple elements (nodes, interfaces, arrows). Verbatim multi-element example from the docs:
+  ```text
+  !unquoted procedure COMP_TEXTGENCOMP(name)
+  [name] << Comp >>
+  interface Ifc << IfcType >> AS name##Ifc
+  name##Ifc - [name]
+  !endprocedure
+  COMP_TEXTGENCOMP(dummy)
+  ```
+- **`!procedure` vs `!function`:** procedures emit text (void); functions return a value via `!return` and "do not output any text." C4Drill's template feature maps to `!procedure` (emit a unit), not `!function`.
+- **`!unquoted`** keyword marks a procedure whose args don't need quotes — relevant if C4Drill wants shorthand invocation.
+- **Procedures can call other procedures** (nesting allowed); local variables are scoped to the procedure body.
+- **Deprecation lineage:** `!define`/`!definelong` are the deprecated predecessors; the docs say "Use `!function`, `!procedure` or variable definition instead." So `!procedure` is the *current recommended* PlantUML idiom — worth aligning C4Drill's naming/semantics with it for familiarity.
+
+#### What to borrow from PlantUML specifically (vs go-metadot)
+
+| Concern | go-metadot | PlantUML `!procedure` | C4Drill lean |
+|---|---|---|---|
+| Positional vs named | positional `${1}` | **both** (positional + keyword) | **named**, optionally with defaults — matches TOML map args and is far more readable |
+| Defaults | none | **yes**, trailing args | **yes** — adopt PlantUML's "trailing args may have defaults" rule |
+| Multi-element emission | yes (one line = one element) | yes (body splices arbitrary text) | under Option B: one template = one unit + its inline links (deliberate C4Drill constraint) |
+| Typing | all-string | ints + strings | all-string (field-level substitution) |
+| Nesting | no (fatal) | **yes** (procedures call procedures) | keep disallowed for v1; revisit if needed |
+
+**Why this matters for C4Drill:** both references are textual macro systems embedded in a line-oriented DSL. C4Drill is structured TOML — a faithful text-level port of either does NOT fit. PlantUML's named-args + defaults idiom is the more natural fit for TOML's map syntax and should inform the C4Drill design. The adaptation must still choose where in the pipeline substitution happens — see Solution.
 
 ## Solution
 
@@ -48,18 +85,21 @@ A new top-level table for definitions:
 
 ```toml
 [template.microservice]
+# params declared with optional defaults (PlantUML-style trailing defaults)
+# params without defaults are required at instantiation
+params = { name = "<required>", domain = "<required>", tech = "Go, gRPC" }
+
 name = "${name} Service"
 type = "container"
-technology = "Go, gRPC"
+technology = "${tech}"
 description = "${name} handles ${domain}"
-params = ["name", "domain"]   # declared param names
 # links inside a template use the same ${name} substitution
 [[template.microservice.link]]
 peer = "messageBus"
 description = "Publishes ${domain} events"
 ```
 
-Instantiation — a new top-level `[use]` section or per-unit `template` field. Two candidate syntaxes (decide in plan):
+Instantiation — a new top-level `[use]` section or per-unit `template` field. Named args (matching PlantUML's keyword-call idiom, not go-metadot's positional `${1}`):
 
 ```toml
 # syntax 1: explicit use blocks
@@ -82,7 +122,7 @@ Syntax 1 (separate `[use]`) keeps template instantiation out of the unit table n
 | Question | go-metadot | C4Drill proposal |
 |---|---|---|
 | Positional vs named | positional `${1}` | **named** `${name}` (TOML has maps; named is more readable and matches syntax sketch) |
-| Defaults | none | consider: omitting a param leaves `${name}` literal OR errors; recommend **error on missing required param** (clearer than go-metadot's silent-literal) |
+| Defaults | none (go-metadot); **yes, trailing** (PlantUML) | **yes, PlantUML-style trailing defaults** — params without defaults are required; supplying them errors (clearer than go-metadot's silent-literal) |
 | Typed | all-string | all-string (substitution is field-level) |
 | Use in multiple fields | yes | yes — any string field |
 | One template → multiple units | yes (line-based) | **no under Option B** — one template instantiates one Unit (+ its inline links). If multi-unit emission is needed, reconsider Option A. State this limitation explicitly. |
