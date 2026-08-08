@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.10
 milestone_name: Model Composition
 status: ready_to_plan
-last_updated: 2026-08-08T18:48:18.896Z
-last_activity: 2026-08-08 -- Phase 31 execution started
+last_updated: "2026-08-08T19:30:00.000Z"
+last_activity: 2026-08-08 -- Phase 32 execution complete
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 13
-  completed_plans: 7
-  percent: 67
-stopped_at: Phase 31 complete (2/2) — ready to discuss Phase 32
+  completed_plans: 11
+  percent: 85
+stopped_at: Phase 32 complete (2/2) — ready to discuss Phase 33
 ---
 
 # Project State
@@ -21,16 +21,16 @@ stopped_at: Phase 31 complete (2/2) — ready to discuss Phase 32
 See: .planning/PROJECT.md (updated 2026-08-08)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** Phase 32 — include directive multi file
+**Current focus:** Phase 33 — docs + integration goldens (Phase 32 include directive complete)
 
 ## Current Position
 
 Phase: 32
-Plan: Not started
-Status: Ready to plan
+Plan: Complete (2/2)
+Status: Phase complete
 Last activity: 2026-08-08
 
-Progress: [███░░░░░░░] 25%
+Progress: [████░░░░░░] 85%
 
 **Build order:** 28 / 29 / 30 are independent & parallelizable → 31 (templates, carries BC-1 parser change) → 32 (include) → 33 (docs + integration goldens).
 
@@ -43,8 +43,8 @@ Progress: [███░░░░░░░] 25%
 
 | Phase | Plans | Notes |
 |-------|-------|-------|
-| 28-33 (v1.10) | 0 done | Not started |
-| Phase 28 P01 | 15 min | 3 tasks | 12 files |
+| 28-33 (v1.10) | 11 done | 28/29/30/31/32 complete; 33 next |
+| Phase 32 | ~28 min | 2 plans | 5 tasks | 9 files (parser IncludeDirective + internal/include.Resolve + pipeline Stage 1a) |
 
 ## Accumulated Context
 
@@ -66,7 +66,7 @@ The five todos in `.planning/todos/pending/` (reference field, ergonomics, type-
 - **ERGO-06 (compact-link shorthand) at-risk:** research SUMMARY §3 flags it a v1.10 anti-feature; mapped to Phase 29 for coverage but discuss must decide confirm-vs-defer-to-v2.
 - **Parser BC-1 prerequisite:** whichever of templates/include lands first needs coordinated `captureDefinitionOrder` (parser.go:100) + `Parse` rawMap extraction changes so `template`/`include`/`use` tables don't become phantom units. Landed as Plan 1 of Phase 31. `reference` is the only safe single-line `isBuiltinField` addition (Phase 28).
 - **KNOWN LIMITATION (cosmetic, deferred):** boundary nodes in C3 clusters draw inside the cluster box (go-graphviz WASM cgraph `agsubnode` on edge creation reassigns root nodes to the cluster subgraph; compound=true doesn't help). Out of scope for v1.10.
-- **Phase 33 EXECUTION blocked on Phases 31 + 32 (PLANNING complete, execution must wait):** Phase 33 is fully planned (4 plans, 33-01..33-04, waves 1+2). Plans 01/02/03 (canonicalDOT helper extraction, fixtures, docs) can execute independently of 31/32. **Plan 04 (XC-05 + XC-01 E2E tests) CANNOT execute until Phases 31 (template.Expand) and 32 (include.Resolve) ship** — its tests reference `include.Resolve` and `template.Expand` which do not exist yet (verified: `internal/template/` and `internal/include/` absent as of 2026-08-08). Plan 04 declares this as a PRE-CONDITION gate; execute-phase must refuse Plan 04 until 31/32 are Complete. Phase 30 (peer.Resolve) is essentially done (landed at root.go:122). Do NOT auto-advance Phase 33 to execute until 31+32 ship.
+- **Phase 33 UNBLOCKED (Phases 31 + 32 shipped 2026-08-08):** Phase 33 is fully planned (4 plans, 33-01..33-04, waves 1+2). **Plan 04 (XC-05 + XC-01 E2E tests) pre-condition now SATISFIED** — `internal/template.Expand` (Phase 31) and `internal/include.Resolve` (Phase 32) both ship in HEAD. Phase 33 may now execute in full. Note: Phase 32's include.Resolve signature is `Resolve(entry, entryDir, entryFile)` (three args — entryFile threads the real entry filename for INC-10/D-12 error attribution); Plan 04's E2E tests must use this signature, not the simplified `Resolve(m)` from the original CONTEXT.
 
 ## Deferred Items
 
@@ -78,8 +78,8 @@ The five todos in `.planning/todos/pending/` (reference field, ergonomics, type-
 
 ## Session Continuity
 
-Last session: 2026-08-08T18:06:17.215Z
-Stopped at: Phase 33 context gathered
+Last session: 2026-08-08T19:30:00.000Z
+Stopped at: Phase 32 execution complete (2/2 plans: 32-01 parser IncludeDirective + 32-02 internal/include.Resolve + merge + pipeline Stage 1a wiring)
 Resume file: .planning/phases/33-docs-sweep-end-to-end-goldens/33-CONTEXT.md
 
 ## Decisions

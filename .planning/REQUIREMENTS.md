@@ -14,16 +14,16 @@ Source research: [.planning/research/SUMMARY.md](research/SUMMARY.md)
 
 ### INCLUDE — Multi-file composition
 
-- [ ] **INC-01**: User can assemble a diagram from multiple TOML files using an `[[include]]` directive; the entry file plus all transitively-included files merge into one logical model.
-- [ ] **INC-02**: Include paths resolve relative to the *including file's* directory (not the CLI working directory), so models work identically regardless of where `c4drill` is invoked.
-- [ ] **INC-03**: Transitive includes work — an included file may itself contain `[[include]]` directives, resolved recursively.
-- [ ] **INC-04**: Cycle detection is fatal — a file that includes itself directly or transitively (A→B→A) produces a clear error naming the cycle, not infinite recursion or silent corruption.
-- [ ] **INC-05**: Diamond includes are *not* cycles — a file reachable by two paths (A→B→D, A→C→D) is legal; behavior without `once` is hard-error on the resulting duplicate unit paths (signals the author to add `once=true`).
-- [ ] **INC-06**: `once = true` on an `[[include]]` directive skips re-inclusion of an already-included file (PlantUML `!include_once` semantics), so shared template/definition libraries can be safely included from multiple model files without double-definition errors.
-- [ ] **INC-07**: Merge is flat (no namespacing/prefixing) — included units merge into one namespace; a unit path defined in two files (after `once` dedup) is a hard error naming both files, not a silent override.
-- [ ] **INC-08**: `[properties]` follows root-file-wins semantics — the entry file's `name`/`description` are authoritative; conflict on `[properties]` from an included file is a hard error.
-- [ ] **INC-09**: `UnitOrder` concatenation preserves authoring order — entry file's units first, then each included file's units appended in include-directive order (so rendering order is deterministic and matches author intent).
-- [ ] **INC-10**: A missing include file produces a clear error naming the referenced path and the including file, not a generic parse failure.
+- [x] **INC-01**: User can assemble a diagram from multiple TOML files using an `[[include]]` directive; the entry file plus all transitively-included files merge into one logical model.
+- [x] **INC-02**: Include paths resolve relative to the *including file's* directory (not the CLI working directory), so models work identically regardless of where `c4drill` is invoked.
+- [x] **INC-03**: Transitive includes work — an included file may itself contain `[[include]]` directives, resolved recursively.
+- [x] **INC-04**: Cycle detection is fatal — a file that includes itself directly or transitively (A→B→A) produces a clear error naming the cycle, not infinite recursion or silent corruption.
+- [x] **INC-05**: Diamond includes are *not* cycles — a file reachable by two paths (A→B→D, A→C→D) is legal; behavior without `once` is hard-error on the resulting duplicate unit paths (signals the author to add `once=true`).
+- [x] **INC-06**: `once = true` on an `[[include]]` directive skips re-inclusion of an already-included file (PlantUML `!include_once` semantics), so shared template/definition libraries can be safely included from multiple model files without double-definition errors.
+- [x] **INC-07**: Merge is flat (no namespacing/prefixing) — included units merge into one namespace; a unit path defined in two files (after `once` dedup) is a hard error naming both files, not a silent override.
+- [x] **INC-08**: `[properties]` follows root-file-wins semantics — the entry file's `name`/`description` are authoritative; conflict on `[properties]` from an included file is a hard error.
+- [x] **INC-09**: `UnitOrder` concatenation preserves authoring order — entry file's units first, then each included file's units appended in include-directive order (so rendering order is deterministic and matches author intent).
+- [x] **INC-10**: A missing include file produces a clear error naming the referenced path and the including file, not a generic parse failure.
 
 ### TMPL — Unit templates
 
@@ -64,7 +64,7 @@ Source research: [.planning/research/SUMMARY.md](research/SUMMARY.md)
 ### XCOMP — Cross-feature integration
 
 - [ ] **XC-01**: The pipeline ordering `include → template-expand → relative-peer-resolve → validate → generate-views → render` is enforced in code and documented; reordering is detected (e.g. via tests) as a regression.
-- [ ] **XC-02**: Templates defined in an included file are visible to `[[use]]` instantiations in the including file (the "template isolation" motivating use case).
+- [x] **XC-02**: Templates defined in an included file are visible to `[[use]]` instantiations in the including file (the "template isolation" motivating use case).
 - [x] **XC-03**: Relative peers authored inside a template resolve against the instantiation site's parent, not the template's lexical location (HS-2 from research — must be settled in discuss phase before implementation).
 - [x] **XC-04**: Humanization runs after template expansion (so it sees the substituted instantiation key, not `${name}`) and before validation (so error messages show final names).
 - [ ] **XC-05**: A multi-file model using include + templates + relative peers produces the same rendered output (order-insensitive canonicalDOT comparison) as the equivalent hand-expanded single-file model.
