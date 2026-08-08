@@ -96,13 +96,47 @@ Source research: [.planning/research/SUMMARY.md](research/SUMMARY.md)
 
 ## Traceability
 
-*Phase mapping filled by roadmapper.*
+*Phase mapping filled by roadmapper (2026-08-08). 40/40 v1.10 requirements mapped.*
 
 | REQ-ID | Phase | Notes |
 |--------|-------|-------|
-| INC-01..10 | TBD | |
-| TMPL-01..11 | TBD | |
-| ERGO-01..06 | TBD | |
-| REF-01..05 | TBD | |
-| DOC-01..03 | TBD | |
-| XC-01..05 | TBD | |
+| REF-01 | 28 | reference field on unit |
+| REF-02 | 28 | 📖 marker render |
+| REF-03 | 28 | clickable via GraphViz URL |
+| REF-04 | 28 | svg + html coverage (Safari shim) |
+| REF-05 | 28 | backward-compat (no reference = unchanged) |
+| ERGO-03 | 29 | optional name → humanized from last path segment |
+| ERGO-04 | 29 | dumb camelCase split (no acronym preservation) |
+| ERGO-05 | 29 | explicit name always wins |
+| ERGO-06 | 29 | AT-RISK: compact-link shorthand; research §3 flags as anti-feature — discuss-phase confirm-vs-defer-to-v2 |
+| ERGO-01 | 30 | bare peer resolves against enclosing parent |
+| ERGO-02 | 30 | absolute-fallback (backward-compat) |
+| TMPL-01 | 31 | `[template.*]` define + named params |
+| TMPL-02 | 31 | trailing defaults |
+| TMPL-03 | 31 | `[[use]]` instantiate |
+| TMPL-04 | 31 | `${param}` into all string fields |
+| TMPL-05 | 31 | one-template-one-unit |
+| TMPL-06 | 31 | instantiated units participate fully |
+| TMPL-07 | 31 | missing required param = hard error (no silent literal) |
+| TMPL-08 | 31 | duplicate unit path = hard error |
+| TMPL-09 | 31 | deep-copy correctness (HS-1 regression test) |
+| TMPL-10 | 31 | forward references work |
+| TMPL-11 | 31 | reference param substitution |
+| XC-03 | 31 | relative-peer in template resolves at instantiation site (HS-2 — discuss MUST settle first) |
+| XC-04 | 31 | humanization runs after expand, before validate (humanize hook lands here; end-to-end test in 33) |
+| INC-01 | 32 | assemble from multiple files |
+| INC-02 | 32 | path relative to including file |
+| INC-03 | 32 | transitive includes |
+| INC-04 | 32 | cycle detection fatal |
+| INC-05 | 32 | diamond not cycle; dup = hard error |
+| INC-06 | 32 | once=true dedup |
+| INC-07 | 32 | flat merge; dup path = hard error |
+| INC-08 | 32 | properties root-file-wins |
+| INC-09 | 32 | UnitOrder concatenation preserves order |
+| INC-10 | 32 | missing include = clear error |
+| XC-02 | 32 | templates in included files visible to `[[use]]` (template-isolation use case) |
+| DOC-01 | 33 | document type-inference |
+| DOC-02 | 33 | document all four features |
+| DOC-03 | 33 | example fixtures |
+| XC-01 | 33 | pipeline ordering enforced + regression test |
+| XC-05 | 33 | multi-file ≡ single-file golden (canonicalDOT) |
