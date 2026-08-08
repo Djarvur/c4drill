@@ -1315,3 +1315,94 @@ func TestParseNoRegressionOnHandAuthoredTemplates(t *testing.T) {
 	assert.Len(t, got.Units, 2, "Units count unchanged")
 }
 
+// --- Phase 32: IncludeDirective extraction (Plan 32-01) ---
+//
+// These tests exercise the parser-side half of the include feature (INC-01):
+// [[include]] array-of-tables are extracted into Model.Includes in document
+// order, each carrying Path and Once; no phantom 'include' unit leaks into
+// UnitOrder/Units. They CONSUME the BC-1 skip landed in Plan 31-01.
+
+// TestParseIncludesExtracted exercises INC-01 extraction: two [[include]]
+// blocks (path="a.toml" once=true then path="b.toml") plus a hand-authored
+// [user] unit populate Model.Includes in document order with the right Path/Once
+// values, and produce ZERO phantom 'include' units.
+func TestParseIncludesExtracted(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Includes Test"
+
+[[include]]
+path = "a.toml"
+once = true
+
+[[include]]
+path = "b.toml"
+
+[user]
+type = "person"
+name = "User"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	// Includes has two entries in document order with the right Path/Once.
+	require.Len(t, got.Includes, 2, "Includes must contain the two [[include]] blocks in document order")
+	assert.Equal(t, "a.toml", got.Includes[0].Path, "Includes[0].Path")
+	assert.True(t, got.Includes[0].Once, "Includes[0].Once")
+	assert.Equal(t, "b.toml", got.Includes[1].Path, "Includes[1].Path")
+	assert.False(t, got.Includes[1].Once, "Includes[1].Once defaults to false when omitted")
+
+	// No phantom 'include' unit.
+	assert.Equal(t, []string{"user"}, got.UnitOrder, "UnitOrder must exclude [[include]]")
+	assert.Len(t, got.Units, 1, "Units must contain only the hand-authored unit")
+	assert.Contains(t, got.Units, "user", "Units must contain 'user'")
+	assert.NotContains(t, got.Units, "include", "[[include]] must not leak as a unit")
+}
+
+// TestParseIncludesOnceDefaultsFalse exercises the Once zero-value default: a
+// single [[include]] path="x.toml" with no `once` key parses into
+// Model.Includes[0].Once == false.
+func TestParseIncludesOnceDefaultsFalse(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Include Once Default Test"
+
+[[include]]
+path = "x.toml"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	require.Len(t, got.Includes, 1, "Includes must contain the single [[include]] block")
+	assert.Equal(t, "x.toml", got.Includes[0].Path, "Includes[0].Path")
+	assert.False(t, got.Includes[0].Once, "Includes[0].Once must default to false when the key is omitted")
+	assert.NotContains(t, got.UnitOrder, "include", "[[include]] must not leak into UnitOrder")
+}
+
+// TestParseNoIncludes exercises the no-regression contract: an existing
+// single-file fixture (valid.toml) with no [[include]] tables has nil/empty
+// Model.Includes and unchanged Properties/UnitOrder/Units.
+func TestParseNoIncludes(t *testing.T) {
+	t.Parallel()
+
+	data, err := os.ReadFile("../../testdata/valid.toml")
+	require.NoError(t, err, "failed to read testdata/valid.toml")
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	// No [[include]] in valid.toml → Includes empty.
+	assert.Empty(t, got.Includes, "Includes must be empty for single-file models")
+
+	// Properties/UnitOrder/Units unchanged from existing behavior.
+	assert.Equal(t, "Test System", got.Properties.Name, "Properties.Name unchanged")
+	assert.Equal(t, []string{"user", "webapp"}, got.UnitOrder, "UnitOrder unchanged")
+	assert.Len(t, got.Units, 2, "Units count unchanged")
+}
+
