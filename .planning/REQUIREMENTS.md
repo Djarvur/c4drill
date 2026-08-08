@@ -69,19 +69,21 @@ Source research: [.planning/research/SUMMARY.md](research/SUMMARY.md) | [LikeC4 
 
 | REQ-ID | Phase | Success Criteria |
 |--------|-------|------------------|
-| PEG-01 | TBD | TBD |
-| PEG-02 | TBD | TBD |
-| PEG-03 | TBD | TBD |
-| PEG-04 | TBD | TBD |
-| CONV-01 | TBD | TBD |
-| CONV-02 | TBD | TBD |
-| CONV-03 | TBD | TBD |
-| CONV-04 | TBD | TBD |
-| CONV-05 | TBD | TBD |
-| INT-01 | TBD | TBD |
-| INT-02 | TBD | TBD |
-| INT-03 | TBD | TBD |
-| INT-04 | TBD | TBD |
-| DX-01 | TBD | TBD |
-| DX-02 | TBD | TBD |
-| DX-03 | TBD | TBD |
+| PEG-01 | 34 | bigbank.c4 parses via generated grammar.go; AST goldens lock typed node shape; `go generate` produces zero-runtime-dep code |
+| PEG-02 | 34 | AST golden tests on bigbank.c4 + minimal fixture lock typed nodes (File/Specification/Model/Element/Relationship/Property) carrying source line:column |
+| PEG-03 | 34 | `views {}`/`deployments {}`/`global {}` and unrecognized blocks parse-and-discard via explicit `UnknownBlock`/`UnknownStatement` recovery rules — no fatal |
+| PEG-04 | 34 | Parse failures surface `bigbank.c4:LINE:COL:` via the existing `*parser.ParseError` shape, not an opaque byte offset |
+| CONV-01 | 35 | Nested `{}` tree converts to dotted-path subunits (`Subunits` keyed by last segment + `SubunitOrder` in source order), structurally identical to `parser.parseUnitWithOrder` output |
+| CONV-02 | 35 | `<->` → TWO Links (Mirror:false, HS-1); `this`/`it`/sourceless `->` resolve to absolute paths (peer.Resolve no-op); kind concatenated into Link.Technology; unresolved ref = HARD error |
+| CONV-03 | 35 | Three-tier fuzzy kind table (exact → substring → box fallback); nesting-parent promotes to box; unknown kind NEVER a hard error |
+| CONV-04 | 35 | title→Name VERBATIM (bypasses Humanize, Pitfall 13); description/technology/link map to Description/Technology/Reference; reference rides v1.10 📖 marker |
+| CONV-05 | 35 | Per-element `style { shape: cylinder }` overrides UnitType; icon styles silently dropped (dev/shapes-no-icons) |
+| INT-01 | 36 | Stage 0 switch in `cmd/c4drill/root.go:runRoot` routes `.c4`/`.likec4`→converter, default→parser.ParseFile; every existing `.toml` fixture byte-identical (DI-1 canonical-DOT) |
+| INT-02 | 36 | `WarnCollector` dedups by construct TYPE to `os.Stderr`; survives `-o` redirection; one warning per type per file regardless of occurrence count |
+| INT-03 | 37 | `testdata/bigbank.c4` (228 lines) renders end-to-end without fatal, produces valid DOT via `canonical.Canonical` — the "render any model" proof |
+| INT-04 | 36 | Single-file `extend <element> {}` accumulates (not overwrites); cross-file workspace extend emits a one-line deferral warning (F-01) rather than fataling |
+| DX-01 | 37 | `skill/examples/10-likec4-bigbank.c4` runnable fixture; README "LikeC4 Compatibility" section documents routing + supported subset + dropped-with-warning set |
+| DX-02 | 37 | TOML↔LikeC4 cross-format equivalence golden (canonical-identical DOT); analog of v1.10 XC-05 |
+| DX-03 | 37 | `cmd/c4drill/root_test.go` CLI regression: `.c4` end-to-end (DOT+SVG on disk) AND `.toml` renders identically to v1.10 (backward-compat guard) |
+
+**Coverage:** 16/16 requirements mapped (100%). Phases 34-37, four phases total.
