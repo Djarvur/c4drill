@@ -1,243 +1,204 @@
-# Project Research Summary — v1.10 Model Composition
+# Project Research Summary — v1.11 LikeC4 Compatibility Layer
 
 **Project:** C4Drill (Go CLI rendering C4 diagrams from TOML)
-**Milestone:** v1.10 Model Composition
-**Features:** include directive · unit templates · TOML ergonomics (relative peer, optional name) · reference field
-**Researched:** 2026-08-08
-**Confidence:** HIGH (codebase citations live; capability matrices built from fetched authoritative docs)
-**Source docs:** [STACK.md](STACK.md), [FEATURES.md](FEATURES.md), [ARCHITECTURE-v1.10.md](ARCHITECTURE-v1.10.md), [PITFALLS.md](PITFALLS.md)
+**Milestone:** v1.11 LikeC4 Compatibility Layer (native-Go `.c4` parser → `*parser.Model`)
+**Researched:** 2026-08-08 (PEG override 2026-08-09)
+**Confidence:** HIGH
+**Source docs:** [STACK.md](STACK.md), [FEATURES.md](FEATURES.md), [ARCHITECTURE-v1.11.md](ARCHITECTURE-v1.11.md), [PITFALLS.md](PITFALLS.md), [likec4-dsl-brief.md](likec4-dsl-brief.md)
 
-> This summary supersedes the prior v1.1 "AI-Ready" SUMMARY.md. It is the single load-bearing document the roadmapper reads alongside `PROJECT.md` and `REQUIREMENTS.md`. The four source docs are NOT re-read downstream.
+> Supersedes the v1.10 "Model Composition" SUMMARY.md. The single load-bearing document the roadmapper and planner read. The four source docs are NOT re-read downstream. **The Pigeon (PEG) override in STACK.md/ARCHITECTURE-v1.11.md is BINDING and reflected throughout.**
 
 ---
 
 ## 1. Executive Summary
 
-v1.10 makes C4Drill compose a model from **multiple files**, **parametrized templates**, and **shorter, more readable TOML**, and adds per-element **hyperlinks**. The four features are independent at the data level (each adds fields or a parse pass) but form a strict **runtime pipeline** at integration time: `include → template-expand → relative-peer-resolve → validate → generate-views → render`. The headline decisions: **zero new dependencies** (everything is hand-rolled Go in ~150–200 lines); **hard-error everywhere on conflict** (no silent merge/override); a **Model-extension approach** that keeps validator/view/render untouched; and a **single GraphViz `URL` attribute** path for the reference field, making it the cheapest table-stakes item in the milestone. The two design forks most likely to cause silent corruption if left undecided are (a) deep-copy semantics for templates and (b) the resolution site for relative peers authored inside templates — both are HS items below and must be settled in the discuss phase.
+v1.11 adds a **Stage 0 converter** that accepts LikeC4 (`.c4` / `.likec4`) source and emits a structurally indistinguishable `*parser.Model`, so the entire v1.10 pipeline (`include.Resolve → template.Expand → peer.Resolve → Validate → view.Generate → graph.Build → render`) is reused verbatim. The converter is the ONLY code that knows LikeC4 was the source — no downstream package imports `internal/likec4`, and no `*parser.Model` field gains a "source format" tag. The north-star contract is "render any model, never fatal on unsupported constructs": `views {}`, `deployments {}`, icons, tags, and metadata are dropped with ONE deduplicated stderr warning per construct type.
+
+**Parser technology — LOCKED: Pigeon (PEG) v1.3.0.** The original STACK.md body recommended hand-written recursive-descent; the user overrode this. Pigeon is codegen-only (`go generate ./internal/likec4/`), and the generated `grammar.go` is self-contained Go — so the zero-runtime-dependency story survives. The accepted tradeoff is error recovery: Pigeon's recovery (via `state.Throw()` and labeled failures) is weaker than hand-written panic-mode skip-to-`}`. The milestone's headline "drop unsupported block with warning" contract must therefore be implemented as **explicit recovery rules in the PEG grammar** (e.g. `UnknownBlock ← Keyword "{" BlockBody* "}"` that consumes and discards), NOT merely absent productions. The roadmap budgets time for recovery-rule design.
+
+Key risks: (1) PEG recovery is harder to tune than hand-written — schedule a dedicated recovery-rule design spike; (2) the TOML byte-identical regression contract (every existing `.toml` fixture must render unchanged) is enforced by extension-dispatch BEFORE `parser.ParseFile`; (3) LikeC4 lexical-scope name resolution (`this`/`it`, sourceless `->`, cross-scope bubbling) DIVERGES from C4Drill's `peer.Resolve` ancestor-walk, so the converter must emit only absolute dotted paths and reduce `peer.Resolve` to a no-op for `.c4` input.
 
 ---
 
-## 2. Stack Decisions
+## 2. Stack Additions
 
-### Zero new external dependencies
+### PEG locked, zero runtime deps, go-cmp test-only
 
-All four features map onto the existing stack with small hand-rolled helpers at known integration points. The codebase's `Model`/`Unit`/`Link` structs are small and known-shape, so reflection-based or config-framework libraries are both unnecessary and riskier than targeted code.
+| Component | Version | Purpose | Why |
+|---|---|---|---|
+| **Pigeon (PEG)** | **v1.3.0** (Sep 2024) | Parser generator — `grammar.peg` → `grammar.go` via `go generate` | LOCKED by user override. Declarative reviewable grammar; mature Go codegen; codegen-only (not imported by production code). Accepted tradeoff: recovery is harder than hand-written. |
+| stdlib `slices` / `maps` | Go 1.26.1 | Dedup, ordering, contains | Already a project idiom (`parser.go:733`) |
+| `google/go-cmp` | **v0.7.0** (2025-01-14) | `cmp.Diff` + `cmpopts.EquateEmpty` for deep-AST golden diffs | NEW **test-only** dep. Existing `testify/assert.Equal` cannot match readable deep-struct diffs. |
 
-| Hand-roll | Why no library fits | Approx size |
-|---|---|---|
-| INCLUDE parse-merge | go-toml/v2 has no merge capability (verified through v2.4.3 release notes). The merge is a union of `Units` maps + append of `UnitOrder` + overlay of `Properties` — ~30 lines. `include_once` and cycle detection are bespoke regardless. | ~30 LOC |
-| Unit deep-copy (`Unit.Clone()`) | Reflection-based copiers (`mohae/deepcopy`, `jinzhu/copier`, `ulule/deepcopier`) **silently skip unexported fields** — would drop `Link.Mirror` (`link.go:67`, load-bearing for validator at `index.go:80` and graph at `builder.go:438`) and `Unit.SubunitOrder` (`unit.go:69`, `toml:"-"`). JSON round-trip loses both; gob round-trip works but is ~10× slower and forces `gob.Register`. | ~15 LOC |
-| `${param}` substitution | `text/template` brings a 95%-unused feature set plus template-injection surface. `strings.NewReplacer` is simpler, safer, and allocation-cheap for 2–4 params. | ~25 LOC |
-| Identifier humanization | No library fits: `stoewer/go-strcase` has no acronym awareness; `iancoleman/strcase`'s acronym support is forward-only (so reverse splitting yields screaming case, not title case). The domain is tiny (TOML keys), so a ~25-line splitter + small acronym table wins. | ~25 LOC |
-| Relative-peer resolution | `path.Join`/`path.Dir` from stdlib. Pure post-parse pass. | trivial |
-| Reference field | One new `string` field + SVG anchor render branch. | trivial |
+**Net new runtime dependencies: 0.** Pigeon output is self-contained Go — no CGO, no TypeScript/Node, no WASM, no grammar runtime. `testify` v1.11.1 stays as-is. Rejected: ANTLR4 (Java codegen toolchain, overkill), participle v2 (struct-tag model fights optional-`:`, flexible ordering, `this`/`it`), goyacc (legacy, 0 importers), `text/scanner` as lexer (now moot — PEG folds lexing in).
 
-**Rejected (with rationale):** viper (config framework, wrong shape); koanf (operates on generic maps, throws away typed parser — contingency only if merge grows arbitrary depth); all reflection/gob/json copiers (see above); `text/template` (overkill); `gobuffalo/validate` (C4Drill already has a purpose-built validator); strcase libraries (wrong direction for acronym handling).
-
-### One housekeeping bump
-
-`github.com/pelletier/go-toml/v2`: **v2.2.4 → v2.4.3** (latest, released 2026-07-05). The API surface C4Drill uses (`toml.Unmarshal`, `toml.Marshal`, `unstable.Parser`/`unstable.Table`/`expr.Key`) is stable across the range; notable v2.3.0 added "UnmarshalText fallbacks to struct unmarshaling for tables and arrays." Low-risk minor bump. **No merge/compose feature exists in any release** — confirms the hand-roll decision for INCLUDE.
-
-All other deps (go-graphviz on the `onokonem` replace, cobra, testify, levenshtein) stay at current lines. Go 1.26.1 stays.
+**PEG package layout** (`internal/likec4/`):
+```
+grammar.peg     # source of truth (declarative, reviewable, fuzzable)
+grammar.go      # GENERATED via `go generate` — do not edit
+ast.go          # AST node types returned by grammar action blocks
+convert.go      # AST → *parser.Model (unchanged keystone)
+kindmap.go      # kind string → model.UnitType fuzzy table
+resolve.go      # this/it/sourceless -> + dotted-path resolution at convert time
+warnings.go     # WarnCollector (dedup by construct type)
+likec4.go       # public entry: ParseFile / Parse / Convert
+```
 
 ---
 
 ## 3. Feature Classification
 
-From the capability matrices in FEATURES.md. **Table stakes** = absence feels broken; **Differentiator** = polish or genuine novelty vs comparable tools; **Anti-feature** = fights C4Drill's auto-generated-view / structured-TOML / single-shot-CLI philosophy.
+Condensed from FEATURES.md. North star: accept ANY valid LikeC4 source, drop unsupported with deduped warnings, NEVER crash.
 
-| Feature area | Table stakes | Differentiator | Anti-feature (do NOT ship) |
-|---|---|---|---|
-| **Include** | directive; transitive includes; **path relative to the including file**; cycle detection (fatal); **hard-error on duplicate unit path** | `once = true` (PlantUML `!include_once` — *essential* for the template-library use case, not optional in practice) | Terraform-override-style silent merge (breaks "TOML is source of truth"); partial import / namespacing; URL includes |
-| **Templates** | **named params** (not positional `${1}`); **trailing defaults**; **hard-error on missing required param** (no silent literal `${name}`); substitution into ALL string fields incl. `Link.Peer`, `reference` | **one-template-one-unit** (deliberate deviation from every precedent's multi-output; correct for structured TOML) | multi-output / `for_each` (fights structured TOML); nesting (resolution-order complexity); forward references (requires multi-pass); typed params |
-| **Ergonomics** | *(none)* — no comparable tool does either item | **relative-peer resolution** (genuinely novel: no surveyed tool does sibling-scope-walk); **optional `name`** with humanization (more aggressive than every peer — all require explicit names or explicit `title()`); walk-up precedence | acronym preservation (Terraform `title()` proves an unsolved tar pit — ship dumb camelCase split, escape via explicit `name`); compact-link string shorthand |
-| **Reference** | per-element URL field; clickable SVG via GraphViz `URL` attribute (near-zero cost — existing backend); **`reference` name** (collision-free — `link` is taken for relationships); HTML-shim coverage for Safari | 📖 visible affordance (matches repo's existing 🔍 collapsed-cluster indicator at `builder.go:258-261`) | URL over-validation (LikeC4 supports any URI scheme); link-specific tooltip (duplicates `description`); per-relationship URL; image/background property |
+**Table stakes (P1 — converter is DOA without these):**
+- Top-level block routing — `specification`/`model`/`views`/`deployment`/`global` dispatch; multiple blocks of same type concatenate
+- Lexical `{}` nesting → dotted-path subunits (parent-child is purely by braces; both `kind name {}` and `name = kind {}` reduce to same node)
+- `->` relationship parsing (infix `a -> b 'title' "desc" "tech"`; single AND double quoted strings)
+- `this`/`it`/sourceless `->` resolution to absolute paths at convert time
+- Kind name → UnitType fuzzy mapping (exact → substring → `box` fallback; level-adjusted for db/queue generics)
+- `title`/`description`/`technology` field mapping (with optional `:` after key)
+- Comments (`//`, `/* */`) — folded into PEG grammar
+- Graceful-degradation warning emitter (dedup by construct type)
+- Extension-based routing (`.c4`/`.likec4` → converter; `.toml` → existing parser) — zero new flags
+- Single-file `extend <element> {}` merging (accumulate per FQN, not overwrite)
+- Anti-feature drops: `views {}`, `deployments {}`, icons (silent), tags/metadata — each with dedup warning
 
-**Single most relevant borrowed idiom per feature:** Include ← PlantUML `!include_once`; Templates ← named+defaulted params (PlantUML `!procedure`, Jsonnet); Ergonomics ← *no precedent* (C4Drill is more aggressive than peers); Reference ← GraphViz `URL` attribute (zero-cost via existing go-graphviz).
+**Differentiators (P2 — add in v1.x when trigger fires):**
+- Relationship kind preservation in `technology` (`-[async]->` → `"async: HTTPS"`) — LOW cost
+- `<->` bidirectional as TWO `model.Link` entries with `Mirror: false` (PROJECT.md decision, NOT `Arrow: bidirectional`) — LOW cost
+- `link <url>` → `reference` field (first http(s) link only; rides v1.10 📖; non-http dropped) — LOW cost
+- Shape mapping override (`style.shape cylinder` → db; warn-once for no-analog shapes) — MEDIUM
+- `specification` kind-default metadata inheritance (bigbank case: `technology` on kind) — MEDIUM
+
+**Anti-features (explicitly DROPPED, do not re-litigate):**
+- `views {}` DSL + predicates + auto-layout + rank + `navigateTo` — fights auto-generation philosophy; one `views-block` warning
+- `deployment {}` / `deploymentNode` — no C4Drill analog; `deployment-block` warning
+- Icons (`icon`/`iconColor`/`iconSize`/`iconPosition`) — project is on `dev/shapes-no-icons`; DELIBERATELY removed in v1.6; silent drop
+- Tags/metadata visual rendering — no UI surface; `tags`/`metadata` warnings
+- Custom kind inheritance/subtyping — CONFIRMED NONEXISTENT in LikeC4; fuzzy mapper handles implicitly
+- File-level `import`/`#include` — CONFIRMED NONEXISTENT; multi-file rides v1.10 `[[include]]` if ever added
 
 ---
 
-## 4. Architecture
+## 4. Architecture Integration
 
-### The pipeline (extended)
+Stage 0 routing by file extension in `cmd/c4drill/root.go` (one-block `switch`): `.c4`/`.likec4` → `likec4.ParseFile(path, stderr)`; everything else → existing `parser.ParseFile` unchanged. The converter emits exactly the `*parser.Model` type — no DTO, no tagged union. Downstream `peer.Resolve` becomes a no-op for `.c4` output (converter pre-resolves all peers to absolute dotted paths); `template.Expand` and `include.Resolve` hit their empty-input fast-paths (LikeC4 has no templates or includes).
 
-```
-ParseFile ──▶ include.Resolve ──▶ template.Expand ──▶ peer.Resolve ──▶ [humanize-names] ──▶ Validate ──▶ views ──▶ render
-  (root.go:112)   (NEW ~:113)      (NEW ~:114)       (NEW ~:115)      (NEW, post-expand)   (:118)    (:209)     (:235)
-```
-
-The four features are **pure pre-processing passes inserted between Stage 1 (Parse) and Stage 2 (Validate)** in `cmd/c4drill/root.go:runRoot`. Each takes a `*parser.Model` and returns a `*parser.Model`. The post-chain model is structurally identical to a hand-authored single-file model.
-
-**Ordering is load-bearing for correctness** (not stylistic):
-
-1. **include first** — so templates defined in an included file are visible to the root's `[[use]]` (the "template isolation" motivating use case).
-2. **template-expand second** — so peers *inside* a templated unit exist before relative-peer resolution; a templated unit's relative links would otherwise resolve against a model missing the unit being expanded.
-3. **relative-peer third** — needs the fully assembled + expanded model to look up peer targets (peers can be forward references across files/templates).
-4. **humanize-names** — runs after expand (so templated units get humanized from their substituted instantiation key, not from `${name}`) and before validate (so validator error messages show final names).
-5. **validate last** — peer-existence (`rules.go:14`) and level checks (`rules.go:187`) must see the final, concrete unit set; the validator remains the single gatekeeper (STATE.md D-12).
-
-### Model-extension approach (not sidecar structs)
-
-**Dedicated fields on `parser.Model`, all `toml:"-"`, extracted in `Parse` from the raw map before the unit loop** — mirroring the existing `properties` extraction at `parser.go:68-77`:
-
+**Two-phase public API (Parse + Convert, `ParseFile` chains):**
 ```go
-type Model struct {
-    Properties model.Properties
-    UnitOrder  []string
-    Units      map[string]*model.Unit
-    // v1.10 composition fields (not read by validator/view/render):
-    Includes       []IncludeDirective   // [[include]] directives, file order
-    Templates      map[string]*TemplateDef  // [template.<name>] bodies
-    Instantiations []Instantiation      // [[use]] requests, file order
-}
+func ParseFile(path string, w io.Writer) (*parser.Model, error)  // chains Parse+Convert
+func Parse(src []byte) (*ast.File, error)                         // Pigeon-generated, pure
+func Convert(f *ast.File, w io.Writer) (*parser.Model, error)    // AST → Model, w receives warnings
 ```
+The split is mandatory for testability: PEG/AST golden tests must not require assembling a full `*parser.Model`.
 
-Sidecar structs (`IncludeGraph`, `TemplateLibrary`, …) were rejected because they would force changing the signatures of `validator.Validate`, the three `view.Generate*` functions, `collectExpandedPaths`, and every caller — wide blast radius for no gain.
+**Warning channel:** `WarnCollector` with `seen map[string]bool` keyed by construct TYPE (`deployment-block`, `views-block`, `metadata`, `tags`, `relationship-kind`, `style-block`, `element-extra-links`, …). Routed to `os.Stderr` directly (NOT `cmd.OutOrStderr()` — Cobra redirects that). One line per type per file; survives `-o` redirection. Required by ALL anti-features.
 
-### Unchanged consumers (confirmed by reading field accesses)
-
-- **`validator.Validate`** (`validator.go:16`) — calls `BuildIndex(m.Units, "")` at `:22`; reads **`m.Units` only**. All rules in `rules.go` operate on the flat index. **Zero change needed.**
-- **`view.GenerateC1View`/`C2`/`C3`/`ExpandedView`** (`scope.go:86/382/454/14`) — read `m.Units`, `m.UnitOrder` (with map-key fallback), `m.Properties`. **Zero change needed.**
-- **`render.*`** (`converter.go`, `labels.go`, `render.go`) — consume `*graph.Graph`, never `*parser.Model`. **Zero change needed** (the reference-field glyph is a *new* feature, not a forced change).
-- **`collectExpandedPaths`** (`root.go:156`) — reads `m.Units`. **Zero change needed.**
-
-The only existing function whose behavior must change is **`parser.Parse`** (`parser.go:47`) and **`captureDefinitionOrder`** (`parser.go:100`) — to extract the new reserved top-level tables (`include`, `template`, `use`) so they don't pollute the unit namespace.
+**Major components:**
+1. **`grammar.peg` + generated `grammar.go`** — lexes+parses LikeC4 → `*ast.File`. Recovery rules for unsupported blocks are explicit productions, not absent grammar.
+2. **`convert.go`** — keystone: walks AST element tree carrying `parentPath`, flattens braces → dotted `Subunits`/`SubunitOrder`, resolves `this`/`it`/sourceless `->` and bare names to absolute paths, maps kinds, drops anti-features, dedups warnings.
+3. **`likec4.go`** — thin public entry; chains Parse+Convert.
+4. **`cmd/c4drill/root.go`** — Stage 0 extension-dispatch switch (one new block).
 
 ---
 
-## 5. High-Severity Risks
+## 5. Watch Out For
 
-Both are flagged HS because they cause **silent corruption** — the model parses and renders without error but is wrong, and the failure surfaces far from its cause.
+Top pitfalls condensed from PITFALLS.md (16 total); PEG recovery tradeoff added from STACK.md.
 
-### HS-1: Deep-copy aliasing corrupts the template on the Nth instantiation
-
-**What.** Under templates Option B, the expansion pass deep-copies a template `Unit` and substitutes params. A *shallow* copy shares the template's `Subunits` map (pointers), `Links`/`LinksFrom`/`Expanded` slice headers (shared backing array). Mutating instantiation #1 then mutates the template, so instantiation #2 starts from a corrupted template.
-
-**Codebase-specific exposure.**
-
-- `Unit` (`unit.go:41-72`) has three aliasing fields: `Subunits map[string]*Unit` (`:71`, `toml:",inline"`), `Links []Link` (`:65`), `LinksFrom []Link` (`:67`), `Expanded []string` (`:63`).
-- **No existing deep-copy helper anywhere in the codebase** — the template feature introduces the first one.
-- **The validator mutates units in place**: `populateIncomingLinks` (`validator/index.go:53-84`) does `targetInfo.Unit.LinksFrom = append(targetInfo.Unit.LinksFrom, model.Link{... Mirror: true})` (`index.go:70-81`). `BuildIndex` stores pointers into the same `Model.Units` graph. With Go slice semantics, if a shared backing array has spare capacity, the append *mutates in place without reallocating* — instantiation #2 silently inherits instantiation #1's mirror links.
-- The graph builder reads these same shared structures (`builder.go:220,312` for subunits, `:360-367,410-434` for links, `:342` for `parent.Expanded`), so corruption propagates into rendered output.
-- `Link.Mirror` (`link.go:67`, `toml:"-"`) is set only by the validator. An encoder/round-trip copy would silently reset `Mirror=false`, re-breaking multiplicity counting (STATE.md D-05). **Do not round-trip-copy Links.**
-
-**Failure symptom.** First instantiation renders correctly; Nth renders with the first's name/links, or phantom mirror links appear, or output varies between runs depending on slice growth (non-deterministic, distinct from the documented go-graphviz layout nondeterminism).
-
-**Prevention.**
-
-- Hand-rolled recursive `Unit.Clone()` in `package model` (~15 lines, `slices.Clone` is already a project idiom at `parser.go:310`). Recursion allocates fresh `Subunits` map + each `*Unit`; copies `Links`/`LinksFrom` struct-by-struct so `Mirror` survives; allocates fresh `Expanded`.
-- **Ordering rule:** deep-copy the template *once per instantiation, then substitute, then discard the copy*. Treat the template registry as immutable after parse.
-- **Regression test (required, not optional):** instantiate the same template 3× with distinct params; assert (a) each instantiation's `Links[0].Description` differs, (b) re-running expansion a second time (idempotency) yields identical output, (c) after a full validate pass, two instantiations' `LinksFrom` slices are disjoint.
-
-**Phase:** the Templates implementation phase — this is THE core correctness concern of that feature.
-
-### HS-2: Relative-peer inside a template — template-parent vs instantiation-parent ambiguity
-
-**What.** A relative peer resolves against the unit's *structural parent*. When the link is authored *inside a template*, "parent" is ambiguous: the template's lexical parent (often none — templates are top-level data) or the instantiation site's parent (where `[[use]]` places the concrete unit). Wrong choice produces **silently wrong edges**.
-
-**Concrete case.** Template `[template.svc]` defines a link with `peer = "cache"`. Two instantiations under different parents: `[[use]] name=auth parent=mainSystem` and `[[use]] name=billing parent=otherSystem`, where both `mainSystem.cache` and `otherSystem.cache` exist. Instantiation-site resolution (recommended) gives `billing → otherSystem.cache` (correct). Template-site resolution either fails or resolves both to the *same* `cache`, fabricating a cross-system edge that renders and validates without complaint.
-
-**Prevention.**
-
-- **Decision (Design Fork — see §6):** relative peers authored in a template resolve against the **instantiation site's** structural parent, never the template's lexical location. Templates are data, not structural location.
-- **Fallback order:** relative-first (search the unit's own parent's direct children), then absolute-fallback (if `peer` contains `.` OR exactly matches a top-level path, treat as absolute). This is the backward-compat contract: every existing model uses absolute peers and resolves identically.
-- **Ambiguity at a single depth is a hard error**, not first-match. "Nearest wins" is for *nesting depth*, not for *ties at the same depth*.
-- Implement as a **separate pass that rewrites `Link.Peer` in place** on the post-expansion model before `BuildIndex`/validation, so the validator's existing absolute-path logic is untouched.
-- **Test:** template with relative peer instantiated under two different parents; assert each link resolves to its own parent's sibling, not a shared global.
-
-**Phase:** Relative-peer implementation phase — the resolution-site decision must be settled in the discuss phase first (see §6).
-
-### BC-1: Parser treats unknown keys as subunits — in TWO places
-
-**What.** Adding top-level `[template.*]` / `[include]` / `[[use]]` tables without parser changes produces **phantom units** named `template`/`include`/`use` — the validator then emits confusing errors like "unit 'template' has type system which cannot have subunits" or "unit 'include' has no incoming or outgoing links".
-
-**Two coordinated parser changes required:**
-
-1. **`captureDefinitionOrder`** (`parser.go:100`, skip rule at `:128` currently only skips `properties`): extend the skip to also skip `[include]`, `[[include]]`, `[template.*]`, `[[use]]`. Without this, `[template.microservice]` (`len(parts)==2`) registers `microservice` under parent `template` in `subunitOrders["template"]`.
-2. **`isBuiltinField`** (`parser.go:309-316`): the allowlist distinguishing struct fields from subunits. **Adding `reference` here is a safe one-liner** (leaf field). But adding `template`/`include`/`use` here is **not** a substitute for change #1 — the two functions have independent detection logic.
-
-The `Parse` loop must extract these reserved tables from `rawMap` before the unit-processing loop (`:80`), exactly as `properties` is extracted at `:68-77`. Rejecting user units literally named `template`/`include`/`use` is itself a design fork (BC-2 — reserved-word collision policy).
+1. **PEG recovery is harder than hand-written** — the "drop unsupported block with warning" contract must be explicit recovery rules (`UnknownBlock ← Keyword "{" BlockBody* "}"`), NOT absent productions. Budget a recovery-rule design spike. Pigeon `state.Throw()` + labeled failures are the mechanism.
+2. **`<->` MUST be two links with `Mirror: false`** (Pitfall 7) — NOT `Arrow: bidirectional`. PROJECT.md decision; validator multiplicity logic and unexported `Link.Mirror` (HS-1 concern) assume this. Gate with a bidirectional-edge regression test.
+3. **`this`/`it`/sourceless `->` + cross-scope bubbling resolve to the WRONG scope** (Pitfalls 4, 5, 14) — never defer to `peer.Resolve` (its D-13 ancestor-walk diverges from LikeC4's lexical bubbling). Converter builds full FQN index, two-pass, emits ONLY absolute dotted paths; `peer.Resolve` becomes a no-op. A miss is a hard error (genuine corruption).
+4. **TOML byte-identical regression** (Pitfall 6) — dispatch by extension BEFORE `parser.ParseFile`; converter must NOT modify `parser.Model`/`model.Unit`/`model.Link` struct defs; canonical-DOT goldens are the gate.
+5. **Humanize title trap** (Pitfall 13) — always set `Unit.Name` from LikeC4 title verbatim (`gRPC` stays `gRPC`); never leave `Name` empty for the parser to humanize (no acronym preservation → "Grpc").
+6. **`->` is grammar-ambiguous** (Pitfall 1) — same `->` means relationship (in `model`/element-body) vs. view predicate (in `views`/`view-body`, must DROP) vs. incoming-edge wildcard (sourceless). Carry a parser context stack; emit links only in `model`/`element-body`.
+7. **Optional `:` and quote styles** (Pitfall 2) — `description "x"` AND `description: "x"` both valid (bigbank mixes them); single `'...'`, double `"..."`, AND triple `'''...'''`/`"""..."""` must all tokenize as one string category.
+8. **Absolute-peer contract** (Pitfall 14) — converter emits only absolute dotted paths; `peer.Resolve`'s D-16 gate (`strings.Contains(peer, ".")`) short-circuits them untouched.
+9. **Warning UX** (Pitfall 11) — dedup per TYPE not per occurrence; route to `os.Stderr` directly (never stdout — `-f dot` writes DOT to stdout); must survive `-o` redirection.
+10. **Source-line tracking** (Pitfall 12) — every AST node carries its `.c4` source line; converter errors embed original line, never generated-model line; reuse `*parser.ParseError` shape.
 
 ---
 
-## 6. Design Decisions Required (for discuss phase)
+## 6. Single Most Relevant Borrowed Idiom / Decision Per Area
 
-These forks cannot be resolved by implementation care — the wrong default is silent corruption or a broken backward-compat guarantee. Each should land as a STATE.md decision-log entry when the discuss phase resolves it.
-
-1. **HS-2: Relative-peer resolution site for template-authored links.** *Recommended: instantiation-site parent.* The single most consequential design decision for the milestone.
-2. **RP-2 / HS-2 wording: "relative-first" semantics.** Clarify it means relative-search-first *for peers that are not already valid absolute paths* — NOT "rewrite all peers as relative." Pin the exact gate: bare name + no `.` + not a top-level key + not already in index.
-3. **TM-2: Forward-reference policy for templates.** *Recommended: allow* (free under Option B — the template registry is built from the fully-parsed Model before any `[[use]]` is processed). The "before use" intuition comes from textual-preprocessor references (Option A / go-metadot) and does not apply to structured post-parse expansion.
-4. **TM-5: Unresolved `${param}` policy.** *Recommended: error* (strictness is a feature; structured post-parse gives the affordance). PlantUML/go-metadot leave literals — C4Drill should NOT.
-5. **HU-1: Humanization approach and acronym allowlist.** *Recommended: `golang.org/x/text/cases` + hand-rolled C4-relevant acronym allowlist* (`gRPC`, `API`, `IDP`, `OAuth`, `SAML`, `REST`, `GraphQL`, `SQL`, …). Pure hand-roll or "require explicit `name`, no humanize" are the alternatives. The allowlist contents are themselves a mini-decision.
-6. **BC-1 / BC-2: Directive-table naming and reserved-word collision policy.** Bare `[include]`/`[template]`/`[use]` (ergonomic, collides with rare legacy units named `use`) **vs** namespaced `[c4.include]`/`[c4drill.template]` (collision-proof, uglier). Backward-compat is non-negotiable, so (b) namespaced or (a) collision-detection are preferred over (c) reserve-and-accept-tiny-break.
-7. **IN-2: `UnitOrder`/`SubunitOrder` merge semantics across included files.** *Recommended:* top-level = root units in definition order, then each included file's units appended in include directive order; subunits = included files may append subunits to a root-defined unit, with same-name conflict = hard error.
-8. **IN-3: Diamond-include behavior without `once`.** *Recommended: include-twice-and-error-on-dup* (signals the author to add `once=true`); the diamond is legal, not a cycle. Cycle detection uses a **stack** (current chain); `once` dedup uses a **global visited-set** — distinct data structures.
-
----
-
-## 7. Cross-Feature Dependencies
-
-```
-include ──enables──► template-isolation   (template libs in their own file, included with once=true)
-include ──enables──► large-model-split    (one file per domain)
-
-template-expand ──requires──► reference field exists            (templates carry parametrized reference URLs)
-template-expand ──requires──► relative-peer resolved AFTER expand (templated links use ${name} in peer)
-template-expand ──constrains──► one-template-one-unit           (so ${name} peer substitution is well-defined)
-
-relative-peer ──consumes──► template expansion output            (peers inside templated units must resolve)
-relative-peer ──orthogonal──► include                           (runs on the merged model; file origin irrelevant)
-
-reference ──orthogonal──► include, relative-peer                 (just a field on the merged unit)
-reference ──consumes──► template param substitution              (reference = "https://wiki/${name}" must substitute)
-
-validate ──consumes──► all four                                  (runs last, on the fully assembled + expanded + resolved model)
-render   ──consumes──► reference field                          (emits GraphViz URL attribute)
-```
-
-**The six concrete interaction cases the plan must test:** (1) template + reference parametrization; (2) include + templates (the motivating use case — `templates.toml` + `[[include]] once=true` + `[[use]]`); (3) template + relative-peer (`peer = "${name}Bus"` — pipeline order required); (4) include + UnitOrder concatenation (templates slot at the use-site's position, not the definition's); (5) optional-name + templates (humanization runs on the instantiation key, not the template segment); (6) reference + render format (📖 marker and SVG `<a>` must render in both `-f svg` and `-f html`; the HTML JS shim must handle external `reference` URLs distinctly from internal drill-down URLs — Safari silently ignores SVG `<a>` for navigation).
+| Area | Borrowed idiom / decision | Source |
+|---|---|---|
+| Parser tech | **Pigeon (PEG) v1.3.0 — codegen-only, generated parser is self-contained Go.** Recovery via `state.Throw()` + explicit recovery rules, not absent productions. | STACK.md addendum |
+| AST-golden testing | `google/go-cmp` `cmp.Diff` + `cmpopts.EquateEmpty` for deep-struct equality | STACK.md (test-only dep) |
+| Scope/name resolution | **Two-pass: build FQN index first, resolve references second; emit only absolute paths.** Mirrors JS lexical-scope + hoisting; do NOT rely on `peer.Resolve`. | PITFALLS.md #5, #14 |
+| Flattening | `pathTracker` `(parentFullDottedPath, childName)` collision detection; `SubunitOrder` in source order | `template/expand.go` pattern, PITFALLS.md #9 |
+| Kind mapping | Three-tier fuzzy table (exact → substring contains → `box` fallback) + `inferGenericType` level-adjustment for db/queue generics | ARCHITECTURE-v1.11 kindmap.go |
+| Name field | LikeC4 `title` → `Unit.Name` verbatim; omit only to let `model.Humanize` derive from identifier (v1.10 ERGO-03) — but ONLY when no title | PITFALLS.md #13 |
+| Warnings | `WarnCollector` with `seen map[string]bool` keyed by construct TYPE; `os.Stderr` direct; one line per type per file | ARCHITECTURE-v1.11 warnings.go |
+| Pipeline convergence | Emit structurally-indistinguishable `*parser.Model`; reuse `include`/`template`/`peer` empty-input fast-paths as no-ops | ARCHITECTURE-v1.11 Pattern 2 |
+| TOML safety | Extension-dispatch BEFORE `parser.ParseFile`; converter never touches shared struct defs | PITFALLS.md #6 |
+| Test corpus | `testdata/bigbank.c4` (228 lines, 10 kinds, 3 nesting levels, 25 relationships, 8 views) as the single regression gate | FEATURES.md, DSL brief §10 |
 
 ---
 
-## 8. Suggested Phase Breakdown
+## 7. Suggested Phase Breakdown
 
-v1.9 shipped as **Phase 27** (`ROADMAP.md:8`). Runtime dependency is `include → template → peer → validate`; the **build/ship order prioritizes low-risk independent work first**. Each pass is independently shippable (each is a no-op for models that don't use the feature).
+Each phase is independently shippable; converter is a no-op for `.toml` inputs (TOML never enters the new code path).
 
 | Phase | Name | Goal | Depends on |
 |---|---|---|---|
-| **28** | **Reference field (📖)** | External-docs URL on units: `Unit.Reference`; `isBuiltinField` allowlist update; `buildNode` glyph (Option A — append 📖 to label, matches 🔍 precedent at `builder.go:260`); `Node.ReferenceURL`; README + skill + example. | None — fully independent, parallelizable. |
-| **29** | **Optional `name` humanization** | Derive display name from last path segment when `name` omitted: humanize function in parser/model; `Unit.Name` fallback at parse time; acronym allowlist; docs. | None — parallelizable with 28. |
-| **30** | **Relative-peer resolution** | Short `peer` names resolve against enclosing parent: `internal/peer/Resolve`; hook in `runRoot` stage 1c; relative-first / absolute-fallback; tests + saira re-measure; backward-compat corpus test. | None (ships as a no-op pass for absolute-only models). |
-| **31** | **Template expansion** | `[template.*]` define + `[[use]]` instantiate: `Model.Templates`/`.Instantiations` fields; `captureDefinitionOrder` skip for `template`/`use`; `internal/template/Expand` (deep-copy + `${param}` substitution into Unit + Link fields); drain instantiations into `Units`/`UnitOrder`; **HS-1 regression test**. | Benefits from 30 (templated links can be relative); ships with absolute peers if 30 slips. |
-| **32** | **Include directive (multi-file)** | Assemble model from multiple files: `Model.Includes` field; `captureDefinitionOrder` skip for `include`; `internal/include/Resolve` (recursive merge, cycle detection via stack, `Once` via visited-set); merge rules (Units union/conflict-error, `UnitOrder` concatenate, Properties root-wins, Templates union). | 31 — the "template isolation" use case is the primary motivation; include must carry `Templates` through the merge. |
-| **33** | **Docs sweep + end-to-end golden tests** | Update `README.md` / `skill/SKILL.md`; add `skill/examples/06-templates.toml`, `07-include/`; golden test: 3-file model produces same SVG (order-insensitive canonicalDOT comparator per STATE.md) as equivalent single-file model. | 30–32. |
+| **P1** | **PEG grammar + recovery-rule design spike** | `grammar.peg` covering `specification`/`model`/element bodies/`->`; explicit `UnknownBlock`-style recovery rules; generated `grammar.go`; `ast.go`; `Parse` API; AST golden tests on `bigbank.c4`. | None — de-risk PEG recovery first. |
+| **P2** | **Convert keystone + kind map + name resolution** | `convert.go`, `kindmap.go`, `resolve.go`, `warnings.go`; `Convert` API; absolute-peer emission; `<->` → two links; kind fuzzy map; `extend` merge. | P1 (consumes AST). |
+| **P3** | **Public entry + CLI wiring + integration regression** | `likec4.go` (`ParseFile`); `root.go` Stage 0 switch; canonical-DOT regression on `bigbank.c4`; TOML byte-identical goldens; warning stderr/`-o` tests; pipeline no-op tests for `template.Expand`/`include.Resolve`. | P2. |
 
-**Parallelization:** Phases 28 and 29 touch disjoint code (`model/unit.go` + `graph/builder.go` + `render` vs parser humanization) and can proceed in parallel. Phases 30–32 are sequential due to the runtime ordering constraint.
+**Phase ordering rationale:** Grammar + recovery first because PEG recovery is the new risk surface; if it can't drop `views {}` cleanly with a warning, the design must change before convert is built. Convert before CLI wiring because convert is the integration keystone emitting `*parser.Model`; it must be gated on `bigbank.c4` before the dispatch switch touches `root.go`. CLI wiring last (one-block diff) so the TOML byte-identical contract is enforceable the moment dispatch lands.
 
-**Parser-change prerequisite:** whichever of include/templates lands first needs the **two coordinated parser changes** (BC-1: `captureDefinitionOrder` skip + `Parse` rawMap extraction + `isBuiltinField` for `reference`). Land this as its own small, well-tested change before building features on top.
+### Research Flags
+- **P1 (PEG recovery):** Pigeon recovery semantics need a focused spike — `state.Throw`, labeled failures, `UnknownBlock`-style consuming productions. Schedule extra time.
+- **P2 (scope bubbling):** LikeC4 lexical-scope + hoisting resolution is the hardest sub-component (Pitfall 5, HIGH recovery cost if broken). Two-pass design mandatory.
 
----
-
-## 9. Watch Out For
-
-The top items from PITFALLS, beyond the two HS risks and the parser change:
-
-- **HS-1 (templates):** no existing deep-copy helper in the codebase; the validator mutates `LinksFrom` in place (`index.go:70-81`) — without a correct `Unit.Clone()` the second template instantiation silently inherits the first's state. Three-instantiation regression test is the acceptance criterion.
-- **HS-2 (relative-peer in templates):** settle the resolution-site decision (instantiation-parent, not template-parent) in the discuss phase before implementing.
-- **BC-1 (phantom units):** the parser treats unknown keys as subunits in TWO independent places (`captureDefinitionOrder` AND `isBuiltinField`) — coordinate both; `reference` is the only safe single-line addition.
-- **BC-2 (reserved-word collision):** decide bare vs namespaced directive-table naming in discuss phase; backward-compat for legacy units named `use` is the constraint.
-- **BC-3 (strict mode):** go-toml/v2 is non-strict by default and must **stay non-strict** — `DisallowUnknownFields()` is load-bearing OFF because the inline-subunit trick (`unit.go:71`, `toml:",inline"`) depends on unknown keys being silently accepted. Add a guard comment.
-- **IN-3 (diamond includes):** a diamond (A→B, A→C, B→D, C→D) is **not a cycle** — use a stack for cycle detection, a separate opt-in visited-set for `once`. Max depth cap (e.g. 100) as defense-in-depth.
-- **IN-5 / IN-4 (path resolution):** resolve every include path relative to the *including file's* directory (universal convention), not cwd — "works on my machine, breaks in CI" is the classic failure. Canonicalize paths via `filepath.Abs` + `filepath.Clean` before pushing on the stack/set.
-- **TM-1 (path collision):** two `[[use]]` blocks producing the same unit path silently overwrite — expansion must hard-error naming both definitions before insertion.
-- **TM-5 (unresolved `${param}`):** after substitution, scan string fields for any remaining `${...}` and error — no silent literals (PlantUML/go-metadot leave them; C4Drill should not).
-- **TM-3 (recursion):** template nesting is disallowed — add an expansion-depth cap (e.g. 100) as defense-in-depth even with the ban.
-- **RP-2 (backward-compat):** the relative-resolution pass must be a **no-op for every existing model** — corpus test asserting the `(source, resolved-peer)` set is byte-identical to today is the acceptance criterion. Gate: relative-search fires only when the peer is bare + has no `.` + isn't a top-level key + isn't already in the index.
-- **HU-2 (humanize ordering):** humanization runs AFTER template expansion (so it sees the final substituted name/key, not `${name}`) and only when `name` is empty (explicit `name` always wins).
-- **Golden comparisons:** all multi-file/template golden tests must use the **order-insensitive canonicalDOT** comparator (sort-normalize, strip layout geometry) per STATE.md — NOT byte-exact `require.Equal`. Multi-file and templates add another axis of ordering variance on top of the documented go-graphviz nondeterminism.
+### Standard Patterns (skip research-phase)
+- P3 CLI wiring — well-documented Cobra + `os.Stderr` idiom; one-block diff.
 
 ---
 
-*Synthesis for: C4Drill v1.10 Model Composition milestone*
-*Researched: 2026-08-08*
+## 8. Confidence Assessment
+
+| Area | Confidence | Notes |
+|------|------------|-------|
+| Stack (PEG locked) | HIGH | User decision; Pigeon v1.3.0 verified on pkg.go.dev; zero-runtime-dep story confirmed |
+| Features | HIGH | Grounded in likec4-dsl-brief.md + bigbank.c4 canonical example + `internal/model/unit.go` |
+| Architecture | HIGH | Reuses v1.10 pipeline verbatim; Stage 0 dispatch is one-block diff; converter/kindmap/resolve/warnings design unchanged by PEG override |
+| Pitfalls | HIGH | 16 pitfalls grounded in repo source (`parser.go`, `unit.go`, `link.go`, `peer/resolve.go`, `include/merge.go`, `root.go`) |
+
+**Overall confidence:** HIGH
+
+### Gaps to Address
+- **PEG recovery-rule design:** Pigeon's `state.Throw`/labeled-failure recovery for the "drop unsupported block" contract needs a P1 spike to validate the pattern works for `views {}` / `deployment {}` / nested unknown blocks. Fallback: grammar productions that consume-and-discard plus a `WarnCollector` call in the action block.
+- **Cross-scope bubbling edge cases:** Two-pass FQN resolution handles common cases (bigbank); pathological ambiguities (same short name in two sibling scopes) may need a hard-error policy decision during P2.
+- **`extend relationship` form:** `extend a -> b {}` — drop-with-warning policy documented but grammar production needs validation.
+
+---
+
+## 9. Sources
+
+### Primary (HIGH confidence)
+- `.planning/research/STACK.md` — Go parser/converter stack; **PEG override addendum is BINDING**
+- `.planning/research/FEATURES.md` — LikeC4→C4Drill feature translation landscape
+- `.planning/research/ARCHITECTURE-v1.11.md` — Stage 0 integration architecture; **PEG override notice in header**; converter/kindmap/resolve/warnings design unchanged
+- `.planning/research/PITFALLS.md` — 16 critical pitfalls grounded in repo source
+- `.planning/research/likec4-dsl-brief.md` — DSL grammar reference (§1-10, background)
+- `internal/parser/parser.go`, `errors.go`, `parser_test.go` — existing TOML pipeline, `ParseError` shape, `inferGenericType`, Humanize hook
+- `internal/model/unit.go`, `link.go`, `humanize.go` — C4Drill model types, `Subunits`/`SubunitOrder`, unexported `Link.Mirror`
+- `internal/peer/resolve.go` — D-13/14/15/16 ancestor-walk, absolute-path gate
+- `internal/include/merge.go`, `internal/template/expand.go` — empty-input fast-paths, `pathTracker` collision pattern, HS-1 Mirror preservation
+- `cmd/c4drill/root.go` — Stage 0 dispatch site (~`:117`), `cmd.OutOrStderr()` pattern
+- [pkg.go.dev — mna/pigeon](https://pkg.go.dev/github.com/mna/pigeon) — v1.3.0, codegen-only, failure-label recovery
+- [pkg.go.dev — google/go-cmp](https://pkg.go.dev/github.com/google/go-cmp) — v0.7.0 (2025-01-14), test-only
+
+### Secondary (MEDIUM confidence)
+- likec4.dev DSL docs (specification/model/relationships/views/styling/deployment/extend)
+- `github.com/likec4/likec4/apps/playground/src/examples/bigbank/bigbank.c4` — 228-line canonical real-world example
+
+### Tertiary (LOW confidence)
+- Web search: no native-Go LikeC4 or C4-family DSL parser exists (official is TS/Langium; structurizr Go hits are TS/Chevrotain) — high confidence in build-from-scratch
+
+---
+*Synthesis for: C4Drill v1.11 LikeC4 Compatibility Layer milestone*
+*Researched: 2026-08-08 (PEG override 2026-08-09)*
 *Ready for roadmapper + planner: yes*
