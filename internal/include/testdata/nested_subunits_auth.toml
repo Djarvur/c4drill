@@ -1,6 +1,12 @@
 # Included half of the D-10 subunit fixture (Plan 32-02).
-# These subunit tables attach to the [linuxSystem] parent declared in
-# nested_subunits_main.toml (cross-file subunit merge, D-10).
+# Declares [linuxSystem] (the parent also declared in the entry file) with auth
+# and db subunits. include.Resolve detects the parent already exists in the
+# entry and attaches ONLY the subunits, appending to the parent's
+# Subunits/SubunitOrder in include-file order (D-10 cross-file subunit merge).
+
+[linuxSystem]
+type = "system"
+name = "Linux System"
 
 [linuxSystem.auth]
 type = "container"

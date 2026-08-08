@@ -37,14 +37,30 @@ func writeFiles(t *testing.T, files map[string]string) string {
 
 // parseAndResolve is the common harness: ParseFile the entry, then Resolve.
 // entryDir is filepath.Dir(entryPath) so [[include]] paths resolve relative to
-// the including file (INC-02).
+// the including file (INC-02). The entry filename is threaded into Resolve so
+// error attribution names the real entry file.
+//
+//nolint:wrapcheck // the resolver returns *parser.ParseError; tests inspect it unwrapped
 func parseAndResolve(t *testing.T, entryPath string) (*parser.Model, error) {
 	t.Helper()
 
 	entry, err := parser.ParseFile(entryPath)
 	require.NoError(t, err, "ParseFile(%s) should not error", entryPath)
 
-	return include.Resolve(entry, filepath.Dir(entryPath))
+	return include.Resolve(entry, filepath.Dir(entryPath), entryPath)
+}
+
+// fixturePath returns an absolute path to a committed fixture under
+// internal/include/testdata. Tests that use committed fixtures (rather than
+// writeFiles) MUST resolve an absolute path, because t.Parallel() runs them
+// concurrently and the cd-proof test mutates the process cwd.
+func fixturePath(name string) string {
+	abs, err := filepath.Abs(filepath.Join("testdata", name))
+	if err != nil {
+		panic("failed to resolve fixture path: " + err.Error())
+	}
+
+	return abs
 }
 
 // requireParseError asserts err is a *parser.ParseError and returns it.
@@ -67,7 +83,7 @@ func requireParseError(t *testing.T, err error) *parser.ParseError {
 func TestResolveTwoFilesMerge(t *testing.T) {
 	t.Parallel()
 
-	merged, err := parseAndResolve(t, "testdata/main.toml")
+	merged, err := parseAndResolve(t, fixturePath("main.toml"))
 	require.NoError(t, err, "Resolve should merge without error")
 
 	// Both files' top-level units present.
@@ -134,9 +150,9 @@ name = "Lib Two"
 // file from two different working directories yields identical merged
 // Units/UnitOrder, because paths resolve relative to the including file's dir
 // (not CLI cwd).
+//
+//nolint:paralleltest // t.Chdir mutates process-global cwd; cannot run in parallel
 func TestResolveRelativePathIndependentOfCwd(t *testing.T) {
-	t.Parallel()
-
 	dir := writeFiles(t, map[string]string{
 		"entry.toml": `
 [properties]
@@ -156,24 +172,17 @@ name = "Guest"
 `,
 	})
 
-	originalCwd, err := os.Getwd()
-	require.NoError(t, err, "Getwd")
-
-	t.Cleanup(func() {
-		_ = os.Chdir(originalCwd)
-	})
-
 	entryPath := filepath.Join(dir, "entry.toml")
 
-	// First resolve from the original cwd.
-	require.NoError(t, os.Chdir(os.TempDir()), "chdir to TempDir for first resolve")
+	// First resolve from os.TempDir.
+	t.Chdir(os.TempDir())
 
 	mergedFromTempDir, err := parseAndResolve(t, entryPath)
 	require.NoError(t, err, "Resolve from TempDir")
 
-	// Second resolve from a completely different cwd.
+	// Second resolve from a completely different cwd (t.Chdir auto-restores).
 	otherDir := t.TempDir()
-	require.NoError(t, os.Chdir(otherDir), "chdir to a different temp dir")
+	t.Chdir(otherDir)
 
 	mergedFromOtherDir, err := parseAndResolve(t, entryPath)
 	require.NoError(t, err, "Resolve from a different cwd")
@@ -499,7 +508,7 @@ path = "ghost.toml"
 func TestMergeCrossFileSubunits(t *testing.T) {
 	t.Parallel()
 
-	merged, err := parseAndResolve(t, "testdata/nested_subunits_main.toml")
+	merged, err := parseAndResolve(t, fixturePath("nested_subunits_main.toml"))
 	require.NoError(t, err, "cross-file subunit merge should not error")
 
 	// Parent is a top-level unit with the two included subunits attached.
