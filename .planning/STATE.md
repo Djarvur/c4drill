@@ -102,6 +102,7 @@ Fixed the two root-cause bugs:
 
 - **Add 'reference' field to C4 units with 📖 marker** (`tooling`) — `.planning/todos/pending/2026-08-08-add-reference-field-to-units.md`. Optional per-unit URL field (LikeC4 `link` port; only LikeC4 feature adopted). Units with non-empty `reference` render a 📖 symbol. Rejected: custom kinds, tags, icons, metadata, deployment model, user-authored views.
 - **TOML authoring ergonomic improvements** (`tooling`) — `.planning/todos/pending/2026-08-08-toml-authoring-ergonomic-improvements.md`. Three independent fixes (relative `peer` resolution, optional `name`, compact `link`) as the TOML-native alternative to a rejected custom DSL. Sequenced: relative peer first, optional name second, compact link deferred.
+- **Document that `type` is omittable** (`docs`) — `.planning/todos/pending/2026-08-08-document-type-inference-omittable.md`. Type inference already exists (parser.go:250/:276) but is underused by authors; pure docs work in README.md + skill/SKILL.md + example comments. Companion to the ergonomic-improvements todo.
 
 ## Operator Next Steps
 
