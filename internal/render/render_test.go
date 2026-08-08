@@ -227,6 +227,12 @@ func TestReferenceNavShim(t *testing.T) {
 	// Internal drill-down still navigates the same tab.
 	assert.Contains(t, s, "window.location.href",
 		"nav shim must keep window.location.href for internal drill-down navigation")
+	// T-28-02: a generic scheme detector MUST appear so javascript:/data:/
+	// vbscript: URIs are no-ops, not fall-through to window.location.href
+	// (which would execute javascript: URIs). The regex anchors on a leading
+	// scheme prefix and is the gate that prevents XSS via the reference URL.
+	assert.Contains(t, s, "[a-z][a-z0-9",
+		"nav shim must carry a generic scheme detector so javascript:/data: are no-ops (T-28-02)")
 }
 
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
