@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.10
 milestone_name: Model Composition
 status: executing
-last_updated: "2026-08-08T18:16:36.718Z"
-last_activity: 2026-08-08 -- Phase 30 planning complete
+last_updated: "2026-08-08T18:31:57.191Z"
+last_activity: 2026-08-08 -- Phase 33 planning complete
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 9
-  completed_plans: 3
-  percent: 33
+  completed_phases: 3
+  total_plans: 13
+  completed_plans: 5
+  percent: 38
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-08-08)
 Phase: 30
 Plan: Not started
 Status: Ready to execute
-Last activity: 2026-08-08 -- Phase 30 planning complete
+Last activity: 2026-08-08 -- Phase 33 planning complete
 
 Progress: [███░░░░░░░] 25%
 
@@ -65,6 +65,7 @@ The five todos in `.planning/todos/pending/` (reference field, ergonomics, type-
 - **ERGO-06 (compact-link shorthand) at-risk:** research SUMMARY §3 flags it a v1.10 anti-feature; mapped to Phase 29 for coverage but discuss must decide confirm-vs-defer-to-v2.
 - **Parser BC-1 prerequisite:** whichever of templates/include lands first needs coordinated `captureDefinitionOrder` (parser.go:100) + `Parse` rawMap extraction changes so `template`/`include`/`use` tables don't become phantom units. Landed as Plan 1 of Phase 31. `reference` is the only safe single-line `isBuiltinField` addition (Phase 28).
 - **KNOWN LIMITATION (cosmetic, deferred):** boundary nodes in C3 clusters draw inside the cluster box (go-graphviz WASM cgraph `agsubnode` on edge creation reassigns root nodes to the cluster subgraph; compound=true doesn't help). Out of scope for v1.10.
+- **Phase 33 EXECUTION blocked on Phases 31 + 32 (PLANNING complete, execution must wait):** Phase 33 is fully planned (4 plans, 33-01..33-04, waves 1+2). Plans 01/02/03 (canonicalDOT helper extraction, fixtures, docs) can execute independently of 31/32. **Plan 04 (XC-05 + XC-01 E2E tests) CANNOT execute until Phases 31 (template.Expand) and 32 (include.Resolve) ship** — its tests reference `include.Resolve` and `template.Expand` which do not exist yet (verified: `internal/template/` and `internal/include/` absent as of 2026-08-08). Plan 04 declares this as a PRE-CONDITION gate; execute-phase must refuse Plan 04 until 31/32 are Complete. Phase 30 (peer.Resolve) is essentially done (landed at root.go:122). Do NOT auto-advance Phase 33 to execute until 31+32 ship.
 
 ## Deferred Items
 

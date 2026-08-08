@@ -155,7 +155,16 @@ Plans:
   4. The pipeline ordering `include → template-expand → relative-peer-resolve → humanize → validate → generate-views → render` is enforced in code and a test detects reordering as a regression (XC-01)
 
 **Notes**: Hosts the cross-cutting integration tests whose feature code landed in earlier phases — XC-02's end-to-end test (include+template), XC-04's humanize-after-expand regression, XC-05's full multi-file golden. All multi-file/template goldens MUST use the order-insensitive canonicalDOT comparator, NOT byte-exact `require.Equal` (go-graphviz layout nondeterminism + an added ordering axis from multi-file/templates).
-**Plans**: TBD
+
+**Plans**:
+- `33-01` — Reusable canonicalDOT helper extraction (D-18): extract `internal/graph/builder_test.go:1249-1591` (canonicalDOT + dotStatement + 12 helpers + 3 WR-01/WR-2 regression tests) into `internal/testutil/canonical/` package so it is importable from `cmd/c4drill/` tests. Switch the 2 existing goldens (COMPAT-02, REF-05) to the import. Wave 1.
+- `33-02` — Example fixtures (D-17, DOC-03): author `skill/examples/06-templates.toml`, `07-relative-peer.toml`, `08-include/` (3 files), `09-composed/` (4 files incl. hand-expanded single-file equivalent). Wave 1.
+- `33-03` — Documentation gap-fill (D-19, DOC-01, DOC-02): add Optional Type Inference + Templates + Multi-File Composition + Relative Peer sections to README.md; expand Type defaults + add Pipeline Ordering + 3 feature schema sections to skill/SKILL.md. Fills gaps only — does NOT rework Phase 28/29 docs. Wave 1.
+- `33-04` — XC-05 golden + XC-01 behavioral E2E tests (D-18, D-20): `TestXC05_ComposedEquivSingleFile` (composed multi-file ≡ hand-expanded single-file, canonicalDOT) + `TestXC01_PipelineOrdering` (behavioral ordering guard proving include→template.Expand→peer.Resolve is load-bearing via XC-02 + XC-03 assertions). Wave 2 *(blocked on Wave 1 completion; CROSS-PHASE blocked on Phases 30-32 shipping — references include.Resolve/template.Expand which do not exist until 31/32 land)*.
+
+**Cross-cutting constraints**:
+- `canonical.Canonical` (STATE.md DI-1) — every DOT comparison in Plan 04 uses the order-insensitive canonicalizer extracted in Plan 01; never byte-exact `require.Equal` on raw DOT.
+- Pipeline ordering `include.Resolve → template.Expand → peer.Resolve → humanize → validate → views → render` — Plan 04's XC-01 test enforces this behaviorally; reordering any pass breaks the composed-fixture render.
 
 ## Progress
 

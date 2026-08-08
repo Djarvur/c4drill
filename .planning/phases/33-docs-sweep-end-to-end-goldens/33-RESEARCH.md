@@ -397,7 +397,9 @@ name, not ${param}) and before validate (so error messages show final names).
 
 **If this table is empty:** N/A — 4 assumptions flagged for executor verification. A2 is the only one with non-trivial risk; the others are low-risk and align with CONTEXT discretion leans.
 
-## Open Questions
+## Open Questions (RESOLVED — disposition in plans)
+
+Both items are executor-verifiable at execution time (they depend on Phases 30-32 shipped code, which is not yet executing when this plan is authored). Neither blocks planning; both have concrete resolution paths encoded in Plan 04.
 
 1. **Exact Phase 29 humanize implementation site**
    - What we know: Phase 29 is Complete (ROADMAP). XC-04 (humanize-after-expand) is assigned to Phase 31 with "end-to-end test in 33". The pipeline note says humanize runs after expand, before validate.
