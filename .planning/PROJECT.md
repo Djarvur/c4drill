@@ -43,6 +43,14 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 - ✓ Optional `name` humanization (ERGO-03/04/05): when a unit omits `name`, the display name is derived from the last path segment via `model.Humanize` — a dumb camelCase split with no acronym preservation (`gRPC` → "Grpc", `IDPToken` → "Idp Token", but trailing pure-upper runs like `localIDP` → "Local IDP" are preserved). Explicit `name =` always wins; existing fixtures parse byte-identically. Zero new deps (stdlib only). Parse-time hook; Phase 31's XC-04 relocates the call to a post-expansion pass.
 
+### Validated in Phase 30 (v1.10)
+
+- ✓ Relative-peer resolution (ERGO-01/02): a bare `peer` value resolves against the enclosing parent's children (the host's siblings), walking up ancestry nearest-first to root; absolute peers (containing `.`) are untouched; a miss at root is a hard error. Ships as a pure pre-parse pass (`internal/peer.Resolve`) between Parse and Validate; absolute-only models parse identically (backward-compat hard contract).
+
+### Validated in Phase 31 (v1.10)
+
+- ✓ Unit templates (TMPL-01..10, XC-03, XC-04): `[template.<name>]` declares a parametrized unit + subunit subtree with named params; `[[use]]` instantiates it N times supplying ALL params (no defaults — missing any is a hard error). `internal/template.Expand` runs between ParseFile and peer.Resolve (pipeline: Parse → Expand → peer.Resolve → Validate), deep-copying each instantiation via hand-rolled recursive `Unit.Clone()` that preserves the unexported `Link.Mirror` (HS-1 — the validator mutates LinksFrom in place). `${param}` substitutes into every string field (Name, Description, Technology, Reference, Color, Link fields) via `strings.NewReplacer`; duplicate-path and residual-token are hard errors. Forward references work. BC-1 parser prerequisite (captureDefinitionOrder skip + rawMap extraction) landed in Plan 01. Three-instantiation regression test (disjoint LinksFrom post-validate + idempotent re-expand) is the HS-1 gate.
+
 ## Current Milestone: v1.10 Model Composition
 
 **Goal:** Expand C4Drill's authoring model from a single static TOML file into a composable, parametrized, multi-file format — while preserving backward compatibility and the auto-generated-view philosophy.
@@ -225,4 +233,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-08 — Phase 29 (optional name humanization) complete*
+*Last updated: 2026-08-08 — Phase 31 (template expansion) complete*
