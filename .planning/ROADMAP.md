@@ -31,7 +31,7 @@ Full details: [milestones/v1.9-ROADMAP.md](milestones/v1.9-ROADMAP.md)
 
 - [x] **Phase 28: Reference field (📖)** - Per-unit external-docs URL; renders a clickable 📖 marker via GraphViz `URL` (completed 2026-08-08)
 - [x] **Phase 29: Optional name humanization** - Omit `name`; display name derived from identifier (camelCase split); +at-risk compact-link (completed 2026-08-08)
-- [ ] **Phase 30: Relative-peer resolution** - Short `peer` names resolve against the enclosing parent; absolute-fallback preserves backward-compat
+- [x] **Phase 30: Relative-peer resolution** - Short `peer` names resolve against the enclosing parent; absolute-fallback preserves backward-compat (completed 2026-08-08)
 - [ ] **Phase 31: Template expansion** - `[template.*]` define + `[[use]]` instantiate parametrized units (deep-copy + `${param}`); parser BC-1 prerequisite
 - [ ] **Phase 32: Include directive (multi-file)** - `[[include]]` assembles a model from multiple TOML files (merge, cycle detection, `once`)
 - [ ] **Phase 33: Docs sweep + end-to-end goldens** - Document all four features; prove multi-file+templates+peers ≡ single-file
@@ -96,7 +96,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 30-02-PLAN.md — Wire `peer.Resolve` into `cmd/c4drill/root.go` Parse→Validate gap + pipeline/CLI integration tests
+- [x] 30-02-PLAN.md — Wire `peer.Resolve` into `cmd/c4drill/root.go` Parse→Validate gap + pipeline/CLI integration tests
 
 ### Phase 31: Template expansion
 
@@ -166,7 +166,7 @@ Phases 28, 29, 30 are independent and parallelizable. Phases 31 → 32 are seque
 |-------|-----------|----------------|--------|-----------|
 | 28. Reference field | v1.10 | 1/1 | Complete    | 2026-08-08 |
 | 29. Optional name humanization | v1.10 | 2/2 | Complete    | 2026-08-08 |
-| 30. Relative-peer resolution | v1.10 | 1/2 | In Progress|  |
+| 30. Relative-peer resolution | v1.10 | 2/2 | Complete   | 2026-08-08 |
 | 31. Template expansion | v1.10 | 0/TBD | Not started | - |
 | 32. Include directive | v1.10 | 0/TBD | Not started | - |
 | 33. Docs sweep + goldens | v1.10 | 0/TBD | Not started | - |
