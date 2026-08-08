@@ -192,6 +192,17 @@ func parseUnitWithOrder(
 	// Infer level-specific type for generic types (db, queue)
 	unit.Type = inferGenericType(unit.Type, parentType)
 
+	// v1.10 ERGO-03/05: derive the display name from the identifier segment
+	// when the author omits `name`. Explicit name = always wins (backward
+	// compat). `name` is parseUnitWithOrder's first arg — already the last
+	// path segment for both top-level units and nested subunits, so this one
+	// hook covers both. Phase 31's XC-04 relocates this call to a
+	// post-template-expansion pass so templated units humanize from their
+	// substituted key, not the literal "${...}" segment.
+	if unit.Name == "" {
+		unit.Name = model.Humanize(name)
+	}
+
 	// Process subunits in the provided order
 	if len(subunitOrder) > 0 {
 		unit.Subunits = make(map[string]*model.Unit)
