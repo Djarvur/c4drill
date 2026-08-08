@@ -63,8 +63,11 @@ Plans:
   2. Humanization is a dumb camelCase split — `sessionManager` → "Session Manager", `gRPC` → "Grpc"; acronym preservation is explicitly out of scope (Terraform `title()` proves it unsolved), authors escape via explicit `name =`
   3. An explicit `name = "..."` always wins over humanization — every existing model renders identically to v1.9 (backward-compat hard contract)
   4. *(AT-RISK — ERGO-06)* A common single edge can be written on one line instead of the multi-line array-of-tables form. **Research SUMMARY §3 flags compact-link shorthand as a v1.10 anti-feature; the discuss phase must decide confirm-in-v1.10 vs defer-to-v2.** If deferred, ERGO-06 moves to Future Requirements and this criterion drops.
-**Notes**: Humanization runs AFTER template expansion and BEFORE validation (XC-04, enforced when the humanize hook lands in runRoot). See research §6 HU-1 for the humanize-approach + acronym-allowlist design fork to settle in discuss.
-**Plans**: TBD
+**Notes**: Humanization runs AFTER template expansion and BEFORE validation (XC-04 — enforced in Phase 31 when the humanize hook relocates to a post-expansion pass; Phase 29 ships a parse-time fallback since templates do not exist yet, and `model.Humanize` is the stable artifact Phase 31 reuses). The research §6 HU-1 acronym-allowlist design fork is **resolved against the allowlist** by ERGO-04 (dumb split, no acronyms) — see 29-CONTEXT.md D-01. **ERGO-06 (compact-link shorthand) is deferred to Future Requirements** per research SUMMARY §3 (classified a v1.10 anti-feature) and the original todo's sequencing ("defer #3; re-evaluate after #1+#2"); success criterion 4 drops.
+**Plans**:
+- `29-01` (wave 1, TDD): `model.Humanize` + parse-time `Unit.Name` fallback in `parseUnitWithOrder`; covers ERGO-03/04/05. Zero new deps; validator/view/render untouched.
+- `29-02` (wave 2, depends on 29-01): README + skill/SKILL.md docs for optional `name` + humanize rules + acronym escape hatch.
+- **Wave 2** *(blocked on Wave 1 completion)*
 
 ### Phase 30: Relative-peer resolution
 **Goal**: Users can write short `peer` values that resolve against the enclosing parent block, eliminating repetitive absolute paths.
