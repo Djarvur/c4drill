@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.10
 milestone_name: Model Composition
-status: Phase 28 planned (1 plan, wave 1) — ready for execute-phase
-last_updated: "2026-08-08T00:00:00.000Z"
-last_activity: 2026-08-08 — Phase 28 plan-phase complete (28-01-PLAN.md, REF-01..05 covered)
+status: Phase 28 planned — ready for execute-phase
+last_updated: "2026-08-08T17:01:06.480Z"
+last_activity: 2026-08-08 — Phase 28 plan-phase complete (single plan covers REF-01..05; checker passed all applicable dimensions)
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 1
+  total_plans: 2
   completed_plans: 0
   percent: 0
 ---
@@ -75,6 +75,6 @@ The five todos in `.planning/todos/pending/` (reference field, ergonomics, type-
 
 ## Session Continuity
 
-Last session: 2026-08-08T16:44:37.934Z
-Stopped at: Phase 31 context gathered
-Resume file: .planning/phases/31-template-expansion/31-CONTEXT.md
+Last session: 2026-08-08T17:01:06.454Z
+Stopped at: Phase 32 context gathered
+Resume file: .planning/phases/32-include-directive-multi-file/32-CONTEXT.md
