@@ -49,7 +49,10 @@ Full details: [milestones/v1.9-ROADMAP.md](milestones/v1.9-ROADMAP.md)
   4. A unit WITHOUT a `reference` field renders exactly as before — byte-identical to v1.9 output (backward-compat hard contract)
   5. Any unit type (system, container, db, queue, person, box) accepts the optional `reference` field
 **Notes**: `isBuiltinField` (parser.go:309) gets the one safe single-line addition for `reference`. No `captureDefinitionOrder` change needed (reference is a leaf field, not a reserved table). This is the cheapest table-stakes item per research §3.
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 28-01-PLAN.md — Add `Unit.Reference` field + isBuiltinField entry; render 📖 glyph via buildNode/buildClusterLabel; wire external URL through Node.ReferenceURL + cn.SetURL; branch htmlNavShim for external http(s) vs internal drill-down; backward-compat canonical-DOT golden; README/SKILL docs + example fixtures
 
 ### Phase 29: Optional name humanization
 **Goal**: Users can omit the `name` field and get a readable display name derived from the unit's identifier, reducing boilerplate.
