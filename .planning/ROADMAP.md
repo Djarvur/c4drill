@@ -133,7 +133,7 @@ Phases 28, 29, 30 are independent and parallelizable. Phases 31 → 32 are seque
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 28. Reference field | v1.10 | 1/1 | Complete    | 2026-08-08 |
-| 29. Optional name humanization | v1.10 | 0/TBD | Not started | - |
+| 29. Optional name humanization | v1.10 | 1/2 | In Progress|  |
 | 30. Relative-peer resolution | v1.10 | 0/TBD | Not started | - |
 | 31. Template expansion | v1.10 | 0/TBD | Not started | - |
 | 32. Include directive | v1.10 | 0/TBD | Not started | - |
