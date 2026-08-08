@@ -29,7 +29,7 @@ Full details: [milestones/v1.9-ROADMAP.md](milestones/v1.9-ROADMAP.md)
 **Coverage:** 40/40 v1.10 requirements mapped ✓
 **Build/ship order:** low-risk independent work first (28, 29, 30 parallelizable); templates then include follow the runtime pipeline (31 → 32); docs + integration goldens last (33).
 
-- [ ] **Phase 28: Reference field (📖)** - Per-unit external-docs URL; renders a clickable 📖 marker via GraphViz `URL`
+- [x] **Phase 28: Reference field (📖)** - Per-unit external-docs URL; renders a clickable 📖 marker via GraphViz `URL` (completed 2026-08-08)
 - [ ] **Phase 29: Optional name humanization** - Omit `name`; display name derived from identifier (camelCase split); +at-risk compact-link
 - [ ] **Phase 30: Relative-peer resolution** - Short `peer` names resolve against the enclosing parent; absolute-fallback preserves backward-compat
 - [ ] **Phase 31: Template expansion** - `[template.*]` define + `[[use]]` instantiate parametrized units (deep-copy + `${param}`); parser BC-1 prerequisite
@@ -52,7 +52,7 @@ Full details: [milestones/v1.9-ROADMAP.md](milestones/v1.9-ROADMAP.md)
 **Plans**: 1 plan
 
 Plans:
-- [ ] 28-01-PLAN.md — Add `Unit.Reference` field + isBuiltinField entry; render 📖 glyph via buildNode/buildClusterLabel; wire external URL through Node.ReferenceURL + cn.SetURL; branch htmlNavShim for external http(s) vs internal drill-down; backward-compat canonical-DOT golden; README/SKILL docs + example fixtures
+- [x] 28-01-PLAN.md — Add `Unit.Reference` field + isBuiltinField entry; render 📖 glyph via buildNode/buildClusterLabel; wire external URL through Node.ReferenceURL + cn.SetURL; branch htmlNavShim for external http(s) vs internal drill-down; backward-compat canonical-DOT golden; README/SKILL docs + example fixtures
 
 ### Phase 29: Optional name humanization
 **Goal**: Users can omit the `name` field and get a readable display name derived from the unit's identifier, reducing boilerplate.
@@ -127,7 +127,7 @@ Phases 28, 29, 30 are independent and parallelizable. Phases 31 → 32 are seque
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 28. Reference field | v1.10 | 0/TBD | Not started | - |
+| 28. Reference field | v1.10 | 1/1 | Complete   | 2026-08-08 |
 | 29. Optional name humanization | v1.10 | 0/TBD | Not started | - |
 | 30. Relative-peer resolution | v1.10 | 0/TBD | Not started | - |
 | 31. Template expansion | v1.10 | 0/TBD | Not started | - |

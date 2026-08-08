@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.10
 milestone_name: Model Composition
-status: executing
-last_updated: "2026-08-08T17:03:51.750Z"
-last_activity: 2026-08-08 -- Phase 31 planning complete
+status: verifying
+last_updated: "2026-08-08T17:12:23.746Z"
+last_activity: 2026-08-08
 progress:
   total_phases: 6
-  completed_phases: 0
-  total_plans: 3
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 4
+  completed_plans: 1
+  percent: 17
 ---
 
 # Project State
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-08)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** v1.10 Model Composition — Phase 28 (Reference field) ready to discuss/plan.
+**Current focus:** Phase 28 — reference-field
 
 ## Current Position
 
-Phase: 28 of 33 (v1.10 spans phases 28-33)
-Plan: 28-01 (planned, wave 1, autonomous)
-Status: Ready to execute
-Last activity: 2026-08-08 -- Phase 31 planning complete
+Phase: 28 (reference-field) — EXECUTING
+Plan: 1 of 1
+Status: Phase complete — ready for verification
+Last activity: 2026-08-08
 
-Progress: [░░░░░░░░░░] 0% of v1.10
+Progress: [███░░░░░░░] 25%
 
 **Build order:** 28 / 29 / 30 are independent & parallelizable → 31 (templates, carries BC-1 parser change) → 32 (include) → 33 (docs + integration goldens).
 
@@ -43,6 +43,7 @@ Progress: [░░░░░░░░░░] 0% of v1.10
 | Phase | Plans | Notes |
 |-------|-------|-------|
 | 28-33 (v1.10) | 0 done | Not started |
+| Phase 28 P01 | 15 min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,10 @@ The five todos in `.planning/todos/pending/` (reference field, ergonomics, type-
 
 ## Session Continuity
 
-Last session: 2026-08-08T17:01:06.454Z
-Stopped at: Phase 32 context gathered
-Resume file: .planning/phases/32-include-directive-multi-file/32-CONTEXT.md
+Last session: 2026-08-08T17:12:08.766Z
+Stopped at: Completed 28-01-PLAN.md (reference field)
+Resume file: None
+
+## Decisions
+
+- [Phase 28]: Phase 28 reference field ships: per-unit `reference` URL renders a clickable 📖 marker via GraphViz native URL attr; external reference wins the single URL slot over drill-down; HTML shim routes external http(s)// to a new tab and no-ops non-http(s) schemes (T-28-02 hardening). Leaf-field isBuiltinField addition only — NO captureDefinitionOrder change (BC-1). REF-05 proven by the unchanged multilevel golden (canonical-DOT, DI-1). — ARCHITECTURE-v1.10.md §6 (6) Option A and the plan locked decisions. multilevel.toml intentionally NOT modified to preserve the COMPAT-02 golden as the REF-05 backward-compat proof; cluster-label + both-present precedence covered by dedicated unit tests instead.

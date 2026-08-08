@@ -49,11 +49,11 @@ Source research: [.planning/research/SUMMARY.md](research/SUMMARY.md)
 
 ### REF — Reference field
 
-- [ ] **REF-01**: A unit may carry an optional `reference` field whose value is a URL (external doc, runbook, ADR, etc.).
-- [ ] **REF-02**: A unit with a non-empty `reference` renders a visible **📖** marker so readers can see at a glance which elements have external documentation.
-- [ ] **REF-03**: The 📖 marker (or the node) is clickable in SVG output, linking to the reference URL via GraphViz's native `URL` attribute.
-- [ ] **REF-04**: The reference field renders correctly in both `-f svg` and `-f html` output; the HTML JS shim handles external `reference` URLs distinctly from internal drill-down navigation (Safari silently ignores SVG `<a>` for navigation).
-- [ ] **REF-05**: Units without a `reference` render exactly as before (backward-compat).
+- [x] **REF-01**: A unit may carry an optional `reference` field whose value is a URL (external doc, runbook, ADR, etc.).
+- [x] **REF-02**: A unit with a non-empty `reference` renders a visible **📖** marker so readers can see at a glance which elements have external documentation.
+- [x] **REF-03**: The 📖 marker (or the node) is clickable in SVG output, linking to the reference URL via GraphViz's native `URL` attribute.
+- [x] **REF-04**: The reference field renders correctly in both `-f svg` and `-f html` output; the HTML JS shim handles external `reference` URLs distinctly from internal drill-down navigation (Safari silently ignores SVG `<a>` for navigation).
+- [x] **REF-05**: Units without a `reference` render exactly as before (backward-compat).
 
 ### DOC — Documentation
 
