@@ -51,7 +51,18 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 - ✓ Unit templates (TMPL-01..10, XC-03, XC-04): `[template.<name>]` declares a parametrized unit + subunit subtree with named params; `[[use]]` instantiates it N times supplying ALL params (no defaults — missing any is a hard error). `internal/template.Expand` runs between ParseFile and peer.Resolve (pipeline: Parse → Expand → peer.Resolve → Validate), deep-copying each instantiation via hand-rolled recursive `Unit.Clone()` that preserves the unexported `Link.Mirror` (HS-1 — the validator mutates LinksFrom in place). `${param}` substitutes into every string field (Name, Description, Technology, Reference, Color, Link fields) via `strings.NewReplacer`; duplicate-path and residual-token are hard errors. Forward references work. BC-1 parser prerequisite (captureDefinitionOrder skip + rawMap extraction) landed in Plan 01. Three-instantiation regression test (disjoint LinksFrom post-validate + idempotent re-expand) is the HS-1 gate.
 
-## Current Milestone: v1.10 Model Composition
+### Validated in Phase 32 (v1.10)
+
+- ✓ Include directive (INC-01..10, XC-02): `[[include]]` array-of-tables pulls in other TOML files relative to the including file's directory (INC-02); transitive, cycle-detected (fatal), flat-merge (no namespacing); `once=true` visited-set dedup (INC-06); cross-file subunits (D-10 — included file re-declares parent, subunits attach); root-file-wins properties (INC-08); 3-arg `include.Resolve(entry, entryDir, entryFile)` runs as Stage 1a so templates in included files are visible to `[[use]]` (XC-02). Parser `IncludeDirective` type + `Model.Includes` field + BC-1 captureDefinitionOrder skip landed in Plan 01; resolver + merge + pipeline wiring in Plan 02.
+
+### Validated in Phase 33 (v1.10) — milestone integration + docs
+
+- ✓ Reusable canonicalDOT helper (D-18): `internal/testutil/canonical.Canonical(t, dot)` extracted from `internal/graph/builder_test.go` into a non-`_test.go` package, importable from any `_test.go` file in the repo. DI-1 contract preserved (parse DOT, strip layout geometry bb/pos/lp/lheight/lwidth/height/width, sort statements + attributes recursively, order-insensitive). 4 WR-01/WR-02 regression tests moved with it; 2 existing goldens (COMPAT-02, REF-05) switched to the import.
+- ✓ Documentation gap-fill (DOC-01, DOC-02, D-19): README.md + skill/SKILL.md gain the omittable-`type` inference tables, Templates/Multi-File Composition/Relative Peer sections, and a Pipeline Ordering note. Phase 28/29 docs untouched (fill-gaps-only).
+- ✓ Example fixtures (DOC-03, D-17): `skill/examples/06-templates.toml`, `07-relative-peer.toml`, `08-include/` (3 files), `09-composed/` (4 files incl. hand-expanded single-file equivalent). All 5 runnable fixtures render cleanly through the full v1.10 pipeline.
+- ✓ End-to-end composition proofs (XC-01, XC-05, D-20): `TestXC05_ComposedEquivSingleFile` proves composed multi-file ≡ hand-expanded single-file (canonicalDOT, 3872 bytes identical); `TestXC01_PipelineOrdering` is a behavioral guard that the pipeline order include → template.Expand → peer.Resolve is load-bearing (covers XC-02 + XC-03). Both use `canonical.Canonical` (DI-1), never byte-exact `require.Equal`.
+
+## Current Milestone: v1.10 Model Composition — COMPLETE (2026-08-08)
 
 **Goal:** Expand C4Drill's authoring model from a single static TOML file into a composable, parametrized, multi-file format — while preserving backward compatibility and the auto-generated-view philosophy.
 
@@ -233,4 +244,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-08 — Phase 31 (template expansion) complete*
+*Last updated: 2026-08-08 — v1.10 milestone complete (Phase 33 final phase shipped)*
