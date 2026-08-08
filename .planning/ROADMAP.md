@@ -109,7 +109,9 @@ Plans:
 **Notes**:
 - **DISCUSS-PHASE BLOCKER (design forks — MUST settle before planning):** merge semantics for `UnitOrder`/`SubunitOrder` across files (IN-2/INC-09), diamond-include behavior without `once` (IN-3/INC-05), directive-table naming + reserved-word collision policy for legacy units named `use` (BC-2 — bare vs namespaced; backward-compat non-negotiable).
 - `captureDefinitionOrder` skip for `[[include]]` already landed in Phase 31 Plan 1 (shared parser change). This phase adds `Model.Includes` field + `internal/include/Resolve` (recursive merge, cycle detection via stack, `Once` via visited-set).
-**Plans**: TBD
+**Plans**:
+- `32-01` — IncludeDirective extraction (parser-side): `IncludeDirective` type + `Model.Includes` field + `[[include]]` rawMap extraction in `Parse` (consumes the Phase 31 BC-1 skip; does NOT re-touch `captureDefinitionOrder`). Wave 1.
+- `32-02` — `internal/include` package + pipeline wiring: `resolve.go` (recursive Resolve with cycle stack, once/diamond visited-set, missing-file hard-error) + `merge.go` (per-field struct-union per D-09/D-10/D-11/INC-08) + comprehensive tests + `cmd/c4drill/root.go` Stage 1a insertion. Wave 2 *(blocked on Wave 1 completion)*.
 
 ### Phase 33: Docs sweep + end-to-end goldens
 **Goal**: All four features are documented with runnable examples and proven to compose correctly end-to-end.
