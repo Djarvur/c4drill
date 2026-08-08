@@ -39,6 +39,10 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 - ✓ `reference` field (📖): optional per-unit external-docs URL renders a clickable marker via GraphViz native `URL` attribute; external reference wins the single URL slot over drill-down; HTML shim routes external http(s)// to a new tab and no-ops non-http(s) schemes (XSS hardening); no-reference models render byte-identical to v1.9 (canonical-DOT golden)
 
+### Validated in Phase 29 (v1.10)
+
+- ✓ Optional `name` humanization (ERGO-03/04/05): when a unit omits `name`, the display name is derived from the last path segment via `model.Humanize` — a dumb camelCase split with no acronym preservation (`gRPC` → "Grpc", `IDPToken` → "Idp Token", but trailing pure-upper runs like `localIDP` → "Local IDP" are preserved). Explicit `name =` always wins; existing fixtures parse byte-identically. Zero new deps (stdlib only). Parse-time hook; Phase 31's XC-04 relocates the call to a post-expansion pass.
+
 ## Current Milestone: v1.10 Model Composition
 
 **Goal:** Expand C4Drill's authoring model from a single static TOML file into a composable, parametrized, multi-file format — while preserving backward compatibility and the auto-generated-view philosophy.
@@ -221,4 +225,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-08 — Phase 28 (reference field 📖) complete*
+*Last updated: 2026-08-08 — Phase 29 (optional name humanization) complete*

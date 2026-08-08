@@ -42,10 +42,10 @@ Source research: [.planning/research/SUMMARY.md](research/SUMMARY.md)
 
 - [ ] **ERGO-01**: A `peer` value resolves *relative to the enclosing parent block* when it is a bare name (no `.`) that matches a sibling unit — e.g. inside `[linuxSystem.localIDP]`, `peer = "sessionManager"` resolves to `linuxSystem.localIDP.sessionManager`.
 - [ ] **ERGO-02**: Relative resolution falls back to absolute when the peer contains a `.` OR exactly matches a top-level unit path OR does not resolve as a relative sibling — so every existing model with absolute peers parses identically (backward-compat is a hard contract).
-- [ ] **ERGO-03**: The `name` field is optional — when omitted, the display name is derived from the last path segment of the unit's identifier (e.g. `localIDP` → "Local IDP", `sessionManager` → "Session Manager").
-- [ ] **ERGO-04**: Humanization is a dumb camelCase split — acronym preservation is explicitly out of scope (Terraform's `title()` proves it's an unsolved tar pit); `gRPC` humanizes to "Grpc" and authors escape via explicit `name =`.
-- [ ] **ERGO-05**: Explicit `name =` always wins over humanization (backward-compat for every existing model).
-- [ ] **ERGO-06**: A compact one-liner link shorthand is available so common edges (peer + optional technology/description) are writable without the multi-line array-of-tables form — exact syntax TBD in discuss/plan, but the authoring cost of a single edge drops from 3+ lines to 1.
+- [x] **ERGO-03**: The `name` field is optional — when omitted, the display name is derived from the last path segment of the unit's identifier (e.g. `localIDP` → "Local IDP", `sessionManager` → "Session Manager").
+- [x] **ERGO-04**: Humanization is a dumb camelCase split — acronym preservation is explicitly out of scope (Terraform's `title()` proves it's an unsolved tar pit); `gRPC` humanizes to "Grpc" and authors escape via explicit `name =`.
+- [x] **ERGO-05**: Explicit `name =` always wins over humanization (backward-compat for every existing model).
+- [x] **ERGO-06**: A compact one-liner link shorthand is available so common edges (peer + optional technology/description) are writable without the multi-line array-of-tables form — exact syntax TBD in discuss/plan, but the authoring cost of a single edge drops from 3+ lines to 1.
 
 ### REF — Reference field
 
