@@ -47,6 +47,8 @@ type Unit struct {
 	Description string `toml:"description"`
 	// Technology describes the technology used (NOT for person types).
 	Technology string `toml:"technology"`
+	// Reference is an optional external documentation URL (📖). Empty when unset.
+	Reference string `toml:"reference"`
 	// Color is the background color of the unit.
 	Color string `toml:"color"`
 	// Style is the visual style of the unit.

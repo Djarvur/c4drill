@@ -903,3 +903,125 @@ name = "Gamma Container"
 	assert.Equal(t, "gamma", system.SubunitOrder[2], "third subunit should be gamma")
 }
 
+// TestReferenceField_PreservesURL exercises REF-01: a TOML unit authored with a
+// `reference` key parses into Unit.Reference carrying the exact string (no scheme
+// enforcement, preserved verbatim).
+func TestReferenceField_PreservesURL(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Reference Test"
+
+[webapp]
+type = "system"
+name = "Web Application"
+reference = "https://example.com/runbook"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	webapp, ok := got.Units["webapp"]
+	require.True(t, ok, "missing 'webapp' unit")
+	assert.Equal(t, "https://example.com/runbook", webapp.Reference, "webapp.Reference should preserve the URL exactly")
+}
+
+// TestReferenceField_EmptyEqualsOmitted exercises REF-01 empty-equals-omitted:
+// both an absent `reference` key and `reference = ""` parse into Unit.Reference == "".
+func TestReferenceField_EmptyEqualsOmitted(t *testing.T) {
+	t.Parallel()
+
+	// Case 1: no `reference` key at all.
+	dataNoKey := []byte(`
+[properties]
+name = "Reference Test"
+
+[without]
+type = "system"
+name = "Without Reference"
+`)
+	gotNoKey, err := parser.Parse(dataNoKey)
+	require.NoError(t, err, "Parse() should not error for the no-key case")
+	without, ok := gotNoKey.Units["without"]
+	require.True(t, ok, "missing 'without' unit")
+	assert.Equal(t, "", without.Reference, "absent reference key should parse to empty string")
+
+	// Case 2: explicit empty `reference = ""`.
+	dataEmpty := []byte(`
+[properties]
+name = "Reference Test"
+
+[empty]
+type = "system"
+name = "Empty Reference"
+reference = ""
+`)
+	gotEmpty, err := parser.Parse(dataEmpty)
+	require.NoError(t, err, "Parse() should not error for the empty case")
+	empty, ok := gotEmpty.Units["empty"]
+	require.True(t, ok, "missing 'empty' unit")
+	assert.Equal(t, "", empty.Reference, "empty reference value should parse to empty string")
+}
+
+// TestReferenceField_NoPhantomSubunit exercises REF-05 / BC-1: a unit authored
+// with `reference = "..."` must NOT create a phantom subunit named "reference"
+// in Unit.Subunits (the bug that fires without the isBuiltinField entry).
+func TestReferenceField_NoPhantomSubunit(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Reference Test"
+
+[webapp]
+type = "system"
+name = "Web Application"
+reference = "https://example.com/runbook"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	webapp, ok := got.Units["webapp"]
+	require.True(t, ok, "missing 'webapp' unit")
+
+	assert.Empty(t, webapp.Subunits, "reference must not create a phantom subunit (BC-1)")
+	assert.NotContains(t, webapp.SubunitOrder, "reference", "SubunitOrder must not contain 'reference' (BC-1)")
+}
+
+// TestReferenceField_AnyType exercises REF-01/REF-05: the field is accepted on
+// multiple distinct unit types in the same model, each carrying a distinct URL
+// that round-trips exactly.
+func TestReferenceField_AnyType(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Reference Any-Type Test"
+
+[srv]
+type = "system"
+name = "System"
+reference = "https://example.com/docs/system"
+
+[store]
+type = "db"
+name = "Database"
+reference = "https://example.com/docs/db"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	srv, ok := got.Units["srv"]
+	require.True(t, ok, "missing 'srv' unit")
+	assert.Equal(t, model.TypeSystem, srv.Type, "srv.Type")
+	assert.Equal(t, "https://example.com/docs/system", srv.Reference, "srv.Reference")
+
+	store, ok := got.Units["store"]
+	require.True(t, ok, "missing 'store' unit")
+	assert.Equal(t, model.TypeDb, store.Type, "store.Type")
+	assert.Equal(t, "https://example.com/docs/db", store.Reference, "store.Reference")
+}
+

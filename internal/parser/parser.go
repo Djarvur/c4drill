@@ -309,6 +309,7 @@ func inferGenericType(unitType model.UnitType, parentType model.UnitType) model.
 func isBuiltinField(key string) bool {
 	return slices.Contains([]string{
 		"type", "name", "description", "technology",
+		"reference",
 		"color", "style", "border", "edges",
 		"width", "height", "expanded",
 		"link", "linkFrom",
