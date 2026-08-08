@@ -13,6 +13,7 @@ import (
 	"github.com/Djarvur/c4drill/internal/model"
 	"github.com/Djarvur/c4drill/internal/output"
 	"github.com/Djarvur/c4drill/internal/parser"
+	"github.com/Djarvur/c4drill/internal/peer"
 	"github.com/Djarvur/c4drill/internal/render"
 	"github.com/Djarvur/c4drill/internal/validator"
 	"github.com/Djarvur/c4drill/internal/view"
@@ -112,6 +113,14 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	m, err := parser.ParseFile(inputPath)
 	if err != nil {
 		return fmt.Errorf("parse: %w", err)
+	}
+
+	// Stage 1.6: Resolve relative peers (Phase 30; runs after future
+	// template.Expand, before humanize + Validate). Rewrites every bare
+	// Link.Peer to an absolute dotted path so the validator sees only
+	// absolute paths. A miss at root is a hard error naming the peer + host.
+	if err := peer.Resolve(m); err != nil {
+		return fmt.Errorf("resolve peers: %w", err)
 	}
 
 	// Stage 2: Validate

@@ -202,7 +202,11 @@ func TestFullPipeline_InvalidTOML(t *testing.T) {
 
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestFullPipeline_ValidationError(t *testing.T) {
-	// Create TOML with invalid reference (validation error)
+	// Create TOML with an undefined reference (validation error).
+	// Uses a DOTTED peer so it skips the relative-peer resolver (D-16 step 1:
+	// peers containing "." are absolute) and reaches the validator's
+	// undefined-unit check — exercising the validation error path. A bare
+	// peer would now be caught by peer.Resolve before validation (Phase 30).
 	tmpDir := t.TempDir()
 	invalidPath := filepath.Join(tmpDir, "invalid_ref.toml")
 	content := `
@@ -214,7 +218,7 @@ type = "person"
 name = "User"
 
 [[user.link]]
-peer = "nonexistent"
+peer = "no.such.unit"
 `
 	err := os.WriteFile(invalidPath, []byte(content), 0o600)
 	require.NoError(t, err)
