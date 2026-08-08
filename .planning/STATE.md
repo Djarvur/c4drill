@@ -2,15 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.10
 milestone_name: Model Composition
-status: executing
-last_updated: "2026-08-08T18:31:57.191Z"
-last_activity: 2026-08-08 -- Phase 33 planning complete
+status: ready_to_plan
+last_updated: 2026-08-08T18:48:18.896Z
+last_activity: 2026-08-08 -- Phase 31 execution started
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 13
-  completed_plans: 5
-  percent: 38
+  completed_plans: 7
+  percent: 67
+stopped_at: Phase 31 complete (2/2) — ready to discuss Phase 32
 ---
 
 # Project State
@@ -20,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-08)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** Phase 30 — relative peer resolution
+**Current focus:** Phase 32 — include directive multi file
 
 ## Current Position
 
-Phase: 30
+Phase: 32
 Plan: Not started
-Status: Ready to execute
-Last activity: 2026-08-08 -- Phase 33 planning complete
+Status: Ready to plan
+Last activity: 2026-08-08
 
 Progress: [███░░░░░░░] 25%
 
