@@ -2,6 +2,7 @@
 created: 2026-08-08T00:53:13.640Z
 title: Document that `type` is omittable (type-inference is underused)
 area: docs
+resolves_phase: 33
 files:
   - internal/parser/parser.go
   - README.md

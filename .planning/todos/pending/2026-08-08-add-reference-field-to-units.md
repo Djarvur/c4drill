@@ -2,6 +2,7 @@
 created: 2026-08-08T00:53:13.640Z
 title: Add 'reference' field to C4 units with 📖 marker
 area: tooling
+resolves_phase: 28
 files:
   - internal/model/unit.go
   - internal/render/converter.go

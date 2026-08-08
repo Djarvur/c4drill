@@ -2,6 +2,7 @@
 created: 2026-08-08T00:53:13.640Z
 title: TOML authoring ergonomic improvements (relative peer, optional name, compact link)
 area: tooling
+resolves_phase: [29, 30]
 files:
   - internal/parser/parser.go
   - internal/model/link.go

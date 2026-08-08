@@ -2,6 +2,7 @@
 created: 2026-08-08T00:53:13.640Z
 title: Unit templates — parametrized unit definitions (define + instantiate)
 area: tooling
+resolves_phase: 31
 files:
   - internal/parser/parser.go
   - internal/model/unit.go

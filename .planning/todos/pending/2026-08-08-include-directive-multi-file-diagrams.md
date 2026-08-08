@@ -2,6 +2,7 @@
 created: 2026-08-08T00:53:13.640Z
 title: Include directive — build diagrams from multiple input files
 area: tooling
+resolves_phase: 32
 files:
   - internal/parser/parser.go
   - cmd/c4drill/root.go
