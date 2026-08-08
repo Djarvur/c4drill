@@ -1110,3 +1110,127 @@ func countBarePeers(m *parser.Model) int {
 
 	return count
 }
+
+// --- Phase 32: include.Resolve pipeline wiring (Plan 32-02) ---
+
+// TestPipelineIncludeBeforeValidate proves the Stage 1a wiring (XC-01): a
+// multi-file model with [[include]] runs through ParseFile → include.Resolve →
+// Expand → peer.Resolve → Validate → render without error. A pre-resolve model
+// with unresolved includes would have no merged units, so successful rendering
+// proves include.Resolve ran BEFORE Validate (and before template.Expand, which
+// needs the merged Units). go-graphviz WASM rules out t.Parallel.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestPipelineIncludeBeforeValidate(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Entry file includes auth.toml; both files contribute top-level units.
+	entryPath := filepath.Join(tmpDir, "main.toml")
+	require.NoError(t, os.WriteFile(entryPath, []byte(`
+[properties]
+name = "Multi-File Pipeline"
+
+[user]
+type = "person"
+name = "User"
+
+[[include]]
+path = "auth.toml"
+`), 0o600), "write entry file")
+
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "auth.toml"), []byte(`
+[authService]
+type = "system"
+name = "Auth Service"
+
+[[authService.link]]
+peer = "user"
+technology = "HTTPS"
+`), 0o600), "write included file")
+
+	outputDir := filepath.Join(tmpDir, "output")
+	cmd := NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+
+	require.NoError(t, cmd.PersistentFlags().Set("output", outputDir), "set output flag")
+	require.NoError(t, cmd.PersistentFlags().Set("format", "dot"), "set format=dot")
+
+	cmd.SetArgs([]string{entryPath})
+
+	require.NoError(t, cmd.Execute(),
+		"multi-file model must parse → include.Resolve → validate → render cleanly")
+
+	// C1 diagram exists → the merged model (both files' units) rendered.
+	assert.FileExists(t, filepath.Join(outputDir, "main.dot"),
+		"C1 DOT diagram for the merged model must exist")
+
+	// Silent on success.
+	assert.Empty(t, buf.String(), "CLI must be silent on success")
+}
+
+// TestPipelineSingleFileNoRegression32 proves include.Resolve is a no-op for
+// single-file models: an existing corpus fixture (no [[include]]) still
+// renders identically through the now-wired pipeline.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestPipelineSingleFileNoRegression32(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Copy the existing valid.toml corpus fixture into the temp dir so the
+	// output path is isolated (no clobbering of committed testdata).
+	src, err := os.ReadFile(filepath.Join("testdata", "valid.toml"))
+	require.NoError(t, err, "read corpus fixture valid.toml")
+
+	entryPath := filepath.Join(tmpDir, "valid.toml")
+	//nolint:gosec // G703: src is a corpus fixture read from committed testdata, written into a temp dir — no taint risk.
+	require.NoError(t, os.WriteFile(entryPath, src, 0o600), "copy valid.toml into temp dir")
+
+	outputDir := filepath.Join(tmpDir, "output")
+	cmd := NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+
+	require.NoError(t, cmd.PersistentFlags().Set("output", outputDir), "set output flag")
+	require.NoError(t, cmd.PersistentFlags().Set("format", "dot"), "set format=dot")
+
+	cmd.SetArgs([]string{entryPath})
+
+	require.NoError(t, cmd.Execute(),
+		"single-file model must render identically (include.Resolve is a no-op)")
+
+	assert.FileExists(t, filepath.Join(outputDir, "valid.dot"),
+		"C1 DOT diagram for the single-file model must still render")
+	assert.Empty(t, buf.String(), "CLI must be silent on success")
+}
+
+// TestCLIMissingIncludeExits proves the CLI error path for a missing include
+// (INC-10/D-12): invoking runRoot returns a non-nil error naming the include
+// stage and the referenced path, and does not panic.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestCLIMissingIncludeExits(t *testing.T) {
+	tmpDir := t.TempDir()
+	entryPath := filepath.Join(tmpDir, "missing_include.toml")
+	require.NoError(t, os.WriteFile(entryPath, []byte(`
+[properties]
+name = "Missing Include"
+[[include]]
+path = "ghost.toml"
+`), 0o600), "write entry file")
+
+	cmd := NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	cmd.SetArgs([]string{entryPath})
+
+	err := cmd.Execute()
+	require.Error(t, err, "missing include must produce a non-nil CLI error")
+
+	msg := err.Error()
+	assert.Contains(t, msg, "include", "error must surface the include stage")
+	assert.Contains(t, msg, "ghost.toml", "error must name the missing path")
+}

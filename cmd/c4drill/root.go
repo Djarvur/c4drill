@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Djarvur/c4drill/internal/graph"
+	"github.com/Djarvur/c4drill/internal/include"
 	"github.com/Djarvur/c4drill/internal/model"
 	"github.com/Djarvur/c4drill/internal/output"
 	"github.com/Djarvur/c4drill/internal/parser"
@@ -116,6 +117,18 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	m, err := parser.ParseFile(inputPath)
 	if err != nil {
 		return fmt.Errorf("parse: %w", err)
+	}
+
+	// Stage 1a: Resolve includes (Phase 32; runs FIRST — before
+	// template.Expand and Validate). Walks every [[include]] directive,
+	// recursively ParseFile+merges the transitively-included files into one
+	// *parser.Model per D-09/D-10/D-11/INC-08. A no-op (returns m unchanged)
+	// when the model has no [[include]] — guaranteeing no regression for
+	// single-file input. Pipeline ordering is load-bearing: include must run
+	// before template.Expand so templates defined in included files are visible
+	// to [[use]] in the entry file (XC-02).
+	if m, err = include.Resolve(m, filepath.Dir(inputPath), inputPath); err != nil {
+		return fmt.Errorf("include: %w", err)
 	}
 
 	// Stage 1.5: Expand templates (Phase 31; runs after Parse, before
