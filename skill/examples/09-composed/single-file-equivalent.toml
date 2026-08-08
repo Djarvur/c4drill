@@ -1,0 +1,87 @@
+# Composed Example - hand-expanded single-file equivalent
+# Renders to identical DOT as entry.toml through the full pipeline (XC-05),
+# asserted by Plan 04's TestXC05_ComposedEquivSingleFile. This file is the
+# hand-expansion of entry.toml + templates.toml + domains/auth.toml:
+#   - the [[use]] of microservice is inlined as [platform.auth] (parent) +
+#     [platform.auth.cache] (subunit) with every ${param} substituted
+#   - the [[include]] of domains/auth.toml is spliced in as [platform.auditLog]
+#     + [platform.auditLog.sink] (cross-file subunit, now local)
+#   - the [[include]] of templates.toml is DROPPED (template definitions produce
+#     no units after expansion; only the instantiated units remain)
+#   - the parametrized peer ${upstreamBus} is rewritten to the concrete value
+#     "messageBus" (what template.Expand + peer.Resolve would produce)
+#
+# Subunit order under [platform] matters for byte-stable rendering: auditLog
+# arrives via include (pass 1) before auth arrives via template.Expand (pass 2),
+# so the single file MUST declare auditLog before auth to match.
+
+[properties]
+name = "Composed Example"
+description = "include + templates + relative-peer + reference in one model"
+edges = "spline"
+expanded = ["platform"]
+
+[platform]
+type = "system"
+name = "Platform"
+description = "Hosts the instantiated auth service and the included audit-log domain"
+
+[messageBus]
+type = "queue"
+name = "Message Bus"
+description = "Top-level backbone; instantiation-site target for the template link"
+
+# ===== auditLog (spliced from domains/auth.toml; declared before auth) =====
+
+[platform.auditLog]
+type = "container"
+name = "Audit Log Domain"
+description = "Appended via include from domains/auth.toml (D-10)"
+
+[platform.auditLog.sink]
+type = "componentQueue"
+name = "Audit Sink"
+description = "Drains audit events from the bus"
+
+[[platform.auditLog.sink.link]]
+peer = "messageBus"
+description = "Consumes audit events from the backbone"
+
+# ===== auth (inlined from [[use]] of microservice; declared after auditLog) =====
+# The instantiation was: name=auth, domain=authentication, tech="Go, gRPC",
+# upstreamBus=messageBus. All ${param} tokens substituted:
+#   name field "${name} Service" -> "auth Service"
+#   technology "${tech}"         -> "Go, gRPC"
+#   description "${name} handles ${domain}" -> "auth handles authentication"
+#   reference "${name}" URL tail -> "auth"
+
+[platform.auth]
+type = "container"
+name = "auth Service"
+technology = "Go, gRPC"
+description = "auth handles authentication"
+reference = "https://wiki.example.com/auth"
+
+# cache subunit (inlined from template.microservice.cache). name "${name} Cache"
+# -> "auth Cache". The parametrized peer ${upstreamBus} -> "messageBus" (the
+# concrete instantiation value, post-expansion + post-peer-resolve).
+[platform.auth.cache]
+type = "componentDb"
+name = "auth Cache"
+technology = "Redis"
+
+[[platform.auth.cache.link]]
+peer = "messageBus"
+description = "Publishes authentication cache invalidations"
+
+# ===== ACTOR (links to the inlined leaf) =====
+
+[customer]
+type = "person"
+name = "Customer"
+description = "End user whose requests reach the instantiated auth service"
+
+[[customer.link]]
+peer = "platform.auth.cache"
+technology = "HTTPS"
+description = "Reads auth-cache entries produced by the instantiated service"

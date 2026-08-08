@@ -1,0 +1,34 @@
+# Composed Example - template library
+# Included once=true from entry.toml; defines [template.microservice] (XC-02).
+# This file is pulled in by [[include]] in entry.toml and the template it
+# defines becomes visible to the [[use]] in entry.toml ONLY because include.Resolve
+# runs BEFORE template.Expand in the pipeline (see SKILL.md ### Pipeline Ordering).
+#
+# The template is a PARENT (has a cache subunit, TMPL-04); per the validator rule
+# the parent itself carries no direct links. The cache subunit carries the
+# parametrized link (peer = ${upstreamBus}) that proves XC-03: after template
+# expansion the bare/parametrized peer resolves at the INSTANTIATION site.
+
+[template.microservice]
+params = ["name", "domain", "tech", "upstreamBus"]
+name = "${name} Service"
+type = "container"
+technology = "${tech}"
+description = "${name} handles ${domain}"
+reference = "https://wiki.example.com/${name}"
+
+# Subunit subtree (TMPL-04): cache key verbatim (D-04); field values substituted.
+# A componentDb (C3 under container).
+[template.microservice.cache]
+type = "componentDb"
+name = "${name} Cache"
+technology = "Redis"
+
+# The parametrized link lives on the leaf cache subunit (parents cannot link).
+# peer = ${upstreamBus} is the XC-03 load-bearing field: after template.Expand
+# rewrites it to the concrete instantiation value, peer.Resolve resolves it.
+# A bare relative peer would also work and demonstrate XC-03 even more sharply
+# (resolves against the instantiation-site ancestry, not the template's).
+[[template.microservice.cache.link]]
+peer = "${upstreamBus}"
+description = "Publishes ${domain} cache invalidations"

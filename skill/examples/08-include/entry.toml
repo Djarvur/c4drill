@@ -1,0 +1,58 @@
+# Include Directive Example (entry file)
+# Demonstrates [[include]] multi-file composition (INC-01 through INC-10):
+# the entry file declares the parent system + two [[include]] directives that
+# pull in auth.toml and billing.toml. The included files append cross-file
+# subunits under this file's [platform] parent (D-10).
+#
+# Pipeline position: include.Resolve runs as the FIRST pass, before templates
+# expand and before peers resolve — so templates defined in included files are
+# visible to [[use]] in the entry, and subunits from included files participate
+# in peer walk-up. Paths are relative to the INCLUDING file's directory (INC-02).
+
+[properties]
+name = "Include Directive Example"
+description = "Entry file pulling in auth and billing domain files"
+edges = "spline"
+expanded = ["platform"]
+
+# platform: the parent system. The included files append subunits
+# ([platform.auth], [platform.auth.db], [platform.billing]) under this parent.
+[platform]
+type = "system"
+name = "Platform"
+description = "Parent system; its auth and billing subunits live in other files"
+
+# messageBus: top-level backbone referenced by subunits that arrive via include
+# (auth.db and billing.charges both publish to it). Declared in the entry so the
+# peer resolves at root scope after include.Resolve merges the included files.
+[messageBus]
+type = "queue"
+name = "Message Bus"
+description = "Event backbone for included-domain subunits"
+
+# ===== INCLUDE DIRECTIVES (D-09 order = append order) =====
+
+# auth.toml contributes [platform.auth] and [platform.auth.db] (D-10
+# cross-file subunits: the included file re-declares the parent with its own
+# subunits, which merge onto the entry's platform).
+[[include]]
+path = "auth.toml"
+
+# billing.toml contributes [platform.billing]. once=true (INC-06) means a
+# later [[include]] of billing.toml from any file would be skipped — the
+# visited-set dedup guarantees at-most-once inclusion even via diamond paths.
+[[include]]
+path = "billing.toml"
+once = true
+
+# ===== ACTOR (links to a subunit that arrives via include) =====
+
+[customer]
+type = "person"
+name = "Customer"
+description = "End user whose requests reach the included auth domain"
+
+[[customer.link]]
+peer = "platform.auth.db" # resolves to the leaf subunit appended by auth.toml
+technology = "HTTPS"
+description = "Authenticates against the included auth domain"
