@@ -74,7 +74,7 @@ Each unit is defined as a TOML section. The section name becomes the unit's iden
 ```toml
 [user]
 type = "person"                     # Required
-name = "Customer"                   # Required: Display name
+name = "Customer"                   # Optional: defaults to humanized identifier
 description = "Online shopper"      # Optional
 ```
 
@@ -160,6 +160,30 @@ reference = "https://wiki.example.com/api-runbook"   # Optional: 📖 marker, cl
 ```
 
 An empty string and an omitted field are equivalent (no 📖, not clickable).
+
+### Optional Name (Humanization)
+
+The `name` field is **optional**. When omitted, the display name is derived from the **last segment** of the unit's identifier via a dumb camelCase split:
+
+```toml
+# Explicit name (always wins — use this for acronyms or custom labels)
+[linuxSystem.localIDP]
+name = "My Custom Name"
+
+# Name omitted — humanized from the last path segment "sessionManager"
+[linuxSystem.sessionManager]
+# displays as "Session Manager"
+```
+
+**Humanization rules:**
+
+- Splits camelCase boundaries and Title-cases each word.
+- Operates on the **last path segment only** — `[linuxSystem.localIDP]` becomes "Local IDP", not "Linux System Local IDP".
+- Examples: `sessionManager` → "Session Manager", `localIDP` → "Local IDP", `linuxSystem` → "Linux System".
+
+**Acronyms:** acronym preservation is intentionally **not** supported (the split is deliberately dumb). `gRPC` humanizes to "Grpc". To preserve an acronym or set any custom label, set `name =` explicitly — an explicit `name =` always wins.
+
+**Backward compatibility:** existing models that already set `name =` on every unit are completely unaffected — humanization only fires when `name` is omitted.
 
 ### Nesting (C2/C3 Diagrams)
 

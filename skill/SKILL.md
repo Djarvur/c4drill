@@ -41,7 +41,7 @@ version: 1.0.0
 
 **Every unit must have:**
 ```toml
-name = "Display Name"  # Required
+name = "Display Name"  # Optional - humanized from identifier if omitted
 type = "<unit_type>"   # Optional - defaults based on nesting level
 ```
 
@@ -96,7 +96,7 @@ Each unit is a TOML section. Section name becomes the identifier:
 ```toml
 [section_name]
 type = "system"                 # Optional: Unit type (defaults based on nesting)
-name = "Display Name"           # Required: Display name
+name = "Display Name"           # Optional: defaults to humanized last path segment
 description = "What it does"    # Optional: Brief description
 technology = "Go, PostgreSQL"   # Optional: Tech stack (not for person types)
 color = "#E3F2FD"               # Optional: Background color override
@@ -110,6 +110,8 @@ reference = "https://docs.example.com/runbook" # Optional: External docs URL (�
 [[unit.link]]                   # Optional: Outgoing links (array of tables)
 [[unit.linkFrom]]               # Optional: Incoming links (array of tables)
 ```
+
+**Optional name humanization:** when `name` is omitted, the display name is derived from the last segment of the unit's identifier via a dumb camelCase split (e.g. `localIDP` → "Local IDP", `sessionManager` → "Session Manager", `linuxSystem` → "Linux System"). Acronyms are **not** preserved (`gRPC` → "Grpc") — set `name =` explicitly to override. An explicit `name =` always wins.
 
 #### reference (External Documentation URL)
 
