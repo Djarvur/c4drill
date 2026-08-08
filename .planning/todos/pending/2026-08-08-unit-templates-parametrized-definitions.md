@@ -86,19 +86,23 @@ A new top-level table for definitions:
 
 ```toml
 [template.microservice]
-# params declared with optional defaults (PlantUML-style trailing defaults)
-# params without defaults are required at instantiation
-params = { name = "<required>", domain = "<required>", tech = "Go, gRPC" }
+# ALL params required at every instantiation — NO defaults (v1.10 decision).
+params = ["name", "domain", "tech"]
 
 name = "${name} Service"
 type = "container"
 technology = "${tech}"
 description = "${name} handles ${domain}"
 # links inside a template use the same ${name} substitution
+# FIXED link count — every instantiation produces exactly these links,
+# with field values filled from params (so different instantiations link
+# to different peers, but always the same NUMBER of links).
 [[template.microservice.link]]
-peer = "messageBus"
+peer = "${upstreamBus}"
 description = "Publishes ${domain} events"
 ```
+
+**Templates may declare a subunit subtree** — `[template.svc]` plus `[template.svc.api]`, `[template.svc.db]`, etc. One instantiation produces the whole subtree; substitution applies to subunit fields too.
 
 Instantiation — a new top-level `[use]` section or per-unit `template` field. Named args (matching PlantUML's keyword-call idiom, not go-metadot's positional `${1}`):
 
@@ -108,36 +112,38 @@ Instantiation — a new top-level `[use]` section or per-unit `template` field. 
 template = "microservice"
 name = "auth"
 domain = "authentication"
+tech = "Go, gRPC"
+upstreamBus = "messageBus"
 # → produces a unit at top level
 
 # syntax 2: inline on the unit (cleaner, but constrains placement)
 [auth]
 template = "microservice"
-params = { name = "auth", domain = "authentication" }
+params = { name = "auth", domain = "authentication", tech = "Go, gRPC", upstreamBus = "messageBus" }
 ```
 
 Syntax 1 (separate `[use]`) keeps template instantiation out of the unit table namespace and avoids collisions with the relative-peer and optional-name work; syntax 2 is terser but harder to place a templated unit *inside* a parent (which is the common case — you want N microservices inside a system). **Leaning toward syntax 1 with a `parent = "linuxSystem"` field** for placement. Resolve in plan.
 
-### Param semantics to pin down (from go-metadot, adapt as fits C4Drill)
+### Param semantics (settled 2026-08-08)
 
-| Question | go-metadot | C4Drill proposal |
+| Question | go-metadot | C4Drill decision (v1.10) |
 |---|---|---|
-| Positional vs named | positional `${1}` | **named** `${name}` (TOML has maps; named is more readable and matches syntax sketch) |
-| Defaults | none (go-metadot); **yes, trailing** (PlantUML) | **yes, PlantUML-style trailing defaults** — params without defaults are required; supplying them errors (clearer than go-metadot's silent-literal) |
+| Positional vs named | positional `${1}` | **named** `${name}` (TOML has maps; named is more readable) |
+| Defaults | none (go-metadot); yes, trailing (PlantUML) | **NONE** — every declared param is required at every instantiation; missing any is a hard error. Strictness is a feature. |
 | Typed | all-string | all-string (substitution is field-level) |
 | Use in multiple fields | yes | yes — any string field |
-| One template → multiple units | yes (line-based) | **no under Option B** — one template instantiates one Unit (+ its inline links). If multi-unit emission is needed, reconsider Option A. State this limitation explicitly. |
-| `${uid}` / uniqueness | auto-injected `NAME_<count>` | consider: the instantiation table key provides uniqueness (e.g. `[[use]] name="auth"` → unit `auth`); may not need `${uid}` at all |
+| One template → multiple units | yes (line-based) | **one top-level unit + its declared subunit subtree** (TMPL-04). NOT multi-output / `for_each`. A template declares a fixed set of links (fixed count); instantiations parametrize their fields, not the count. |
+| `${uid}` / uniqueness | auto-injected `NAME_<count>` | the instantiation table key provides uniqueness (e.g. `[[use]] name="auth"` → unit `auth`); no `${uid}` needed |
 | Nested templates | no (fatal in go-metadot) | no — keep it simple; one level of instantiation |
-| Forward references | no | no — templates must be defined before use (consistent with file-order semantics) |
+| Forward references | no | **yes** — structured post-parse makes this free; `[[use]]` may appear before `[template.*]` definition (TMPL-09) |
 | Recursion guard | cap 100 | cap, but if nested is disallowed, recursion is impossible — guard may be unnecessary |
 
 ### Touch points (Option B)
 
-- **`internal/model/unit.go`** — `Unit` struct gains no field; templates live in a separate `Template` struct (`Name string`, `Params []string`, `Unit Unit`). Or model templates as a Unit with a `Params []string` field and a `IsTemplate bool` marker — decide in plan.
-- **`internal/parser/parser.go`** — new top-level table handling for `[template.<name>]`; skip templates in `captureDefinitionOrder` (they're not renderable units); new post-parse expansion pass that walks `[use]` blocks, deep-copies, substitutes, inserts into `Model.Units`/`UnitOrder`. Update builtin field allowlist (`parser.go:309`) if templates use reserved keys.
-- **`internal/validator/rules.go`** — validate: referenced template exists; required params supplied; instantiation produces a unit at a legal nesting level (C1/C2/C3 check at `rules.go:187`); templated unit's links resolve (existing peer check `rules.go:14` runs *after* expansion).
-- **`internal/model/link.go`** — substitution must also apply to `Link.Peer`, `Link.Description`, `Link.Technology` etc., not just unit fields.
+- **`internal/model/unit.go`** — `Unit` struct gains no field; templates live in a separate `Template` struct (`Name string`, `Params []string`, `Unit Unit`, `Subunits map[string]*Unit` — templates carry a subunit subtree per TMPL-04). Or model templates as a Unit with a `Params []string` field and a `IsTemplate bool` marker — decide in plan.
+- **`internal/parser/parser.go`** — new top-level table handling for `[template.<name>]` (including dotted subunit tables like `[template.svc.api]`); skip templates in `captureDefinitionOrder` (they're not renderable units); new post-parse expansion pass that walks `[use]` blocks, deep-copies (RECURSIVE into Subunits), substitutes, inserts into `Model.Units`/`UnitOrder`. Update builtin field allowlist (`parser.go:309`) if templates use reserved keys.
+- **`internal/validator/rules.go`** — validate: referenced template exists; ALL declared params supplied (no defaults — missing any is a hard error); instantiation produces a unit at a legal nesting level (C1/C2/C3 check at `rules.go:187`); templated unit's links resolve (existing peer check `rules.go:14` runs *after* expansion).
+- **`internal/model/link.go`** — substitution must also apply to `Link.Peer`, `Link.Description`, `Link.Technology` etc., not just unit fields. Link COUNT is fixed by the template; only field values are parametrized.
 - **README.md / skill/SKILL.md** — document the feature with a before/after example (5 near-identical microservices spelled out → one template + 5 `[[use]]` blocks).
 - **`skill/examples/`** — add a `06-templates.toml` demonstrating the pattern.
 
@@ -149,6 +155,7 @@ Syntax 1 (separate `[use]`) keeps template instantiation out of the unit table n
 
 ### Verification
 
-- Unit tests for the expansion pass: param substitution into every string field, missing-param error, multi-instantiation producing distinct units, templated-unit links resolving post-expansion.
-- End-to-end test: a model with a template + N instantiations produces the same SVG as a hand-expanded model with N spelled-out units (golden comparison, order-insensitive per the existing canonicalDOT approach — see STATE.md decision log).
+- Unit tests for the expansion pass: param substitution into every string field (including subunit fields), missing-param error (any of the required params), multi-instantiation producing distinct unit subtrees, templated-unit links resolving post-expansion.
+- **HS-1 regression (required)**: instantiate the same template 3× with distinct params; assert (a) each instantiation's subtree is independent — modifying one doesn't affect others; (b) re-running expansion is idempotent; (c) after a full validate pass, two instantiations' `LinksFrom` slices are disjoint (the validator mutates `LinksFrom` in place at `index.go:70-81`, so a shallow copy corrupts subsequent instantiations — deep-copy MUST recurse into Subunits).
+- End-to-end test: a model with a template (with subunits + fixed link set) + N instantiations produces the same SVG as a hand-expanded model with N spelled-out unit subtrees (golden comparison, order-insensitive per the existing canonicalDOT approach — see STATE.md decision log).
 - Confirm validator runs *after* expansion so peer-existence and level checks apply to the expanded model, not the template skeleton.

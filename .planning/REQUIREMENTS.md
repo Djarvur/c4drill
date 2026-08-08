@@ -28,16 +28,15 @@ Source research: [.planning/research/SUMMARY.md](research/SUMMARY.md)
 ### TMPL — Unit templates
 
 - [ ] **TMPL-01**: User can define a reusable, parametrized unit template in a `[template.<name>]` table with declared named parameters.
-- [ ] **TMPL-02**: Template parameters support trailing defaults — params without defaults are required at instantiation; params with defaults may be omitted (PlantUML `!procedure` idiom).
-- [ ] **TMPL-03**: User can instantiate a template via a `[[use]]` directive, supplying concrete values for the template's parameters, producing a concrete unit inserted into the model.
-- [ ] **TMPL-04**: `${param}` substitution applies to *all* string fields of the instantiated unit — `Name`, `Description`, `Technology`, `Reference`, `Color`, and every `Link` field (`Peer`, `Description`, `Technology`) — so a param can parameterize any text the unit carries.
-- [ ] **TMPL-05**: One template instantiation produces exactly **one** unit (plus its inline links) — deliberately not multi-output (no `for_each`/fan-out); the N-near-identical-units use case is served by N `[[use]]` blocks.
-- [ ] **TMPL-06**: Instantiated units participate in the model exactly like hand-authored units — they pass validation, appear in auto-generated C1/C2/C3 views, and render identically.
-- [ ] **TMPL-07**: Instantiating a template with a missing *required* parameter is a hard error naming the template, the parameter, and the instantiation site — no silent `${param}` literals in output (deliberate divergence from go-metadot/PlantUML).
-- [ ] **TMPL-08**: Two `[[use]]` instantiations producing the same unit path (e.g. same `name`/`parent`) is a hard error naming both instantiation sites, not a silent overwrite.
-- [ ] **TMPL-09**: Template deep-copy is correct under repeated instantiation — instantiating the same template N times with distinct params yields N independent units; the 2nd instantiation never inherits state from the 1st (HS-1 from research: validator mutates `LinksFrom` in place, so a shallow copy corrupts subsequent instantiations).
-- [ ] **TMPL-10**: Forward references work — a `[[use]]` may appear textually before its `[template.<name>]` definition in the same file (structured post-parse expansion makes this free; the "define-before-use" restriction from go-metadot's textual preprocessor does not apply).
-- [ ] **TMPL-11**: A templated unit's `reference` field substitutes params correctly (e.g. `reference = "https://wiki/${name}"`), so reference URLs can be parameterized.
+- [ ] **TMPL-02**: User can instantiate a template via a `[[use]]` directive, supplying concrete values for ALL of the template's declared parameters. **No parameter defaults** — every declared param is required at every instantiation; missing any is a hard error. (Simpler than PlantUML/go-metadot trailing defaults; strictness is a feature.)
+- [ ] **TMPL-03**: `${param}` substitution applies to *all* string fields of the instantiated unit — `Name`, `Description`, `Technology`, `Reference`, `Color`, and every `Link` field (`Peer`, `Description`, `Technology`) — so a param can parameterize any text the unit carries. The template declares a **fixed set of links** (fixed count); each instantiation fills their fields from params (so the same template produces units linked differently — different peer/target/technology per instantiation — but always the same number of links). No array/conditional expansion (no `for_each`/fan-out).
+- [ ] **TMPL-04**: A template may define a **single top-level unit plus its declared subunit subtree** — e.g. `[template.svc]` with `[template.svc.api]`, `[template.svc.db]`. One instantiation produces that whole subtree. Substitution applies to subunit fields too. (Relaxed from the earlier "exactly one unit" formulation.)
+- [ ] **TMPL-05**: Instantiated units (and their subunits) participate in the model exactly like hand-authored units — they pass validation, appear in auto-generated C1/C2/C3 views, and render identically.
+- [ ] **TMPL-06**: Instantiating a template with a missing parameter is a hard error naming the template, the parameter, and the instantiation site — no silent `${param}` literals in output (deliberate divergence from go-metadot/PlantUML).
+- [ ] **TMPL-07**: Two `[[use]]` instantiations producing the same unit path (e.g. same `name`/`parent`) is a hard error naming both instantiation sites, not a silent overwrite.
+- [ ] **TMPL-08**: Template deep-copy is correct under repeated instantiation — instantiating the same template N times with distinct params yields N independent unit subtrees; the 2nd instantiation never inherits state from the 1st (HS-1 from research: validator mutates `LinksFrom` in place, so a shallow copy corrupts subsequent instantiations). Deep-copy MUST recurse into `Subunits` (every `*Unit` in the map cloned, each subunit's links cloned) since templates may declare subunit subtrees (TMPL-04).
+- [ ] **TMPL-09**: Forward references work — a `[[use]]` may appear textually before its `[template.<name>]` definition in the same file (structured post-parse expansion makes this free; the "define-before-use" restriction from go-metadot's textual preprocessor does not apply).
+- [ ] **TMPL-10**: A templated unit's `reference` field substitutes params correctly (e.g. `reference = "https://wiki/${name}"`), so reference URLs can be parameterized (composes with the Phase 28 reference field).
 
 ### ERGO — TOML authoring ergonomics
 
@@ -75,7 +74,8 @@ Source research: [.planning/research/SUMMARY.md](research/SUMMARY.md)
 ## Future Requirements (deferred)
 
 - **Compact link shorthand variants** beyond the v1.10 baseline (e.g. string-only `link = ["a", "b"]` peer-only shorthand) — re-evaluate after relative-peer + optional-name land and authoring verbosity is re-measured.
-- **Template multi-output / fan-out** (`for_each`-style one-template-many-units) — deliberately deferred; one-template-one-unit is the v1.10 constraint.
+- **Template multi-output / fan-out** (`for_each`-style one-template-many-units, or array/conditional link expansion) — deliberately deferred; a template declares a fixed set of links and a single top-level unit + its declared subunit subtree (TMPL-04).
+- **Parameter defaults** — every declared param is required at every instantiation (TMPL-02); trailing-default support deferred (PlantUML/go-metadot idiom rejected for v1.10 strictness).
 - **Template nesting** (template instantiating another template) — deferred; one level of instantiation in v1.10.
 
 ## Out of Scope
@@ -96,7 +96,7 @@ Source research: [.planning/research/SUMMARY.md](research/SUMMARY.md)
 
 ## Traceability
 
-*Phase mapping filled by roadmapper (2026-08-08). 40/40 v1.10 requirements mapped.*
+*Phase mapping filled by roadmapper (2026-08-08). 39/39 v1.10 requirements mapped (TMPL reqs renumbered after dropping param-defaults requirement).*
 
 | REQ-ID | Phase | Notes |
 |--------|-------|-------|
@@ -112,16 +112,15 @@ Source research: [.planning/research/SUMMARY.md](research/SUMMARY.md)
 | ERGO-01 | 30 | bare peer resolves against enclosing parent |
 | ERGO-02 | 30 | absolute-fallback (backward-compat) |
 | TMPL-01 | 31 | `[template.*]` define + named params |
-| TMPL-02 | 31 | trailing defaults |
-| TMPL-03 | 31 | `[[use]]` instantiate |
-| TMPL-04 | 31 | `${param}` into all string fields |
-| TMPL-05 | 31 | one-template-one-unit |
-| TMPL-06 | 31 | instantiated units participate fully |
-| TMPL-07 | 31 | missing required param = hard error (no silent literal) |
-| TMPL-08 | 31 | duplicate unit path = hard error |
-| TMPL-09 | 31 | deep-copy correctness (HS-1 regression test) |
-| TMPL-10 | 31 | forward references work |
-| TMPL-11 | 31 | reference param substitution |
+| TMPL-02 | 31 | `[[use]]` instantiate; all params required (no defaults) |
+| TMPL-03 | 31 | `${param}` into all string fields; fixed link count, parametrized fields |
+| TMPL-04 | 31 | one template = one top-level unit + its declared subunit subtree |
+| TMPL-05 | 31 | instantiated units + subunits participate fully |
+| TMPL-06 | 31 | missing param = hard error (no silent literal) |
+| TMPL-07 | 31 | duplicate unit path = hard error |
+| TMPL-08 | 31 | deep-copy recurses into Subunits (HS-1 regression test) |
+| TMPL-09 | 31 | forward references work |
+| TMPL-10 | 31 | reference param substitution |
 | XC-03 | 31 | relative-peer in template resolves at instantiation site (HS-2 — discuss MUST settle first) |
 | XC-04 | 31 | humanization runs after expand, before validate (humanize hook lands here; end-to-end test in 33) |
 | INC-01 | 32 | assemble from multiple files |
