@@ -8,6 +8,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Local subunit-key consts to avoid goconst noise in the Clone tests.
+const (
+	subAPI = "api"
+	subDB  = "db"
+)
+
 // TestClonePreservesMirror is the HS-1 load-bearing test (Plan 31-02): the
 // validator mutates Unit.LinksFrom in place (internal/validator/index.go:70-81)
 // appending Link{Mirror:true} entries. A Clone that drops Mirror (e.g. via
@@ -58,16 +64,16 @@ func TestCloneRecursesSubunits(t *testing.T) {
 	orig := &model.Unit{
 		Type: model.TypeSystem,
 		Name: "Parent",
-		SubunitOrder: []string{"api", "db"},
+		SubunitOrder: []string{subAPI, subDB},
 		Subunits: map[string]*model.Unit{
-			"api": {
+			subAPI: {
 				Type: model.TypeContainer,
 				Name: "API",
 				Links: []model.Link{
-					{Peer: "db"},
+					{Peer: subDB},
 				},
 			},
-			"db": {
+			subDB: {
 				Type: model.TypeContainerDb,
 				Name: "Database",
 			},
@@ -78,16 +84,17 @@ func TestCloneRecursesSubunits(t *testing.T) {
 	require.NotNil(t, clone, "Clone must return a non-nil unit")
 
 	// SubunitOrder cloned (disjoint backing array).
-	require.Equal(t, []string{"api", "db"}, clone.SubunitOrder, "clone SubunitOrder")
+	require.Equal(t, []string{subAPI, subDB}, clone.SubunitOrder, "clone SubunitOrder")
 	clone.SubunitOrder = append(clone.SubunitOrder, "extra")
 	assert.Len(t, orig.SubunitOrder, 2, "original SubunitOrder unchanged after clone append")
 
 	// Subunits map is a fresh map with pointer-disjoint children.
-	require.Contains(t, clone.Subunits, "api", "clone has 'api' subunit")
-	require.Contains(t, clone.Subunits, "db", "clone has 'db' subunit")
+	require.Contains(t, clone.Subunits, subAPI, "clone has 'api' subunit")
+	require.Contains(t, clone.Subunits, subDB, "clone has 'db' subunit")
 
-	cloneAPI := clone.Subunits["api"]
-	origAPI := orig.Subunits["api"]
+	cloneAPI := clone.Subunits[subAPI]
+	origAPI := orig.Subunits[subAPI]
+
 	require.NotNil(t, cloneAPI, "clone api non-nil")
 	require.NotNil(t, origAPI, "orig api non-nil")
 	assert.NotSame(t, origAPI, cloneAPI, "clone child must be a different pointer (pointer-disjoint)")
@@ -99,7 +106,7 @@ func TestCloneRecursesSubunits(t *testing.T) {
 	// Child Links are independent (backing-array disjoint).
 	require.Len(t, cloneAPI.Links, 1, "clone child Links length")
 	cloneAPI.Links[0].Peer = "mutated-peer"
-	assert.Equal(t, "db", origAPI.Links[0].Peer, "original child Link.Peer unchanged")
+	assert.Equal(t, subDB, origAPI.Links[0].Peer, "original child Link.Peer unchanged")
 }
 
 // TestCloneNilSafe verifies Clone on a nil *Unit returns nil (no panic).
@@ -107,6 +114,7 @@ func TestCloneNilSafe(t *testing.T) {
 	t.Parallel()
 
 	var nilUnit *model.Unit
+
 	clone := nilUnit.Clone()
 	assert.Nil(t, clone, "Clone of nil *Unit must return nil")
 }
@@ -143,8 +151,8 @@ func TestClonePreservesAllValueFields(t *testing.T) {
 	assert.Equal(t, orig.Style, clone.Style, "Style")
 	assert.Equal(t, orig.Border, clone.Border, "Border")
 	assert.Equal(t, orig.Edges, clone.Edges, "Edges")
-	assert.Equal(t, orig.Width, clone.Width, "Width")
-	assert.Equal(t, orig.Height, clone.Height, "Height")
+	assert.InDelta(t, orig.Width, clone.Width, 0.0001, "Width")
+	assert.InDelta(t, orig.Height, clone.Height, 0.0001, "Height")
 	assert.Equal(t, orig.Expanded, clone.Expanded, "Expanded")
 
 	// Expanded backing-array disjoint.

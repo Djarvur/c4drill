@@ -1,5 +1,7 @@
 package model
 
+import "slices"
+
 // UnitType represents the type of a C4 architecture unit.
 type UnitType string
 
@@ -71,4 +73,61 @@ type Unit struct {
 	SubunitOrder []string `toml:"-"`
 	// Subunits contains nested units within this unit.
 	Subunits map[string]*Unit `toml:",inline"`
+}
+
+// Clone returns a deep copy of u. Value fields are copied; slice fields
+// (Expanded, SubunitOrder, Links, LinksFrom) are deep-copied so the clone's
+// slices have disjoint backing arrays; Subunits is a fresh map with every
+// child *Unit recursively cloned (pointer-disjoint).
+//
+// The unexported Link.Mirror field is PRESERVED by the element-wise Link copy
+// (model.Link has only value-type fields — no pointers/maps/slices — so a
+// value copy duplicates each Link wholesale, Mirror included). This is the
+// load-bearing HS-1 mitigation (Plan 31-02): the validator mutates
+// Unit.LinksFrom in place (internal/validator/index.go:70-81), so a Clone that
+// dropped Mirror (e.g. reflect/gob/json copiers, which cannot see unexported
+// fields) would corrupt multiplicity counting for every template instantiation
+// after the first.
+//
+// Clone on a nil *Unit returns nil (no panic).
+func (u *Unit) Clone() *Unit {
+	if u == nil {
+		return nil
+	}
+
+	clone := *u // shallow struct copy: value fields + slice/map headers
+
+	// Deep-copy slice fields. slices.Clone copies the backing array; for Links
+	// and LinksFrom we do an explicit element-wise copy because each Link is a
+	// value we want independently owned (defensive even though Link has no
+	// reference-type fields).
+	clone.Expanded = slices.Clone(u.Expanded)
+	clone.SubunitOrder = slices.Clone(u.SubunitOrder)
+	clone.Links = cloneLinks(u.Links)
+	clone.LinksFrom = cloneLinks(u.LinksFrom)
+
+	// Deep-copy Subunits: fresh map, each child *Unit recursively cloned.
+	if u.Subunits != nil {
+		clone.Subunits = make(map[string]*Unit, len(u.Subunits))
+		for k, child := range u.Subunits {
+			clone.Subunits[k] = child.Clone()
+		}
+	}
+
+	return &clone
+}
+
+// cloneLinks returns a deep copy of a Link slice: a new backing array with
+// each Link value-copied. Because model.Link has ONLY value-type fields
+// (strings, ints, enums, and the unexported Mirror bool — no pointers, maps,
+// or slices), a value copy fully duplicates each Link including Mirror.
+func cloneLinks(links []Link) []Link {
+	if links == nil {
+		return nil
+	}
+
+	out := make([]Link, len(links))
+	copy(out, links) // value copy preserves Mirror for every element
+
+	return out
 }
