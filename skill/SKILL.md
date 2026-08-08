@@ -130,10 +130,52 @@ reference = "https://wiki.example.com/api-runbook"
   by the HTML shim; external `http(s)` references open in a new tab in `-f html`
   output (distinct from internal drill-down navigation).
 
-**Type defaults** (when `type` is omitted):
-- Root-level units → `system`
-- Units inside system/box → `container`
-- Units inside container → `component`
+**Type inference rules** (when `type` is omitted, or when a generic `db`/`queue` type is set):
+
+**Default type by parent** (`defaultTypeForParent`):
+| Parent type | Inferred child type | Level |
+|-------------|---------------------|-------|
+| (none — root) | `system` | C1 |
+| `system` | `container` | C2 |
+| `box` | `system` | C1 (same-level grouping) |
+| `container` | `component` | C3 |
+| `containerBox` | `container` | C2 (same-level grouping) |
+| `componentBox` | `component` | C3 (same-level grouping) |
+| (other: db, queue, etc.) | `system` | C1 fallback |
+
+**Generic `db`/`queue` promotion by nesting level** (`inferGenericType`):
+| Parent type | `db` becomes | `queue` becomes | Level |
+|-------------|--------------|-----------------|-------|
+| (none) or `box` | `db` | `queue` | C1 (unchanged) |
+| `system` or `containerBox` | `containerDb` | `containerQueue` | C2 |
+| `container` or `componentBox` | `componentDb` | `componentQueue` | C3 |
+
+```toml
+[platform]
+# type omitted → inferred "system" (no parent)
+[platform.webapp]
+# type omitted → inferred "container" (parent is system)
+[platform.webapp.cache]
+type = "db"
+# explicit generic db → promoted to "componentDb" (parent is container)
+```
+
+An explicit non-generic `type =` always wins (no inference runs). Source: `defaultTypeForParent` and `inferGenericType` in `internal/parser/parser.go`.
+
+### Pipeline Ordering
+
+The v1.10 composition features run in a fixed pipeline order. Ordering is load-bearing for correctness:
+
+```
+include.Resolve → template.Expand → peer.Resolve → humanize → validate → views → render
+```
+
+- **`include.Resolve` runs FIRST** so templates defined in included files are visible to `[[use]]` directives in the entry file (XC-02).
+- **`template.Expand` runs before `peer.Resolve`** so relative peers authored inside templates resolve at the **instantiation site** (the `[[use]]` location), not the template's lexical location (XC-03).
+- **`humanize` runs after expand** (so it sees substituted names) and **before validate** (so error messages show final names) (XC-04). Currently humanize runs at parse time; templates carry explicit `name=` so parse-time humanize does not fire for them.
+- **`validate` sees only absolute paths** (peer.Resolve has rewritten all bare peers) and a fully-expanded model (no `${param}` tokens, no `[[use]]`/`[[include]]` directives remain).
+
+Reordering any pass breaks the multi-file templated relative-peer case (enforced as a behavioral regression test — see the XC-01 test in `cmd/c4drill/root_test.go`).
 
 ### Nesting (C2/C3 Diagrams)
 
@@ -284,6 +326,83 @@ description = "Real-time updates"
 | `technology` | `"HTTPS"`, `"gRPC"`, `"TCP"` | Protocol/technology label |
 | `description` | `"Sends events to"` | Relationship description |
 | `labelPosition` | `middle` (default), `tail`, `head` | Where label appears |
+
+### Templates ([template.*] + [[use]])
+
+Define a parametrized unit template once and instantiate it N times with distinct parameter values. A `[template.<name>]` table declares its parameters and the unit shape (fields, links, subunit subtrees); each `[[use]]` directive instantiates it under a parent with concrete parameter values.
+
+**`[template.<name>]` fields:**
+
+| Field | Description |
+|-------|-------------|
+| `params = ["a", "b", ...]` | Required: declares the named parameters. ALL are required on every `[[use]]` (no defaults). |
+| `name`, `description`, `technology`, `reference`, `color` | Standard unit fields; `${param}` substitutes into each. |
+| `type` | Standard unit type. Must be valid for the instantiation parent. |
+| `[[template.<name>.link]]` | Fixed link set (TMPL-03); peer/description/technology fields accept `${param}`. |
+| `[template.<name>.<child>]` | Subunit subtree (TMPL-04); child key verbatim (D-04), field values substituted. |
+
+**`[[use]]` directive fields:**
+
+| Field | Description |
+|-------|-------------|
+| `template = "<name>"` | Required: the `[template.<name>]` to instantiate. |
+| `parent = "<dotted.path>"` | Optional: placement path (empty/omitted = top-level). Produced path = `parent + "." + name-param`. |
+| `name = "<value>"` | Required: fills the produced unit's last path segment AND the template's `${name}` token. |
+| (other keys) | The template's remaining params; each must match a declared `params` entry. |
+
+**Validation rules:**
+- All declared `params` are required on every `[[use]]` (TMPL-02/06); a missing param is a hard error naming the template, the param, and the instantiation site.
+- `${param}` substitutes into Name/Description/Technology/Reference/Color and all Link fields (TMPL-03, TMPL-10).
+- The link set is **fixed** — N instantiations of a template with one link produce N links, not a fan-out (no `for_each`).
+- Subunit subtrees are deep-copied per instantiation (TMPL-08); the subunit key is verbatim, only field values substitute.
+- Duplicate unit paths across instantiations (or with hand-authored units) are a hard error (TMPL-07).
+- Forward references are allowed (a `[[use]]` may precede its `[template.*]` definition; an instantiated unit may be referenced before the `[[use]]`).
+
+**Interactions:** runs as the 2nd pipeline pass (see Pipeline Ordering). Relative peers authored inside a template resolve at the instantiation site (XC-03). Reference-field parametrization composes with the Phase 28 reference feature (TMPL-10). A template with a subunit cannot also carry direct links (validator rule — split into a leaf template + a parent template if you need both).
+
+### Include ([[include]])
+
+Assemble a model from multiple TOML files. Each `[[include]]` pulls in another file relative to the including file and merges its units.
+
+**`[[include]]` fields:**
+
+| Field | Description |
+|-------|-------------|
+| `path = "<relative>"` | Required: TOML file to include; relative to the including file's directory (INC-02). |
+| `once = true` | Optional: opts into visited-set dedup (INC-06) — a file included again via any path is skipped. |
+
+**Validation rules:**
+- Paths resolve relative to the INCLUDING file's directory, not the CLI cwd (INC-02).
+- Includes are **transitive** (an included file may itself `[[include]]` others) (INC-03).
+- Include cycles (self or mutual) are a fatal error naming the cycle (INC-04).
+- A same-file diamond (the same canonical path reached via two `[[include]]` paths) is auto-deduped silently (D-11); a cross-file unit-path collision (two different files defining the same `[unit]`) is a hard error.
+- `once=true` adds the file's canonical path to a visited set; subsequent `[[include]]` of the same path is skipped (INC-06).
+- The merge is **flat** — no namespacing. Included units append to `UnitOrder` in include-directive order (D-09).
+- Cross-file subunits (D-10): an included file may re-declare a parent declared in the entry; its subunits attach onto the entry's existing parent, appending to `SubunitOrder` in include-file order.
+- Properties follow root-file-wins (the entry's `[properties]` takes precedence; included `[properties]` are ignored) (INC-08).
+- A missing include file is a hard error naming the including file (INC-10/D-12).
+
+**Interactions:** runs as the 1st pipeline pass (see Pipeline Ordering) so templates defined in included files are visible to `[[use]]` in the entry (XC-02).
+
+### Relative Peer Resolution
+
+Bare peers (no dot) resolve by walking the host unit's ancestor scopes nearest-first (ERGO-01); absolute peers (with a dot) are used as-is (ERGO-02). A `peer` value is either **absolute** (contains a dot) or **bare** (no dot). The two are gated distinctly (D-16):
+
+- **Absolute peer** (e.g. `"platform.api"`): used as-is. No walk-up.
+- **Bare peer** (e.g. `"cache"`): resolved by walking the host unit's ancestor scopes nearest-first (D-13/D-14/D-15).
+
+**Walk-up algorithm:** starting at the host unit's immediate parent's children-map, check for a child matching the peer name. If found, resolve to that child's absolute path. If not, ascend to the grandparent's children-map and repeat. Continue until a match is found or the root scope is exhausted.
+
+| Case | Host | Bare peer | Resolves to |
+|------|------|-----------|-------------|
+| Sibling (D-13) | `platform.api` | `cache` | `platform.cache` (sibling under nearest ancestor) |
+| Aunt (D-14) | `platform.api.handlers.auth` | `queue` | `platform.queue` (walk up past empty scopes) |
+| Root (D-15) | `platform.api.handlers.auth` | `messageBus` | `messageBus` (top-level, walk reaches root) |
+| Absolute (D-16) | any | `platform.cache` | `platform.cache` (dot = no walk-up) |
+
+**Error cases:** a bare peer that matches nothing at any scope up to and including root is a hard error naming the peer and the host unit. Multiple matches at the same depth are structurally impossible (sibling keys are unique per parent).
+
+**Interactions:** runs as the 3rd pipeline pass, after `template.Expand` (see Pipeline Ordering). Templated units' relative peers resolve at the instantiation site (XC-03). Absolute peers (with a dot) are always unchanged (ERGO-02 backward-compat — any pre-v1.10 model using dotted peers renders identically).
 
 ---
 
@@ -450,6 +569,10 @@ The following examples demonstrate increasing complexity:
 3. **[03-links.toml](examples/03-links.toml)** - Link syntax (all attributes)
 4. **[04-styling.toml](examples/04-styling.toml)** - Visual customization (colors, borders, edges)
 5. **[05-ecommerce.toml](examples/05-ecommerce.toml)** - Realistic full architecture
+6. **[06-templates.toml](examples/06-templates.toml)** - Templates (`[template.*]` define + `[[use]]` instantiate, TMPL-01..10)
+7. **[07-relative-peer.toml](examples/07-relative-peer.toml)** - Relative peer walk-up (4 cases: sibling, aunt, root, absolute)
+8. **[08-include/](examples/08-include/)** - Multi-file composition (`[[include]]`, `once`, cross-file subunits)
+9. **[09-composed/](examples/09-composed/)** - All four features composed (XC-05 golden pair)
 
 All examples parse and validate successfully with `c4drill validate`.
 
@@ -573,5 +696,5 @@ c4drill architecture.toml -f html    # Safari-compatible
 
 ---
 
-*Skill version: 1.1.0*
-*C4Drill version: v1.9+*
+*Skill version: 1.2.0*
+*C4Drill version: v1.10+*

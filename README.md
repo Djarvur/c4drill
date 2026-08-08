@@ -185,6 +185,53 @@ name = "My Custom Name"
 
 **Backward compatibility:** existing models that already set `name =` on every unit are completely unaffected — humanization only fires when `name` is omitted.
 
+### Optional Type (Inference)
+
+The `type` field is **optional**. When omitted, the type is inferred from the parent unit's type (and, for the generic `db`/`queue` types, promoted to the level-specific variant based on nesting). Two rules apply:
+
+**1. Default type by parent** — the type assigned when `type` is omitted entirely:
+
+| Parent type | Inferred child type | Level |
+|-------------|---------------------|-------|
+| (none — root) | `system` | C1 |
+| `system` | `container` | C2 |
+| `box` | `system` | C1 (same-level grouping) |
+| `container` | `component` | C3 |
+| `containerBox` | `container` | C2 (same-level grouping) |
+| `componentBox` | `component` | C3 (same-level grouping) |
+| (other: db, queue, etc.) | `system` | C1 fallback |
+
+**2. Generic `db`/`queue` promotion** — when `type = "db"` or `type = "queue"` is set explicitly, the type is promoted to the level-specific variant based on the parent:
+
+| Parent type | `db` becomes | `queue` becomes | Level |
+|-------------|--------------|-----------------|-------|
+| (none) or `box` | `db` | `queue` | C1 (unchanged) |
+| `system` or `containerBox` | `containerDb` | `containerQueue` | C2 |
+| `container` or `componentBox` | `componentDb` | `componentQueue` | C3 |
+
+**Before/after example:**
+
+```toml
+# BEFORE — explicit types (verbose)
+[platform]
+type = "system"
+[platform.webapp]
+type = "container"
+[platform.webapp.cache]
+type = "componentDb"     # generic db promoted because parent is container
+
+# AFTER — type omitted, inferred (identical result)
+[platform]
+# type omitted → inferred "system" (no parent)
+[platform.webapp]
+# type omitted → inferred "container" (parent is system)
+[platform.webapp.cache]
+type = "db"
+# explicit generic db → promoted to "componentDb" (parent is container)
+```
+
+An explicit non-generic `type =` always wins (no inference runs). Source: `defaultTypeForParent` and `inferGenericType` in `internal/parser/parser.go`.
+
 ### Nesting (C2/C3 Diagrams)
 
 Systems and boxes can contain subunits using dotted notation:
@@ -306,6 +353,92 @@ color = "#4A90D9"              # Background color
 border = "#2E5A8B"             # Border color
 style = "solid"                # Border style (solid|dashed|dotted)
 ```
+
+### Templates
+
+Define a parametrized unit template once and instantiate it N times with distinct parameter values. A template is a `[template.<name>]` table declaring its parameters and the unit shape (including subunits and links); each `[[use]]` directive instantiates it with concrete values.
+
+```toml
+[template.microservice]
+params = ["name", "tech", "upstreamBus"]
+name = "${name} Service"
+type = "container"
+technology = "${tech}"
+description = "${name} handles its domain"
+reference = "https://wiki.example.com/${name}"
+
+[[template.microservice.link]]
+peer = "${upstreamBus}"
+description = "Publishes ${name} domain events"
+
+[[use]]
+template = "microservice"
+parent = "platform"
+name = "auth"
+tech = "Go, gRPC"
+upstreamBus = "messageBus"
+```
+
+**Rules:**
+- All declared params are **required** on every `[[use]]` (no defaults); a missing param is a hard error.
+- `${param}` substitutes into every string field — name, description, technology, reference, color, and link fields (peer, description, technology).
+- The link set is **fixed**: a template with one `[[template.X.link]]` produces exactly one link per instantiation (no fan-out / `for_each`).
+- Subunit subtrees are supported (declare `[template.X.child]`); the subunit key is verbatim, only field values are substituted.
+- Duplicate unit paths across instantiations are a hard error.
+
+See `skill/examples/06-templates.toml` for a runnable example.
+
+### Multi-File Composition (Include)
+
+Assemble a diagram from multiple TOML files. Each `[[include]]` directive pulls in another file relative to the including file's directory and merges its units into the model.
+
+```toml
+# entry.toml
+[platform]
+type = "system"
+name = "Platform"
+
+[[include]]
+path = "auth.toml"
+
+[[include]]
+path = "templates.toml"
+once = true
+```
+
+**Rules:**
+- Paths are **relative to the including file's directory** (not the CLI cwd).
+- Includes are **transitive** (an included file may itself include others).
+- `once = true` deduplicates by canonical path — a file included again (even via a different path) is skipped.
+- The merge is **flat** (no namespacing): included units append in include order. Cross-file subunits are supported — an included file may re-declare a parent declared in the entry and contribute subunits under it.
+- Include cycles are a fatal error; missing files are a hard error.
+- Properties follow root-file-wins (the entry's `[properties]` takes precedence).
+
+See `skill/examples/08-include/` for a runnable multi-file example.
+
+### Relative Peer Resolution
+
+A bare `peer` value (no dot) resolves against the enclosing parent's ancestor scopes — walking up nearest-first until a sibling match is found. A peer **with a dot** is absolute and used as-is.
+
+```toml
+[platform.api]
+# Bare peer "cache" resolves via walk-up:
+[[platform.api.link]]
+peer = "cache"                          # sibling: platform.cache (nearest ancestor scope match)
+
+[[platform.api.link]]
+peer = "platform.cache"                 # absolute: has a dot, used as-is
+```
+
+**The four resolution cases:**
+- **Sibling match** — the nearest ancestor scope (the immediate parent) has a child with that name.
+- **Aunt/grandparent match** — walk up past the parent; a grandparent's child matches.
+- **Root match** — walk all the way to the top-level scope.
+- **Absolute fallback** — a peer containing a dot is never walked-up; it is used verbatim.
+
+Multiple matches at the same depth are impossible (sibling keys are unique per parent). A miss at root is a hard error naming the peer and the host unit.
+
+See `skill/examples/07-relative-peer.toml` for a runnable example demonstrating all four cases.
 
 ## Full Example
 
