@@ -64,7 +64,9 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - ✓ Example fixtures (DOC-03, D-17): `skill/examples/06-templates.toml`, `07-relative-peer.toml`, `08-include/` (3 files), `09-composed/` (4 files incl. hand-expanded single-file equivalent). All 5 runnable fixtures render cleanly through the full v1.10 pipeline.
 - ✓ End-to-end composition proofs (XC-01, XC-05, D-20): `TestXC05_ComposedEquivSingleFile` proves composed multi-file ≡ hand-expanded single-file (canonicalDOT, 3872 bytes identical); `TestXC01_PipelineOrdering` is a behavioral guard that the pipeline order include → template.Expand → peer.Resolve is load-bearing (covers XC-02 + XC-03). Both use `canonical.Canonical` (DI-1), never byte-exact `require.Equal`.
 
-## Current Milestone: v1.10 Model Composition — COMPLETE (2026-08-08)
+## Shipped
+
+### v1.10 Model Composition (Shipped 2026-08-08)
 
 **Goal:** Expand C4Drill's authoring model from a single static TOML file into a composable, parametrized, multi-file format — while preserving backward compatibility and the auto-generated-view philosophy.
 
@@ -77,13 +79,34 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - **Document omittable `type`** — surface the existing type-inference rules in README + SKILL docs
 
 **Key context:**
-- Two features carry **open design questions** flagged for discuss-phase resolution: include (parse-then-merge vs byte-concat — recommendation: parse-then-merge) and templates (structured post-parse vs text preprocess — recommendation: structured post-parse).
+- Two features carried **open design questions** resolved during discuss-phase: include (parse-then-merge) and templates (structured post-parse).
 - Pipeline ordering is load-bearing: include resolves first (template libraries in included files become visible), template expansion runs before relative-peer resolution (templated-unit links resolve correctly), validation runs last.
-- Backward compatibility is non-negotiable: all five features are additive; existing single-file models must parse and render unchanged.
-- References: go-metadot (`metadot.pl` — the Go port does NOT implement macros), PlantUML `!procedure` and `!include`/`!include_once`.
+- Backward compatibility was non-negotiable: all five features were additive; existing single-file models parse and render unchanged.
 - Out of scope (from LikeC4 comparison): custom kinds, tags, icons, metadata, deployment model, user-authored views.
 
-## Shipped
+## Current Milestone: v1.11 LikeC4 Compatibility Layer
+
+**Goal:** Let `c4drill` render any valid LikeC4 (`.c4`) source by on-the-fly converting it into the existing TOML pipeline — breadth over fidelity, never fatal on unsupported constructs.
+
+**Target features:**
+
+- **Native Go LikeC4 parser** — hand-written parser for the LikeC4 DSL subset (`specification`, `model`, element kinds, `->` relationships, lexical `{}` nesting, comments). No TypeScript/Node runtime, no CGO, no external grammar dependency.
+- **On-the-fly converter** — produces a `*parser.Model` from LikeC4 source, inserted as Stage 0 (before the existing `parser.ParseFile`). Everything downstream (`include.Resolve → template.Expand → peer.Resolve → Validate → view → render`) runs unchanged — the converter is the only code that knows LikeC4 was the source.
+- **Extension-based routing** — `.c4` / `.likec4` inputs route to the converter; `.toml` inputs route to the existing parser. Zero new flags. Hard regression contract: every existing `.toml` fixture parses byte-identical.
+- **Graceful degradation** — unsupported constructs are dropped with deduplicated stderr warnings (one per construct type), never fatal:
+  - `deployments {}` block — C4Drill has no deployment concept.
+  - Custom element kinds — LikeC4 has NO built-in kinds and NO kind inheritance; every kind is a flat user-declared scalar. The converter maps unknown kinds to the nearest C4Drill built-in by fuzzy name match (`person`→person, `database`/`db`→db, `queue`→queue, `container`→container, `system`/`enterprise`/`softwaresystem`→system, fallback→box), not a hard error.
+  - Icons — silently dropped (project is on `dev/shapes-no-icons` branch).
+  - `tags` / `metadata` — dropped with a warning (not rendered visually).
+  - `views {}` block — dropped entirely; C4Drill auto-generates C1/C2/C3 from the model tree.
+- **LikeC4 `extend` support** — cross-file element extension (add children/properties to an element declared elsewhere) maps to C4Drill's nested-unit model so multi-file LikeC4 workspaces merge correctly.
+
+**Key context:**
+- LikeC4 source files in a workspace are implicitly merged into one model; there is no `import` / `#include` at the DSL level (only `extend <element> {}`). A single-input-file converter needs no import syntax.
+- LikeC4 nesting is purely lexical (braces) — there is no `parent` attribute. The converter must flatten braces into C4Drill's dotted-path subunit tree.
+- LikeC4 relationships support `this`/`it` (parent as source/target) and sourceless `-> target` (implicit parent source) inside element bodies — the converter must resolve these to absolute paths.
+- Relationship kinds (e.g. `-[async]->`) and the bidirectional `<->` form exist; C4Drill links carry `technology` but no kind taxonomy — kind is dropped, `<->` becomes two links.
+- Reference research: `.planning/research/likec4-dsl-brief.md` (full DSL technical brief).
 
 ### v1.8 Proper C1/C2/C3 View Generation
 
@@ -250,4 +273,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-08 — v1.10 milestone complete (Phase 33 final phase shipped)*
+*Last updated: 2026-08-08 — v1.11 LikeC4 Compatibility Layer milestone started*
