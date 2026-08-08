@@ -1,0 +1,35 @@
+# Fixture for BC-1 reserved-table skip: exercises all three reserved tables
+# ([template.*], [[use]], [[include]]) alongside a hand-authored unit so the
+# parser skip-rule + extraction is covered in one document.
+[properties]
+name = "Reserved Tables Test"
+description = "Exercises BC-1 reserved-table skip"
+
+[user]
+type = "person"
+name = "User"
+description = "End user"
+
+# Reserved table 1: [template.<name>] — must NOT register 'svc' or 'template'
+# as a phantom unit; extracted into Model.Templates.
+[template.svc]
+params = ["name", "tech"]
+name = "${name} Service"
+type = "container"
+technology = "${tech}"
+description = "${name} service"
+
+[[template.svc.link]]
+peer = "${bus}"
+description = "Publishes events"
+
+# Reserved table 2: [[use]] — array-of-tables; extracted into Model.Instantiations.
+[[use]]
+template = "svc"
+name = "auth"
+tech = "Go"
+bus = "messageBus"
+
+# Reserved table 3: [[include]] — reserved for Phase 32; skipped, NOT extracted.
+[[include]]
+path = "other.toml"

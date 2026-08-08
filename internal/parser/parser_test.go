@@ -1155,3 +1155,163 @@ func TestParseOmittedNameNoRegression(t *testing.T) {
 	})
 }
 
+// --- Phase 31: BC-1 reserved-table parser tests (Plan 31-01) ---
+//
+// These tests exercise the BC-1 prerequisite (D-08): the parser must skip
+// [template.*] / [[use]] / [[include]] tables so they neither create phantom
+// units nor leak into the unit loop, and route template/use into new
+// Model.Templates / Model.Instantiations fields consumed by Plan 02's
+// expansion pass.
+
+// TestParseReservedTablesSkipped exercises the BC-1 skip rule: a document
+// containing [template.svc], [[use]], and [[include]] alongside a hand-authored
+// [user] unit produces a Model whose UnitOrder/Units contain ONLY the
+// hand-authored unit. None of "template", "svc", "use", "include" may leak.
+func TestParseReservedTablesSkipped(t *testing.T) {
+	t.Parallel()
+
+	data, err := os.ReadFile("../../testdata/template_reserved.toml")
+	require.NoError(t, err, "failed to read template_reserved.toml")
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	// UnitOrder contains ONLY the hand-authored unit, in order.
+	assert.Equal(t, []string{"user"}, got.UnitOrder, "UnitOrder must exclude all reserved tables")
+
+	// Units contains ONLY the hand-authored unit.
+	assert.Len(t, got.Units, 1, "Units must contain only the hand-authored unit")
+	assert.Contains(t, got.Units, "user", "Units must contain 'user'")
+	assert.NotContains(t, got.Units, "template", "phantom 'template' parent must not exist")
+	assert.NotContains(t, got.Units, "svc", "template name must not leak as a unit")
+	assert.NotContains(t, got.Units, "use", "[[use]] must not leak as a unit")
+	assert.NotContains(t, got.Units, "include", "[[include]] must not leak as a unit")
+
+	// Model.Templates has the 'svc' key.
+	require.NotNil(t, got.Templates, "Templates map must be non-nil when [template.*] present")
+	assert.Contains(t, got.Templates, "svc", "Templates must contain 'svc'")
+
+	// Model.Instantiations has exactly one entry (document order).
+	require.Len(t, got.Instantiations, 1, "Instantiations must contain the single [[use]] entry")
+}
+
+// TestParseTemplateTableExtractsSubtree verifies the [template.<name>] table is
+// extracted into Model.Templates with its full parsed *model.Unit subtree,
+// INCLUDING [[template.<name>.link]] arrays becoming model.Unit.Links. Params
+// are captured but NOT substituted at parse time (Plan 02's job).
+func TestParseTemplateTableExtractsSubtree(t *testing.T) {
+	t.Parallel()
+
+	data, err := os.ReadFile("../../testdata/template_reserved.toml")
+	require.NoError(t, err, "failed to read template_reserved.toml")
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	require.Contains(t, got.Templates, "svc", "Templates must contain 'svc'")
+	tmpl := got.Templates["svc"]
+	require.NotNil(t, tmpl, "Templates['svc'] must be non-nil")
+	require.NotNil(t, tmpl.Unit, "TemplateDef.Unit must be the parsed subtree")
+
+	assert.Equal(t, model.TypeContainer, tmpl.Unit.Type, "template svc.Type")
+	assert.Equal(t, "${name} Service", tmpl.Unit.Name, "template svc.Name (unsubstituted at parse time)")
+	assert.Equal(t, "${tech}", tmpl.Unit.Technology, "template svc.Technology (unsubstituted)")
+
+	// Declared params captured.
+	assert.ElementsMatch(t, []string{"name", "tech"}, tmpl.Params, "template svc declared params")
+
+	// [[template.svc.link]] parsed into Unit.Links with Peer unsubstituted.
+	require.Len(t, tmpl.Unit.Links, 1, "template svc.Links must contain the declared link")
+	assert.Equal(t, "${bus}", tmpl.Unit.Links[0].Peer, "link Peer (unsubstituted)")
+	assert.Equal(t, "Publishes events", tmpl.Unit.Links[0].Description, "link Description")
+}
+
+// TestParseUseArrayPreservesOrder verifies [[use]] array-of-tables entries are
+// captured into Model.Instantiations in document order, each carrying the
+// template name + supplied named params.
+func TestParseUseArrayPreservesOrder(t *testing.T) {
+	t.Parallel()
+
+	data, err := os.ReadFile("../../testdata/template_use_array.toml")
+	require.NoError(t, err, "failed to read template_use_array.toml")
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	require.Len(t, got.Instantiations, 2, "two [[use]] blocks must yield two Instantiations")
+
+	assert.Equal(t, "svc", got.Instantiations[0].Template, "Instantiations[0].Template")
+	assert.Equal(t, "svc", got.Instantiations[1].Template, "Instantiations[1].Template")
+
+	// Document order: 'alpha' before 'beta'.
+	require.NotNil(t, got.Instantiations[0].Params, "Instantiations[0].Params")
+	assert.Equal(t, "alpha", got.Instantiations[0].Params["name"], "Instantiations[0] name param (document order)")
+	require.NotNil(t, got.Instantiations[1].Params, "Instantiations[1].Params")
+	assert.Equal(t, "beta", got.Instantiations[1].Params["name"], "Instantiations[1] name param (document order)")
+}
+
+// TestParseUseBeforeTemplate exercises TMPL-09: a [[use]] appearing textually
+// BEFORE its [template.<name>] definition parses without error because
+// extraction is structured (rawMap post-parse), not textual.
+func TestParseUseBeforeTemplate(t *testing.T) {
+	t.Parallel()
+
+	data, err := os.ReadFile("../../testdata/template_forward_ref.toml")
+	require.NoError(t, err, "failed to read template_forward_ref.toml")
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "forward-reference [[use]] before [template.*] must not error (TMPL-09)")
+
+	// Both fields populated despite textual ordering.
+	assert.Contains(t, got.Templates, "svc", "Templates['svc'] populated regardless of textual order")
+	require.Len(t, got.Instantiations, 1, "forward-ref [[use]] captured")
+	assert.Equal(t, "svc", got.Instantiations[0].Template, "forward-ref Instantiation.Template")
+}
+
+// TestParseIncludeReservedSkipped verifies [[include]] tables are skipped in
+// captureDefinitionOrder (no phantom 'include' unit) and NOT extracted into any
+// Model field (reserved for Phase 32).
+func TestParseIncludeReservedSkipped(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Include Skip Test"
+
+[[include]]
+path = "other.toml"
+
+[user]
+type = "person"
+name = "User"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	assert.NotContains(t, got.UnitOrder, "include", "[[include]] must not leak into UnitOrder")
+	assert.NotContains(t, got.Units, "include", "[[include]] must not leak into Units")
+	assert.Equal(t, []string{"user"}, got.UnitOrder, "UnitOrder contains only the hand-authored unit")
+}
+
+// TestParseNoRegressionOnHandAuthoredTemplates verifies that existing
+// hand-authored fixtures (no reserved tables) parse identically: no Templates,
+// no Instantiations, Units/UnitOrder unchanged.
+func TestParseNoRegressionOnHandAuthoredTemplates(t *testing.T) {
+	t.Parallel()
+
+	data, err := os.ReadFile("../../testdata/valid.toml")
+	require.NoError(t, err, "failed to read testdata/valid.toml")
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	// No reserved tables in valid.toml → Templates empty, Instantiations empty.
+	assert.Empty(t, got.Templates, "Templates must be empty for hand-authored-only models")
+	assert.Empty(t, got.Instantiations, "Instantiations must be empty for hand-authored-only models")
+
+	// Units/UnitOrder unchanged.
+	assert.Equal(t, []string{"user", "webapp"}, got.UnitOrder, "UnitOrder unchanged")
+	assert.Len(t, got.Units, 2, "Units count unchanged")
+}
+
