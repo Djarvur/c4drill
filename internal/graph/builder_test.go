@@ -3,7 +3,6 @@ package graph_test
 import (
 	"fmt"
 	"os"
-	"sort"
 	"strings"
 	"testing"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/Djarvur/c4drill/internal/model"
 	"github.com/Djarvur/c4drill/internal/parser"
 	"github.com/Djarvur/c4drill/internal/render"
+	"github.com/Djarvur/c4drill/internal/testutil/canonical"
 	"github.com/Djarvur/c4drill/internal/validator"
 	"github.com/Djarvur/c4drill/internal/view"
 	"github.com/stretchr/testify/assert"
@@ -1131,6 +1131,7 @@ func TestBuildGraphEdgeLength(t *testing.T) {
 // effect only when BOTH drawn endpoints are the link's original units. When
 // either endpoint is resolved to an ancestor, the synthesized edge carries no
 // minlen.
+//
 //nolint:funlen // Test functions with model setup are naturally longer
 func TestBuildGraphResolvedEdgeMinLen(t *testing.T) {
 	t.Parallel()
@@ -1240,355 +1241,10 @@ func TestBuildExpandedGraphBaselineDOT(t *testing.T) {
 
 	// DI-1: the pinned go-graphviz fork emits map-order-dependent sibling
 	// ordering and layout geometry, so the golden comparison is
-	// order-insensitive — canonicalDOT normalizes both sides to a sorted,
+	// order-insensitive — canonical.Canonical normalizes both sides to a sorted,
 	// geometry-stripped semantic form (D-02 contract) before comparison.
-	require.Equal(t, canonicalDOT(t, string(expected)), canonicalDOT(t, string(dotData)),
+	require.Equal(t, canonical.Canonical(t, string(expected)), canonical.Canonical(t, string(dotData)),
 		"expanded DOT must match the committed golden baseline semantically (COMPAT-02)")
-}
-
-// canonicalDOT normalizes XDOT output into an order-insensitive semantic
-// serialization (DI-1). The pinned go-graphviz fork emits map-order-dependent
-// sibling statement order and layout geometry, so raw byte comparison against
-// the committed golden baseline is impossible; the normalized form keeps
-// statement kind, head, sorted attributes with layout geometry stripped, and
-// recursively sorted children — the D-02 equivalence contract.
-func canonicalDOT(t *testing.T, dot string) string {
-	t.Helper()
-
-	stmts, ok := parseDOTStatements(dot)
-	require.True(t, ok, "parsing DOT output for canonical comparison")
-
-	return serializeDOTStatements(stmts)
-}
-
-// dotStatement is one parsed statement of an XDOT document: an attribute block
-// (graph/node/edge defaults, node or edge statement) or a nested subgraph.
-type dotStatement struct {
-	kind     string
-	head     string
-	attrs    []string
-	children []dotStatement
-}
-
-// parseDOTStatements skips the "digraph ... {" header and parses the statement
-// list until the closing brace.
-func parseDOTStatements(dot string) ([]dotStatement, bool) {
-	idx := strings.Index(dot, "{")
-	if idx < 0 {
-		return nil, false
-	}
-
-	stmts, _, ok := parseDOTBlock(dot, idx+1)
-
-	return stmts, ok
-}
-
-// parseDOTBlock parses statements starting at pos until the matching "}".
-// It returns the parsed statements and the position just past the closing brace.
-func parseDOTBlock(dot string, pos int) ([]dotStatement, int, bool) {
-	var stmts []dotStatement
-
-	for pos < len(dot) {
-		pos = skipDOTWhitespace(dot, pos)
-		if pos >= len(dot) {
-			return stmts, pos, false
-		}
-
-		if dot[pos] == '}' {
-			return stmts, pos + 1, true
-		}
-
-		var (
-			stmt dotStatement
-			ok   bool
-		)
-
-		if strings.HasPrefix(dot[pos:], "subgraph") {
-			stmt, pos, ok = parseDOTSubgraph(dot, pos)
-		} else {
-			stmt, pos, ok = parseDOTAttrStatement(dot, pos)
-		}
-
-		if !ok {
-			return stmts, pos, false
-		}
-
-		stmts = append(stmts, stmt)
-	}
-
-	return stmts, pos, true
-}
-
-// skipDOTWhitespace advances pos past spaces, tabs and newlines.
-func skipDOTWhitespace(dot string, pos int) int {
-	for pos < len(dot) && (dot[pos] == ' ' || dot[pos] == '\t' || dot[pos] == '\n' || dot[pos] == '\r') {
-		pos++
-	}
-
-	return pos
-}
-
-// parseDOTSubgraph parses a "subgraph ... { ... }" statement, recursing into
-// its children. It returns the statement and the position past its closing "}".
-// The opening "{" is located with quoted-string and HTML label awareness so a
-// head containing those characters cannot truncate the statement early.
-func parseDOTSubgraph(dot string, pos int) (dotStatement, int, bool) {
-	open := findDOTBlockOpen(dot, pos)
-	if open < 0 {
-		return dotStatement{}, pos, false
-	}
-
-	head := strings.TrimSpace(dot[pos:open])
-
-	children, next, ok := parseDOTBlock(dot, open+1)
-	if !ok {
-		return dotStatement{}, next, false
-	}
-
-	return dotStatement{kind: "subgraph", head: head, children: children}, next, true
-}
-
-// parseDOTAttrStatement parses one attribute statement (graph/node/edge
-// defaults, node or edge statement). It returns the statement and the position
-// past its "];" terminator. Terminators are located with quoted-string and
-// HTML label awareness: attribute values are user-authored (descriptions,
-// technologies) and may contain "];", "{" or "}" inside quotes or HTML labels,
-// so a raw "];" search would truncate the statement and silently shift the
-// parse of everything after it. The ";" alone is not a safe terminator because
-// HTML entity values (e.g. "&#x1F464;") contain semicolons.
-func parseDOTAttrStatement(dot string, pos int) (dotStatement, int, bool) {
-	end := findDOTAttrTerminator(dot, pos)
-	if end < 0 {
-		return dotStatement{}, pos, false
-	}
-
-	text := dot[pos:end]
-	next := end + 2
-
-	open := strings.Index(text, "[")
-	if open < 0 {
-		return dotStatement{kind: "bare", head: strings.TrimSpace(text)}, next, true
-	}
-
-	return dotStatement{
-		kind:  "attr",
-		head:  strings.TrimSpace(text[:open]),
-		attrs: normalizeDOTAttrs(text[open+1:]),
-	}, next, true
-}
-
-// scanDOTValueEnd advances pos past a DOT value region starting at pos: a
-// double-quoted string (with backslash escapes) or an HTML label (<...>,
-// which may nest). It returns the position just past the closing quote or ">",
-// or len(dot) when the region is unterminated.
-func scanDOTValueEnd(dot string, pos int) int {
-	if dot[pos] == '"' {
-		for i := pos + 1; i < len(dot); i++ {
-			if dot[i] == '\\' {
-				i++ // skip the escaped character
-
-				continue
-			}
-
-			if dot[i] == '"' {
-				return i + 1
-			}
-		}
-
-		return len(dot)
-	}
-
-	depth := 1
-
-	for i := pos + 1; i < len(dot); i++ {
-		switch dot[i] {
-		case '<':
-			depth++
-		case '>':
-			depth--
-			if depth == 0 {
-				return i + 1
-			}
-		}
-	}
-
-	return len(dot)
-}
-
-// findDOTAttrTerminator returns the absolute index of the "];" that terminates
-// the attribute statement starting at pos, skipping quoted strings and HTML
-// labels inside attribute values. It returns -1 when the document ends before
-// a terminator.
-func findDOTAttrTerminator(dot string, pos int) int {
-	for i := pos; i < len(dot); i++ {
-		switch dot[i] {
-		case '"', '<':
-			i = scanDOTValueEnd(dot, i) - 1
-		case ']':
-			if i+1 < len(dot) && dot[i+1] == ';' {
-				return i
-			}
-		}
-	}
-
-	return -1
-}
-
-// findDOTBlockOpen returns the absolute index of the "{" that opens the block
-// of the subgraph statement starting at pos, skipping quoted strings and HTML
-// labels in the head. It returns -1 when the document ends before an opening
-// brace.
-func findDOTBlockOpen(dot string, pos int) int {
-	for i := pos; i < len(dot); i++ {
-		switch dot[i] {
-		case '"', '<':
-			i = scanDOTValueEnd(dot, i) - 1
-		case '{':
-			return i
-		}
-	}
-
-	return -1
-}
-
-// isGeometryAttr reports whether an attribute is layout geometry emitted by the
-// go-graphviz engine. Its values flip between runs and carry no D-02 semantic
-// content, so it is stripped from the canonical form.
-func isGeometryAttr(name string) bool {
-	switch name {
-	case "bb", "pos", "lp", "lheight", "lwidth", "height", "width":
-		return true
-	}
-
-	return false
-}
-
-// normalizeDOTAttrs splits an attribute block (between "[" and "]") into
-// individual attributes, strips layout geometry, and sorts the remainder.
-// Attributes are one per line in xdot output, so ",\n" is the separator;
-// block content never contains a newline inside a value.
-func normalizeDOTAttrs(block string) []string {
-	raw := strings.Split(block, ",\n")
-	attrs := make([]string, 0, len(raw))
-
-	for _, piece := range raw {
-		attr := strings.TrimSpace(piece)
-		if attr == "" {
-			continue
-		}
-
-		name, _, _ := strings.Cut(attr, "=")
-		if isGeometryAttr(name) {
-			continue
-		}
-
-		attrs = append(attrs, attr)
-	}
-
-	sort.Strings(attrs)
-
-	return attrs
-}
-
-// serializeDOTStatements serializes a statement list canonically: statements
-// are ordered by their canonical form so sibling order flips (DI-1) compare
-// equal, preserving duplicates for multiset semantics.
-func serializeDOTStatements(stmts []dotStatement) string {
-	sorted := make([]string, 0, len(stmts))
-	for _, stmt := range stmts {
-		sorted = append(sorted, serializeDOTStatement(stmt))
-	}
-
-	sort.Strings(sorted)
-
-	return strings.Join(sorted, "\x00")
-}
-
-// serializeDOTStatement serializes one statement: kind, head, sorted
-// attributes, then recursively serialized children.
-func serializeDOTStatement(stmt dotStatement) string {
-	var b strings.Builder
-
-	b.WriteString(stmt.kind)
-	b.WriteByte('\x00')
-	b.WriteString(stmt.head)
-
-	for _, attr := range stmt.attrs {
-		b.WriteByte('\x00')
-		b.WriteString(attr)
-	}
-
-	if len(stmt.children) > 0 {
-		b.WriteByte('\x00')
-		b.WriteString(serializeDOTStatements(stmt.children))
-	}
-
-	return b.String()
-}
-
-func TestCanonicalDOTPreservesLastAttribute(t *testing.T) {
-	t.Parallel()
-
-	// WR-01 regression: the attribute block was sliced with an off-by-one that
-	// dropped the final character of the last attribute, canonicalizing
-	// style=solid as style=soli. The full value must survive.
-	dot := "digraph G {\n" +
-		"\t\"a\" -> \"b\" [key=\"a_to_b\",\n" +
-		"\t\tstyle=solid];\n" +
-		"}\n"
-
-	require.Equal(t, "attr\x00\"a\" -> \"b\"\x00key=\"a_to_b\"\x00style=solid",
-		canonicalDOT(t, dot))
-}
-
-func TestCanonicalDOTFinalAttributeDriftDetected(t *testing.T) {
-	t.Parallel()
-
-	// WR-01 false-pass window: penwidth=1 vs penwidth=2 as the FINAL attribute
-	// must canonicalize differently, otherwise a renderer drift confined to
-	// that position would silently pass the COMPAT-02 comparison.
-	dotPenwidth1 := "digraph G {\n" +
-		"\t\"a\" -> \"b\" [key=\"a_to_b\",\n" +
-		"\t\tpenwidth=1];\n" +
-		"}\n"
-	dotPenwidth2 := "digraph G {\n" +
-		"\t\"a\" -> \"b\" [key=\"a_to_b\",\n" +
-		"\t\tpenwidth=2];\n" +
-		"}\n"
-
-	require.NotEqual(t, canonicalDOT(t, dotPenwidth1), canonicalDOT(t, dotPenwidth2))
-	require.Contains(t, canonicalDOT(t, dotPenwidth2), "penwidth=2")
-}
-
-func TestCanonicalDOTQuotedValuesDoNotTruncate(t *testing.T) {
-	t.Parallel()
-
-	// WR-02 regression: `];` and braces inside quoted attribute values must not
-	// terminate the statement early — the full value and every following
-	// statement must survive canonicalization.
-	dot := "digraph G {\n" +
-		"\t\"a\" -> \"b\" [description=\"SSH [session]; admin\",\n" +
-		"\t\tminlen=3];\n" +
-		"\t\"b\" -> \"c\" [label=\"uses {braces}\"];\n" +
-		"}\n"
-
-	canon := canonicalDOT(t, dot)
-	require.Contains(t, canon, "description=\"SSH [session]; admin\"")
-	require.Contains(t, canon, "minlen=3")
-	require.Contains(t, canon, "label=\"uses {braces}\"")
-	require.Contains(t, canon, "\"b\" -> \"c\"")
-}
-
-func TestCanonicalDOTHTMLLabelDoesNotTruncate(t *testing.T) {
-	t.Parallel()
-
-	// WR-02 regression: `];` inside an HTML label (<...>) must not terminate
-	// the statement early; HTML labels contain entities and arbitrary text.
-	dot := "digraph G {\n" +
-		"\t\"a\" [label=<<b>SSH [session]; admin</b>>];\n" +
-		"}\n"
-
-	require.Contains(t, canonicalDOT(t, dot), "label=<<b>SSH [session]; admin</b>>")
 }
 
 //nolint:funlen // Test functions with model setup are naturally longer
@@ -1686,16 +1342,16 @@ func TestBuildGraphDeterministicOrder(t *testing.T) {
 			UnitOrder:  []string{"zeta", "alpha", "gamma"}, // Explicit definition order
 			Units: map[string]*model.Unit{
 				"zeta": {
-					Type: model.TypeSystem,
-					Name: "Zeta System",
+					Type:         model.TypeSystem,
+					Name:         "Zeta System",
 					SubunitOrder: []string{"sub"},
 					Subunits: map[string]*model.Unit{
 						"sub": {Type: model.TypeContainer, Name: "Sub"},
 					},
 				},
 				"alpha": {
-					Type: model.TypeSystem,
-					Name: "Alpha System",
+					Type:         model.TypeSystem,
+					Name:         "Alpha System",
 					SubunitOrder: []string{"sub"},
 					Subunits: map[string]*model.Unit{
 						"sub": {Type: model.TypeContainer, Name: "Sub"},
@@ -1730,10 +1386,10 @@ func TestBuildGraphDeterministicOrder(t *testing.T) {
 			Properties: model.Properties{Name: "Test"},
 			Units: map[string]*model.Unit{
 				"system": {
-					Type:          model.TypeSystem,
-					Name:          "System",
-					Expanded:      []string{"system"}, // Mark the system itself as expanded
-					SubunitOrder:  []string{"zeta", "alpha", "gamma"}, // Explicit definition order
+					Type:         model.TypeSystem,
+					Name:         "System",
+					Expanded:     []string{"system"},                 // Mark the system itself as expanded
+					SubunitOrder: []string{"zeta", "alpha", "gamma"}, // Explicit definition order
 					Subunits: map[string]*model.Unit{
 						"zeta":  {Type: model.TypeContainer, Name: "Zeta"},
 						"alpha": {Type: model.TypeContainer, Name: "Alpha"},
@@ -1769,9 +1425,9 @@ func TestBuildGraphDeterministicOrder(t *testing.T) {
 					SubunitOrder: []string{"zeta", "alpha", "gamma"}, // Explicit definition order
 					Subunits: map[string]*model.Unit{
 						"zeta": {
-							Type:          model.TypeContainer,
-							Name:          "Zeta",
-							SubunitOrder:  []string{"sub3", "sub1", "sub2"}, // Explicit definition order
+							Type:         model.TypeContainer,
+							Name:         "Zeta",
+							SubunitOrder: []string{"sub3", "sub1", "sub2"}, // Explicit definition order
 							Subunits: map[string]*model.Unit{
 								"sub3": {Type: model.TypeComponent, Name: "Sub3"},
 								"sub1": {Type: model.TypeComponent, Name: "Sub1"},
@@ -1928,13 +1584,13 @@ func TestBuildGraphDefinitionOrder(t *testing.T) {
 		UnitOrder:  []string{"zulu", "alpha", "gamma"},
 		Units: map[string]*model.Unit{
 			"zulu": {
-				Type: model.TypeSystem,
-				Name: "Zulu System",
+				Type:  model.TypeSystem,
+				Name:  "Zulu System",
 				Links: []model.Link{{Peer: "alpha", Technology: "HTTP"}},
 			},
 			"alpha": {
-				Type: model.TypeSystem,
-				Name: "Alpha System",
+				Type:  model.TypeSystem,
+				Name:  "Alpha System",
 				Links: []model.Link{{Peer: "gamma", Technology: "TCP"}},
 			},
 			"gamma": {
@@ -2453,6 +2109,7 @@ func edgeBlockFromDOT(t *testing.T, dot []byte, source, target string) string {
 // serialization: 1.0 for single edges in resolved views, 2.0 for collapsed
 // pairs in resolved views, 2.0 in expanded mode. DOT rendering is
 // parallel-safe (precedent: TestBuildExpandedGraphRealToml).
+//
 //nolint:funlen // Test functions with model setup are naturally longer
 func TestBuildEdgesPenwidthRendered(t *testing.T) {
 	t.Parallel()
@@ -2751,6 +2408,6 @@ func TestReference_BackwardCompat(t *testing.T) {
 
 	// REF-05 / DI-1: order-insensitive canonical comparison. A model with no
 	// reference fields must render byte-identical (semantically) to v1.9.
-	require.Equal(t, canonicalDOT(t, string(expected)), canonicalDOT(t, string(dotData)),
+	require.Equal(t, canonical.Canonical(t, string(expected)), canonical.Canonical(t, string(dotData)),
 		"REF-05: a no-reference model must render identical to the v1.9 golden baseline")
 }
