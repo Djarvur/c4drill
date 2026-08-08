@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.10
 milestone_name: Model Composition
-status: milestone_complete
-last_updated: 2026-08-08T19:23:41.729Z
-last_activity: 2026-08-08 -- Phase 32 execution complete
+status: Awaiting next milestone
+last_updated: "2026-08-08T20:10:54.179Z"
+last_activity: 2026-08-08 — Milestone v1.10 completed and archived
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 13
   completed_plans: 13
-  percent: 83
-stopped_at: Milestone complete (Phase 33 was final phase)
+  percent: 100
 ---
 
 # Project State
@@ -25,14 +24,10 @@ See: .planning/PROJECT.md (updated 2026-08-08)
 
 ## Current Position
 
-Phase: 33
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-08-08
-
-Progress: [████░░░░░░] 85%
-
-**Build order:** 28 / 29 / 30 are independent & parallelizable → 31 (templates, carries BC-1 parser change) → 32 (include) → 33 (docs + integration goldens).
+Phase: Milestone v1.10 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-08-08 — Milestone v1.10 completed and archived
 
 ## Performance Metrics
 
@@ -75,6 +70,8 @@ The five todos in `.planning/todos/pending/` (reference field, ergonomics, type-
 | Templates | multi-output / `for_each` fan-out | Future (REQUIREMENTS.md) | v1.10 planning |
 | Templates | template nesting (template-instantiating-template) | Future (REQUIREMENTS.md) | v1.10 planning |
 | Ergonomics | compact-link shorthand variants beyond baseline | Future (REQUIREMENTS.md) | v1.10 planning |
+| Docs | docs-drift-orphan-rule-testdata — README "Validation Rules" section (line 551) missing VAL-01 orphan rule; root `testdata/valid.toml`+`nested.toml` unused (tests use `cmd/c4drill/testdata/`) | confirmed_open, low-severity | v1.10 close (pre-existing, not a v1.10 regression) |
+| Tooling | knowledge-base.md — NOT a debug session; gsd-debugger tool reference doc the audit scanner misclassifies. No action needed. | wontfix (false positive) | v1.10 close |
 
 ## Session Continuity
 
@@ -85,3 +82,7 @@ Resume file: .planning/phases/33-docs-sweep-end-to-end-goldens/33-CONTEXT.md
 ## Decisions
 
 - [Phase 28]: Phase 28 reference field ships: per-unit `reference` URL renders a clickable 📖 marker via GraphViz native URL attr; external reference wins the single URL slot over drill-down; HTML shim routes external http(s)// to a new tab and no-ops non-http(s) schemes (T-28-02 hardening). Leaf-field isBuiltinField addition only — NO captureDefinitionOrder change (BC-1). REF-05 proven by the unchanged multilevel golden (canonical-DOT, DI-1). — ARCHITECTURE-v1.10.md §6 (6) Option A and the plan locked decisions. multilevel.toml intentionally NOT modified to preserve the COMPAT-02 golden as the REF-05 backward-compat proof; cluster-label + both-present precedence covered by dedicated unit tests instead.
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

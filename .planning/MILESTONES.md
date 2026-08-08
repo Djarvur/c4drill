@@ -1,5 +1,26 @@
 # Milestones
 
+## v1.10 Model Composition (Shipped: 2026-08-08)
+
+**Phases completed:** 6 phases, 13 plans, 35 tasks
+
+**Key accomplishments:**
+
+- Optional per-unit `reference` external-docs URL rendered as a clickable 📖 marker, wired through GraphViz's native URL attribute with a Safari-safe HTML shim that routes external links to a new tab.
+- model.Humanize dumb camelCase splitter + parse-time Unit.Name fallback: omit `name` and get "Local IDP" from `localIDP`, with explicit `name =` always winning (zero new deps).
+- README + skill/SKILL.md now document that `name` is optional with the dumb humanize rule, last-segment-only derivation, and the explicit-name escape hatch for acronyms like `gRPC`.
+- Pure post-parse pass rewriting every Link.Peer from relative bare to absolute dotted path, implementing D-13/D-14/D-15/D-16 with a nearest-first ancestor walk-up and a hard error on miss-at-root.
+- Connected the Phase 30 resolver to users: peer.Resolve now runs between Parse and Validate so authored bare peers resolve to absolute paths, with integration tests proving the ordering, the CLI error path, and corpus backward-compat.
+- template.Expand turns every [[use]] into a concrete parametrized unit subtree via hand-rolled Unit.Clone (HS-1) + strings.NewReplacer substitution, with missing-param/duplicate-path hard errors and pipeline insertion before peer.Resolve
+- IncludeDirective type + Model.Includes field landed so `[[include]]` array-of-tables route into the Model in document order with zero phantom units — the foundation Plan 02's resolver consumes.
+- Recursive multi-file include resolver + per-field struct merge land as the pipeline's FIRST pre-processing pass (Stage 1a), delivering INC-01 through INC-10 and XC-02 — templates in included files flow through the merge so [[use]] in the entry file can instantiate them.
+- Extracted the order-insensitive canonicalDOT comparator (DI-1) from internal/graph/builder_test.go into a reusable internal/testutil/canonical/ package, importable from any _test.go file — unblocking Plan 04's cross-package E2E goldens.
+- Nine runnable TOML fixtures across four sets (06-templates, 07-relative-peer, 08-include, 09-composed) demonstrating all four v1.10 features; the composed set ships a hand-expanded single-file equivalent verified to canonicalize identical to its multi-file entry.
+- README.md and skill/SKILL.md gain DOC-01 (omittable type with full inference tables) and DOC-02 (templates, include, relative-peer sections) matching the established Phase 28/29 style; SKILL.md also gains a Pipeline Ordering section explaining the load-bearing v1.10 composition pipeline.
+- Two end-to-end tests in cmd/c4drill/root_test.go proving the four v1.10 features compose correctly through the full pipeline: XC-05 (composed multi-file ≡ hand-expanded single-file, canonicalDOT) and XC-01 (behavioral proof that include → template.Expand → peer.Resolve ordering is load-bearing, covering XC-02 and XC-03).
+
+---
+
 ## v1.9 C3 Boundary Node Fix (Shipped: 2026-08-06)
 
 **Phases completed:** 1 phases, 1 plans, 3 tasks

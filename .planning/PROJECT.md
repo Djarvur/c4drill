@@ -2,7 +2,9 @@
 
 ## What This Is
 
-A Go CLI tool for generating C4 architecture diagrams from TOML definitions. Users describe their system architecture in a structured TOML file, and C4Drill renders it as GraphViz DOT, SVG, or HTML diagrams. Supports C1 (Context), C2 (Containers), and C3 (Components) layers with collapsed/expanded views and interactive explore links. The HTML format (`-f html`) wraps the SVG in a self-contained document with a JS shim so clickable navigation works in Safari/WebKit (which silently ignores SVG `<a>` hyperlinks).
+A Go CLI tool for generating C4 architecture diagrams from TOML definitions. Users describe their system architecture in a structured TOML file (or a set of files composed via `[[include]]`), and C4Drill renders it as GraphViz DOT, SVG, or HTML diagrams. Supports C1 (Context), C2 (Containers), and C3 (Components) layers with collapsed/expanded views and interactive explore links. The HTML format (`-f html`) wraps the SVG in a self-contained document with a JS shim so clickable navigation works in Safari/WebKit (which silently ignores SVG `<a>` hyperlinks).
+
+As of v1.10, models are composable: a diagram can be assembled from multiple TOML files (`[[include]]` with cycle detection and `once` dedup), units can be defined once as parametrized `[template.*]` and instantiated N times via `[[use]]`, `peer` references can be relative (resolving against the enclosing parent's ancestry), `name` is optional (humanized from the identifier), and any unit can carry a `reference` URL rendered as a clickable 📖 marker.
 
 ## Core Value
 
@@ -165,6 +167,10 @@ The tool uses nested TOML objects where each level contains strictly typed subun
 | Auto-layout only | Let GraphViz handle positioning | ✓ Good — clean diagrams without manual effort |
 | TOML input | Human-readable, supports nested structures | ✓ Good — intuitive authoring |
 | go-graphviz library | Native Go, no external graphviz binary needed | ✓ Good — simple deployment |
+| Structured post-parse composition (v1.10) | Templates + include + relative-peer run as passes on `*parser.Model` between Parse and Validate, keeping validator/view/render unchanged | ✓ Good — 4 new packages (`internal/{include,peer,template,testutil/canonical}`), zero changes downstream |
+| Hand-rolled `Unit.Clone()` (v1.10) | Reflection/JSON/gob deep-copy silently drops the unexported `Link.Mirror` field, which the validator mutates in place | ✓ Good — HS-1 regression test (3 instantiations → disjoint `LinksFrom`) passes |
+| Hard-error-everywhere stance (v1.10) | Strictness over convenience: missing include, missing param, duplicate path, unresolved peer all error loudly | ✓ Good — caught real issues early; no silent corruption |
+| No LikeC4 feature adoption except `reference` (v1.10) | Custom kinds, tags, icons, metadata, deployment model, user-authored views all fight C4Drill's auto-generation philosophy | ✓ Good — kept the format lean; `reference` was the only clear win |
 
 ## TOML Schema (Reference)
 
