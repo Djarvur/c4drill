@@ -1,0 +1,118 @@
+# peer_walkup.toml — fixture exercising sibling, aunt, root, and nearest-first
+# walk-up cases for the relative-peer resolver (Phase 30 ERGO-01).
+#
+# All peers below are BARE (no dot). After peer.Resolve they must rewrite to
+# absolute dotted paths so the validator (which sees only absolute peers) is
+# satisfied. Plan 02's TestPipelineResolveBeforeValidate parses this file,
+# resolves, validates, and asserts no validation errors.
+#
+# Coverage:
+#   - sibling (D-13):  [mainSystem.localIDP.sessionAPI] peer "sessionManager"
+#                      -> mainSystem.localIDP.sessionManager
+#   - aunt   (D-14):   [mainSystem.frontend.api.handlers.auth] peer "cache"
+#                      where mainSystem.frontend.cache exists
+#                      -> mainSystem.frontend.cache
+#   - root   (D-15):   [mainSystem.sshAuth.sshd] peer "messageBus"
+#                      where top-level messageBus exists
+#                      -> messageBus
+#   - nearest (D-14):  [mainSystem.a.b.c] peer "x" where both mainSystem.a.b.x
+#                      and mainSystem.a.x exist -> mainSystem.a.b.x (nearer)
+
+[properties]
+name = "Peer Walkup Test"
+description = "Fixture for relative-peer walk-up resolution"
+edges = "straight"
+
+# Root-level shared service (D-15 root target).
+[messageBus]
+name = "Message Bus"
+type = "queue"
+description = "Top-level shared queue reachable by bare name from any depth"
+
+# --- sibling case (D-13) ---
+[mainSystem]
+name = "Main System"
+type = "system"
+
+[mainSystem.localIDP]
+name = "Local IDP"
+type = "container"
+
+[mainSystem.localIDP.sessionAPI]
+name = "Session API"
+type = "component"
+description = "Host of the bare peer 'sessionManager' (sibling case)"
+link = [
+  {peer = "sessionManager", technology = "internal"},
+]
+
+[mainSystem.localIDP.sessionManager]
+name = "Session Manager"
+type = "component"
+description = "Sibling target for sessionAPI's bare peer"
+
+# --- aunt case (D-14 walk-up) ---
+[mainSystem.frontend]
+name = "Frontend"
+type = "container"
+
+[mainSystem.frontend.cache]
+name = "Frontend Cache"
+type = "component"
+description = "Aunt target — found via walk-up, no direct sibling match"
+
+[mainSystem.frontend.api]
+name = "Frontend API"
+type = "component"
+
+[mainSystem.frontend.api.handlers]
+name = "API Handlers"
+type = "component"
+
+[mainSystem.frontend.api.handlers.auth]
+name = "Auth Handler"
+type = "component"
+description = "Host of the bare peer 'cache' (aunt case — walks up to frontend.cache)"
+link = [
+  {peer = "cache", technology = "internal"},
+]
+
+# --- root case (D-15) ---
+[mainSystem.sshAuth]
+name = "SSH Auth"
+type = "container"
+
+[mainSystem.sshAuth.sshd]
+name = "SSHD"
+type = "component"
+description = "Host of the bare peer 'messageBus' (root case — walks up to top level)"
+link = [
+  {peer = "messageBus", technology = "AMQP"},
+]
+
+# --- nearest-first case (D-14) ---
+[mainSystem.a]
+name = "A"
+type = "container"
+
+[mainSystem.a.x]
+name = "A X"
+type = "component"
+description = "Farther ancestor's child — nearest-first should NOT pick this"
+
+[mainSystem.a.b]
+name = "A B"
+type = "container"
+
+[mainSystem.a.b.x]
+name = "A B X"
+type = "component"
+description = "Nearer ancestor's child — nearest-first MUST pick this"
+
+[mainSystem.a.b.c]
+name = "A B C"
+type = "component"
+description = "Host of the bare peer 'x' (nearest-first — both a.b.x and a.x exist)"
+link = [
+  {peer = "x", technology = "internal"},
+]
