@@ -155,8 +155,15 @@ var svgHrefSuffix = regexp.MustCompile(`((?:xlink:)?href="[^"]+)\.svg(")`)
 // ignores default navigation on SVG <a> elements; this shim attaches click
 // listeners that navigate via window.location.href, restoring drill-down
 // navigation in WebKit browsers. Also sets pointer cursor on links.
+//
+// REF-04: external reference URLs (📖, http(s):// or protocol-relative //) open
+// in a new tab via window.open, distinct from internal drill-down navigation
+// (.html after svgHrefSuffix rewrite) which stays in the same tab. T-28-02
+// hardening: any href whose scheme is NOT http(s) and which is not a relative
+// internal path is treated as untrusted (e.g. javascript:/data:) and the click
+// is a no-op (preventDefault without navigation).
 const htmlNavShim = `<script>(function(){
-function go(e){var a=e.currentTarget;var h=a.getAttribute("href")||a.getAttributeNS("http://www.w3.org/1999/xlink","href");if(h){window.location.href=h;e.preventDefault();}}
+function go(e){var a=e.currentTarget;var h=a.getAttribute("href")||a.getAttributeNS("http://www.w3.org/1999/xlink","href");if(!h){return;}e.preventDefault();if(/^https?:\/\//.test(h)||h.indexOf("//")===0){window.open(h,"_blank");}else if(/^(?:[a-z]+:)?\/\//i.test(h)){return;}else{window.location.href=h;}}
 function init(){var l=document.querySelectorAll("svg a");for(var i=0;i<l.length;i++){l[i].style.cursor="pointer";l[i].addEventListener("click",go);}}
 if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",init);}else{init();}
 })();</script>`

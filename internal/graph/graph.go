@@ -68,6 +68,8 @@ type Node struct {
 	IsInCluster bool
 	// ExploreURL is the relative path for drill-down (empty if not expandable).
 	ExploreURL string
+	// ReferenceURL is the external docs URL (📖), empty if none.
+	ReferenceURL string
 }
 
 // Edge represents a connection between two nodes.

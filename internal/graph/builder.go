@@ -260,6 +260,12 @@ func buildNode(entry *view.Entry) *Node {
 		label.Name += " 🔍"
 	}
 
+	// Add 📖 indicator for units with an external reference URL (REF-02),
+	// mirroring the 🔍 collapsed-cluster affordance style above.
+	if entry.Unit.Reference != "" {
+		label.Name += " 📖"
+	}
+
 	// For C1 boxes, use content-based styling
 	var style *NodeStyle
 	if entry.Unit.Type == model.TypeBox {
@@ -269,12 +275,13 @@ func buildNode(entry *view.Entry) *Node {
 	}
 
 	return &Node{
-		ID:         entry.FullPath,
-		Label:      label,
-		Shape:      ShapeForType(entry.Unit.Type),
-		Type:       entry.Unit.Type,
-		Style:      style,
-		IsExternal: entry.IsExternal,
+		ID:           entry.FullPath,
+		Label:        label,
+		Shape:        ShapeForType(entry.Unit.Type),
+		Type:         entry.Unit.Type,
+		Style:        style,
+		IsExternal:   entry.IsExternal,
+		ReferenceURL: entry.Unit.Reference,
 	}
 }
 
@@ -329,12 +336,22 @@ func buildCluster(entry *view.Entry) *Cluster {
 
 // buildClusterLabel creates a label for the cluster (parent unit info).
 func buildClusterLabel(entry *view.Entry) *Label {
-	return &Label{
+	label := &Label{
 		Name:        entry.Unit.Name,
 		Technology:  entry.Unit.Technology,
 		Description: entry.Unit.Description,
 		Icon:        IconForType(entry.Unit.Type),
 	}
+
+	// Add 📖 indicator for referenced expanded parents (REF-02), mirroring the
+	// glyph treatment in buildNode. buildClusterLabel returns a Label (not a
+	// Node), so there is no ReferenceURL to populate here; the cluster's
+	// drill-down/explore URL handling is unchanged.
+	if entry.Unit.Reference != "" {
+		label.Name += " 📖"
+	}
+
+	return label
 }
 
 // isUnitExpanded checks if a child unit should be expanded.

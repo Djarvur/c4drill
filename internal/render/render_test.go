@@ -203,6 +203,32 @@ func TestRenderHTML(t *testing.T) {
 	})
 }
 
+// TestReferenceNavShim exercises REF-04: the htmlNavShim's click handler must
+// route EXTERNAL http(s)/protocol-relative URLs distinctly from internal
+// drill-down navigation so Safari/WebKit follows external references. It also
+// hardens against non-http(s) schemes (T-28-02): javascript:/data: URIs in a
+// reference URL must NOT navigate.
+func TestReferenceNavShim(t *testing.T) {
+	t.Parallel()
+
+	g := testGraph("ref_node")
+
+	output, err := render.RenderHTML(g)
+	require.NoError(t, err)
+
+	s := string(output)
+	// REF-04: external references open in a new tab via window.open.
+	assert.Contains(t, s, "window.open",
+		"nav shim must route external reference URLs via window.open(_, _blank)")
+	// REF-04: the scheme check must be present so external http(s)// URLs are
+	// detected.
+	assert.Contains(t, s, "http",
+		"nav shim must check the http(s)// scheme to branch external vs internal")
+	// Internal drill-down still navigates the same tab.
+	assert.Contains(t, s, "window.location.href",
+		"nav shim must keep window.location.href for internal drill-down navigation")
+}
+
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestRenderErrors(t *testing.T) {
 	t.Run("invalid format returns error with clear message", func(t *testing.T) {

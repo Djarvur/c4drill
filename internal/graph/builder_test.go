@@ -2549,3 +2549,208 @@ func TestBuildEdgesPenwidthRendered(t *testing.T) {
 		assert.Contains(t, edgeBlock, "penwidth=2", "expanded mode keeps 2.0 (COMPAT-02)")
 	})
 }
+
+// TestReferenceGlyph exercises REF-02: a unit with a non-empty Reference renders
+// a visible 📖 marker appended to the node label name (mirroring the 🔍
+// collapsed-cluster affordance at builder.go:258-261), and populates
+// Node.ReferenceURL (REF-03 plumbing). A non-referenced unit renders no 📖 and
+// an empty ReferenceURL.
+func TestReferenceGlyph(t *testing.T) {
+	t.Parallel()
+
+	t.Run("referenced unit label has 📖 and ReferenceURL is set", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Reference Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type:      model.TypeSystem,
+					Name:      "App",
+					Reference: "https://example.com/docs/app",
+				},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Nodes, 1)
+		node := g.Nodes[0]
+
+		// REF-02: label name contains the 📖 marker.
+		assert.Contains(t, node.Label.Name, "📖", "referenced unit label must include the 📖 marker")
+		// REF-03 plumbing: ReferenceURL carries the exact reference string.
+		assert.Equal(t, "https://example.com/docs/app", node.ReferenceURL,
+			"Node.ReferenceURL must carry the unit's reference URL exactly")
+	})
+
+	t.Run("non-referenced unit label has no 📖 and ReferenceURL is empty", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Reference Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type: model.TypeSystem,
+					Name: "App",
+				},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Nodes, 1)
+		node := g.Nodes[0]
+
+		assert.NotContains(t, node.Label.Name, "📖", "non-referenced unit label must NOT include 📖")
+		assert.Empty(t, node.ReferenceURL, "non-referenced unit must have an empty ReferenceURL")
+	})
+
+	t.Run("expanded parent cluster label has 📖 when referenced", func(t *testing.T) {
+		t.Parallel()
+
+		// An expanded parent unit (rendered via buildCluster → buildClusterLabel)
+		// carrying a reference must gain the 📖 glyph on its cluster label name.
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Reference Cluster Test"},
+			Units: map[string]*model.Unit{
+				"mainsystem": {
+					Type:      model.TypeSystem,
+					Name:      "Main System",
+					Reference: "https://example.com/docs/main",
+					Subunits: map[string]*model.Unit{
+						"api": {
+							Type: model.TypeContainer,
+							Name: "API",
+						},
+					},
+				},
+			},
+		}
+
+		// Expanded view → mainsystem renders as a cluster whose label is built
+		// by buildClusterLabel.
+		v := view.GenerateExpandedView(m)
+		g := graph.BuildExpandedGraph(v)
+
+		require.Len(t, g.Clusters, 1, "expanded mainsystem must render as a cluster")
+		cluster := g.Clusters[0]
+		require.NotNil(t, cluster.Label, "cluster must have a label")
+		assert.Contains(t, cluster.Label.Name, "📖",
+			"expanded referenced parent cluster label must include 📖")
+	})
+}
+
+// TestReferenceURL_RenderedDOT exercises REF-03 (converter): createNode wires
+// the external reference URL into the GraphViz node's single URL attribute.
+// Also covers the external-wins precedence (REF-03/J) when BOTH ReferenceURL
+// and ExploreURL are present on the same node.
+func TestReferenceURL_RenderedDOT(t *testing.T) {
+	t.Parallel()
+
+	t.Run("referenced node DOT carries the external URL", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Reference URL Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type:      model.TypeSystem,
+					Name:      "App",
+					Reference: "https://example.com/docs/app",
+				},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraph(v)
+
+		dotData, err := render.RenderDOT(g)
+		require.NoError(t, err)
+
+		s := string(dotData)
+		// The external reference URL must appear in the rendered DOT (URL=...).
+		assert.Contains(t, s, "https://example.com/docs/app",
+			"rendered DOT must carry the external reference URL on the node")
+	})
+
+	t.Run("external reference wins the single URL slot over explore URL", func(t *testing.T) {
+		t.Parallel()
+
+		// A collapsed system with subunits AND a reference: BuildGraphWithPath
+		// would normally set ExploreURL for drill-down, but the external
+		// ReferenceURL must win GraphViz's single URL slot (ARCHITECTURE-v1.10
+		// §6 (6) Option A).
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Reference Precedence Test"},
+			Units: map[string]*model.Unit{
+				"mainsystem": {
+					Type:      model.TypeSystem,
+					Name:      "Main System",
+					Reference: "https://example.com/docs/main",
+					Subunits: map[string]*model.Unit{
+						"api": {
+							Type: model.TypeContainer,
+							Name: "API",
+						},
+					},
+				},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraphWithPath(v, "", "diagram", "svg")
+
+		require.Len(t, g.Nodes, 1)
+		node := g.Nodes[0]
+		// Precondition: both URLs are populated on the Node struct.
+		assert.Equal(t, "https://example.com/docs/main", node.ReferenceURL, "ReferenceURL must be set")
+		assert.NotEmpty(t, node.ExploreURL, "ExploreURL must also be set (collapsed with subunits)")
+
+		dotData, err := render.RenderDOT(g)
+		require.NoError(t, err)
+
+		s := string(dotData)
+		// The external reference URL must win the single slot — the explore
+		// URL (.svg drill-down) must NOT be the rendered URL for this node.
+		assert.Contains(t, s, "https://example.com/docs/main",
+			"rendered DOT must carry the external reference URL (external-wins precedence)")
+	})
+}
+
+// TestReference_BackwardCompat exercises REF-05: a unit authored WITHOUT a
+// reference field renders semantically identical to the committed v1.9 golden
+// baseline. This is the existing COMPAT-02 golden (TestBuildExpandedGraphBaselineDOT)
+// which renders cmd/c4drill/testdata/multilevel.toml — a fixture that has no
+// reference fields — against the committed multilevel.expanded.dot baseline.
+// The Phase 28 change MUST leave that golden comparison byte-for-byte identical
+// (order-insensitive canonicalDOT comparison per STATE.md DI-1).
+//
+// This test is intentionally a thin alias that pins the REF-05 contract name
+// alongside the existing COMPAT-02 regression guard so a failure here directly
+// reports the backward-compat regression.
+func TestReference_BackwardCompat(t *testing.T) {
+	t.Parallel()
+
+	m, err := parser.ParseFile("../../cmd/c4drill/testdata/multilevel.toml")
+	require.NoError(t, err)
+
+	valErrors := validator.Validate(m)
+	require.Empty(t, valErrors, "model should be valid")
+
+	v := view.GenerateExpandedView(m)
+	g := graph.BuildExpandedGraph(v)
+
+	dotData, err := render.RenderDOT(g)
+	require.NoError(t, err)
+
+	expected, err := os.ReadFile("../../cmd/c4drill/testdata/multilevel.expanded.dot")
+	require.NoError(t, err)
+
+	// REF-05 / DI-1: order-insensitive canonical comparison. A model with no
+	// reference fields must render byte-identical (semantically) to v1.9.
+	require.Equal(t, canonicalDOT(t, string(expected)), canonicalDOT(t, string(dotData)),
+		"REF-05: a no-reference model must render identical to the v1.9 golden baseline")
+}

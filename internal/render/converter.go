@@ -264,8 +264,15 @@ func createNode(
 	// Apply style
 	applyNodeStyle(cn, node.Style)
 
-	// Set URL for clickable nodes (explore links)
-	if node.ExploreURL != "" {
+	// Set URL for clickable nodes. A GraphViz node has a SINGLE URL attribute,
+	// so when an external reference (📖) and an internal drill-down explore URL
+	// both apply, the EXTERNAL reference wins the slot (ARCHITECTURE-v1.10
+	// §6 (6) Option A). The glyph(s) remain the visible affordance regardless
+	// of which URL the slot carries. See converter.go:175-200 for the
+	// single-URL-per-node GraphViz limitation that drives this precedence.
+	if node.ReferenceURL != "" {
+		cn.SetURL(node.ReferenceURL)
+	} else if node.ExploreURL != "" {
 		cn.SetURL(node.ExploreURL)
 	}
 
