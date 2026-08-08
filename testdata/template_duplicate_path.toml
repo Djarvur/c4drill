@@ -1,0 +1,18 @@
+# Fixture for TMPL-07: two [[use]] blocks producing the SAME unit path (both
+# have name="auth", no parent → both target top-level path "auth"). Expand must
+# return a hard error naming both sources. No silent overwrite.
+[properties]
+name = "Duplicate Path Test"
+
+[template.svc]
+params = ["name"]
+name = "${name} Service"
+type = "container"
+
+[[use]]
+template = "svc"
+name = "auth"
+
+[[use]]
+template = "svc"
+name = "auth"

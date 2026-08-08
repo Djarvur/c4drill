@@ -1,0 +1,30 @@
+# Fixture for TMPL-04: a template declaring a subunit subtree. One [[use]]
+# produces the whole subtree rooted at the produced unit, subunit keys verbatim
+# (D-04 — no structural parametrization), fields substituted.
+[properties]
+name = "Subtree Template Test"
+
+[template.svc]
+params = ["name", "tech"]
+name = "${name} Service"
+type = "container"
+technology = "${tech}"
+
+[template.svc.api]
+type = "component"
+name = "${name} API"
+technology = "${tech}"
+
+[template.svc.db]
+type = "componentDb"
+name = "${name} DB"
+technology = "PostgreSQL"
+
+[[use]]
+template = "svc"
+name = "auth"
+tech = "Go"
+
+[messageBus]
+type = "queue"
+name = "Message Bus"

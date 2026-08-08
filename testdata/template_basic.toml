@@ -1,0 +1,26 @@
+# Fixture for TMPL-01/02/03/05: one template, one [[use]] with all params.
+# Exercises basic instantiation, full-field substitution, and validator-pass.
+[properties]
+name = "Basic Template Test"
+
+[template.svc]
+params = ["name", "tech"]
+name = "${name} Service"
+type = "container"
+technology = "${tech}"
+description = "${name} handles requests"
+color = "${name}-color"
+
+[[template.svc.link]]
+peer = "messageBus"
+description = "Publishes ${name} events"
+technology = "${tech}"
+
+[[use]]
+template = "svc"
+name = "auth"
+tech = "Go"
+
+[messageBus]
+type = "queue"
+name = "Message Bus"

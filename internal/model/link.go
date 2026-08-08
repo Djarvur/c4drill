@@ -78,3 +78,10 @@ func FindLinkByPeer(links []Link, peer string) (*Link, bool) {
 
 	return nil, false
 }
+
+// IsMirror reports whether this link is a validator-synthesized mirror of an
+// outgoing link (populateIncomingLinks). It is the minimal exported accessor
+// for the otherwise-invisible Mirror field, enabling external (package
+// model_test) assertions that Unit.Clone preserves Mirror (HS-1, Plan 31-02).
+// Read-only — does not leak mutability.
+func (l Link) IsMirror() bool { return l.Mirror }
