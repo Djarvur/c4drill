@@ -34,7 +34,7 @@ Full details: [milestones/v1.9-ROADMAP.md](milestones/v1.9-ROADMAP.md)
 - [x] **Phase 30: Relative-peer resolution** - Short `peer` names resolve against the enclosing parent; absolute-fallback preserves backward-compat (completed 2026-08-08)
 - [x] **Phase 31: Template expansion** - `[template.*]` define + `[[use]]` instantiate parametrized units (deep-copy + `${param}`); parser BC-1 prerequisite (completed 2026-08-08)
 - [x] **Phase 32: Include directive (multi-file)** - `[[include]]` assembles a model from multiple TOML files (merge, cycle detection, `once`) (completed 2026-08-08)
-- [ ] **Phase 33: Docs sweep + end-to-end goldens** - Document all four features; prove multi-file+templates+peers ≡ single-file
+- [x] **Phase 33: Docs sweep + end-to-end goldens** - Document all four features; prove multi-file+templates+peers ≡ single-file (completed 2026-08-08)
 
 ## Phase Details
 
@@ -178,4 +178,4 @@ Phases 28, 29, 30 are independent and parallelizable. Phases 31 → 32 are seque
 | 30. Relative-peer resolution | v1.10 | 2/2 | Complete   | 2026-08-08 |
 | 31. Template expansion | v1.10 | 2/2 | Complete    | 2026-08-08 |
 | 32. Include directive | v1.10 | 2/2 | Complete   | 2026-08-08 |
-| 33. Docs sweep + goldens | v1.10 | 0/TBD | Not started | - |
+| 33. Docs sweep + goldens | v1.10 | 4/4 | Complete    | 2026-08-08 |

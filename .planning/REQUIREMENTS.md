@@ -57,17 +57,17 @@ Source research: [.planning/research/SUMMARY.md](research/SUMMARY.md)
 
 ### DOC — Documentation
 
-- [ ] **DOC-01**: README.md and skill/SKILL.md document that `type` is optional, with the full type-inference rules (default type by parent at parser.go:250; generic db/queue promotion by nesting level at parser.go:276) and a before/after example.
-- [ ] **DOC-02**: README.md and skill/SKILL.md document all four new features (include, templates, ergonomics, reference) with syntax and examples.
-- [ ] **DOC-03**: New example fixtures demonstrate each feature (`skill/examples/06-templates.toml`, a multi-file include example, etc.).
+- [x] **DOC-01**: README.md and skill/SKILL.md document that `type` is optional, with the full type-inference rules (default type by parent at parser.go:250; generic db/queue promotion by nesting level at parser.go:276) and a before/after example.
+- [x] **DOC-02**: README.md and skill/SKILL.md document all four new features (include, templates, ergonomics, reference) with syntax and examples.
+- [x] **DOC-03**: New example fixtures demonstrate each feature (`skill/examples/06-templates.toml`, a multi-file include example, etc.).
 
 ### XCOMP — Cross-feature integration
 
-- [ ] **XC-01**: The pipeline ordering `include → template-expand → relative-peer-resolve → validate → generate-views → render` is enforced in code and documented; reordering is detected (e.g. via tests) as a regression.
+- [x] **XC-01**: The pipeline ordering `include → template-expand → relative-peer-resolve → validate → generate-views → render` is enforced in code and documented; reordering is detected (e.g. via tests) as a regression.
 - [x] **XC-02**: Templates defined in an included file are visible to `[[use]]` instantiations in the including file (the "template isolation" motivating use case).
 - [x] **XC-03**: Relative peers authored inside a template resolve against the instantiation site's parent, not the template's lexical location (HS-2 from research — must be settled in discuss phase before implementation).
 - [x] **XC-04**: Humanization runs after template expansion (so it sees the substituted instantiation key, not `${name}`) and before validation (so error messages show final names).
-- [ ] **XC-05**: A multi-file model using include + templates + relative peers produces the same rendered output (order-insensitive canonicalDOT comparison) as the equivalent hand-expanded single-file model.
+- [x] **XC-05**: A multi-file model using include + templates + relative peers produces the same rendered output (order-insensitive canonicalDOT comparison) as the equivalent hand-expanded single-file model.
 
 ---
 
