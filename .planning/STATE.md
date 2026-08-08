@@ -101,6 +101,7 @@ Fixed the two root-cause bugs:
 ### Pending Todos
 
 - **Add 'reference' field to C4 units with 📖 marker** (`tooling`) — `.planning/todos/pending/2026-08-08-add-reference-field-to-units.md`. Optional per-unit URL field (LikeC4 `link` port; only LikeC4 feature adopted). Units with non-empty `reference` render a 📖 symbol. Rejected: custom kinds, tags, icons, metadata, deployment model, user-authored views.
+- **TOML authoring ergonomic improvements** (`tooling`) — `.planning/todos/pending/2026-08-08-toml-authoring-ergonomic-improvements.md`. Three independent fixes (relative `peer` resolution, optional `name`, compact `link`) as the TOML-native alternative to a rejected custom DSL. Sequenced: relative peer first, optional name second, compact link deferred.
 
 ## Operator Next Steps
 
