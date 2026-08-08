@@ -11,7 +11,6 @@
 package peer_test
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"sort"
