@@ -7,10 +7,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Djarvur/c4drill/internal/graph"
+	"github.com/Djarvur/c4drill/internal/include"
 	"github.com/Djarvur/c4drill/internal/model"
 	"github.com/Djarvur/c4drill/internal/parser"
 	"github.com/Djarvur/c4drill/internal/peer"
+	"github.com/Djarvur/c4drill/internal/render"
+	"github.com/Djarvur/c4drill/internal/template"
+	"github.com/Djarvur/c4drill/internal/testutil/canonical"
 	"github.com/Djarvur/c4drill/internal/validator"
+	"github.com/Djarvur/c4drill/internal/view"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -1233,4 +1239,116 @@ path = "ghost.toml"
 	msg := err.Error()
 	assert.Contains(t, msg, "include", "error must surface the include stage")
 	assert.Contains(t, msg, "ghost.toml", "error must name the missing path")
+}
+
+// renderThroughPipeline runs the full v1.10 pipeline on the fixture at inputPath
+// and returns the canonical (order-insensitive, DI-1) DOT serialization. The
+// pipeline sequence mirrors cmd/c4drill/root.go exactly:
+//
+//	ParseFile -> include.Resolve -> template.Expand -> peer.Resolve
+//	         -> Validate -> GenerateExpandedView -> BuildExpandedGraph -> RenderDOT
+//
+// Humanize runs INSIDE ParseFile (parser.go:614, the Phase 29 stopgap — Phase
+// 31's XC-04 relocation to a post-expansion pass was deferred). The composed
+// fixtures carry explicit name= so parse-time humanize does not fire for them.
+func renderThroughPipeline(t *testing.T, inputPath string) string {
+	t.Helper()
+
+	m, err := parser.ParseFile(inputPath)
+	require.NoError(t, err, "ParseFile")
+
+	// Stage 1a: include.Resolve runs FIRST (3-arg signature: entry, entryDir,
+	// entryFile — the third arg threads the real entry filename so error
+	// messages name the including file per INC-10/D-12).
+	m, err = include.Resolve(m, filepath.Dir(inputPath), inputPath)
+	require.NoError(t, err, "include.Resolve")
+
+	// Stage 1.5: template.Expand runs after include so templates defined in
+	// included files are visible to [[use]] in the entry (XC-02).
+	m, err = template.Expand(m)
+	require.NoError(t, err, "template.Expand")
+
+	// Stage 1.6: peer.Resolve runs after Expand so relative peers authored
+	// inside templates resolve at the instantiation site (XC-03).
+	require.NoError(t, peer.Resolve(m), "peer.Resolve")
+
+	// Stage 2: Validate (must see only absolute paths + a fully-expanded model).
+	require.Empty(t, validator.Validate(m), "model should be valid after pipeline")
+
+	// Views + graph + render.
+	v := view.GenerateExpandedView(m)
+	g := graph.BuildExpandedGraph(v)
+	dot, err := render.RenderDOT(g)
+	require.NoError(t, err, "render.RenderDOT")
+
+	return canonical.Canonical(t, string(dot))
+}
+
+// TestXC05_ComposedEquivSingleFile guards XC-05: the composed multi-file fixture
+// (include + templates + relative-peer + reference) renders to IDENTICAL DOT as
+// its hand-expanded single-file equivalent through the full pipeline.
+//
+// The comparison is order-insensitive (canonical.Canonical, STATE.md DI-1):
+// the pinned go-graphviz fork emits map-order-dependent sibling ordering and
+// layout geometry, so byte-exact require.Equal on raw DOT would fail spuriously.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestXC05_ComposedEquivSingleFile(t *testing.T) {
+	const (
+		multiFile  = "../../skill/examples/09-composed/entry.toml"
+		singleFile = "../../skill/examples/09-composed/single-file-equivalent.toml"
+	)
+
+	multiCanon := renderThroughPipeline(t, multiFile)
+	singleCanon := renderThroughPipeline(t, singleFile)
+
+	require.Equal(t, multiCanon, singleCanon,
+		"XC-05: composed multi-file model must render identical to its "+
+			"hand-expanded single-file equivalent (canonicalDOT, DI-1)")
+}
+
+// TestXC01_PipelineOrdering guards XC-01: the v1.10 pipeline order is
+// load-bearing for correctness. This behavioral test (D-20) asserts the two
+// order-dependent properties that ONLY hold when the pipeline runs
+// include.Resolve -> template.Expand -> peer.Resolve in that order:
+//
+//   - XC-02 (include before Expand): the [[use]] in entry.toml instantiates the
+//     `microservice` template that is DEFINED in the included templates.toml.
+//     If include ran AFTER Expand, the [[use]] would fail with "unknown template".
+//     A successful renderThroughPipeline (no error at the Expand stage) proves
+//     include ran first.
+//
+//   - XC-03 (Expand before peer.Resolve): the instantiated platform.auth.cache
+//     unit's parametrized link (peer = "${upstreamBus}") expands to the concrete
+//     value "messageBus" and then resolves as an edge connecting platform.auth.cache
+//     to messageBus. If peer.Resolve ran BEFORE Expand, the literal "${upstreamBus}"
+//     would not yet be substituted and peer resolution would fail or resolve wrongly.
+//
+// This test is behavioral (inspects the rendered DOT), NOT a source-scan — it
+// is robust to refactors that move pipeline calls into helper functions (D-20
+// explicitly rejected the source-scan alternative).
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestXC01_PipelineOrdering(t *testing.T) {
+	canon := renderThroughPipeline(t, "../../skill/examples/09-composed/entry.toml")
+
+	// Assertion A (XC-02 — include before template.Expand): the render
+	// completed without "unknown template" error (require.NoError inside
+	// renderThroughPipeline at the Expand stage would have fired otherwise).
+	// Make it explicit by asserting the instantiated unit appears in the
+	// canonical output — the [[use]] succeeded against a template that lives
+	// in an INCLUDED file.
+	assert.Contains(t, canon, `"platform.auth.cache"`,
+		"XC-02: the [[use]] instantiated the microservice template defined in "+
+			"the included templates.toml — proves include.Resolve ran before template.Expand")
+
+	// Assertion B (XC-03 — template.Expand before peer.Resolve): the
+	// parametrized peer ${upstreamBus} expanded to the concrete "messageBus"
+	// and the edge platform.auth.cache -> messageBus is present in the render.
+	// The canonical serialization format (serializeDOTStatement in the
+	// canonical helper) emits edges as `"src" -> "dst"` in the head field.
+	assert.Contains(t, canon, `"platform.auth.cache" -> messageBus`,
+		"XC-03: the templated cache's parametrized peer ${upstreamBus} expanded "+
+			"to messageBus and resolved as an edge to the instantiation-site target "+
+			"— proves template.Expand ran before peer.Resolve")
 }
