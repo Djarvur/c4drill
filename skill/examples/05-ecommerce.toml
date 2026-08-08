@@ -52,6 +52,7 @@ description = "Payment processor"
 technology = "Stripe API"
 color = "#E3F2FD"
 border = "#1976D2"
+reference = "https://docs.stripe.com/api"
 
 [[stripe.link]]
 peer = "platform.payment-service"

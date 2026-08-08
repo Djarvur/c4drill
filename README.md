@@ -144,6 +144,23 @@ name = "AWS Cloud"
 description = "Cloud infrastructure"
 ```
 
+#### Reference (External Documentation URL)
+
+Any unit accepts an optional `reference` field — an external documentation URL.
+When set, a 📖 marker appears next to the unit name and the node becomes
+clickable: clicking it opens the URL (via GraphViz's native `URL` attribute in
+SVG). In `-f html` output, external `http(s)` references open in a new tab,
+distinct from internal drill-down navigation.
+
+```toml
+[api]
+type = "system"
+name = "API Service"
+reference = "https://wiki.example.com/api-runbook"   # Optional: 📖 marker, clickable
+```
+
+An empty string and an omitted field are equivalent (no 📖, not clickable).
+
 ### Nesting (C2/C3 Diagrams)
 
 Systems and boxes can contain subunits using dotted notation:

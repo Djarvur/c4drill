@@ -106,9 +106,27 @@ edges = "spline"                # Optional: Edge style (cascades to subunits)
 width = 300                     # Optional: Explicit width (0=auto)
 height = 200                    # Optional: Explicit height (0=auto)
 expanded = ["subunit1"]         # Optional: Subunits expanded by default
+reference = "https://docs.example.com/runbook" # Optional: External docs URL (📖 marker, clickable)
 [[unit.link]]                   # Optional: Outgoing links (array of tables)
 [[unit.linkFrom]]               # Optional: Incoming links (array of tables)
 ```
+
+#### reference (External Documentation URL)
+
+Any unit accepts an optional `reference` field — an external documentation URL.
+When set, a 📖 marker appears next to the unit name and the node is clickable.
+
+```toml
+[api]
+type = "system"
+name = "API Service"
+reference = "https://wiki.example.com/api-runbook"
+```
+
+- Empty string and an omitted field are equivalent (no 📖, not clickable).
+- The URL is rendered via GraphViz's native `URL` attribute (SVG) and routed
+  by the HTML shim; external `http(s)` references open in a new tab in `-f html`
+  output (distinct from internal drill-down navigation).
 
 **Type defaults** (when `type` is omitted):
 - Root-level units → `system`
