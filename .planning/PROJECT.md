@@ -35,6 +35,10 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 - ✓ C1 view: only top-level units, edges resolved to visible ancestors (pair-only edge collapse, deepest-visible-ancestor resolution both sides, binary penwidth for collapsed edges)
 
+### Validated in Phase 28 (v1.10)
+
+- ✓ `reference` field (📖): optional per-unit external-docs URL renders a clickable marker via GraphViz native `URL` attribute; external reference wins the single URL slot over drill-down; HTML shim routes external http(s)// to a new tab and no-ops non-http(s) schemes (XSS hardening); no-reference models render byte-identical to v1.9 (canonical-DOT golden)
+
 ## Current Milestone: v1.10 Model Composition
 
 **Goal:** Expand C4Drill's authoring model from a single static TOML file into a composable, parametrized, multi-file format — while preserving backward compatibility and the auto-generated-view philosophy.
@@ -217,4 +221,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-08 — milestone v1.10 Model Composition started*
+*Last updated: 2026-08-08 — Phase 28 (reference field 📖) complete*
