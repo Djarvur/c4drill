@@ -35,7 +35,28 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 - ✓ C1 view: only top-level units, edges resolved to visible ancestors (pair-only edge collapse, deepest-visible-ancestor resolution both sides, binary penwidth for collapsed edges)
 
-## Current Milestone: v1.8 Proper C1/C2/C3 View Generation
+## Current Milestone: v1.10 Model Composition
+
+**Goal:** Expand C4Drill's authoring model from a single static TOML file into a composable, parametrized, multi-file format — while preserving backward compatibility and the auto-generated-view philosophy.
+
+**Target features (in pipeline order `include → template-expand → relative-peer-resolve → validate → render`):**
+
+- **Include directive** — assemble a diagram from multiple TOML files; isolate template libraries and split large models across files
+- **Unit templates** — parametrized unit definitions (define once, instantiate with parameters) for near-identical units
+- **TOML ergonomic improvements** — relative `peer` resolution, optional `name` (humanized from identifier); compact link deferred
+- **`reference` field** — optional per-unit URL; units with a reference render a 📖 marker in the SVG
+- **Document omittable `type`** — surface the existing type-inference rules in README + SKILL docs
+
+**Key context:**
+- Two features carry **open design questions** flagged for discuss-phase resolution: include (parse-then-merge vs byte-concat — recommendation: parse-then-merge) and templates (structured post-parse vs text preprocess — recommendation: structured post-parse).
+- Pipeline ordering is load-bearing: include resolves first (template libraries in included files become visible), template expansion runs before relative-peer resolution (templated-unit links resolve correctly), validation runs last.
+- Backward compatibility is non-negotiable: all five features are additive; existing single-file models must parse and render unchanged.
+- References: go-metadot (`metadot.pl` — the Go port does NOT implement macros), PlantUML `!procedure` and `!include`/`!include_once`.
+- Out of scope (from LikeC4 comparison): custom kinds, tags, icons, metadata, deployment model, user-authored views.
+
+## Shipped
+
+### v1.8 Proper C1/C2/C3 View Generation
 
 **Goal:** Generate correct per-level diagrams — C1 shows only top-level units, C2/C3 files are created for units with subunits
 
@@ -178,5 +199,22 @@ link = { "target_unit" = { reverse = false, equal = false, color = "black", styl
 - **File structure**: `{basename}.{format}` for context, `{basename}/` directory for expanded units (format = svg, html, or dot)
 - **Shapes**: Person, DB, Queue, System each have distinct record shapes
 
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd:complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
 ---
-*Last updated: 2026-08-06 after Phase 1 (v1.8) completed*
+*Last updated: 2026-08-08 — milestone v1.10 Model Composition started*
