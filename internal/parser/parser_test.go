@@ -1025,3 +1025,133 @@ reference = "https://example.com/docs/db"
 	assert.Equal(t, "https://example.com/docs/db", store.Reference, "store.Reference")
 }
 
+// TestParseOmittedNameTopLevel exercises ERGO-03: a top-level unit defined
+// with no `name` field derives its display name from the identifier segment
+// via model.Humanize ("linuxSystem" → "Linux System").
+func TestParseOmittedNameTopLevel(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Omitted Name Test"
+
+[linuxSystem]
+type = "system"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	unit, ok := got.Units["linuxSystem"]
+	require.True(t, ok, "missing 'linuxSystem' unit")
+	assert.Equal(t, "Linux System", unit.Name, "top-level unit with omitted name should humanize from the identifier segment")
+}
+
+// TestParseOmittedNameNestedSegment exercises ERGO-03 + D-02: a nested
+// subunit defined with no `name` humanizes from its LAST path segment only
+// (not the full dotted path). [linuxSystem.localIDP] → "Local IDP".
+func TestParseOmittedNameNestedSegment(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Omitted Nested Name Test"
+
+[linuxSystem]
+type = "system"
+name = "Linux System"
+
+[linuxSystem.localIDP]
+type = "container"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	parent, ok := got.Units["linuxSystem"]
+	require.True(t, ok, "missing 'linuxSystem' unit")
+
+	child, ok := parent.Subunits["localIDP"]
+	require.True(t, ok, "missing 'linuxSystem.localIDP' subunit")
+	assert.Equal(t, "Local IDP", child.Name, "nested unit with omitted name should humanize from the last segment only (not 'Linux System Local IDP')")
+}
+
+// TestParseExplicitNameWins exercises ERGO-05: an explicit `name =` is NEVER
+// overwritten by humanization, even when the segment would humanize
+// (gRPC → "Grpc"). The authored value renders verbatim.
+func TestParseExplicitNameWins(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Explicit Name Wins Test"
+
+[gRPC]
+type = "system"
+name = "My gRPC Service"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	unit, ok := got.Units["gRPC"]
+	require.True(t, ok, "missing 'gRPC' unit")
+	assert.Equal(t, "My gRPC Service", unit.Name, "explicit name = must win over humanization (ERGO-05)")
+}
+
+// TestParseOmittedNameNoRegression exercises the ERGO-05 backward-compat hard
+// contract: every existing fixture already carries explicit `name =` values, so
+// the humanize fallback MUST be a no-op for them — every unit's Name must
+// remain byte-identical to the authored value.
+func TestParseOmittedNameNoRegression(t *testing.T) {
+	t.Parallel()
+
+	t.Run("valid.toml", func(t *testing.T) {
+		t.Parallel()
+		data, err := os.ReadFile("../../testdata/valid.toml")
+		require.NoError(t, err, "failed to read testdata/valid.toml")
+
+		got, err := parser.Parse(data)
+		require.NoError(t, err, "Parse() should not error")
+
+		expected := map[string]string{
+			"user":   "User",
+			"webapp": "Web Application",
+		}
+		for key, wantName := range expected {
+			unit, ok := got.Units[key]
+			require.True(t, ok, "missing %q unit", key)
+			assert.Equal(t, wantName, unit.Name, "%q unit Name must equal its explicit name= value (no regression)", key)
+		}
+	})
+
+	t.Run("nested.toml", func(t *testing.T) {
+		t.Parallel()
+		data, err := os.ReadFile("../../testdata/nested.toml")
+		require.NoError(t, err, "failed to read testdata/nested.toml")
+
+		got, err := parser.Parse(data)
+		require.NoError(t, err, "Parse() should not error")
+
+		externals, ok := got.Units["externals"]
+		require.True(t, ok, "missing 'externals' unit")
+		assert.Equal(t, "External System", externals.Name, "externals.Name must equal its explicit name= value (no regression)")
+
+		mainapp, ok := got.Units["mainapp"]
+		require.True(t, ok, "missing 'mainapp' unit")
+		assert.Equal(t, "Main Application", mainapp.Name, "mainapp.Name must equal its explicit name= value (no regression)")
+
+		api, ok := mainapp.Subunits["api"]
+		require.True(t, ok, "missing 'mainapp.api' subunit")
+		assert.Equal(t, "API Server", api.Name, "mainapp.api.Name must equal its explicit name= value (no regression)")
+
+		db, ok := mainapp.Subunits["db"]
+		require.True(t, ok, "missing 'mainapp.db' subunit")
+		assert.Equal(t, "Database", db.Name, "mainapp.db.Name must equal its explicit name= value (no regression)")
+
+		handler, ok := api.Subunits["handler"]
+		require.True(t, ok, "missing 'mainapp.api.handler' subunit")
+		assert.Equal(t, "Request Handler", handler.Name, "mainapp.api.handler.Name must equal its explicit name= value (no regression)")
+	})
+}
+
