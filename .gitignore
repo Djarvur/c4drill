@@ -77,7 +77,10 @@ skill/examples/*.svg
 .cursor/
 .zcode/
 
-# GSD GitHub-native runtime (reinstallable) — keep agents/, skills/, workflows/
+# GSD GitHub-native install (reinstallable via npx get-shit-done-cc) — keep workflows/
+.github/agents/
+.github/skills/
+.github/copilot-instructions.md
 .github/get-shit-done/
 .github/gsd-file-manifest.json
 .github/gsd-install-state.json
