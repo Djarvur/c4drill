@@ -83,6 +83,37 @@ func addUnitRecursive(v *View, path string, unit *model.Unit) {
 
 // GenerateC1View creates a C1 (Context) level view showing all top-level units.
 // It includes external boundary nodes for units referenced by links but not defined.
+// modelUnitOrder returns the model's top-level iteration order: UnitOrder
+// when available, otherwise a fallback over map keys (test models or models
+// without explicit order).
+func modelUnitOrder(m *parser.Model) []string {
+	if len(m.UnitOrder) > 0 {
+		return m.UnitOrder
+	}
+
+	names := make([]string, 0, len(m.Units))
+	for name := range m.Units {
+		names = append(names, name)
+	}
+
+	return names
+}
+
+// subunitOrderOf returns the unit's subunit iteration order: SubunitOrder
+// when available, otherwise a fallback over map keys.
+func subunitOrderOf(unit *model.Unit) []string {
+	if len(unit.SubunitOrder) > 0 {
+		return unit.SubunitOrder
+	}
+
+	names := make([]string, 0, len(unit.Subunits))
+	for name := range unit.Subunits {
+		names = append(names, name)
+	}
+
+	return names
+}
+
 func GenerateC1View(m *parser.Model) *View {
 	if m == nil {
 		return nil
@@ -97,19 +128,8 @@ func GenerateC1View(m *parser.Model) *View {
 		VisiblePaths: make(map[string]bool),
 	}
 
-	// Determine iteration order: use UnitOrder if available, otherwise fallback to map keys
-	var unitOrder []string
-	if len(m.UnitOrder) > 0 {
-		unitOrder = m.UnitOrder
-	} else {
-		// Fallback for test models or models without explicit order
-		for name := range m.Units {
-			unitOrder = append(unitOrder, name)
-		}
-	}
-
 	// Add all top-level units in definition order
-	for _, name := range unitOrder {
+	for _, name := range modelUnitOrder(m) {
 		unit := m.Units[name]
 		if unit == nil {
 			continue
@@ -130,23 +150,13 @@ func GenerateC1View(m *parser.Model) *View {
 	// one level). They are added to v.Units + VisiblePaths so resolution
 	// (D-07/D-09/D-10) can reach them, while BuildGraph skips them as
 	// top-level nodes (Pitfall 5).
-	for _, name := range unitOrder {
+	for _, name := range modelUnitOrder(m) {
 		entry := v.Units[name]
 		if entry == nil || !entry.IsExpanded {
 			continue
 		}
 
-		// Determine iteration order: use SubunitOrder if available, otherwise fallback to map keys
-		var subunitOrder []string
-		if len(entry.Unit.SubunitOrder) > 0 {
-			subunitOrder = entry.Unit.SubunitOrder
-		} else {
-			for subName := range entry.Unit.Subunits {
-				subunitOrder = append(subunitOrder, subName)
-			}
-		}
-
-		for _, subName := range subunitOrder {
+		for _, subName := range subunitOrderOf(entry.Unit) {
 			subUnit := entry.Unit.Subunits[subName]
 			if subUnit == nil {
 				continue
@@ -237,16 +247,7 @@ func createExternalBoundaryNode(m *parser.Model, name string, _ string) *Entry {
 // webUser → linuxSystem.localIDP.grpcAPIs.authAPI resolves to webUser → linuxSystem.
 func addC1BoundaryNodes(v *View, m *parser.Model) {
 	// Collect all link peers from ALL units (recursive) and resolve them
-	var unitOrder []string
-	if len(m.UnitOrder) > 0 {
-		unitOrder = m.UnitOrder
-	} else {
-		for name := range m.Units {
-			unitOrder = append(unitOrder, name)
-		}
-	}
-
-	for _, name := range unitOrder {
+	for _, name := range modelUnitOrder(m) {
 		unit := m.Units[name]
 		if unit == nil {
 			continue
@@ -270,91 +271,20 @@ func resolveAndAddBoundary(v *View, m *parser.Model, path string, unit *model.Un
 
 	// Process outgoing links
 	for _, link := range unit.Links {
-		resolved := resolveToTopLevel(v, link.Peer)
-		if resolved == "" {
-			continue // Internal link (both sides under same ancestor or self-referencing)
-		}
-
-		if _, exists := v.Units[resolved]; !exists {
-			v.Units[resolved] = createExternalBoundaryNode(m, resolved, path)
-			v.UnitOrder = append(v.UnitOrder, resolved)
-		}
-
-		// Add resolved outgoing link to the source entry (D-10: within-cluster
-		// edges pass because resolved != resolvedSource; D-08: no parent edge
-		// is synthesized when the link resolved to a child).
-		if sourceEntry != nil && resolved != resolvedSource {
-			// D-13: minlen applies only when both drawn endpoints are the
-			// link's original units — resolved links carry no length.
-			length := 0
-			if path == resolvedSource && link.Peer == resolved {
-				length = link.Length
-			}
-
-			resolvedLink := model.Link{
-				Peer:          resolved,
-				Technology:    link.Technology,
-				Description:   link.Description,
-				Style:         link.Style,
-				Arrow:         link.Arrow,
-				Rank:          link.Rank,
-				LabelPosition: link.LabelPosition,
-				Color:         link.Color,
-				Length:        length,
-			}
+		if resolvedLink, ok := resolveBoundaryLink(v, m, path, resolvedSource, sourceEntry, link); ok {
 			sourceEntry.ResolvedLinks = append(sourceEntry.ResolvedLinks, resolvedLink)
 		}
 	}
 
 	// Process incoming links
 	for _, link := range unit.LinksFrom {
-		resolved := resolveToTopLevel(v, link.Peer)
-		if resolved == "" {
-			continue
-		}
-
-		if _, exists := v.Units[resolved]; !exists {
-			v.Units[resolved] = createExternalBoundaryNode(m, resolved, path)
-			v.UnitOrder = append(v.UnitOrder, resolved)
-		}
-
-		// Add resolved incoming link to the source entry (D-10/D-08 semantics
-		// mirror the outgoing pass above).
-		if sourceEntry != nil && resolved != resolvedSource {
-			// D-13: minlen applies only when both drawn endpoints are the
-			// link's original units — resolved links carry no length.
-			length := 0
-			if path == resolvedSource && link.Peer == resolved {
-				length = link.Length
-			}
-
-			resolvedLink := model.Link{
-				Peer:          resolved,
-				Technology:    link.Technology,
-				Description:   link.Description,
-				Style:         link.Style,
-				Arrow:         link.Arrow,
-				Rank:          link.Rank,
-				LabelPosition: link.LabelPosition,
-				Color:         link.Color,
-				Length:        length,
-				Mirror:        link.Mirror,
-			}
+		if resolvedLink, ok := resolveBoundaryLink(v, m, path, resolvedSource, sourceEntry, link); ok {
 			sourceEntry.ResolvedLinksFrom = append(sourceEntry.ResolvedLinksFrom, resolvedLink)
 		}
 	}
 
 	// Recurse into subunits
-	var subunitOrder []string
-	if len(unit.SubunitOrder) > 0 {
-		subunitOrder = unit.SubunitOrder
-	} else {
-		for name := range unit.Subunits {
-			subunitOrder = append(subunitOrder, name)
-		}
-	}
-
-	for _, subName := range subunitOrder {
+	for _, subName := range subunitOrderOf(unit) {
 		subUnit := unit.Subunits[subName]
 		if subUnit == nil {
 			continue
@@ -362,6 +292,53 @@ func resolveAndAddBoundary(v *View, m *parser.Model, path string, unit *model.Un
 
 		resolveAndAddBoundary(v, m, path+"."+subName, subUnit)
 	}
+}
+
+// resolveBoundaryLink resolves a single link to its nearest top-level boundary
+// node, creating the node if needed. It returns the resolved link (with D-13
+// length semantics) when it should be recorded on the source entry.
+func resolveBoundaryLink(
+	v *View, m *parser.Model, path, resolvedSource string,
+	sourceEntry *Entry, link model.Link,
+) (model.Link, bool) {
+	resolved := resolveToTopLevel(v, link.Peer)
+	if resolved == "" {
+		return model.Link{}, false // Internal link (both sides under same ancestor or self-referencing)
+	}
+
+	if _, exists := v.Units[resolved]; !exists {
+		v.Units[resolved] = createExternalBoundaryNode(m, resolved, path)
+		v.UnitOrder = append(v.UnitOrder, resolved)
+	}
+
+	// Add resolved link to the source entry (D-10: within-cluster edges pass
+	// because resolved != resolvedSource; D-08: no parent edge is synthesized
+	// when the link resolved to a child).
+	if sourceEntry == nil || resolved == resolvedSource {
+		return model.Link{}, false
+	}
+
+	// D-13: minlen applies only when both drawn endpoints are the link's
+	// original units — resolved links carry no length.
+	length := 0
+	if path == resolvedSource && link.Peer == resolved {
+		length = link.Length
+	}
+
+	resolvedLink := model.Link{
+		Peer:          resolved,
+		Technology:    link.Technology,
+		Description:   link.Description,
+		Style:         link.Style,
+		Arrow:         link.Arrow,
+		Rank:          link.Rank,
+		LabelPosition: link.LabelPosition,
+		Color:         link.Color,
+		Length:        length,
+		Mirror:        link.Mirror,
+	}
+
+	return resolvedLink, true
 }
 
 // resolveToTopLevel resolves a peer path to its nearest VISIBLE ancestor in
@@ -628,37 +605,44 @@ func sortBoundaryNodesByModelOrder(v *View, m *parser.Model) {
 	}
 
 	sort.SliceStable(boundary, func(i, j int) bool {
-		// Extract top-level segment from each boundary path
-		keyI := boundary[i]
-		if idx := strings.Index(keyI, "."); idx > 0 {
-			keyI = keyI[:idx]
-		}
-
-		keyJ := boundary[j]
-		if idx := strings.Index(keyJ, "."); idx > 0 {
-			keyJ = keyJ[:idx]
-		}
-
-		// Unknown keys sort after known ones, preserving relative order
-		oi, okI := topIndex[keyI]
-		oj, okJ := topIndex[keyJ]
-
-		if !okI && !okJ {
-			return boundary[i] < boundary[j]
-		}
-
-		if !okI {
-			return false
-		}
-
-		if !okJ {
-			return true
-		}
-
-		return oi < oj
+		return boundaryBefore(boundary[i], boundary[j], topIndex)
 	})
 
 	v.UnitOrder = append(internal, boundary...)
+}
+
+// topLevelKey extracts the top-level segment of a dotted boundary path.
+func topLevelKey(path string) string {
+	if idx := strings.Index(path, "."); idx > 0 {
+		return path[:idx]
+	}
+
+	return path
+}
+
+// boundaryBefore reports whether boundary path a sorts before b: known
+// top-level keys by model definition order, unknown keys after known ones
+// preserving their relative order.
+func boundaryBefore(a, b string, topIndex map[string]int) bool {
+	keyA := topLevelKey(a)
+	keyB := topLevelKey(b)
+
+	_, okA := topIndex[keyA]
+	_, okB := topIndex[keyB]
+
+	if !okA && !okB {
+		return a < b
+	}
+
+	if !okA {
+		return false
+	}
+
+	if !okB {
+		return true
+	}
+
+	return topIndex[keyA] < topIndex[keyB]
 }
 
 // addExternalBoundaryNodesForSubunits scans links from subunits (recursively) and adds
@@ -692,16 +676,7 @@ func addExternalBoundaryNodesForSubunits(
 
 		// Recurse into nested subunits
 		if len(unit.Subunits) > 0 {
-			var childOrder []string
-			if len(unit.SubunitOrder) > 0 {
-				childOrder = unit.SubunitOrder
-			} else {
-				for childName := range unit.Subunits {
-					childOrder = append(childOrder, childName)
-				}
-			}
-
-			addExternalBoundaryNodesForSubunits(v, m, unit.Subunits, childOrder, fullPath)
+			addExternalBoundaryNodesForSubunits(v, m, unit.Subunits, subunitOrderOf(unit), fullPath)
 		}
 	}
 }
@@ -822,72 +797,51 @@ func resolveBoundaryNodeLinks(v *View) {
 			continue
 		}
 
-			// Resolve outgoing links
-			if len(entry.Unit.Links) > 0 {
-				resolved := make([]model.Link, 0, len(entry.Unit.Links))
-				for _, link := range entry.Unit.Links {
-					resolvedPeer := resolveToViewAncestor(v, link.Peer)
-					if resolvedPeer != "" && resolvedPeer != path {
-						// D-13: the boundary node itself is the original
-						// source — minlen survives only when the peer did not
-						// resolve to an ancestor.
-						length := 0
-						if link.Peer == resolvedPeer {
-							length = link.Length
-						}
+		// Resolve outgoing links
+		if resolved := resolveBoundaryLinks(v, path, entry.Unit.Links); len(resolved) > 0 {
+			entry.ResolvedLinks = resolved
+		}
 
-						resolved = append(resolved, model.Link{
-							Peer:          resolvedPeer,
-							Arrow:         link.Arrow,
-							Rank:          link.Rank,
-							Color:         link.Color,
-							Style:         link.Style,
-							Technology:    link.Technology,
-							Description:   link.Description,
-							LabelPosition: link.LabelPosition,
-							Length:        length,
-						})
-					}
-				}
-
-				if len(resolved) > 0 {
-					entry.ResolvedLinks = resolved
-				}
-			}
-
-			// Resolve incoming links (LinksFrom)
-			if len(entry.Unit.LinksFrom) > 0 {
-				resolved := make([]model.Link, 0, len(entry.Unit.LinksFrom))
-				for _, link := range entry.Unit.LinksFrom {
-					resolvedPeer := resolveToViewAncestor(v, link.Peer)
-					if resolvedPeer != "" && resolvedPeer != path {
-						// D-13: minlen survives only when the peer did not
-						// resolve to an ancestor.
-						length := 0
-						if link.Peer == resolvedPeer {
-							length = link.Length
-						}
-
-						resolved = append(resolved, model.Link{
-							Peer:          resolvedPeer,
-							Arrow:         link.Arrow,
-							Rank:          link.Rank,
-							Color:         link.Color,
-							Style:         link.Style,
-							Technology:    link.Technology,
-							Description:   link.Description,
-							LabelPosition: link.LabelPosition,
-							Length:        length,
-							Mirror:        link.Mirror,
-						})
-					}
-				}
-
-				if len(resolved) > 0 {
-					entry.ResolvedLinksFrom = resolved
-				}
-			}
+		// Resolve incoming links (LinksFrom)
+		if resolved := resolveBoundaryLinks(v, path, entry.Unit.LinksFrom); len(resolved) > 0 {
+			entry.ResolvedLinksFrom = resolved
+		}
 	}
+}
+
+// resolveBoundaryLinks resolves a boundary node's links to their nearest
+// visible ancestor. Returns the links whose peer resolved to a different unit
+// (D-13: the boundary node itself is the original source — minlen survives
+// only when the peer did not resolve to an ancestor).
+func resolveBoundaryLinks(v *View, path string, links []model.Link) []model.Link {
+	resolved := make([]model.Link, 0, len(links))
+
+	for _, link := range links {
+		resolvedPeer := resolveToViewAncestor(v, link.Peer)
+		if resolvedPeer == "" || resolvedPeer == path {
+			continue
+		}
+
+		length := 0
+		if link.Peer == resolvedPeer {
+			length = link.Length
+		}
+
+		resolved = append(resolved, model.Link{
+			Peer:          resolvedPeer,
+			Arrow:         link.Arrow,
+			Rank:          link.Rank,
+			Color:         link.Color,
+			Style:         link.Style,
+			Technology:    link.Technology,
+			Description:   link.Description,
+			LabelPosition: link.LabelPosition,
+			Length:        length,
+			Mirror:        link.Mirror,
+		})
+	}
+
+	return resolved
 }
 
 // resolveToViewAncestor resolves a peer path to its nearest ancestor
@@ -953,16 +907,7 @@ func resolveSubunitCrossLinks(v *View, subunits map[string]*model.Unit, subunitO
 
 		// Recursively process descendant links
 		if len(unit.Subunits) > 0 {
-			var childOrder []string
-			if len(unit.SubunitOrder) > 0 {
-				childOrder = unit.SubunitOrder
-			} else {
-				for childName := range unit.Subunits {
-					childOrder = append(childOrder, childName)
-				}
-			}
-
-			resolveDescendantCrossLinks(v, subunitEntry, fullPath, unit.Subunits, childOrder, fullPath)
+			resolveDescendantCrossLinks(v, subunitEntry, fullPath, unit.Subunits, subunitOrderOf(unit), fullPath)
 		}
 	}
 }
@@ -996,16 +941,7 @@ func resolveDescendantCrossLinks(
 
 		// Recurse into nested subunits
 		if len(unit.Subunits) > 0 {
-			var childOrder []string
-			if len(unit.SubunitOrder) > 0 {
-				childOrder = unit.SubunitOrder
-			} else {
-				for childName := range unit.Subunits {
-					childOrder = append(childOrder, childName)
-				}
-			}
-
-			resolveDescendantCrossLinks(v, subunitEntry, entryPath, unit.Subunits, childOrder, fullPath)
+			resolveDescendantCrossLinks(v, subunitEntry, entryPath, unit.Subunits, subunitOrderOf(unit), fullPath)
 		}
 	}
 }

@@ -108,10 +108,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	inputPath := args[0]
 
 	// Default output directory to input file's directory
-	outDir := outputDir
-	if outDir == "" {
-		outDir = filepath.Dir(inputPath)
-	}
+	outDir := resolveOutDir(inputPath)
 
 	// Stage 1: Parse
 	m, err := parser.ParseFile(inputPath)
@@ -160,10 +157,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	}
 
 	// Derive basename from input file
-	basename := strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
-	if basename == "" {
-		basename = "diagram"
-	}
+	basename := deriveBasename(inputPath)
 
 	// Create output writer
 	writer := output.NewWriter(outDir)
@@ -184,6 +178,26 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil // Success - silent per spec
+}
+
+// resolveOutDir defaults the output directory to the input file's directory.
+func resolveOutDir(inputPath string) string {
+	if outputDir != "" {
+		return outputDir
+	}
+
+	return filepath.Dir(inputPath)
+}
+
+// deriveBasename strips the extension from the input file name, falling back
+// to "diagram" for dotfiles with no basename.
+func deriveBasename(inputPath string) string {
+	basename := strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
+	if basename == "" {
+		return "diagram"
+	}
+
+	return basename
 }
 
 // collectExpandedPaths returns all unit paths that need diagrams.

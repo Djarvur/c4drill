@@ -58,7 +58,7 @@ func wrapText(text string, maxChars int) string {
 		wordLen := utf8.RuneCountInString(word)
 
 		// Word fits on current line (with space if not first word on line)
-		if currentLen > 0 && currentLen+1+wordLen <= maxChars {
+		if fitsOnLine(currentLen, wordLen, maxChars) {
 			currentLine.WriteRune(' ')
 
 			currentLine.WriteString(word)
@@ -70,10 +70,7 @@ func wrapText(text string, maxChars int) string {
 
 		// Word fits as the start of a new line
 		if wordLen <= maxChars {
-			if currentLen > 0 {
-				lines = append(lines, currentLine.String())
-				currentLine.Reset()
-			}
+			lines = flushIfPending(lines, &currentLine, &currentLen)
 
 			currentLine.WriteString(word)
 
@@ -83,29 +80,12 @@ func wrapText(text string, maxChars int) string {
 		}
 
 		// Word exceeds maxChars - force character-level break
-		if currentLen > 0 {
-			lines = append(lines, currentLine.String())
+		for _, chunk := range splitLongWord(word, maxChars) {
+			lines = flushIfPending(lines, &currentLine, &currentLen)
 
-			currentLine.Reset()
+			currentLine.WriteString(chunk)
 
-			currentLen = 0
-		}
-
-		runes := []rune(word)
-		for len(runes) > 0 {
-			chunkSize := maxChars
-			if chunkSize > len(runes) {
-				chunkSize = len(runes)
-			}
-
-			if currentLen > 0 {
-				lines = append(lines, currentLine.String())
-				currentLine.Reset()
-			}
-
-			currentLine.WriteString(string(runes[:chunkSize]))
-			currentLen = chunkSize
-			runes = runes[chunkSize:]
+			currentLen = utf8.RuneCountInString(chunk)
 		}
 	}
 
@@ -114,6 +94,47 @@ func wrapText(text string, maxChars int) string {
 	}
 
 	return strings.Join(lines, htmlLineBreak)
+}
+
+// fitsOnLine reports whether the word fits on the current line with a
+// preceding space (when the line is non-empty).
+func fitsOnLine(currentLen, wordLen, maxChars int) bool {
+	return currentLen > 0 && currentLen+1+wordLen <= maxChars
+}
+
+// flushIfPending appends the current line to lines and resets it when it is
+// non-empty.
+func flushIfPending(lines []string, currentLine *strings.Builder, currentLen *int) []string {
+	if *currentLen == 0 {
+		return lines
+	}
+
+	lines = append(lines, currentLine.String())
+
+	currentLine.Reset()
+
+	*currentLen = 0
+
+	return lines
+}
+
+// splitLongWord splits a word longer than maxChars into character-level
+// chunks of at most maxChars runes.
+func splitLongWord(word string, maxChars int) []string {
+	runes := []rune(word)
+	chunks := make([]string, 0, (len(runes)+maxChars-1)/maxChars)
+
+	for len(runes) > 0 {
+		chunkSize := maxChars
+		if chunkSize > len(runes) {
+			chunkSize = len(runes)
+		}
+
+		chunks = append(chunks, string(runes[:chunkSize]))
+		runes = runes[chunkSize:]
+	}
+
+	return chunks
 }
 
 // wrapAndEscape wraps text at word boundaries, then HTML-escapes each line.

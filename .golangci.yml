@@ -22,7 +22,6 @@ linters:
     - dupl # duplicate detection too noisy for test code
     - cyclop # cyclomatic complexity covered by other linters
     - goconst # repeated strings in test fixtures are intentional
-    - gocognit # cognitive complexity metric, not actionable here
     - funlen # test functions are long by design
     - nlreturn # blank-line-before-return style, not enforced
     - mnd # magic numbers are self-evident in context
@@ -38,6 +37,8 @@ linters:
     - maintidx # maintainability index, not actionable
     - nestif # nested-if complexity covered by gocognit
   settings:
+    gocognit:
+      min-complexity: 15
     gomoddirectives:
       replace-allow-list:
         - github.com/goccy/go-graphviz
