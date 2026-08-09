@@ -107,7 +107,7 @@ func HasExternalSubunits(unit *model.Unit) bool {
 // GetBoxStyleByContents returns the style for a C1 box based on its contents.
 // - Boxes with external subunits: grey border (PersonExternalBorder)
 // - Boxes with only non-external subunits: dark blue border (PersonBorder)
-// - Both cases: dashed border style
+// - Both cases: dashed border style.
 func GetBoxStyleByContents(unit *model.Unit) *NodeStyle {
 	if HasExternalSubunits(unit) {
 		return &NodeStyle{

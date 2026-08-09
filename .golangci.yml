@@ -28,7 +28,6 @@ linters:
     - modernize # Go modernization suggestions, tracked separately
     - testpackage # black-box test packages not required
     - gosmopolitan # non-ASCII string literals (e.g. CJK wrap tests) are intentional
-    - godot # period-at-end-of-comment style, not enforced
     - maintidx # maintainability index, not actionable
     - nestif # nested-if complexity covered by gocognit
   settings:
