@@ -7,7 +7,7 @@
 #     once. (Validator rule: a parent with subunits cannot carry direct links,
 #     so the subunit-bearing template is separate from the link-bearing one.)
 #
-# Pipeline position (see SKILL.md ### Pipeline Ordering):
+# Pipeline position (see SKILL.adoc ### Pipeline Ordering):
 #   include.Resolve -> template.Expand -> peer.Resolve -> humanize -> validate
 # Templates expand as the 2nd pass; relative peers authored inside a template
 # resolve at the instantiation site (XC-03), NOT the template's lexical location.
