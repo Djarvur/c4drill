@@ -108,10 +108,3 @@ func breadcrumbItemTD(item graph.BreadcrumbItem) string {
 func plainNavTD(content string) string {
 	return "<TD>" + navFontOpen + content + "</FONT></TD>"
 }
-
-// plainTD wraps a literal HTML fragment (already escaped) in a non-clickable,
-// unstyled table cell. Used for the diagram title, which should render at the
-// default font size/color (not the muted nav styling).
-func plainTD(content string) string {
-	return "<TD>" + content + "</TD>"
-}

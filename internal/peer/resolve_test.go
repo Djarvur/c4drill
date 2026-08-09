@@ -244,10 +244,10 @@ func TestResolveCorpusByteIdentical(t *testing.T) {
 	fixtures := []string{"valid.toml", "links.toml", "nested.toml"}
 
 	for _, fix := range fixtures {
-		fix := fix
 		t.Run(fix, func(t *testing.T) {
 			t.Parallel()
 
+			//nolint:gosec // test fixture read, path comes from the fixed corpus above
 			data, err := os.ReadFile(filepath.Join("..", "..", "testdata", fix))
 			require.NoError(t, err, "failed to read parser-corpus fixture %s", fix)
 

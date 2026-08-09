@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/Djarvur/c4drill/internal/graph"
-	"github.com/Djarvur/c4drill/internal/model"
 )
 
 // buildRecordLabel generates a record-style label for a node.
@@ -412,14 +411,4 @@ func buildBoxHTMLLabel(label *graph.Label) string {
 	sb.WriteString(`</table>`)
 
 	return sb.String()
-}
-
-// iconTypeForUnit maps unit types to icon names.
-// This function is kept for backward compatibility but is no longer used
-// since we replaced SVG icons with native GraphViz shapes and emoji.
-// Deprecated: Will be removed in a future version.
-//
-//nolint:deadcode // Kept for reference
-func iconTypeForUnit(_ model.UnitType) string {
-	return "" // No longer needed
 }
