@@ -611,7 +611,7 @@ func sortBoundaryNodesByModelOrder(v *View, m *parser.Model) {
 		return boundaryBefore(boundary[i], boundary[j], topIndex)
 	})
 
-	v.UnitOrder = append(internal, boundary...)
+	v.UnitOrder = slices.Concat(internal, boundary)
 }
 
 // topLevelKey extracts the top-level segment of a dotted boundary path.
