@@ -3,7 +3,7 @@
 # fixture). Renders to identical DOT as single-file-equivalent.toml through the
 # full pipeline (asserted by Plan 04's TestXC05_ComposedEquivSingleFile).
 #
-# Pipeline (see SKILL.adoc ### Pipeline Ordering):
+# Pipeline (see SKILL.md ### Pipeline Ordering):
 #   1. include.Resolve  - pulls in templates.toml (defines [template.microservice])
 #                         and domains/auth.toml (contributes [platform.auditLog])
 #   2. template.Expand  - the [[use]] instantiates microservice -> [platform.auth]
