@@ -1,9 +1,11 @@
-package model
+package model_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/Djarvur/c4drill/internal/model"
 )
 
 // TestHumanize is the ERGO-04 contract test. The cases below are the
@@ -41,7 +43,7 @@ func TestHumanize(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, c.want, Humanize(c.in), "Humanize(%q)", c.in)
+			assert.Equal(t, c.want, model.Humanize(c.in), "Humanize(%q)", c.in)
 		})
 	}
 }
