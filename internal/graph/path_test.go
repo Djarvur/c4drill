@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//nolint:funlen // Test functions with many table-driven subtests are naturally longer
 func TestComputeExploreURL(t *testing.T) {
 	t.Parallel()
 

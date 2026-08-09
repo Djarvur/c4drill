@@ -85,8 +85,6 @@ Output:
 
 // runRoot is the main execution function for the root command.
 // It validates flags early, then orchestrates the full pipeline.
-//
-//nolint:funlen // linear pipeline stage sequence; one statement per stage
 func runRoot(cmd *cobra.Command, args []string) error {
 	// Show help if no input file provided
 	if len(args) == 0 {

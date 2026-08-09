@@ -127,48 +127,7 @@ func rowspanString(n int) string {
 // Format: name (bold) / [technology] italic / description
 // Single-column layout without icon column.
 func buildDbHTMLLabel(label *graph.Label) string {
-	if label == nil {
-		return ""
-	}
-
-	// Calculate max characters for word wrapping (no icon column)
-	rowCount := 1 // name
-	if label.Technology != "" {
-		rowCount++
-	}
-
-	if label.Description != "" {
-		rowCount++
-	}
-
-	// Use cylinder-specific calculation to compensate for shape's extra height
-	maxChars := labelMaxCharsForCylinder(rowCount)
-
-	var sb strings.Builder
-	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
-
-	// Row 1: Name (bold)
-	sb.WriteString(`<tr align="center"><td valign="bottom"><b>`)
-	sb.WriteString(wrapAndEscape(label.Name, maxChars))
-	sb.WriteString(`</b></td></tr>`)
-
-	// Row 2: Technology (if present, italic in brackets)
-	if label.Technology != "" {
-		sb.WriteString(`<tr align="center"><td valign="middle"><i>[`)
-		sb.WriteString(wrapAndEscape(label.Technology, maxChars))
-		sb.WriteString(`]</i></td></tr>`)
-	}
-
-	// Row 3: Description (if present)
-	if label.Description != "" {
-		sb.WriteString(`<tr align="center"><td valign="top">`)
-		sb.WriteString(wrapAndEscape(label.Description, maxChars))
-		sb.WriteString(`</td></tr>`)
-	}
-
-	sb.WriteString(`</table>`)
-
-	return sb.String()
+	return buildNoIconHTMLLabel(label, labelMaxCharsForCylinder)
 }
 
 // buildQueueHTMLLabel generates an HTML table label for Queue-type nodes.
@@ -179,47 +138,18 @@ func buildQueueHTMLLabel(label *graph.Label) string {
 		return ""
 	}
 
-	// Calculate max characters for word wrapping (no icon column)
-	// Graphic row doesn't wrap but counts for proportion
-	rowCount := 2 // graphic + name
-	if label.Technology != "" {
-		rowCount++
-	}
-
-	if label.Description != "" {
-		rowCount++
-	}
-
-	maxChars := labelMaxCharsForQueue(rowCount)
+	// Graphic row doesn't wrap but counts for proportion.
+	maxChars := labelMaxCharsForQueue(labelRowCount(label) + 1)
 
 	var sb strings.Builder
-	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
-
-	// Row 1: ASCII art graphic
+	writeLabelTableStart(&sb)
 	sb.WriteString(`<tr align="center"><td valign="middle">`)
 	sb.WriteString("═╦╩═╦═══")
 	sb.WriteString(`</td></tr>`)
-
-	// Row 2: Name (bold)
-	sb.WriteString(`<tr align="center"><td valign="bottom"><b>`)
-	sb.WriteString(wrapAndEscape(label.Name, maxChars))
-	sb.WriteString(`</b></td></tr>`)
-
-	// Row 3: Technology (if present, italic in brackets)
-	if label.Technology != "" {
-		sb.WriteString(`<tr align="center"><td valign="middle"><i>[`)
-		sb.WriteString(wrapAndEscape(label.Technology, maxChars))
-		sb.WriteString(`]</i></td></tr>`)
-	}
-
-	// Row 4: Description (if present)
-	if label.Description != "" {
-		sb.WriteString(`<tr align="center"><td valign="top">`)
-		sb.WriteString(wrapAndEscape(label.Description, maxChars))
-		sb.WriteString(`</td></tr>`)
-	}
-
-	sb.WriteString(`</table>`)
+	writeNameRow(&sb, label.Name, maxChars)
+	writeTechnologyRow(&sb, label.Technology, maxChars)
+	writeDescriptionRow(&sb, label.Description, maxChars)
+	writeLabelTableEnd(&sb)
 
 	return sb.String()
 }
@@ -228,141 +158,21 @@ func buildQueueHTMLLabel(label *graph.Label) string {
 // Format: name (bold) / [technology] italic / description
 // Single-column layout without icon column.
 func buildSystemHTMLLabel(label *graph.Label) string {
-	if label == nil {
-		return ""
-	}
-
-	// Calculate max characters for word wrapping (no icon column)
-	rowCount := 1 // name
-	if label.Technology != "" {
-		rowCount++
-	}
-
-	if label.Description != "" {
-		rowCount++
-	}
-
-	maxChars := labelMaxCharsNoIcon(rowCount)
-
-	var sb strings.Builder
-	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
-
-	// Row 1: Name (bold)
-	sb.WriteString(`<tr align="center"><td valign="bottom"><b>`)
-	sb.WriteString(wrapAndEscape(label.Name, maxChars))
-	sb.WriteString(`</b></td></tr>`)
-
-	// Row 2: Technology (if present, italic in brackets)
-	if label.Technology != "" {
-		sb.WriteString(`<tr align="center"><td valign="middle"><i>[`)
-		sb.WriteString(wrapAndEscape(label.Technology, maxChars))
-		sb.WriteString(`]</i></td></tr>`)
-	}
-
-	// Row 3: Description (if present)
-	if label.Description != "" {
-		sb.WriteString(`<tr align="center"><td valign="top">`)
-		sb.WriteString(wrapAndEscape(label.Description, maxChars))
-		sb.WriteString(`</td></tr>`)
-	}
-
-	sb.WriteString(`</table>`)
-
-	return sb.String()
+	return buildNoIconHTMLLabel(label, labelMaxCharsNoIcon)
 }
 
 // buildContainerHTMLLabel generates an HTML table label for Container-type nodes.
 // Format: name (bold) / [technology] italic / description
 // Single-column layout without icon column.
 func buildContainerHTMLLabel(label *graph.Label) string {
-	if label == nil {
-		return ""
-	}
-
-	// Calculate max characters for word wrapping (no icon column)
-	rowCount := 1 // name
-	if label.Technology != "" {
-		rowCount++
-	}
-
-	if label.Description != "" {
-		rowCount++
-	}
-
-	maxChars := labelMaxCharsNoIcon(rowCount)
-
-	var sb strings.Builder
-	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
-
-	// Row 1: Name (bold)
-	sb.WriteString(`<tr align="center"><td valign="bottom"><b>`)
-	sb.WriteString(wrapAndEscape(label.Name, maxChars))
-	sb.WriteString(`</b></td></tr>`)
-
-	// Row 2: Technology (if present, italic in brackets)
-	if label.Technology != "" {
-		sb.WriteString(`<tr align="center"><td valign="middle"><i>[`)
-		sb.WriteString(wrapAndEscape(label.Technology, maxChars))
-		sb.WriteString(`]</i></td></tr>`)
-	}
-
-	// Row 3: Description (if present)
-	if label.Description != "" {
-		sb.WriteString(`<tr align="center"><td valign="top">`)
-		sb.WriteString(wrapAndEscape(label.Description, maxChars))
-		sb.WriteString(`</td></tr>`)
-	}
-
-	sb.WriteString(`</table>`)
-
-	return sb.String()
+	return buildNoIconHTMLLabel(label, labelMaxCharsNoIcon)
 }
 
 // buildComponentHTMLLabel generates an HTML table label for Component-type nodes.
 // Format: name (bold) / [technology] italic / description
 // Single-column layout without icon column.
 func buildComponentHTMLLabel(label *graph.Label) string {
-	if label == nil {
-		return ""
-	}
-
-	// Calculate max characters for word wrapping (no icon column)
-	rowCount := 1 // name
-	if label.Technology != "" {
-		rowCount++
-	}
-
-	if label.Description != "" {
-		rowCount++
-	}
-
-	maxChars := labelMaxCharsNoIcon(rowCount)
-
-	var sb strings.Builder
-	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
-
-	// Row 1: Name (bold)
-	sb.WriteString(`<tr align="center"><td valign="bottom"><b>`)
-	sb.WriteString(wrapAndEscape(label.Name, maxChars))
-	sb.WriteString(`</b></td></tr>`)
-
-	// Row 2: Technology (if present, italic in brackets)
-	if label.Technology != "" {
-		sb.WriteString(`<tr align="center"><td valign="middle"><i>[`)
-		sb.WriteString(wrapAndEscape(label.Technology, maxChars))
-		sb.WriteString(`]</i></td></tr>`)
-	}
-
-	// Row 3: Description (if present)
-	if label.Description != "" {
-		sb.WriteString(`<tr align="center"><td valign="top">`)
-		sb.WriteString(wrapAndEscape(label.Description, maxChars))
-		sb.WriteString(`</td></tr>`)
-	}
-
-	sb.WriteString(`</table>`)
-
-	return sb.String()
+	return buildNoIconHTMLLabel(label, labelMaxCharsNoIcon)
 }
 
 // buildBoxHTMLLabel generates an HTML table label for Box-type nodes.
@@ -370,11 +180,31 @@ func buildComponentHTMLLabel(label *graph.Label) string {
 // Single-column layout without icon column.
 // Output does NOT contain curly brackets {} unlike record labels.
 func buildBoxHTMLLabel(label *graph.Label) string {
+	return buildNoIconHTMLLabel(label, labelMaxCharsNoIcon)
+}
+
+// buildNoIconHTMLLabel builds the standard name/technology/description table
+// label without an icon column, using maxCharsFor for word-wrapping.
+func buildNoIconHTMLLabel(label *graph.Label, maxCharsFor func(rowCount int) int) string {
 	if label == nil {
 		return ""
 	}
 
-	// Calculate max characters for word wrapping (no icon column)
+	maxChars := maxCharsFor(labelRowCount(label))
+
+	var sb strings.Builder
+	writeLabelTableStart(&sb)
+	writeNameRow(&sb, label.Name, maxChars)
+	writeTechnologyRow(&sb, label.Technology, maxChars)
+	writeDescriptionRow(&sb, label.Description, maxChars)
+	writeLabelTableEnd(&sb)
+
+	return sb.String()
+}
+
+// labelRowCount counts the content rows: name plus optional technology and
+// description.
+func labelRowCount(label *graph.Label) int {
 	rowCount := 1 // name
 	if label.Technology != "" {
 		rowCount++
@@ -384,31 +214,39 @@ func buildBoxHTMLLabel(label *graph.Label) string {
 		rowCount++
 	}
 
-	maxChars := labelMaxCharsNoIcon(rowCount)
+	return rowCount
+}
 
-	var sb strings.Builder
+func writeLabelTableStart(sb *strings.Builder) {
 	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
+}
 
-	// Row 1: Name (bold)
-	sb.WriteString(`<tr align="center"><td valign="bottom"><b>`)
-	sb.WriteString(wrapAndEscape(label.Name, maxChars))
-	sb.WriteString(`</b></td></tr>`)
-
-	// Row 2: Technology (if present, italic in brackets)
-	if label.Technology != "" {
-		sb.WriteString(`<tr align="center"><td valign="middle"><i>[`)
-		sb.WriteString(wrapAndEscape(label.Technology, maxChars))
-		sb.WriteString(`]</i></td></tr>`)
-	}
-
-	// Row 3: Description (if present)
-	if label.Description != "" {
-		sb.WriteString(`<tr align="center"><td valign="top">`)
-		sb.WriteString(wrapAndEscape(label.Description, maxChars))
-		sb.WriteString(`</td></tr>`)
-	}
-
+func writeLabelTableEnd(sb *strings.Builder) {
 	sb.WriteString(`</table>`)
+}
 
-	return sb.String()
+func writeNameRow(sb *strings.Builder, name string, maxChars int) {
+	sb.WriteString(`<tr align="center"><td valign="bottom"><b>`)
+	sb.WriteString(wrapAndEscape(name, maxChars))
+	sb.WriteString(`</b></td></tr>`)
+}
+
+func writeTechnologyRow(sb *strings.Builder, technology string, maxChars int) {
+	if technology == "" {
+		return
+	}
+
+	sb.WriteString(`<tr align="center"><td valign="middle"><i>[`)
+	sb.WriteString(wrapAndEscape(technology, maxChars))
+	sb.WriteString(`]</i></td></tr>`)
+}
+
+func writeDescriptionRow(sb *strings.Builder, description string, maxChars int) {
+	if description == "" {
+		return
+	}
+
+	sb.WriteString(`<tr align="center"><td valign="top">`)
+	sb.WriteString(wrapAndEscape(description, maxChars))
+	sb.WriteString(`</td></tr>`)
 }

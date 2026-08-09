@@ -17,7 +17,7 @@ import (
 // a substring in the styled TDs below. Kept in sync with navigation.go.
 const navFontOpen = `<FONT POINT-SIZE="10" COLOR="#666666">`
 
-//nolint:paralleltest,funlen // go-graphviz WASM engine has concurrency issues
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestBuildNavigationLabel(t *testing.T) {
 	t.Run("nil navigation returns empty string", func(t *testing.T) {
 		result := render.BuildNavigationLabel(nil)

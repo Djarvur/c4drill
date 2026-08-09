@@ -389,7 +389,6 @@ func TestBuildGraphMultipleLinks(t *testing.T) {
 	require.Len(t, g.Edges, 2)
 }
 
-//nolint:funlen // Test functions with model setup are naturally longer
 func TestBuildGraphWithPathSetsExploreURL(t *testing.T) {
 	t.Parallel()
 
@@ -480,7 +479,6 @@ func TestBuildGraphWithPathSetsExploreURL(t *testing.T) {
 	})
 }
 
-//nolint:funlen // Test functions with model setup are naturally longer
 func TestBuildExpandedGraph(t *testing.T) {
 	t.Parallel()
 
@@ -844,7 +842,6 @@ func TestBuildExpandedGraphRealToml(t *testing.T) {
 	assert.Contains(t, string(dotData), expectedMinlen, "DOT output should contain minlen for the edge")
 }
 
-//nolint:funlen // Test functions with model setup are naturally longer
 func TestBuildGraphEdgeColor(t *testing.T) {
 	t.Parallel()
 
@@ -1030,7 +1027,6 @@ func TestBuildGraphEdgeColor(t *testing.T) {
 	})
 }
 
-//nolint:funlen // Test functions with model setup are naturally longer
 func TestBuildGraphEdgeLength(t *testing.T) {
 	t.Parallel()
 
@@ -1133,7 +1129,6 @@ func TestBuildGraphEdgeLength(t *testing.T) {
 // either endpoint is resolved to an ancestor, the synthesized edge carries no
 // minlen.
 //
-//nolint:funlen // Test functions with model setup are naturally longer
 func TestBuildGraphResolvedEdgeMinLen(t *testing.T) {
 	t.Parallel()
 
@@ -1248,7 +1243,6 @@ func TestBuildExpandedGraphBaselineDOT(t *testing.T) {
 		"expanded DOT must match the committed golden baseline semantically (COMPAT-02)")
 }
 
-//nolint:funlen // Test functions with model setup are naturally longer
 func TestBuildGraphDeterministicOrder(t *testing.T) {
 	t.Parallel()
 
@@ -1471,7 +1465,6 @@ func TestBuildGraphDeterministicOrder(t *testing.T) {
 	})
 }
 
-//nolint:funlen // Test functions with model setup are naturally longer
 func TestBuildGraphWithPathSetsNavigation(t *testing.T) {
 	t.Parallel()
 
@@ -2115,7 +2108,6 @@ func edgeBlockFromDOT(t *testing.T, dot []byte, source, target string) string {
 // pairs in resolved views, 2.0 in expanded mode. DOT rendering is
 // parallel-safe (precedent: TestBuildExpandedGraphRealToml).
 //
-//nolint:funlen // Test functions with model setup are naturally longer
 func TestBuildEdgesPenwidthRendered(t *testing.T) {
 	t.Parallel()
 

@@ -14,7 +14,7 @@ import (
 // Note: Tests in this file do NOT use t.Parallel() because the go-graphviz
 // library uses a WASM-based rendering engine that has concurrency issues.
 
-//nolint:funlen,paralleltest // Table-driven test pattern; go-graphviz WASM concurrency issues
+//nolint:paralleltest // Table-driven test pattern; go-graphviz WASM concurrency issues
 func TestRecordLabelGeneration(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -84,7 +84,7 @@ func TestRecordLabelGeneration(t *testing.T) {
 	}
 }
 
-//nolint:funlen,paralleltest // Table-driven test pattern; go-graphviz WASM concurrency issues
+//nolint:paralleltest // Table-driven test pattern; go-graphviz WASM concurrency issues
 func TestEdgeLabelGeneration(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -228,7 +228,7 @@ func TestGraphTitle(t *testing.T) {
 	})
 }
 
-//nolint:funlen,paralleltest // Table-driven test pattern; go-graphviz WASM concurrency issues
+//nolint:paralleltest // Table-driven test pattern; go-graphviz WASM concurrency issues
 func TestBoxHTMLLabelGeneration(t *testing.T) {
 	tests := []struct {
 		name        string
