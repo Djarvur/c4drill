@@ -67,7 +67,9 @@ func splitWords(runes []rune) [][]rune {
 			// so a lone leading lowercase (e.g. the "g" in "gRPC") stays glued
 			// to the following upper-run as one word.
 			split = lowerRun >= 2
-		case unicode.IsUpper(prev) && unicode.IsUpper(cur) && i+1 < len(runes) && unicode.IsLower(runes[i+1]) && hasLowerRun(runes, i+1, 2):
+		case unicode.IsUpper(prev) && unicode.IsUpper(cur) &&
+			i+1 < len(runes) && unicode.IsLower(runes[i+1]) &&
+			hasLowerRun(runes, i+1, 2):
 			// upper→upper→lower: the current upper begins a new word so the
 			// preceding upper-run forms its own word ("IDPToken" → IDP|Token).
 			// Require at least two lowercase letters to follow, so a trailing

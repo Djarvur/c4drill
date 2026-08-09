@@ -667,7 +667,10 @@ func sortBoundaryNodesByModelOrder(v *View, m *parser.Model) {
 // nested links (e.g., linuxSystem.storages.localStorage.lookupAPI) are resolved
 // to the nearest visible parent (e.g., linuxSystem.storages) rather than appearing
 // as individual boundary nodes.
-func addExternalBoundaryNodesForSubunits(v *View, m *parser.Model, subunits map[string]*model.Unit, subunitOrder []string, parentPath string) {
+func addExternalBoundaryNodesForSubunits(
+	v *View, m *parser.Model, subunits map[string]*model.Unit,
+	subunitOrder []string, parentPath string,
+) {
 	// Iterate in definition order, recursing into nested subunits
 	for _, name := range subunitOrder {
 		unit := subunits[name]
@@ -969,7 +972,10 @@ func resolveSubunitCrossLinks(v *View, subunits map[string]*model.Unit, subunitO
 // a different subunit or external boundary node in the view.
 // entryPath is the fixed path of the subunit entry (used to detect self-links).
 // parentPath is the current recursion depth (changes as we recurse deeper).
-func resolveDescendantCrossLinks(v *View, subunitEntry *Entry, entryPath string, subunits map[string]*model.Unit, subunitOrder []string, parentPath string) {
+func resolveDescendantCrossLinks(
+	v *View, subunitEntry *Entry, entryPath string,
+	subunits map[string]*model.Unit, subunitOrder []string, parentPath string,
+) {
 	for _, name := range subunitOrder {
 		unit := subunits[name]
 		if unit == nil {

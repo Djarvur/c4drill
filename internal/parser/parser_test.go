@@ -799,7 +799,8 @@ name = "Queue"
 	myqueue, ok := external.Subunits["myqueue"]
 	require.True(t, ok, "missing 'external.myqueue' subunit")
 	// systemExternal cannot contain subunits (validator will reject), but parser keeps type as-is
-	assert.Equal(t, model.TypeQueue, myqueue.Type, "queue inside systemExternal stays as queue (systemExternal cannot contain subunits)")
+	assert.Equal(t, model.TypeQueue, myqueue.Type,
+		"queue inside systemExternal stays as queue (systemExternal cannot contain subunits)")
 }
 
 func TestParseGenericTypeInference_ExplicitTypesUnchanged(t *testing.T) {
@@ -1046,7 +1047,8 @@ type = "system"
 
 	unit, ok := got.Units["linuxSystem"]
 	require.True(t, ok, "missing 'linuxSystem' unit")
-	assert.Equal(t, "Linux System", unit.Name, "top-level unit with omitted name should humanize from the identifier segment")
+	assert.Equal(t, "Linux System", unit.Name,
+		"top-level unit with omitted name should humanize from the identifier segment")
 }
 
 // TestParseOmittedNameNestedSegment exercises ERGO-03 + D-02: a nested
@@ -1075,7 +1077,8 @@ type = "container"
 
 	child, ok := parent.Subunits["localIDP"]
 	require.True(t, ok, "missing 'linuxSystem.localIDP' subunit")
-	assert.Equal(t, "Local IDP", child.Name, "nested unit with omitted name should humanize from the last segment only (not 'Linux System Local IDP')")
+	assert.Equal(t, "Local IDP", child.Name,
+		"nested unit with omitted name should humanize from the last segment only (not 'Linux System Local IDP')")
 }
 
 // TestParseExplicitNameWins exercises ERGO-05: an explicit `name =` is NEVER
@@ -1139,7 +1142,8 @@ func TestParseOmittedNameNoRegression(t *testing.T) {
 
 		externals, ok := got.Units["externals"]
 		require.True(t, ok, "missing 'externals' unit")
-		assert.Equal(t, "External System", externals.Name, "externals.Name must equal its explicit name= value (no regression)")
+		assert.Equal(t, "External System", externals.Name,
+			"externals.Name must equal its explicit name= value (no regression)")
 
 		mainapp, ok := got.Units["mainapp"]
 		require.True(t, ok, "missing 'mainapp' unit")
@@ -1155,7 +1159,8 @@ func TestParseOmittedNameNoRegression(t *testing.T) {
 
 		handler, ok := api.Subunits["handler"]
 		require.True(t, ok, "missing 'mainapp.api.handler' subunit")
-		assert.Equal(t, "Request Handler", handler.Name, "mainapp.api.handler.Name must equal its explicit name= value (no regression)")
+		assert.Equal(t, "Request Handler", handler.Name,
+			"mainapp.api.handler.Name must equal its explicit name= value (no regression)")
 	})
 }
 
