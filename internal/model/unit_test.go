@@ -62,8 +62,8 @@ func TestCloneRecursesSubunits(t *testing.T) {
 	t.Parallel()
 
 	orig := &model.Unit{
-		Type: model.TypeSystem,
-		Name: "Parent",
+		Type:         model.TypeSystem,
+		Name:         "Parent",
 		SubunitOrder: []string{subAPI, subDB},
 		Subunits: map[string]*model.Unit{
 			subAPI: {

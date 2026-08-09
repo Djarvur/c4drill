@@ -38,8 +38,8 @@ const (
 
 //nolint:gochecknoglobals // Cobra flags require package-level variables for PersistentFlags registration
 var (
-	format    string
-	outputDir string
+	format     string
+	outputDir  string
 	expanded   bool
 	labelRatio float64
 	version    = "dev"

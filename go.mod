@@ -19,10 +19,11 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
-	github.com/tetratelabs/wazero v1.10.1 // indirect
-	golang.org/x/image v0.41.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
+	github.com/tetratelabs/wazero v1.12.0 // indirect
+	golang.org/x/image v0.44.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/text v0.40.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/goccy/go-graphviz => github.com/onokonem/go-graphviz v0.0.0-20260321130544-f364b5235161
+replace github.com/goccy/go-graphviz => github.com/onokonem/go-graphviz v0.0.0-20260809224952-459d4fb09a82

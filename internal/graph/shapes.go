@@ -111,17 +111,17 @@ func HasExternalSubunits(unit *model.Unit) bool {
 func GetBoxStyleByContents(unit *model.Unit) *NodeStyle {
 	if HasExternalSubunits(unit) {
 		return &NodeStyle{
-			FillColor:   "",                              // Transparent background
-			BorderColor: model.PersonExternalBorder,      // Grey for external boxes
-			FontColor:   model.PersonExternalBorder,      // Font color matches border color
+			FillColor:   "",                         // Transparent background
+			BorderColor: model.PersonExternalBorder, // Grey for external boxes
+			FontColor:   model.PersonExternalBorder, // Font color matches border color
 			BorderStyle: "dashed",
 		}
 	}
 
 	return &NodeStyle{
-		FillColor:   "",                     // Transparent background
-		BorderColor: model.PersonBorder,     // Dark blue for internal boxes
-		FontColor:   model.PersonBorder,     // Font color matches border color
+		FillColor:   "",                 // Transparent background
+		BorderColor: model.PersonBorder, // Dark blue for internal boxes
+		FontColor:   model.PersonBorder, // Font color matches border color
 		BorderStyle: "dashed",
 	}
 }
@@ -177,21 +177,21 @@ func getLevelStyle(t model.UnitType) *NodeStyle {
 	switch level {
 	case levelC1:
 		return &NodeStyle{
-			FillColor:   "", // Transparent background
+			FillColor:   "",                 // Transparent background
 			BorderColor: model.PersonBorder, // Dark blue for all C1 units
 			FontColor:   model.PersonBorder, // Font color matches border color
 			BorderStyle: borderStyle,
 		}
 	case levelC2:
 		return &NodeStyle{
-			FillColor:   "", // Transparent background
+			FillColor:   "",                    // Transparent background
 			BorderColor: model.ContainerBorder, // Blue for all C2 units
 			FontColor:   model.ContainerBorder, // Font color matches border color
 			BorderStyle: borderStyle,
 		}
 	case levelC3:
 		return &NodeStyle{
-			FillColor:   "", // Transparent background
+			FillColor:   "",                    // Transparent background
 			BorderColor: model.ComponentBorder, // Light blue for all C3 units
 			FontColor:   model.ComponentBorder, // Font color matches border color
 			BorderStyle: borderStyle,
@@ -224,21 +224,21 @@ func getExternalStyle(t model.UnitType) *NodeStyle {
 	switch level {
 	case levelC1:
 		return &NodeStyle{
-			FillColor:   "", // Transparent background
+			FillColor:   "",                         // Transparent background
 			BorderColor: model.PersonExternalBorder, // Dark gray for all C1 external units
 			FontColor:   model.PersonExternalBorder, // Font color matches border color
 			BorderStyle: borderStyle,
 		}
 	case levelC2:
 		return &NodeStyle{
-			FillColor:   "", // Transparent background
+			FillColor:   "",                            // Transparent background
 			BorderColor: model.ContainerExternalBorder, // Medium gray for all C2 external units
 			FontColor:   model.ContainerExternalBorder, // Font color matches border color
 			BorderStyle: borderStyle,
 		}
 	case levelC3:
 		return &NodeStyle{
-			FillColor:   "", // Transparent background
+			FillColor:   "",                            // Transparent background
 			BorderColor: model.ComponentExternalBorder, // Light gray for all C3 external units
 			FontColor:   model.ComponentExternalBorder, // Font color matches border color
 			BorderStyle: borderStyle,

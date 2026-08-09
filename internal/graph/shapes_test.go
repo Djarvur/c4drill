@@ -116,7 +116,7 @@ func TestGetStyleForType(t *testing.T) {
 	// Test 8: GetStyleForType returns transparent fill for C1 level internal types
 	// C1 uses dark blue (PersonBorder) for all unit types
 	c1Style := graph.GetStyleForType(model.TypeSystem, false)
-	assert.Empty(t, c1Style.FillColor) // Transparent background
+	assert.Empty(t, c1Style.FillColor)                       // Transparent background
 	assert.Equal(t, model.PersonBorder, c1Style.BorderColor) // Dark blue for C1
 	assert.Equal(t, model.PersonBorder, c1Style.FontColor)   // Font color matches border color
 	assert.Equal(t, "solid", c1Style.BorderStyle)
@@ -138,7 +138,7 @@ func TestGetStyleForType(t *testing.T) {
 	// Test 9: GetStyleForType returns transparent fill for external types
 	// C1 external uses dark gray (PersonExternalBorder)
 	extStyle := graph.GetStyleForType(model.TypeSystemExternal, true)
-	assert.Empty(t, extStyle.FillColor) // Transparent background
+	assert.Empty(t, extStyle.FillColor)                               // Transparent background
 	assert.Equal(t, model.PersonExternalBorder, extStyle.BorderColor) // Dark gray for C1 external
 	assert.Equal(t, model.PersonExternalBorder, extStyle.FontColor)   // Font color matches border color
 

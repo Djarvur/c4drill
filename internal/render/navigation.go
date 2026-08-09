@@ -13,7 +13,7 @@ import (
 // underlined so they are recognisable as links (Safari/Chrome/Firefox all
 // render <U> inside GraphViz HTML labels as text-decoration: underline).
 const (
-	navFontPoint = "10"     // smaller than the 14pt title
+	navFontPoint = "10"      // smaller than the 14pt title
 	navFontColor = "#666666" // muted gray
 )
 

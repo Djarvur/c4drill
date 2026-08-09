@@ -53,11 +53,11 @@ func ValidateSubunitRules(index map[string]*UnitInfo) ValidationErrors {
 
 	// Types that can have subunits
 	allowedTypes := map[model.UnitType]bool{
-		model.TypeSystem:        true,
-		model.TypeBox:           true, // C1 box can contain C1 types
-		model.TypeContainer:     true,
-		model.TypeContainerBox:  true, // C2 box can contain C2 types
-		model.TypeComponentBox:  true, // C3 box can contain C3 types
+		model.TypeSystem:       true,
+		model.TypeBox:          true, // C1 box can contain C1 types
+		model.TypeContainer:    true,
+		model.TypeContainerBox: true, // C2 box can contain C2 types
+		model.TypeComponentBox: true, // C3 box can contain C3 types
 	}
 
 	for path, info := range index {
@@ -252,10 +252,10 @@ func requireChildType(
 //
 //nolint:gochecknoglobals // Lookup map for O(1) type checking, immutable after init
 var externalTypes = map[model.UnitType]bool{
-	model.TypePersonExternal:  true,
-	model.TypeSystemExternal:  true,
-	model.TypeDbExternal:      true,
-	model.TypeQueueExternal:   true,
+	model.TypePersonExternal: true,
+	model.TypeSystemExternal: true,
+	model.TypeDbExternal:     true,
+	model.TypeQueueExternal:  true,
 }
 
 // ValidateBoxMixedContents checks that C1 boxes contain only external or only non-external units.
