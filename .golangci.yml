@@ -24,7 +24,6 @@ linters:
     - nlreturn # blank-line-before-return style, not enforced
     - mnd # magic numbers are self-evident in context
     - modernize # Go modernization suggestions, tracked separately
-    - maintidx # maintainability index, not actionable
     - nestif # nested-if complexity covered by gocognit
   settings:
     gocognit:

@@ -479,151 +479,281 @@ func TestBuildGraphWithPathSetsExploreURL(t *testing.T) {
 	})
 }
 
-func TestBuildExpandedGraph(t *testing.T) {
+// TestBuildExpandedGraphCreatesClusterWithCorrectID verifies cluster ID creation.
+func TestBuildExpandedGraphCreatesClusterWithCorrectID(t *testing.T) {
 	t.Parallel()
 
-	// Test 1: buildNestedCluster creates cluster with correct ID (cluster_path)
-	t.Run("creates cluster with correct ID", func(t *testing.T) {
-		t.Parallel()
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"mainapp": {
+				Type: model.TypeSystem,
+				Name: "Main App",
+				Subunits: map[string]*model.Unit{
+					"api": {
+						Type: model.TypeContainer,
+						Name: "API",
+					},
+				},
+			},
+		},
+	}
 
-		m := &parser.Model{
-			Properties: model.Properties{Name: "Test"},
-			Units: map[string]*model.Unit{
-				"mainapp": {
-					Type: model.TypeSystem,
-					Name: "Main App",
-					Subunits: map[string]*model.Unit{
-						"api": {
-							Type: model.TypeContainer,
-							Name: "API",
+	v := view.GenerateExpandedView(m)
+	require.NotNil(t, v)
+
+	g := graph.BuildExpandedGraph(v)
+	require.NotNil(t, g)
+
+	// Top-level unit with subunits should become a cluster
+	require.Len(t, g.Clusters, 1)
+	assert.Equal(t, "mainapp", g.Clusters[0].ID)
+}
+
+// TestBuildExpandedGraphRecursivelyBuildsNestedClusters verifies recursive cluster nesting.
+func TestBuildExpandedGraphRecursivelyBuildsNestedClusters(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"mainapp": {
+				Type: model.TypeSystem,
+				Name: "Main App",
+				Subunits: map[string]*model.Unit{
+					"api": {
+						Type: model.TypeContainer,
+						Name: "API",
+						Subunits: map[string]*model.Unit{
+							"auth": {
+								Type: model.TypeComponent,
+								Name: "Auth",
+							},
 						},
 					},
 				},
 			},
-		}
+		},
+	}
 
-		v := view.GenerateExpandedView(m)
-		require.NotNil(t, v)
+	v := view.GenerateExpandedView(m)
+	g := graph.BuildExpandedGraph(v)
 
-		g := graph.BuildExpandedGraph(v)
-		require.NotNil(t, g)
+	require.NotNil(t, g)
+	require.Len(t, g.Clusters, 1)
 
-		// Top-level unit with subunits should become a cluster
-		require.Len(t, g.Clusters, 1)
-		assert.Equal(t, "mainapp", g.Clusters[0].ID)
-	})
+	// Top-level cluster
+	topCluster := g.Clusters[0]
+	assert.Equal(t, "mainapp", topCluster.ID)
 
-	// Test 2: buildNestedCluster recursively builds nested clusters for subunits
-	t.Run("recursively builds nested clusters", func(t *testing.T) {
-		t.Parallel()
+	// Nested cluster for api (has subunits)
+	require.Len(t, topCluster.Clusters, 1)
+	nestedCluster := topCluster.Clusters[0]
+	assert.Equal(t, "mainapp.api", nestedCluster.ID)
+}
 
-		m := &parser.Model{
-			Properties: model.Properties{Name: "Test"},
-			Units: map[string]*model.Unit{
-				"mainapp": {
-					Type: model.TypeSystem,
-					Name: "Main App",
-					Subunits: map[string]*model.Unit{
-						"api": {
-							Type: model.TypeContainer,
-							Name: "API",
-							Subunits: map[string]*model.Unit{
-								"auth": {
-									Type: model.TypeComponent,
-									Name: "Auth",
+// TestBuildExpandedGraphAddsLeafSubunitsAsNodes verifies leaf subunits become nodes, not clusters.
+func TestBuildExpandedGraphAddsLeafSubunitsAsNodes(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"mainapp": {
+				Type: model.TypeSystem,
+				Name: "Main App",
+				Subunits: map[string]*model.Unit{
+					"api": {
+						Type: model.TypeContainer,
+						Name: "API",
+						// No subunits - leaf
+					},
+					"web": {
+						Type: model.TypeContainer,
+						Name: "Web",
+						// No subunits - leaf
+					},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateExpandedView(m)
+	g := graph.BuildExpandedGraph(v)
+
+	require.NotNil(t, g)
+	require.Len(t, g.Clusters, 1)
+
+	cluster := g.Clusters[0]
+	// Both leaf subunits should be nodes, not clusters
+	assert.Len(t, cluster.Nodes, 2)
+	assert.Empty(t, cluster.Clusters)
+
+	// Verify node IDs
+	nodeIDs := make(map[string]bool)
+	for _, node := range cluster.Nodes {
+		nodeIDs[node.ID] = true
+	}
+
+	assert.True(t, nodeIDs["mainapp.api"])
+	assert.True(t, nodeIDs["mainapp.web"])
+}
+
+// TestBuildExpandedGraphProducesDeeplyNestedClusters verifies deep cluster nesting.
+func TestBuildExpandedGraphProducesDeeplyNestedClusters(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"system": {
+				Type: model.TypeSystem,
+				Name: "System",
+				Subunits: map[string]*model.Unit{
+					"container": {
+						Type: model.TypeContainer,
+						Name: "Container",
+						Subunits: map[string]*model.Unit{
+							"component": {
+								Type: model.TypeComponent,
+								Name: "Component",
+								Subunits: map[string]*model.Unit{
+									"subcomponent": {
+										Type: model.TypeComponent,
+										Name: "SubComponent",
+									},
 								},
 							},
 						},
 					},
 				},
 			},
-		}
+		},
+	}
 
-		v := view.GenerateExpandedView(m)
-		g := graph.BuildExpandedGraph(v)
+	v := view.GenerateExpandedView(m)
+	g := graph.BuildExpandedGraph(v)
 
-		require.NotNil(t, g)
-		require.Len(t, g.Clusters, 1)
+	require.NotNil(t, g)
+	require.Len(t, g.Clusters, 1)
 
-		// Top-level cluster
-		topCluster := g.Clusters[0]
-		assert.Equal(t, "mainapp", topCluster.ID)
+	// Level 1: system
+	l1 := g.Clusters[0]
+	assert.Equal(t, "system", l1.ID)
+	require.Len(t, l1.Clusters, 1)
 
-		// Nested cluster for api (has subunits)
-		require.Len(t, topCluster.Clusters, 1)
-		nestedCluster := topCluster.Clusters[0]
-		assert.Equal(t, "mainapp.api", nestedCluster.ID)
-	})
+	// Level 2: container
+	l2 := l1.Clusters[0]
+	assert.Equal(t, "system.container", l2.ID)
+	require.Len(t, l2.Clusters, 1)
 
-	// Test 3: buildNestedCluster adds leaf subunits as nodes (not clusters)
-	t.Run("adds leaf subunits as nodes", func(t *testing.T) {
-		t.Parallel()
+	// Level 3: component
+	l3 := l2.Clusters[0]
+	assert.Equal(t, "system.container.component", l3.ID)
+	// subcomponent is a leaf, so it's a node
+	require.Len(t, l3.Nodes, 1)
+	assert.Equal(t, "system.container.component.subcomponent", l3.Nodes[0].ID)
+}
 
-		m := &parser.Model{
-			Properties: model.Properties{Name: "Test"},
-			Units: map[string]*model.Unit{
-				"mainapp": {
-					Type: model.TypeSystem,
-					Name: "Main App",
-					Subunits: map[string]*model.Unit{
-						"api": {
-							Type: model.TypeContainer,
-							Name: "API",
-							// No subunits - leaf
-						},
-						"web": {
-							Type: model.TypeContainer,
-							Name: "Web",
-							// No subunits - leaf
+// TestBuildExpandedGraphHandlesMixedTopLevelUnits verifies clusters and nodes at the top level.
+func TestBuildExpandedGraphHandlesMixedTopLevelUnits(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"system": {
+				Type: model.TypeSystem,
+				Name: "System",
+				Subunits: map[string]*model.Unit{
+					"api": {Type: model.TypeContainer, Name: "API"},
+				},
+			},
+			"db": {
+				Type: model.TypeDb,
+				Name: "Database",
+				// No subunits - should be a node
+			},
+		},
+	}
+
+	v := view.GenerateExpandedView(m)
+	g := graph.BuildExpandedGraph(v)
+
+	require.NotNil(t, g)
+
+	// System with subunits -> cluster
+	require.Len(t, g.Clusters, 1)
+	assert.Equal(t, "system", g.Clusters[0].ID)
+
+	// DB without subunits -> node
+	require.Len(t, g.Nodes, 1)
+	assert.Equal(t, "db", g.Nodes[0].ID)
+}
+
+// TestBuildExpandedGraphBuildsEdgesForCrossLevelConnections verifies edges across levels.
+func TestBuildExpandedGraphBuildsEdgesForCrossLevelConnections(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"system": {
+				Type: model.TypeSystem,
+				Name: "System",
+				Subunits: map[string]*model.Unit{
+					"api": {
+						Type: model.TypeContainer,
+						Name: "API",
+						Links: []model.Link{
+							{Peer: "db", Technology: "SQL"},
 						},
 					},
 				},
 			},
-		}
+			"db": {
+				Type: model.TypeDb,
+				Name: "Database",
+			},
+		},
+	}
 
-		v := view.GenerateExpandedView(m)
-		g := graph.BuildExpandedGraph(v)
+	v := view.GenerateExpandedView(m)
+	g := graph.BuildExpandedGraph(v)
 
-		require.NotNil(t, g)
-		require.Len(t, g.Clusters, 1)
+	require.NotNil(t, g)
 
-		cluster := g.Clusters[0]
-		// Both leaf subunits should be nodes, not clusters
-		assert.Len(t, cluster.Nodes, 2)
-		assert.Empty(t, cluster.Clusters)
+	// Edge should exist between nested api and top-level db
+	require.Len(t, g.Edges, 1)
+	assert.Equal(t, "system.api", g.Edges[0].Source)
+	assert.Equal(t, "db", g.Edges[0].Target)
+}
 
-		// Verify node IDs
-		nodeIDs := make(map[string]bool)
-		for _, node := range cluster.Nodes {
-			nodeIDs[node.ID] = true
-		}
+// TestBuildExpandedGraphPreservesLengthAttributeForNestedSubunitToExternalUnit
+// verifies minlen survives cross-level resolution.
+func TestBuildExpandedGraphPreservesLengthAttributeForNestedSubunitToExternalUnit(t *testing.T) {
+	t.Parallel()
 
-		assert.True(t, nodeIDs["mainapp.api"])
-		assert.True(t, nodeIDs["mainapp.web"])
-	})
-
-	// Test 4: BuildExpandedGraph produces graph with deeply nested clusters
-	t.Run("produces deeply nested clusters", func(t *testing.T) {
-		t.Parallel()
-
-		m := &parser.Model{
-			Properties: model.Properties{Name: "Test"},
-			Units: map[string]*model.Unit{
-				"system": {
-					Type: model.TypeSystem,
-					Name: "System",
-					Subunits: map[string]*model.Unit{
-						"container": {
-							Type: model.TypeContainer,
-							Name: "Container",
-							Subunits: map[string]*model.Unit{
-								"component": {
-									Type: model.TypeComponent,
-									Name: "Component",
-									Subunits: map[string]*model.Unit{
-										"subcomponent": {
-											Type: model.TypeComponent,
-											Name: "SubComponent",
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"linuxSystem": {
+				Type: model.TypeSystem,
+				Name: "Linux System",
+				Subunits: map[string]*model.Unit{
+					"storages": {
+						Type: model.TypeContainer,
+						Name: "Storages",
+						Subunits: map[string]*model.Unit{
+							"keycloakStorage": {
+								Type: model.TypeContainer,
+								Name: "Keycloak Storage",
+								Subunits: map[string]*model.Unit{
+									"client": {
+										Type: model.TypeComponent,
+										Name: "Keycloak Client",
+										Links: []model.Link{
+											{Peer: "keycloak", Length: 2},
 										},
 									},
 								},
@@ -632,164 +762,30 @@ func TestBuildExpandedGraph(t *testing.T) {
 					},
 				},
 			},
-		}
-
-		v := view.GenerateExpandedView(m)
-		g := graph.BuildExpandedGraph(v)
-
-		require.NotNil(t, g)
-		require.Len(t, g.Clusters, 1)
-
-		// Level 1: system
-		l1 := g.Clusters[0]
-		assert.Equal(t, "system", l1.ID)
-		require.Len(t, l1.Clusters, 1)
-
-		// Level 2: container
-		l2 := l1.Clusters[0]
-		assert.Equal(t, "system.container", l2.ID)
-		require.Len(t, l2.Clusters, 1)
-
-		// Level 3: component
-		l3 := l2.Clusters[0]
-		assert.Equal(t, "system.container.component", l3.ID)
-		// subcomponent is a leaf, so it's a node
-		require.Len(t, l3.Nodes, 1)
-		assert.Equal(t, "system.container.component.subcomponent", l3.Nodes[0].ID)
-	})
-
-	// Test 5: BuildExpandedGraph handles mixed top-level (clusters + nodes)
-	t.Run("handles mixed top-level units", func(t *testing.T) {
-		t.Parallel()
-
-		m := &parser.Model{
-			Properties: model.Properties{Name: "Test"},
-			Units: map[string]*model.Unit{
-				"system": {
-					Type: model.TypeSystem,
-					Name: "System",
-					Subunits: map[string]*model.Unit{
-						"api": {Type: model.TypeContainer, Name: "API"},
-					},
-				},
-				"db": {
-					Type: model.TypeDb,
-					Name: "Database",
-					// No subunits - should be a node
-				},
+			"keycloak": {
+				Type: model.TypeSystemExternal,
+				Name: "Keycloak",
 			},
+		},
+	}
+
+	v := view.GenerateExpandedView(m)
+	g := graph.BuildExpandedGraph(v)
+
+	require.NotNil(t, g)
+
+	// Find the edge from client to keycloak
+	var foundEdge *graph.Edge
+
+	for _, edge := range g.Edges {
+		if edge.Source == "linuxSystem.storages.keycloakStorage.client" && edge.Target == "keycloak" {
+			foundEdge = edge
+			break
 		}
+	}
 
-		v := view.GenerateExpandedView(m)
-		g := graph.BuildExpandedGraph(v)
-
-		require.NotNil(t, g)
-
-		// System with subunits -> cluster
-		require.Len(t, g.Clusters, 1)
-		assert.Equal(t, "system", g.Clusters[0].ID)
-
-		// DB without subunits -> node
-		require.Len(t, g.Nodes, 1)
-		assert.Equal(t, "db", g.Nodes[0].ID)
-	})
-
-	// Test 6: BuildExpandedGraph builds edges for cross-level connections
-	t.Run("builds edges for cross-level connections", func(t *testing.T) {
-		t.Parallel()
-
-		m := &parser.Model{
-			Properties: model.Properties{Name: "Test"},
-			Units: map[string]*model.Unit{
-				"system": {
-					Type: model.TypeSystem,
-					Name: "System",
-					Subunits: map[string]*model.Unit{
-						"api": {
-							Type: model.TypeContainer,
-							Name: "API",
-							Links: []model.Link{
-								{Peer: "db", Technology: "SQL"},
-							},
-						},
-					},
-				},
-				"db": {
-					Type: model.TypeDb,
-					Name: "Database",
-				},
-			},
-		}
-
-		v := view.GenerateExpandedView(m)
-		g := graph.BuildExpandedGraph(v)
-
-		require.NotNil(t, g)
-
-		// Edge should exist between nested api and top-level db
-		require.Len(t, g.Edges, 1)
-		assert.Equal(t, "system.api", g.Edges[0].Source)
-		assert.Equal(t, "db", g.Edges[0].Target)
-	})
-
-	// Test 7: BuildExpandedGraph preserves length attribute for cross-level connections
-	// This tests the bug where nested subunit -> external top-level unit loses minlen
-	t.Run("preserves length attribute for nested subunit to external unit", func(t *testing.T) {
-		t.Parallel()
-
-		m := &parser.Model{
-			Properties: model.Properties{Name: "Test"},
-			Units: map[string]*model.Unit{
-				"linuxSystem": {
-					Type: model.TypeSystem,
-					Name: "Linux System",
-					Subunits: map[string]*model.Unit{
-						"storages": {
-							Type: model.TypeContainer,
-							Name: "Storages",
-							Subunits: map[string]*model.Unit{
-								"keycloakStorage": {
-									Type: model.TypeContainer,
-									Name: "Keycloak Storage",
-									Subunits: map[string]*model.Unit{
-										"client": {
-											Type: model.TypeComponent,
-											Name: "Keycloak Client",
-											Links: []model.Link{
-												{Peer: "keycloak", Length: 2},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-				"keycloak": {
-					Type: model.TypeSystemExternal,
-					Name: "Keycloak",
-				},
-			},
-		}
-
-		v := view.GenerateExpandedView(m)
-		g := graph.BuildExpandedGraph(v)
-
-		require.NotNil(t, g)
-
-		// Find the edge from client to keycloak
-		var foundEdge *graph.Edge
-
-		for _, edge := range g.Edges {
-			if edge.Source == "linuxSystem.storages.keycloakStorage.client" && edge.Target == "keycloak" {
-				foundEdge = edge
-				break
-			}
-		}
-
-		require.NotNil(t, foundEdge, "Edge from client to keycloak should exist")
-		assert.Equal(t, 2, foundEdge.MinLen, "Edge should have MinLen=2 from TOML length attribute")
-	})
+	require.NotNil(t, foundEdge, "Edge from client to keycloak should exist")
+	assert.Equal(t, 2, foundEdge.MinLen, "Edge should have MinLen=2 from TOML length attribute")
 }
 
 // TestBuildExpandedGraphRealToml tests that length attribute is preserved for the real TOML file.
@@ -1128,7 +1124,6 @@ func TestBuildGraphEdgeLength(t *testing.T) {
 // effect only when BOTH drawn endpoints are the link's original units. When
 // either endpoint is resolved to an ancestor, the synthesized edge carries no
 // minlen.
-//
 func TestBuildGraphResolvedEdgeMinLen(t *testing.T) {
 	t.Parallel()
 
@@ -2107,7 +2102,6 @@ func edgeBlockFromDOT(t *testing.T, dot []byte, source, target string) string {
 // serialization: 1.0 for single edges in resolved views, 2.0 for collapsed
 // pairs in resolved views, 2.0 in expanded mode. DOT rendering is
 // parallel-safe (precedent: TestBuildExpandedGraphRealToml).
-//
 func TestBuildEdgesPenwidthRendered(t *testing.T) {
 	t.Parallel()
 
