@@ -25,6 +25,8 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    env:
+      COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
@@ -34,13 +36,11 @@ jobs:
       - name: Test with coverage
         run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
       - name: Upload coverage to Coveralls
-        if: ${{ secrets.COVERALLS_REPO_TOKEN != '' }}
+        if: ${{ env.COVERALLS_REPO_TOKEN != '' }}
         uses: coverallsapp/github-action@v2
         with:
           format: golang
           file: coverage.out
-        env:
-          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
 
   lint:
     name: Lint

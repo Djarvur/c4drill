@@ -77,7 +77,7 @@ border = "#E65100"  # Dark orange
 edges = "ortho"  # Override to orthogonal edges for this group
 
 [internal.auth]
-type = "container"
+type = "system"
 name = "Auth Service"
 description = "Authentication service"
 technology = "Node.js, JWT"
@@ -99,7 +99,7 @@ style = "solid"
 arrow = "forward"
 
 [internal.config]
-type = "container"
+type = "system"
 name = "Config Service"
 description = "Configuration management"
 technology = "Go, Etcd"
