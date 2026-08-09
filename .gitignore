@@ -70,6 +70,13 @@ draft.txt
 .cursor/
 .zcode/
 
+# GSD GitHub-native runtime (reinstallable) — keep agents/, skills/, workflows/
+.github/get-shit-done/
+.github/gsd-file-manifest.json
+.github/gsd-install-state.json
+.github/gsd-migration-journal/
+.github/.gsd-profile
+
 # Private test data — cyp-auth-infra architecture (keep local, never commit)
 cyp-auth-infra/
 
