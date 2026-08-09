@@ -1,10 +1,7 @@
 = C4Drill image:https://pkg.go.dev/badge/github.com/Djarvur/c4drill.svg["GoDoc",link="https://pkg.go.dev/github.com/Djarvur/c4drill"] image:https://github.com/Djarvur/c4drill/actions/workflows/pr-sanity.yml/badge.svg["Build Status",link="https://github.com/Djarvur/c4drill/actions/workflows/pr-sanity.yml"] image:https://coveralls.io/repos/github/Djarvur/c4drill/badge.svg?branch=master&service=github["Coverage Status",link="https://coveralls.io/github/Djarvur/c4drill?branch=master"]
-
-:toc: macro
+:toc:
 :toc-title: Contents
 :icons: font
-
-toc::[]
 
 Transform simple TOML architecture descriptions into professional,
 interactive C4 diagrams without manual drawing.
