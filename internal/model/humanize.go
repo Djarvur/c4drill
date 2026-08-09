@@ -1,4 +1,3 @@
-// Package model provides domain types for the C4 architecture.
 package model
 
 import (

@@ -29,7 +29,6 @@ linters:
     - testpackage # black-box test packages not required
     - revive # umbrella style linter; specific rules not adopted
     - gosmopolitan # non-ASCII string literals (e.g. CJK wrap tests) are intentional
-    - godoclint # doc comment style, not enforced
     - gocritic # stylistic suggestions, not adopted
     - godot # period-at-end-of-comment style, not enforced
     - maintidx # maintainability index, not actionable
