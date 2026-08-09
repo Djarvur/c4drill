@@ -1,0 +1,17 @@
+# Fixture for [[use]] array-of-tables document-order preservation.
+[properties]
+name = "Use Array Order Test"
+
+[template.svc]
+params = ["name"]
+name = "${name} Service"
+type = "container"
+
+# Two [[use]] blocks — must be preserved in document order in Model.Instantiations.
+[[use]]
+template = "svc"
+name = "alpha"
+
+[[use]]
+template = "svc"
+name = "beta"

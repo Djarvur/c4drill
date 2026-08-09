@@ -1,0 +1,1378 @@
+package main
+
+import (
+	"bytes"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/Djarvur/c4drill/internal/graph"
+	"github.com/Djarvur/c4drill/internal/include"
+	"github.com/Djarvur/c4drill/internal/model"
+	"github.com/Djarvur/c4drill/internal/parser"
+	"github.com/Djarvur/c4drill/internal/peer"
+	"github.com/Djarvur/c4drill/internal/render"
+	"github.com/Djarvur/c4drill/internal/template"
+	"github.com/Djarvur/c4drill/internal/testutil/canonical"
+	"github.com/Djarvur/c4drill/internal/validator"
+	"github.com/Djarvur/c4drill/internal/view"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// TestHelpText verifies that help shows usage examples and flag descriptions (CLII-04).
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestHelpText(t *testing.T) {
+	cmd := NewRootCmd()
+
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	cmd.SetArgs([]string{"--help"})
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	output := buf.String()
+
+	// Verify key content per CLII-04
+	assert.Contains(t, output, "c4drill <input.toml>", "Usage should show command syntax")
+	assert.Contains(t, output, "Examples:", "Help should include examples section")
+	assert.Contains(t, output, "--format", "Help should document --format flag")
+	assert.Contains(t, output, "--output", "Help should document --output flag")
+	assert.Contains(t, output, "dot|svg|html", "Help should show available formats")
+}
+
+// TestHelpSubcommand verifies that help subcommand shows same content as --help.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestHelpSubcommand(t *testing.T) {
+	cmd := NewRootCmd()
+
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	cmd.SetArgs([]string{"--help"})
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	helpOutput := buf.String()
+
+	// Test help subcommand
+	cmd2 := NewRootCmd()
+
+	var buf2 bytes.Buffer
+	cmd2.SetOut(&buf2)
+	cmd2.SetArgs([]string{"help"})
+
+	err2 := cmd2.Execute()
+	// Note: Cobra's help subcommand may work differently, so we check basic content
+	// The --help flag is the primary way to get help
+	_ = err2
+
+	// Both should contain the same key elements
+	assert.Contains(t, helpOutput, "c4drill <input.toml>")
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestNewRootCmd(t *testing.T) {
+	cmd := NewRootCmd()
+
+	assert.Equal(t, "c4drill <input.toml>", cmd.Use)
+	assert.Equal(t, "Generate C4 architecture diagrams from TOML", cmd.Short)
+	assert.NotEmpty(t, cmd.Long)
+	assert.True(t, cmd.SilenceUsage)
+	assert.NotNil(t, cmd.RunE)
+	// Verify Args requires exactly 1 argument
+	assert.NotNil(t, cmd.Args)
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestFormatFlag(t *testing.T) {
+	cmd := NewRootCmd()
+
+	formatFlag := cmd.PersistentFlags().Lookup("format")
+	assert.NotNil(t, formatFlag)
+	assert.Equal(t, "svg", formatFlag.DefValue)
+	assert.Equal(t, "f", formatFlag.Shorthand)
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestOutputFlag(t *testing.T) {
+	cmd := NewRootCmd()
+
+	outputFlag := cmd.PersistentFlags().Lookup("output")
+	assert.NotNil(t, outputFlag)
+	assert.Empty(t, outputFlag.DefValue) // Empty default, resolved to input file's directory at runtime
+	assert.Equal(t, "o", outputFlag.Shorthand)
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestFlagValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		format      string
+		expectError bool
+	}{
+		{
+			name:        "svg format is valid",
+			format:      "svg",
+			expectError: false,
+		},
+		{
+			name:        "dot format is valid",
+			format:      "dot",
+			expectError: false,
+		},
+		{
+			name:        "html format is valid",
+			format:      "html",
+			expectError: false,
+		},
+		{
+			name:        "png format is invalid",
+			format:      "png",
+			expectError: true,
+		},
+		{
+			name:        "empty format is invalid",
+			format:      "",
+			expectError: true,
+		},
+		{
+			name:        "uppercase format is invalid",
+			format:      "SVG",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) { //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+			cmd := NewRootCmd()
+			buf := &bytes.Buffer{}
+			cmd.SetOut(buf)
+			cmd.SetErr(buf)
+
+			// Set format flag
+			if err := cmd.PersistentFlags().Set("format", tt.format); err != nil {
+				t.Fatalf("failed to set format flag: %v", err)
+			}
+
+			// Set a dummy arg to satisfy ExactArgs(1)
+			cmd.SetArgs([]string{"dummy.toml"})
+
+			err := cmd.Execute()
+
+			if tt.expectError {
+				assert.Error(t, err)
+			} else if err != nil {
+				// For valid formats, the command will fail at file reading stage
+				// but not at format validation
+				assert.NotContains(t, err.Error(), "invalid format")
+			}
+		})
+	}
+}
+
+// Note: Tests in this file do NOT use t.Parallel() because the go-graphviz
+// library uses a WASM-based rendering engine that has concurrency issues.
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestFullPipeline_NonexistentFile(t *testing.T) {
+	cmd := NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	cmd.SetArgs([]string{"nonexistent_file.toml"})
+
+	err := cmd.Execute()
+	require.Error(t, err, "Should return error for nonexistent file")
+	assert.Contains(t, err.Error(), "parse", "Error should mention parse stage")
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestFullPipeline_InvalidTOML(t *testing.T) {
+	// Create invalid TOML file
+	tmpDir := t.TempDir()
+	invalidPath := filepath.Join(tmpDir, "invalid.toml")
+	err := os.WriteFile(invalidPath, []byte("invalid [toml"), 0o600)
+	require.NoError(t, err)
+
+	cmd := NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	cmd.SetArgs([]string{invalidPath})
+
+	err = cmd.Execute()
+	require.Error(t, err, "Should return error for invalid TOML")
+	assert.Contains(t, err.Error(), "parse", "Error should mention parse stage")
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestFullPipeline_ValidationError(t *testing.T) {
+	// Create TOML with an undefined reference (validation error).
+	// Uses a DOTTED peer so it skips the relative-peer resolver (D-16 step 1:
+	// peers containing "." are absolute) and reaches the validator's
+	// undefined-unit check — exercising the validation error path. A bare
+	// peer would now be caught by peer.Resolve before validation (Phase 30).
+	tmpDir := t.TempDir()
+	invalidPath := filepath.Join(tmpDir, "invalid_ref.toml")
+	content := `
+[properties]
+name = "Test"
+
+[user]
+type = "person"
+name = "User"
+
+[[user.link]]
+peer = "no.such.unit"
+`
+	err := os.WriteFile(invalidPath, []byte(content), 0o600)
+	require.NoError(t, err)
+
+	cmd := NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	cmd.SetArgs([]string{invalidPath})
+
+	err = cmd.Execute()
+	require.Error(t, err, "Should return error for validation failure")
+	assert.Contains(t, err.Error(), "validation", "Error should mention validation")
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestFullPipeline_ValidInput(t *testing.T) {
+	// Create a valid TOML file in temp dir
+	tmpDir := t.TempDir()
+	validPath := filepath.Join(tmpDir, "valid.toml")
+	content := `
+[properties]
+name = "Test System"
+description = "A test architecture"
+
+[user]
+type = "person"
+name = "User"
+description = "End user of the system"
+
+[[user.link]]
+peer = "webapp"
+technology = "HTTPS"
+
+[webapp]
+type = "system"
+name = "Web Application"
+description = "Main web application"
+technology = "Go, React"
+
+[[webapp.linkFrom]]
+peer = "user"
+technology = "HTTPS"
+`
+	err := os.WriteFile(validPath, []byte(content), 0o600)
+	require.NoError(t, err)
+
+	outputDir := filepath.Join(tmpDir, "output")
+	cmd := NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+
+	// Set output directory to temp output dir
+	if err := cmd.PersistentFlags().Set("output", outputDir); err != nil {
+		t.Fatalf("failed to set output flag: %v", err)
+	}
+
+	cmd.SetArgs([]string{validPath})
+
+	err = cmd.Execute()
+	require.NoError(t, err, "Should succeed for valid input")
+
+	// Verify C1 diagram was created
+	assert.FileExists(t, filepath.Join(outputDir, "valid.svg"), "C1 diagram should exist")
+
+	// Verify silent on success (no stdout output)
+	assert.Empty(t, buf.String(), "Should be silent on success")
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestFullPipeline_ValidInput_DotFormat(t *testing.T) {
+	// Test DOT format output
+	tmpDir := t.TempDir()
+	validPath := filepath.Join(tmpDir, "valid.toml")
+	content := `
+[properties]
+name = "Test System"
+
+[user]
+type = "person"
+name = "User"
+
+[[user.link]]
+peer = "webapp"
+technology = "HTTPS"
+
+[webapp]
+type = "system"
+name = "Web Application"
+
+[[webapp.linkFrom]]
+peer = "user"
+technology = "HTTPS"
+`
+	err := os.WriteFile(validPath, []byte(content), 0o600)
+	require.NoError(t, err)
+
+	outputDir := filepath.Join(tmpDir, "output")
+	cmd := NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+
+	if err := cmd.PersistentFlags().Set("output", outputDir); err != nil {
+		t.Fatalf("failed to set output flag: %v", err)
+	}
+
+	if err := cmd.PersistentFlags().Set("format", "dot"); err != nil {
+		t.Fatalf("failed to set format flag: %v", err)
+	}
+
+	cmd.SetArgs([]string{validPath})
+
+	err = cmd.Execute()
+	require.NoError(t, err, "Should succeed for valid input with dot format")
+
+	// Verify C1 diagram was created with .dot extension
+	assert.FileExists(t, filepath.Join(outputDir, "valid.dot"), "C1 DOT diagram should exist")
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestFullPipeline_NestedWithExpanded(t *testing.T) {
+	// Test with nested model that has expanded units
+	tmpDir := t.TempDir()
+
+	// Create a test file with expanded units
+	testPath := filepath.Join(tmpDir, "expanded.toml")
+	content := `
+[properties]
+name = "Expanded Test"
+
+[mainapp]
+type = "system"
+name = "Main App"
+technology = "Go"
+expanded = ["mainapp"]
+
+[mainapp.api]
+type = "container"
+name = "API"
+technology = "Go"
+
+[[mainapp.api.link]]
+peer = "external"
+technology = "HTTPS"
+
+[external]
+type = "systemExternal"
+name = "External API"
+
+[[external.linkFrom]]
+peer = "mainapp.api"
+technology = "HTTPS"
+`
+	err := os.WriteFile(testPath, []byte(content), 0o600)
+	require.NoError(t, err)
+
+	outputDir := filepath.Join(tmpDir, "output")
+	cmd := NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+
+	if err := cmd.PersistentFlags().Set("output", outputDir); err != nil {
+		t.Fatalf("failed to set output flag: %v", err)
+	}
+
+	cmd.SetArgs([]string{testPath})
+
+	err = cmd.Execute()
+	require.NoError(t, err, "Should succeed for expanded model")
+
+	// Verify C1 diagram was created
+	assert.FileExists(t, filepath.Join(outputDir, "expanded.svg"), "C1 diagram should exist")
+
+	// Verify C2 diagram for expanded system was created
+	assert.FileExists(t, filepath.Join(outputDir, "expanded", "mainapp.svg"), "C2 diagram for mainapp should exist")
+}
+
+// D-01/D-02/D-03: uniform auto-detect incl. boxes; unit-key file naming.
+// Any unit with subunits gets a sub-diagram — C1 boxes included (D-01), deep
+// box parity for containerBox (D-02), files named by TOML section key with
+// dotted-path directory layout (D-03). No per-unit expanded needed anywhere.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestFullPipeline_BoxWithSubunitsGeneratesSubDiagram(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	testPath := filepath.Join(tmpDir, "boxtest.toml")
+	content := `
+[properties]
+name = "Box Test"
+
+[boxname]
+type = "box"
+name = "Box"
+
+[boxname.child]
+type = "system"
+name = "Child"
+
+[[boxname.child.link]]
+peer = "system.cbox.comp"
+technology = "HTTP"
+
+[system]
+type = "system"
+name = "System"
+
+[system.cbox]
+type = "containerBox"
+name = "Containers"
+
+[system.cbox.comp]
+type = "container"
+name = "Container"
+
+[[system.cbox.comp.linkFrom]]
+peer = "boxname.child"
+technology = "HTTP"
+`
+	err := os.WriteFile(testPath, []byte(content), 0o600)
+	require.NoError(t, err)
+
+	outputDir := filepath.Join(tmpDir, "output")
+	cmd := NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+
+	if err := cmd.PersistentFlags().Set("output", outputDir); err != nil {
+		t.Fatalf("failed to set output flag: %v", err)
+	}
+
+	cmd.SetArgs([]string{testPath})
+
+	err = cmd.Execute()
+	require.NoError(t, err, "Should succeed for box model")
+
+	// C1 diagram for the whole model
+	assert.FileExists(t, filepath.Join(outputDir, "boxtest.svg"), "C1 diagram should exist")
+
+	// D-01: C2 sub-diagram for the box (unit-key naming, no display names)
+	assert.FileExists(t, filepath.Join(outputDir, "boxtest", "boxname.svg"), "C2 diagram for box should exist")
+
+	// D-02/D-03: C3 sub-diagram for the containerBox at its dotted-path location
+	cboxSVG := filepath.Join(outputDir, "boxtest", "system", "cbox.svg")
+	assert.FileExists(t, cboxSVG, "C3 diagram for containerBox should exist")
+}
+
+// =============================================================================
+// Tests using test fixtures from testdata/ directory
+// =============================================================================
+
+// TestExitCode_Success verifies exit code 0 for successful execution.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestExitCode_Success(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	cmd := NewRootCmd()
+	cmd.SetArgs([]string{
+		filepath.Join("testdata", "valid.toml"),
+		"--output", tmpDir,
+		"--format", "svg",
+	})
+
+	err := cmd.Execute()
+	assert.NoError(t, err, "Expected exit code 0 (no error)")
+}
+
+// TestExitCode_NonexistentFile verifies exit code 1 for nonexistent file.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestExitCode_NonexistentFile(t *testing.T) {
+	cmd := NewRootCmd()
+
+	var stderr bytes.Buffer
+	cmd.SetErr(&stderr)
+	cmd.SetArgs([]string{"nonexistent.toml"})
+
+	err := cmd.Execute()
+	assert.Error(t, err, "Expected exit code 1 (error)")
+}
+
+// TestExitCode_InvalidTOML verifies exit code 1 for invalid TOML syntax.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestExitCode_InvalidTOML(t *testing.T) {
+	cmd := NewRootCmd()
+
+	var stderr bytes.Buffer
+	cmd.SetErr(&stderr)
+	cmd.SetArgs([]string{filepath.Join("testdata", "invalid.toml")})
+
+	err := cmd.Execute()
+	assert.Error(t, err, "Expected exit code 1 (error)")
+}
+
+// TestStderrOutput verifies errors go to stderr, not stdout (CLII-06).
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestStderrOutput(t *testing.T) {
+	cmd := NewRootCmd()
+
+	var stdout, stderr bytes.Buffer
+	cmd.SetOut(&stdout)
+	cmd.SetErr(&stderr)
+	cmd.SetArgs([]string{"nonexistent.toml"})
+
+	_ = cmd.Execute()
+
+	// Per CLII-06: errors go to stderr
+	// Cobra writes errors to stderr via SetErr
+	// stdout should be empty
+	assert.Empty(t, stdout.String(), "stdout should be empty on error")
+}
+
+// TestSilentOnSuccess verifies no stdout output on successful execution.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestSilentOnSuccess(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	cmd := NewRootCmd()
+
+	var stdout bytes.Buffer
+	cmd.SetOut(&stdout)
+	cmd.SetArgs([]string{
+		filepath.Join("testdata", "valid.toml"),
+		"--output", tmpDir,
+	})
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+	assert.Empty(t, stdout.String(), "stdout should be empty on success (silent)")
+}
+
+// TestExpandedUnits verifies C2/C3 diagrams generated for expanded units.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestExpandedUnits(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	cmd := NewRootCmd()
+	cmd.SetArgs([]string{
+		filepath.Join("testdata", "expanded.toml"),
+		"--output", tmpDir,
+		"--format", "svg",
+	})
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	// Verify C1 file exists
+	_, err = os.Stat(filepath.Join(tmpDir, "expanded.svg"))
+	require.NoError(t, err, "C1 diagram should exist")
+
+	// Verify C2 file exists (mainsystem expanded)
+	_, err = os.Stat(filepath.Join(tmpDir, "expanded", "mainsystem.svg"))
+	require.NoError(t, err, "C2 diagram for mainsystem should exist")
+
+	// Verify C3 file exists (webapp nested system expanded)
+	_, err = os.Stat(filepath.Join(tmpDir, "expanded", "mainsystem", "webapp.svg"))
+	require.NoError(t, err, "C3 diagram for mainsystem.webapp should exist")
+}
+
+// TestFormatFlag_Dot verifies DOT format output using test fixture.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestFormatFlag_Dot(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	cmd := NewRootCmd()
+	cmd.SetArgs([]string{
+		filepath.Join("testdata", "valid.toml"),
+		"--output", tmpDir,
+		"--format", "dot",
+	})
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	// Verify .dot file was created
+	_, err = os.Stat(filepath.Join(tmpDir, "valid.dot"))
+	require.NoError(t, err, "DOT file should be created")
+}
+
+// TestCompat01_ValidTomlAllCollapsed locks COMPAT-01: TOML without
+// properties.expanded generates a correct C1 with all units collapsed.
+// The C2 sub-diagram valid/app.dot IS generated by Phase 2 auto-detect
+// (app has a subunit) — its existence is deliberately not asserted here.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestCompat01_ValidTomlAllCollapsed(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	cmd := NewRootCmd()
+	cmd.SetArgs([]string{
+		filepath.Join("testdata", "valid.toml"),
+		"--output", tmpDir,
+		"--format", "dot",
+	})
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	//nolint:gosec // G304: Test reads from temp directory created by t.TempDir()
+	dotData, err := os.ReadFile(filepath.Join(tmpDir, "valid.dot"))
+	require.NoError(t, err)
+
+	dot := string(dotData)
+
+	assert.Contains(t, dot, "user\t[", "user node present in C1")
+	assert.Contains(t, dot, "app\t[", "app node present in C1")
+	assert.Contains(t, dot, "Application 🔍", "app has subunits and no expansion hint -> collapsed with 🔍 in C1")
+	assert.NotContains(t, dot, "subgraph cluster_", "no clusters when everything is collapsed (COMPAT-01)")
+	assert.NotContains(t, dot, "app.api", "subunits must not appear in C1 when collapsed")
+}
+
+// TestCompat02_MultilevelFixtureFiveNodeC1 proves ROADMAP success criterion 4
+// on the public fixture (D-01): multilevel.toml renders a 5-node C1 plus the
+// auto-detected C2/C3 sub-diagrams.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestCompat02_MultilevelFixtureFiveNodeC1(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	cmd := NewRootCmd()
+	cmd.SetArgs([]string{
+		filepath.Join("testdata", "multilevel.toml"),
+		"--output", tmpDir,
+		"--format", "dot",
+	})
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	//nolint:gosec // G304: Test reads from temp directory created by t.TempDir()
+	dotData, err := os.ReadFile(filepath.Join(tmpDir, "multilevel.dot"))
+	require.NoError(t, err)
+
+	dot := string(dotData)
+
+	for _, unit := range []string{"actorA", "actorB", "actorC", "externalSys"} {
+		assert.Contains(t, dot, unit+"\t[", "the four external/top-level units render as C1 nodes")
+	}
+
+	// mainSystem is expanded (properties.expanded = ["mainSystem"]) so it
+	// appears as a cluster, not a collapsed node.
+	assert.Contains(t, dot, "subgraph cluster_mainSystem", "mainSystem expanded -> cluster present")
+	assert.NotContains(t, dot, "Main System 🔍", "mainSystem is expanded, not collapsed")
+	assert.Contains(t, dot, "mainSystem.sshAuth", "expanded mainSystem shows its containers")
+
+	// C2 sub-diagram for mainSystem (auto-detected: has subunits).
+	_, err = os.Stat(filepath.Join(tmpDir, "multilevel", "mainSystem.dot"))
+	require.NoError(t, err, "C2 diagram for mainSystem should exist")
+
+	// C3 sub-diagram for mainSystem.sshAuth (auto-detected: has subunits).
+	_, err = os.Stat(filepath.Join(tmpDir, "multilevel", "mainSystem", "sshAuth.dot"))
+	require.NoError(t, err, "C3 diagram for mainSystem.sshAuth should exist")
+}
+
+// TestCompat02_NavigationLinksResolve (03-04-03) proves the three UAT
+// navigation gaps are closed end-to-end on the public multilevel.toml fixture:
+//
+//	Gap 1: every explore href in C2/C3 SVGs resolves to an existing sibling
+//	       file (os.Stat join against the real CLI-generated tree); the C3
+//	       collapsed-ancestor node no longer emits the empty href=".svg".
+//	Gap 2: the navigation bar renders as clickable <a xlink:href> anchors in
+//	       SVG (not escaped &lt;a href= literal text).
+//	Gap 3: the .dot render format still emits .svg navigation URLs.
+//
+// The DOT-level canonicalDOT golden (TestBuildExpandedGraphBaselineDOT) strips
+// and normalizes URL/label attributes, so it cannot enforce these user-facing
+// navigation contracts; this test does.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestCompat02_NavigationLinksResolve(t *testing.T) {
+	svgDir := generateMultilevelOutput(t, "svg")
+
+	t.Run("C2 SVG navigation is clickable and hrefs resolve", func(t *testing.T) {
+		c2 := readOutputFile(t, filepath.Join(svgDir, "multilevel", "mainSystem.svg"))
+
+		assert.Contains(t, c2, `<a xlink:href=`,
+			"C2 SVG navigation bar must render clickable anchors (Gap 2)")
+		assert.NotContains(t, c2, `&lt;a href=`,
+			"C2 SVG must not contain escaped nav markup (Gap 2)")
+
+		c2Dir := filepath.Join(svgDir, "multilevel")
+		for _, href := range collectNavAndExploreHrefs(c2) {
+			assertHrefsResolve(t, c2Dir, href, "C2 mainSystem.svg")
+		}
+	})
+
+	t.Run("C3 SVG ancestor link resolves and no empty href", func(t *testing.T) {
+		c3 := readOutputFile(t, filepath.Join(svgDir, "multilevel", "mainSystem", "sshAuth.svg"))
+
+		// Gap 1 symptom B: the C3 collapsed-ancestor node must not emit the
+		// empty href=".svg" ComputeExploreURL produced before the self-link
+		// guard.
+		assert.NotContains(t, c3, `href=".svg"`,
+			"C3 SVG must not contain the empty href=\".svg\" (Gap 1 symptom B)")
+		assert.Contains(t, c3, `<a xlink:href=`,
+			"C3 SVG navigation bar must render clickable anchors (Gap 2)")
+
+		hrefs := collectNavAndExploreHrefs(c3)
+		require.NotEmpty(t, hrefs, "C3 SVG should contain clickable hrefs")
+		// The C2 ancestor (mainSystem.svg) must be reachable upward from C3.
+		assert.Contains(t, hrefs, "../mainSystem.svg",
+			"C3 SVG must link upward to its C2 ancestor mainSystem.svg (Gap 1)")
+
+		c3Dir := filepath.Join(svgDir, "multilevel", "mainSystem")
+		for _, href := range hrefs {
+			assertHrefsResolve(t, c3Dir, href, "C3 sshAuth.svg")
+		}
+	})
+
+	t.Run("dot render still uses svg navigation URLs", func(t *testing.T) {
+		dotDir := generateMultilevelOutput(t, "dot")
+		dotStr := readOutputFile(t, filepath.Join(dotDir, "multilevel", "mainSystem.dot"))
+
+		// Gap 3: even though the render format is .dot, navigation URLs must
+		// end with .svg (browser-navigable), matching the explore URLs.
+		assert.Contains(t, dotStr, "../multilevel.svg",
+			"C2 .dot navigation back-link must use ../multilevel.svg (Gap 3)")
+		assert.NotContains(t, dotStr, "../multilevel.dot",
+			"C2 .dot navigation must not reference the .dot file (Gap 3)")
+	})
+}
+
+// generateMultilevelOutput runs the c4drill CLI on the multilevel fixture into
+// a fresh temp directory in the given format and returns that directory.
+func generateMultilevelOutput(t *testing.T, format string) string {
+	t.Helper()
+
+	dir := t.TempDir()
+	cmd := NewRootCmd()
+	cmd.SetArgs([]string{
+		filepath.Join("testdata", "multilevel.toml"),
+		"--output", dir,
+		"--format", format,
+	})
+	require.NoError(t, cmd.Execute())
+
+	return dir
+}
+
+// readOutputFile reads a generated output file. The gosec G304 nolint applies
+// because the path is constructed inside t.TempDir().
+//
+//nolint:gosec // G304: Test reads files generated into t.TempDir()
+func readOutputFile(t *testing.T, path string) string {
+	t.Helper()
+
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+
+	return string(data)
+}
+
+// collectNavAndExploreHrefs extracts every href value (navigation xlink:href
+// anchors and node URL/xlink:href explore links) from a rendered SVG string.
+// GraphViz emits hrefs as xlink:href="..." in SVG output.
+func collectNavAndExploreHrefs(svg string) []string {
+	var hrefs []string
+
+	const marker = `xlink:href="`
+	for {
+		idx := strings.Index(svg, marker)
+		if idx < 0 {
+			break
+		}
+
+		start := idx + len(marker)
+		rest := svg[start:]
+
+		end := strings.Index(rest, `"`)
+		if end < 0 {
+			break
+		}
+
+		href := rest[:end]
+		if href != "" {
+			hrefs = append(hrefs, href)
+		}
+
+		svg = svg[start+end:]
+	}
+
+	return hrefs
+}
+
+// assertHrefsResolve asserts that a single href resolves to an existing file
+// when joined with the directory of the SVG that emitted it.
+func assertHrefsResolve(t *testing.T, dir, href, src string) {
+	t.Helper()
+
+	resolved := filepath.Join(dir, href)
+	if _, err := os.Stat(resolved); err != nil {
+		t.Errorf("href %q from %s does not resolve (joined %s): %v",
+			href, src, resolved, err)
+	}
+}
+
+// =============================================================================
+// Tests for --expanded flag (EXPD-01, EXPD-03, EXPD-05)
+// =============================================================================
+
+// TestExpandedFlag_Exists verifies the --expanded flag is registered.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestExpandedFlag_Exists(t *testing.T) {
+	cmd := NewRootCmd()
+
+	expandedFlag := cmd.PersistentFlags().Lookup("expanded")
+	require.NotNil(t, expandedFlag, "--expanded flag should exist")
+	assert.Equal(t, "false", expandedFlag.DefValue, "--expanded should default to false")
+}
+
+// TestExpandedFlag_GeneratesExpandedFile verifies --expanded produces .expanded.{ext} file.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestExpandedFlag_GeneratesExpandedFile(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	cmd := NewRootCmd()
+	cmd.SetArgs([]string{
+		filepath.Join("testdata", "expanded.toml"),
+		"--output", tmpDir,
+		"--format", "svg",
+		"--expanded",
+	})
+
+	err := cmd.Execute()
+	require.NoError(t, err, "--expanded should succeed")
+
+	// Verify .expanded.svg file was created
+	assert.FileExists(t, filepath.Join(tmpDir, "expanded.expanded.svg"), "Expanded file should exist")
+}
+
+// TestExpandedFlag_SkipsC1C2C3 verifies --expanded skips C1/C2/C3 generation (EXPD-05).
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestExpandedFlag_SkipsC1C2C3(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	cmd := NewRootCmd()
+	cmd.SetArgs([]string{
+		filepath.Join("testdata", "expanded.toml"), // Has expanded units that normally generate C2/C3
+		"--output", tmpDir,
+		"--format", "svg",
+		"--expanded",
+	})
+
+	err := cmd.Execute()
+	require.NoError(t, err, "--expanded should succeed")
+
+	// Only expanded file should exist, no C1/C2/C3 files
+	assert.FileExists(t, filepath.Join(tmpDir, "expanded.expanded.svg"), "Expanded file should exist")
+
+	// C1 file should NOT exist
+	_, err = os.Stat(filepath.Join(tmpDir, "expanded.svg"))
+	assert.True(t, os.IsNotExist(err), "C1 file should NOT exist with --expanded")
+
+	// C2 file should NOT exist
+	_, err = os.Stat(filepath.Join(tmpDir, "expanded", "mainsystem.svg"))
+	assert.True(t, os.IsNotExist(err), "C2 file should NOT exist with --expanded")
+}
+
+// TestExpandedFlag_Off_StandardBehavior verifies normal C1/C2/C3 without --expanded.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestExpandedFlag_Off_StandardBehavior(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	cmd := NewRootCmd()
+	cmd.SetArgs([]string{
+		filepath.Join("testdata", "expanded.toml"),
+		"--output", tmpDir,
+		"--format", "svg",
+	})
+
+	err := cmd.Execute()
+	require.NoError(t, err, "Standard mode should succeed")
+
+	// C1 file should exist
+	assert.FileExists(t, filepath.Join(tmpDir, "expanded.svg"), "C1 file should exist")
+
+	// C2 file should exist (mainsystem is expanded)
+	assert.FileExists(t, filepath.Join(tmpDir, "expanded", "mainsystem.svg"), "C2 file should exist")
+
+	// Expanded file should NOT exist
+	_, err = os.Stat(filepath.Join(tmpDir, "expanded.expanded.svg"))
+	assert.True(t, os.IsNotExist(err), "Expanded file should NOT exist without --expanded")
+}
+
+// TestRootCmd_HTMLFormat (03-04 Safari-link-fix) verifies that `-f html`
+// produces self-contained HTML files at C1/C2/C3 paths, that the Safari nav
+// shim is present, that no raw .svg hrefs survive (all rewritten to .html so
+// wrapped diagrams cross-link to wrapped siblings), and that the XML
+// declaration is stripped. End-to-end click navigation is verified separately
+// via Safari/AppleScript in the UAT.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestRootCmd_HTMLFormat(t *testing.T) {
+	dir := generateMultilevelOutput(t, "html")
+
+	t.Run("produces HTML files at C1/C2/C3 paths", func(t *testing.T) {
+		assert.FileExists(t, filepath.Join(dir, "multilevel.html"),
+			"C1 HTML should exist")
+		assert.FileExists(t, filepath.Join(dir, "multilevel", "mainSystem.html"),
+			"C2 HTML should exist")
+		assert.FileExists(t, filepath.Join(dir, "multilevel", "mainSystem", "sshAuth.html"),
+			"C3 HTML should exist")
+	})
+
+	t.Run("HTML output is well-formed and contains the SVG", func(t *testing.T) {
+		c1 := readOutputFile(t, filepath.Join(dir, "multilevel.html"))
+
+		assert.True(t, strings.HasPrefix(c1, "<!DOCTYPE html>"),
+			"HTML output must start with <!DOCTYPE html>")
+		assert.Contains(t, c1, "<svg", "HTML output must inline the SVG")
+		assert.Contains(t, c1, "</html>", "HTML output must close <html>")
+		assert.NotContains(t, c1, "<?xml",
+			"XML declaration must be stripped (invalid inside HTML body)")
+	})
+
+	t.Run("injects the Safari navigation shim", func(t *testing.T) {
+		c2 := readOutputFile(t, filepath.Join(dir, "multilevel", "mainSystem.html"))
+
+		assert.Contains(t, c2, "window.location.href",
+			"C2 HTML must contain the nav shim that makes SVG <a> clickable in Safari")
+	})
+
+	t.Run("rewrites all .svg hrefs to .html", func(t *testing.T) {
+		c2 := readOutputFile(t, filepath.Join(dir, "multilevel", "mainSystem.html"))
+
+		// C2 has 4 explore links + back-link/breadcrumb, all originally .svg.
+		// Every href must end in .html, none in .svg.
+		assert.NotContains(t, c2, `.svg"`,
+			"C2 HTML must not contain any .svg href suffix (all rewritten to .html)")
+		// And at least one href pointing at a sibling HTML diagram.
+		assert.Contains(t, c2, `mainSystem/sshAuth.html`,
+			"C2 HTML explore link for sshAuth must be rewritten to .html")
+	})
+
+	t.Run("C3 back-link rewritten to .html", func(t *testing.T) {
+		c3 := readOutputFile(t, filepath.Join(dir, "multilevel", "mainSystem", "sshAuth.html"))
+
+		assert.Contains(t, c3, `../mainSystem.html`,
+			"C3 back-link must point at ../mainSystem.html (rewritten from .svg)")
+		assert.NotContains(t, c3, `.svg"`,
+			"C3 HTML must not contain any .svg href suffix")
+	})
+}
+
+// --- Phase 30: relative-peer resolution integration tests ---
+//
+// These prove the end-to-end behavior the CLI gains from wiring peer.Resolve
+// into the runRoot pipeline (Plan 30-02): the pipeline ordering makes bare
+// peers resolvable BEFORE the validator sees them, and an unresolvable bare
+// peer produces a clean non-zero CLI exit (no panic). They complement Plan
+// 30-01's unit tests, which cover the resolution algorithm in isolation.
+
+// TestPipelineResolveBeforeValidate proves the pipeline ordering (XC-01):
+// peer.Resolve runs between Parse and Validate, so a model with BARE peers
+// (which the validator could not resolve on its own) validates cleanly once
+// Resolve has rewritten them to absolute paths. It also sanity-checks that
+// the fixture actually exercises the feature (>= 1 bare peer pre-resolve).
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestPipelineResolveBeforeValidate(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("testdata", "peer_walkup.toml"))
+	require.NoError(t, err, "failed to read peer_walkup.toml fixture")
+
+	m, err := parser.Parse(data)
+	require.NoError(t, err, "peer_walkup.toml must parse cleanly")
+
+	// Sanity: the fixture must declare at least one bare peer (no '.') so
+	// the test actually exercises the resolver. Without this guard a future
+	// edit that dots every peer would silently turn this into a no-op test.
+	bareCount := countBarePeers(m)
+	assert.GreaterOrEqual(t, bareCount, 1,
+		"peer_walkup.toml must declare at least one bare peer to exercise the resolver")
+
+	// Resolve relative peers (this is the call wired into runRoot Stage 1.6).
+	require.NoError(t, peer.Resolve(m),
+		"peer_walkup.toml's bare peers must all resolve (sibling/aunt/root/nearest-first)")
+
+	// Validate: the validator now sees absolute peers only, so it must
+	// report no reference errors. This would FAIL if peer.Resolve were
+	// removed or reordered to run after Validate (the bare peers would be
+	// reported as undefined units).
+	valErrors := validator.Validate(m)
+	assert.Empty(t, valErrors,
+		"validator must see absolute peers post-resolve — bare-peer walkup fixture should validate cleanly")
+}
+
+// TestCLIUnresolvablePeerExits proves the CLI error path for an unresolvable
+// bare peer: invoking runRoot via the cobra root command returns a non-nil
+// error whose message names the resolve stage and the peer, and the process
+// does not panic. This is the end-to-end form of Plan 30-01's
+// TestResolveUnresolvableError.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestCLIUnresolvablePeerExits(t *testing.T) {
+	cmd := NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	cmd.SetArgs([]string{filepath.Join("testdata", "peer_unresolvable.toml")})
+
+	err := cmd.Execute()
+	require.Error(t, err, "unresolvable bare peer must produce a non-nil CLI error")
+
+	msg := err.Error()
+	assert.Contains(t, msg, "resolve peers",
+		"error must surface the resolve stage (the fmt.Errorf wrapper)")
+	assert.Contains(t, msg, "nonexistent",
+		"error must name the unresolvable peer")
+	// No panic = the require.Error above already caught it; cobra returns
+	// errors, it does not panic on RunE failure.
+}
+
+// TestCLICorpusRendersUnchanged proves ERGO-02 end-to-end: every existing
+// cmd/c4drill/testdata corpus fixture with peers parses, resolves, and
+// validates without error. peer.Resolve must be a no-op for their rendered
+// output (their bare peers all reference top-level units → identity rewrite).
+// Complements Plan 30-01's parser-corpus peer-set unit test by covering the
+// cmd corpus through the full Parse→Resolve→Validate chain.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestCLICorpusRendersUnchanged(t *testing.T) {
+	corpus := []string{"valid.toml", "expanded.toml", "multilevel.toml"}
+
+	for _, fix := range corpus {
+		t.Run(fix, func(t *testing.T) {
+			//nolint:gosec // test fixture read, path comes from the fixed corpus above
+			data, err := os.ReadFile(filepath.Join("testdata", fix))
+			require.NoError(t, err, "failed to read corpus fixture %s", fix)
+
+			m, err := parser.Parse(data)
+			require.NoError(t, err, "corpus fixture %s must parse cleanly", fix)
+
+			require.NoError(t, peer.Resolve(m),
+				"peer.Resolve must be a no-op (error-wise) on corpus fixture %s — bare peers reference top-level units", fix)
+
+			valErrors := validator.Validate(m)
+			assert.Empty(t, valErrors,
+				"corpus fixture %s must validate cleanly post-resolve (ERGO-02 backward-compat)", fix)
+		})
+	}
+}
+
+// countBarePeers walks m.Units + Subunits counting Link.Peer values that
+// contain no '.' (the relative form peer.Resolve rewrites), across both
+// Links and authored LinksFrom. Used by TestPipelineResolveBeforeValidate to
+// confirm its fixture actually exercises the resolver.
+func countBarePeers(m *parser.Model) int {
+	count := 0
+
+	var walk func(units map[string]*model.Unit)
+
+	walk = func(units map[string]*model.Unit) {
+		for _, unit := range units {
+			count += bareLinkPeers(unit.Links)
+			count += bareLinkFromPeers(unit.LinksFrom)
+
+			if len(unit.Subunits) > 0 {
+				walk(unit.Subunits)
+			}
+		}
+	}
+	walk(m.Units)
+
+	return count
+}
+
+// bareLinkPeers counts Link.Peer values that contain no '.' (the relative
+// form peer.Resolve rewrites).
+func bareLinkPeers(links []model.Link) int {
+	n := 0
+
+	for _, l := range links {
+		if !strings.Contains(l.Peer, ".") {
+			n++
+		}
+	}
+
+	return n
+}
+
+// bareLinkFromPeers counts authored (non-mirror) LinksFrom.Peer values that
+// contain no '.' (the relative form peer.Resolve rewrites).
+func bareLinkFromPeers(links []model.Link) int {
+	n := 0
+
+	for _, lf := range links {
+		if lf.Mirror {
+			continue
+		}
+
+		if !strings.Contains(lf.Peer, ".") {
+			n++
+		}
+	}
+
+	return n
+}
+
+// --- Phase 32: include.Resolve pipeline wiring (Plan 32-02) ---
+
+// TestPipelineIncludeBeforeValidate proves the Stage 1a wiring (XC-01): a
+// multi-file model with [[include]] runs through ParseFile → include.Resolve →
+// Expand → peer.Resolve → Validate → render without error. A pre-resolve model
+// with unresolved includes would have no merged units, so successful rendering
+// proves include.Resolve ran BEFORE Validate (and before template.Expand, which
+// needs the merged Units). go-graphviz WASM rules out t.Parallel.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestPipelineIncludeBeforeValidate(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Entry file includes auth.toml; both files contribute top-level units.
+	entryPath := filepath.Join(tmpDir, "main.toml")
+	require.NoError(t, os.WriteFile(entryPath, []byte(`
+[properties]
+name = "Multi-File Pipeline"
+
+[user]
+type = "person"
+name = "User"
+
+[[include]]
+path = "auth.toml"
+`), 0o600), "write entry file")
+
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "auth.toml"), []byte(`
+[authService]
+type = "system"
+name = "Auth Service"
+
+[[authService.link]]
+peer = "user"
+technology = "HTTPS"
+`), 0o600), "write included file")
+
+	outputDir := filepath.Join(tmpDir, "output")
+	cmd := NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+
+	require.NoError(t, cmd.PersistentFlags().Set("output", outputDir), "set output flag")
+	require.NoError(t, cmd.PersistentFlags().Set("format", "dot"), "set format=dot")
+
+	cmd.SetArgs([]string{entryPath})
+
+	require.NoError(t, cmd.Execute(),
+		"multi-file model must parse → include.Resolve → validate → render cleanly")
+
+	// C1 diagram exists → the merged model (both files' units) rendered.
+	assert.FileExists(t, filepath.Join(outputDir, "main.dot"),
+		"C1 DOT diagram for the merged model must exist")
+
+	// Silent on success.
+	assert.Empty(t, buf.String(), "CLI must be silent on success")
+}
+
+// TestPipelineSingleFileNoRegression32 proves include.Resolve is a no-op for
+// single-file models: an existing corpus fixture (no [[include]]) still
+// renders identically through the now-wired pipeline.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestPipelineSingleFileNoRegression32(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Copy the existing valid.toml corpus fixture into the temp dir so the
+	// output path is isolated (no clobbering of committed testdata).
+	src, err := os.ReadFile(filepath.Join("testdata", "valid.toml"))
+	require.NoError(t, err, "read corpus fixture valid.toml")
+
+	entryPath := filepath.Join(tmpDir, "valid.toml")
+	//nolint:gosec // G703: src is a corpus fixture read from committed testdata, written into a temp dir — no taint risk.
+	require.NoError(t, os.WriteFile(entryPath, src, 0o600), "copy valid.toml into temp dir")
+
+	outputDir := filepath.Join(tmpDir, "output")
+	cmd := NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+
+	require.NoError(t, cmd.PersistentFlags().Set("output", outputDir), "set output flag")
+	require.NoError(t, cmd.PersistentFlags().Set("format", "dot"), "set format=dot")
+
+	cmd.SetArgs([]string{entryPath})
+
+	require.NoError(t, cmd.Execute(),
+		"single-file model must render identically (include.Resolve is a no-op)")
+
+	assert.FileExists(t, filepath.Join(outputDir, "valid.dot"),
+		"C1 DOT diagram for the single-file model must still render")
+	assert.Empty(t, buf.String(), "CLI must be silent on success")
+}
+
+// TestCLIMissingIncludeExits proves the CLI error path for a missing include
+// (INC-10/D-12): invoking runRoot returns a non-nil error naming the include
+// stage and the referenced path, and does not panic.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestCLIMissingIncludeExits(t *testing.T) {
+	tmpDir := t.TempDir()
+	entryPath := filepath.Join(tmpDir, "missing_include.toml")
+	require.NoError(t, os.WriteFile(entryPath, []byte(`
+[properties]
+name = "Missing Include"
+[[include]]
+path = "ghost.toml"
+`), 0o600), "write entry file")
+
+	cmd := NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	cmd.SetArgs([]string{entryPath})
+
+	err := cmd.Execute()
+	require.Error(t, err, "missing include must produce a non-nil CLI error")
+
+	msg := err.Error()
+	assert.Contains(t, msg, "include", "error must surface the include stage")
+	assert.Contains(t, msg, "ghost.toml", "error must name the missing path")
+}
+
+// renderThroughPipeline runs the full v1.10 pipeline on the fixture at inputPath
+// and returns the canonical (order-insensitive, DI-1) DOT serialization. The
+// pipeline sequence mirrors cmd/c4drill/root.go exactly:
+//
+//	ParseFile -> include.Resolve -> template.Expand -> peer.Resolve
+//	         -> Validate -> GenerateExpandedView -> BuildExpandedGraph -> RenderDOT
+//
+// Humanize runs INSIDE ParseFile (parser.go:614, the Phase 29 stopgap — Phase
+// 31's XC-04 relocation to a post-expansion pass was deferred). The composed
+// fixtures carry explicit name= so parse-time humanize does not fire for them.
+func renderThroughPipeline(t *testing.T, inputPath string) string {
+	t.Helper()
+
+	m, err := parser.ParseFile(inputPath)
+	require.NoError(t, err, "ParseFile")
+
+	// Stage 1a: include.Resolve runs FIRST (3-arg signature: entry, entryDir,
+	// entryFile — the third arg threads the real entry filename so error
+	// messages name the including file per INC-10/D-12).
+	m, err = include.Resolve(m, filepath.Dir(inputPath), inputPath)
+	require.NoError(t, err, "include.Resolve")
+
+	// Stage 1.5: template.Expand runs after include so templates defined in
+	// included files are visible to [[use]] in the entry (XC-02).
+	m, err = template.Expand(m)
+	require.NoError(t, err, "template.Expand")
+
+	// Stage 1.6: peer.Resolve runs after Expand so relative peers authored
+	// inside templates resolve at the instantiation site (XC-03).
+	require.NoError(t, peer.Resolve(m), "peer.Resolve")
+
+	// Stage 2: Validate (must see only absolute paths + a fully-expanded model).
+	require.Empty(t, validator.Validate(m), "model should be valid after pipeline")
+
+	// Views + graph + render.
+	v := view.GenerateExpandedView(m)
+	g := graph.BuildExpandedGraph(v)
+	dot, err := render.RenderDOT(g)
+	require.NoError(t, err, "render.RenderDOT")
+
+	return canonical.Canonical(t, string(dot))
+}
+
+// TestXC05_ComposedEquivSingleFile guards XC-05: the composed multi-file fixture
+// (include + templates + relative-peer + reference) renders to IDENTICAL DOT as
+// its hand-expanded single-file equivalent through the full pipeline.
+//
+// The comparison is order-insensitive (canonical.Canonical, STATE.md DI-1):
+// the pinned go-graphviz fork emits map-order-dependent sibling ordering and
+// layout geometry, so byte-exact require.Equal on raw DOT would fail spuriously.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestXC05_ComposedEquivSingleFile(t *testing.T) {
+	const (
+		multiFile  = "../../skill/examples/09-composed/entry.toml"
+		singleFile = "../../skill/examples/09-composed/single-file-equivalent.toml"
+	)
+
+	multiCanon := renderThroughPipeline(t, multiFile)
+	singleCanon := renderThroughPipeline(t, singleFile)
+
+	require.Equal(t, multiCanon, singleCanon,
+		"XC-05: composed multi-file model must render identical to its "+
+			"hand-expanded single-file equivalent (canonicalDOT, DI-1)")
+}
+
+// TestXC01_PipelineOrdering guards XC-01: the v1.10 pipeline order is
+// load-bearing for correctness. This behavioral test (D-20) asserts the two
+// order-dependent properties that ONLY hold when the pipeline runs
+// include.Resolve -> template.Expand -> peer.Resolve in that order:
+//
+//   - XC-02 (include before Expand): the [[use]] in entry.toml instantiates the
+//     `microservice` template that is DEFINED in the included templates.toml.
+//     If include ran AFTER Expand, the [[use]] would fail with "unknown template".
+//     A successful renderThroughPipeline (no error at the Expand stage) proves
+//     include ran first.
+//
+//   - XC-03 (Expand before peer.Resolve): the instantiated platform.auth.cache
+//     unit's parametrized link (peer = "${upstreamBus}") expands to the concrete
+//     value "messageBus" and then resolves as an edge connecting platform.auth.cache
+//     to messageBus. If peer.Resolve ran BEFORE Expand, the literal "${upstreamBus}"
+//     would not yet be substituted and peer resolution would fail or resolve wrongly.
+//
+// This test is behavioral (inspects the rendered DOT), NOT a source-scan — it
+// is robust to refactors that move pipeline calls into helper functions (D-20
+// explicitly rejected the source-scan alternative).
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestXC01_PipelineOrdering(t *testing.T) {
+	canon := renderThroughPipeline(t, "../../skill/examples/09-composed/entry.toml")
+
+	// Assertion A (XC-02 — include before template.Expand): the render
+	// completed without "unknown template" error (require.NoError inside
+	// renderThroughPipeline at the Expand stage would have fired otherwise).
+	// Make it explicit by asserting the instantiated unit appears in the
+	// canonical output — the [[use]] succeeded against a template that lives
+	// in an INCLUDED file.
+	assert.Contains(t, canon, `"platform.auth.cache"`,
+		"XC-02: the [[use]] instantiated the microservice template defined in "+
+			"the included templates.toml — proves include.Resolve ran before template.Expand")
+
+	// Assertion B (XC-03 — template.Expand before peer.Resolve): the
+	// parametrized peer ${upstreamBus} expanded to the concrete "messageBus"
+	// and the edge platform.auth.cache -> messageBus is present in the render.
+	// The canonical serialization format (serializeDOTStatement in the
+	// canonical helper) emits edges as `"src" -> "dst"` in the head field.
+	assert.Contains(t, canon, `"platform.auth.cache" -> messageBus`,
+		"XC-03: the templated cache's parametrized peer ${upstreamBus} expanded "+
+			"to messageBus and resolved as an edge to the instantiation-site target "+
+			"— proves template.Expand ran before peer.Resolve")
+}

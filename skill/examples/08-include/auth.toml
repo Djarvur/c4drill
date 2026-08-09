@@ -1,0 +1,31 @@
+# Include Directive Example (auth domain)
+# Demonstrates cross-file subunits under the entry's [platform] (D-10): this
+# included file re-declares [platform] (the parent also declared in entry.toml)
+# with auth + db subunits, which include.Resolve attaches onto the entry's
+# existing platform — appending to its Subunits/SubunitOrder in include order.
+
+# Re-declare the parent so the parser recognizes [platform.auth] as a subunit
+# (not a phantom top-level unit). include.Resolve detects the parent already
+# exists in the entry and merges ONLY the subunits.
+[platform]
+type = "system"
+name = "Platform"
+
+# Cross-file subunit (D-10): appended onto entry.toml's platform. A container
+# (C2 under system). It carries the link that keeps the customer's
+# platform.auth reference valid.
+[platform.auth]
+type = "container"
+name = "Auth Domain"
+description = "Authentication boundary; arrived via include from auth.toml"
+
+# auth.db: a C3 component under platform.auth. Links to messageBus to satisfy
+# the orphan rule. (platform.auth itself is a parent and cannot link directly.)
+[platform.auth.db]
+type = "componentDb"
+name = "Auth Database"
+description = "Credential store; subunit of the included auth domain"
+
+[[platform.auth.db.link]]
+peer = "messageBus"
+description = "Publishes credential-change events"

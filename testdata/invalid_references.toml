@@ -1,0 +1,18 @@
+[properties]
+name = "Invalid References Test"
+
+[user]
+type = "person"
+name = "User"
+
+[[user.link]]
+peer = "undefined_db"
+technology = "HTTP"
+
+[app]
+type = "system"
+name = "App"
+
+[[app.linkFrom]]
+peer = "missing_system"
+technology = "TCP"

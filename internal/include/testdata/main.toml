@@ -1,0 +1,15 @@
+# Canonical INC-01 / INC-09 multi-file fixture (Plan 32-02).
+# entry file with one [[include]] directive + a hand-authored top-level unit.
+# Used by TestResolveTwoFilesMerge and TestMergeUnitOrderAppend.
+
+[properties]
+name = "Main System"
+description = "Entry file for the INC-01 merge fixture"
+
+[user]
+type = "person"
+name = "User"
+description = "End user of the main system"
+
+[[include]]
+path = "auth.toml"

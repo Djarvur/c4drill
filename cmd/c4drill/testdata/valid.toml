@@ -1,0 +1,26 @@
+[properties]
+name = "Test System"
+description = "A test architecture"
+
+[user]
+type = "person"
+name = "User"
+description = "End user"
+
+[[user.link]]
+peer = "app.api"
+technology = "HTTPS"
+
+[app]
+type = "system"
+name = "Application"
+description = "Main application"
+
+[app.api]
+type = "container"
+name = "API"
+description = "API container"
+
+[[app.api.linkFrom]]
+peer = "user"
+technology = "HTTPS"

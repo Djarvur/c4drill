@@ -1,0 +1,81 @@
+digraph "" {
+	graph [bb="0,0,647.59,214.8",
+		fontname=Helvetica,
+		fontsize=14,
+		label="Expanded System",
+		labelloc=t,
+		lheight=0.23,
+		lp="323.79,202.4",
+		lwidth=1.58,
+		rankdir=TB
+	];
+	node [color=black,
+		fontcolor=black,
+		label="\N",
+		shape=ellipse
+	];
+	edge [fontsize=14.0,
+		label="\E"
+	];
+	subgraph cluster_cluster_mainsystem {
+		graph [bb="12.888,90.6,270.89,182",
+			color="#3C7FC0",
+			label="Main System",
+			lheight=0.23,
+			lp="141.89,169.6",
+			lwidth=1.12,
+			style=rounded
+		];
+		"mainsystem.api"	[color="#3C7FC0",
+			fontcolor="#3C7FC0",
+			height=0.70278,
+			label="{API|Backend API}",
+			pos="66.888,123.9",
+			rects="21.369,123.9,112.41,148.7 21.369,99.1,112.41,123.9",
+			shape=record,
+			style=rounded,
+			width=1.2644];
+		"mainsystem.webapp"	[color="#3C7FC0",
+			fontcolor="#3C7FC0",
+			height=0.70278,
+			label="{Web Application [+]|Frontend}",
+			pos="196.89,123.9",
+			rects="130.52,123.9,263.26,148.7 130.52,99.1,263.26,123.9",
+			shape=record,
+			style=rounded,
+			width=1.8437];
+	}
+	external	[color="#8A8A8A",
+		fontcolor="#8A8A8A",
+		height=0.70278,
+		label="{External System|External dependency}",
+		pos="66.888,25.3",
+		rects="0,25.3,133.78,50.1 0,0.5,133.78,25.3",
+		shape=record,
+		style=rounded,
+		width=1.858];
+	"mainsystem.webapp.service"	[color="#8A8A8A",
+		fontcolor="#8A8A8A",
+		height=0.51389,
+		label="{mainsystem.webapp.service}",
+		pos="367.89,123.9",
+		rects="281.36,106.1,454.42,141.9",
+		shape=record,
+		style=rounded,
+		width=2.4036];
+	"mainsystem.webapp.handler"	[color="#8A8A8A",
+		fontcolor="#8A8A8A",
+		height=0.51389,
+		label="{mainsystem.webapp.handler}",
+		pos="559.89,123.9",
+		rects="472.19,106.1,647.59,141.9",
+		shape=record,
+		style=rounded,
+		width=2.4361];
+	"mainsystem.api" -> external	[key="mainsystem.api_to_external",
+		fontsize=10,
+		label="[HTTPS]",
+		lp="85.499,74.6",
+		pos="e,66.888,50.575 66.888,99.021 66.888,87.844 66.888,74.298 66.888,61.941",
+		style=solid];
+}

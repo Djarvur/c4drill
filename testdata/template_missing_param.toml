@@ -1,0 +1,17 @@
+# Fixture for TMPL-06: a [[use]] MISSING a declared param ('tech'). Expand must
+# return a hard error naming the template ('svc'), the missing param ('tech'),
+# and the instantiation site (the [[use]] entry — identifiable by its name
+# param 'auth' or its position).
+[properties]
+name = "Missing Param Test"
+
+[template.svc]
+params = ["name", "tech"]
+name = "${name} Service"
+type = "system"
+technology = "${tech}"
+
+[[use]]
+template = "svc"
+name = "auth"
+# 'tech' deliberately omitted — must be a hard error.

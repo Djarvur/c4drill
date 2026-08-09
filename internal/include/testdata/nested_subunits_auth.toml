@@ -1,0 +1,19 @@
+# Included half of the D-10 subunit fixture (Plan 32-02).
+# Declares [linuxSystem] (the parent also declared in the entry file) with auth
+# and db subunits. include.Resolve detects the parent already exists in the
+# entry and attaches ONLY the subunits, appending to the parent's
+# Subunits/SubunitOrder in include-file order (D-10 cross-file subunit merge).
+
+[linuxSystem]
+type = "system"
+name = "Linux System"
+
+[linuxSystem.auth]
+type = "container"
+name = "Auth Container"
+technology = "Go"
+
+[linuxSystem.db]
+type = "containerDb"
+name = "Auth Database"
+technology = "PostgreSQL"

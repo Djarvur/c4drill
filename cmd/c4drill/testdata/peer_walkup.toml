@@ -1,0 +1,131 @@
+# peer_walkup.toml — fixture exercising sibling, aunt, root, and nearest-first
+# walk-up cases for the relative-peer resolver (Phase 30 ERGO-01).
+#
+# All peers below are BARE (no dot). After peer.Resolve they rewrite to
+# absolute dotted paths so the validator (which sees only absolute peers and
+# requires every host/target to be a leaf unit) is satisfied. Plan 02's
+# TestPipelineResolveBeforeValidate parses this file, resolves, validates,
+# and asserts no validation errors.
+#
+# Type rules honored (so the model validates post-resolve):
+#   - Only system/box/container/containerBox/componentBox have subunits.
+#   - Units WITH subunits cannot have links (host must be a leaf).
+#   - Units WITH subunits cannot be linked TO (target must be a leaf).
+#   - No orphans (every unit has a link, a linkFrom, or subunits).
+#
+# Coverage (each host's bare peer resolves via walk-up):
+#   - sibling (D-13):  [mainSystem.parent.host] peer "sibling"
+#                      -> mainSystem.parent.sibling
+#   - aunt   (D-14):   [mainSystem.front.end] peer "cache"
+#                      where mainSystem.cache (C2 leaf) exists, no
+#                      mainSystem.front.cache -> mainSystem.cache
+#   - root   (D-15):   [mainSystem.sub.sshd] peer "messageBus"
+#                      where top-level messageBus exists -> messageBus
+#   - nearest (D-14):  [mainSystem.n.m.host] peer "x" where both
+#                      mainSystem.n.m.x (nearer) and mainSystem.n.x exist
+#                      -> mainSystem.n.m.x
+
+[properties]
+name = "Peer Walkup Test"
+description = "Fixture for relative-peer walk-up resolution"
+edges = "straight"
+
+# Root-level shared service (D-15 root target). A leaf (no subunits).
+[messageBus]
+name = "Message Bus"
+type = "queue"
+description = "Top-level shared queue reachable by bare name from any depth"
+
+# --- top-level system holding the walk-up cases ---
+[mainSystem]
+name = "Main System"
+type = "system"
+description = "C1 container for all walk-up cases"
+
+# --- sibling case (D-13): parent is a container holding two C3 leaves ---
+[mainSystem.parent]
+name = "Parent"
+type = "container"
+
+[mainSystem.parent.host]
+name = "Host"
+type = "component"
+description = "Host of the bare peer 'sibling' (sibling case, D-13)"
+link = [
+  {peer = "sibling", technology = "internal"},
+]
+
+[mainSystem.parent.sibling]
+name = "Sibling"
+type = "component"
+description = "Sibling target for host's bare peer"
+
+# --- aunt case (D-14): cache is a C2 leaf sibling of front; end is a C3 ---
+[mainSystem.cache]
+name = "Cache"
+type = "container"
+description = "Aunt target — C2 leaf found via walk-up from a C3 host"
+# cache is a leaf (no subunits) so it can be linked to (VALD-03).
+
+[mainSystem.front]
+name = "Front"
+type = "container"
+description = "C2 container whose C3 child peers up to an aunt"
+
+[mainSystem.front.end]
+name = "End"
+type = "component"
+description = "Host of bare peer 'cache' (aunt case — walks up past front to mainSystem.cache)"
+link = [
+  {peer = "cache", technology = "internal"},
+]
+
+# --- root case (D-15): walk-up reaches the top-level scope ---
+[mainSystem.sub]
+name = "Sub"
+type = "container"
+
+[mainSystem.sub.sshd]
+name = "SSHD"
+type = "component"
+description = "Host of bare peer 'messageBus' (root case — walks up to top level)"
+link = [
+  {peer = "messageBus", technology = "AMQP"},
+]
+
+# --- nearest-first case (D-14): two ancestor depths both match 'x' ---
+[mainSystem.n]
+name = "N"
+type = "container"
+
+# Farther match: mainSystem.n.x — a C3 leaf. Give it a link so it's not an orphan.
+[mainSystem.n.x]
+name = "Far X"
+type = "component"
+description = "Farther ancestor's child — nearest-first must NOT pick this"
+link = [
+  {peer = "messageBus", technology = "internal"},
+]
+
+[mainSystem.n.m]
+name = "M"
+type = "componentBox"
+description = "C3 grouping so its children are also C3 components"
+
+# Nearer match: mainSystem.n.m.x — a C3 leaf. Link back to Far X for connectivity.
+[mainSystem.n.m.x]
+name = "Near X"
+type = "component"
+description = "Nearer ancestor's child — nearest-first MUST pick this"
+link = [
+  {peer = "mainSystem.n.x", technology = "internal"},
+]
+
+# Host of the bare peer 'x' — nearest-first must resolve to mainSystem.n.m.x.
+[mainSystem.n.m.host]
+name = "N Host"
+type = "component"
+description = "Host of bare peer 'x' (nearest-first — both n.m.x and n.x exist)"
+link = [
+  {peer = "x", technology = "internal"},
+]

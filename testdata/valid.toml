@@ -1,0 +1,18 @@
+[properties]
+name = "Test System"
+description = "A test architecture"
+color = "transparent"
+edges = "straight"
+lineLength = 40
+expanded = ["webapp"]
+
+[user]
+type = "person"
+name = "User"
+description = "End user of the system"
+
+[webapp]
+type = "system"
+name = "Web Application"
+description = "Main web application"
+technology = "Go, React"

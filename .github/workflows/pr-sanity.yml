@@ -1,0 +1,56 @@
+name: PR Sanity
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Build
+        run: go build ./...
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    env:
+      COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Test with coverage
+        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+      - name: Upload coverage to Coveralls
+        if: ${{ env.COVERALLS_REPO_TOKEN != '' }}
+        uses: coverallsapp/github-action@v2
+        with:
+          format: golang
+          file: coverage.out
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12

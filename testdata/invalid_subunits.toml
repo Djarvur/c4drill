@@ -1,0 +1,10 @@
+[properties]
+name = "Invalid Subunits Test"
+
+[person_with_subunits]
+type = "person"
+name = "Person with Subunits"
+
+[person_with_subunits.child]
+type = "container"
+name = "Invalid Child"

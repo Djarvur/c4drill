@@ -1,0 +1,110 @@
+package render
+
+import (
+	"fmt"
+	"html"
+	"strings"
+
+	"github.com/Djarvur/c4drill/internal/graph"
+)
+
+// Nav styling constants. The nav line is rendered in a smaller, muted font so
+// it reads as secondary to the diagram title; clickable breadcrumb items are
+// underlined so they are recognisable as links (Safari/Chrome/Firefox all
+// render <U> inside GraphViz HTML labels as text-decoration: underline).
+const (
+	navFontPoint = "10"     // smaller than the 14pt title
+	navFontColor = "#666666" // muted gray
+)
+
+// navFontOpen is the opening <FONT ...> tag wrapping every nav cell so the
+// entire breadcrumb trail shares the secondary styling.
+const navFontOpen = `<FONT POINT-SIZE="` + navFontPoint + `" COLOR="` + navFontColor + `">`
+
+// BuildNavigationLabel creates a GraphViz HTML-like label for the navigation
+// bar and returns it as a single-row <TABLE>.
+//
+// The navigation is breadcrumb-only: "Ancestor1 > Ancestor2 > Current", where
+// each ancestor is a clickable TD (rendered underlined in a muted font) and the
+// current level is plain. The earlier "Back to {parent}" affordance was dropped
+// because it always duplicated the breadcrumb's nearest-ancestor link (same
+// destination, same label) — the breadcrumb alone covers the up-navigation.
+//
+// Gap 2 (03-04): GraphViz HTML-like labels do NOT support <a href> tags — the
+// label is silently dropped at render time. Clickable links inside an HTML
+// label are expressed via the HREF attribute on a <TD> element, which GraphViz
+// renders as an <a xlink:href="..."> anchor in SVG output. The plain-text
+// breadcrumb names AND the HREF URLs are HTML-escaped so a name or URL
+// containing <, >, or & cannot break the label (WR-01: url.PathEscape does not
+// escape '&').
+func BuildNavigationLabel(nav *graph.Navigation) string {
+	if nav == nil {
+		return ""
+	}
+
+	tds := navigationTDs(nav)
+	if len(tds) == 0 {
+		return ""
+	}
+
+	return "<TABLE BORDER=\"0\" CELLBORDER=\"0\" CELLSPACING=\"0\" CELLPADDING=\"0\" ALIGN=\"CENTER\">" +
+		"<TR>" + strings.Join(tds, "") + "</TR></TABLE>"
+}
+
+// navigationTDs returns the <TD> elements that make up the breadcrumb bar:
+// clickable ancestor items carry an HREF attribute; separators and the current
+// level are plain (non-clickable) cells. Exposed so the graph label can merge
+// navigation with the title in a single multi-row table.
+func navigationTDs(nav *graph.Navigation) []string {
+	if nav == nil {
+		return nil
+	}
+
+	return breadcrumbTDs(nav.Breadcrumbs)
+}
+
+// breadcrumbTDs turns breadcrumb items into <TD> cells, with a "→" separator
+// in its OWN TD between items. Separate separator TDs give tighter, more
+// consistent spacing than merged separators because each TD sizes to its
+// content and GraphViz doesn't stretch them as much.
+//
+// The last item (current level) has no trailing separator.
+func breadcrumbTDs(items []graph.BreadcrumbItem) []string {
+	if len(items) == 0 {
+		return nil
+	}
+
+	var tds []string
+
+	for i, item := range items {
+		if i > 0 {
+			tds = append(tds, plainNavTD("&#8594;"))
+		}
+
+		tds = append(tds, breadcrumbItemTD(item))
+	}
+
+	return tds
+}
+
+// breadcrumbItemTD renders a single breadcrumb item as a clickable or plain TD.
+// Clickable items are wrapped in <U> (underline) inside the muted <FONT> so
+// they are recognisable as links.
+func breadcrumbItemTD(item graph.BreadcrumbItem) string {
+	escaped := html.EscapeString(item.Name)
+	if item.URL == "" {
+		return plainNavTD(escaped)
+	}
+
+	// HTML-escape the URL for the HREF attribute (WR-01): url.PathEscape does
+	// not escape '&', which GraphViz's HTML-like label parser rejects, silently
+	// dropping the breadcrumb anchor.
+	return fmt.Sprintf(`<TD HREF="%s">%s<U>%s</U>%s</TD>`,
+		html.EscapeString(item.URL), navFontOpen, escaped, "</FONT>")
+}
+
+// plainNavTD wraps a literal HTML fragment (already escaped or a known entity)
+// in a non-clickable table cell with the muted nav font styling.
+func plainNavTD(content string) string {
+	return "<TD>" + navFontOpen + content + "</FONT></TD>"
+}

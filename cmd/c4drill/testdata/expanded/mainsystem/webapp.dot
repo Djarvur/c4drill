@@ -1,0 +1,46 @@
+digraph "" {
+	graph [bb="0,0,695.17,190.8",
+		fontname=Helvetica,
+		fontsize=14,
+		label="<a href=\"../mainsystem.dot\">Back to mainsystem</a> | <a href=\"../expanded.dot\">mainsystem</a> > webapp
+Main System - Web Application \
+- Components",
+		labelloc=t,
+		lheight=0.47,
+		lp="347.59,170",
+		lwidth=9.43,
+		rankdir=TB
+	];
+	node [color=black,
+		fontcolor=black,
+		label="\N",
+		shape=ellipse
+	];
+	edge [fontsize=14.0,
+		label="\E"
+	];
+	"mainsystem.webapp.handler"	[color="#78A8D8",
+		fontcolor="#78A8D8",
+		height=0.70278,
+		label="{Handler|HTTP handlers}",
+		pos="347.59,123.9",
+		rects="296.62,123.9,398.55,148.7 296.62,99.1,398.55,123.9",
+		shape=record,
+		style=rounded,
+		width=1.4157];
+	"mainsystem.webapp.service"	[color="#78A8D8",
+		fontcolor="#78A8D8",
+		height=0.70278,
+		label="{Service|Business logic}",
+		pos="347.59,25.3",
+		rects="298.95,25.3,396.23,50.1 298.95,0.5,396.23,25.3",
+		shape=record,
+		style=rounded,
+		width=1.3511];
+	"mainsystem.webapp.handler" -> "mainsystem.webapp.service"	[key="mainsystem.webapp.handler_to_mainsystem.webapp.service",
+		fontsize=10,
+		label="[internal]",
+		lp="366.19,74.6",
+		pos="e,347.59,50.575 347.59,99.021 347.59,87.844 347.59,74.298 347.59,61.941",
+		style=solid];
+}

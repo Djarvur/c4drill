@@ -1,0 +1,28 @@
+[properties]
+name = "Nested Test"
+edges = "straight"
+
+[externals]
+type = "systemExternal"
+name = "External System"
+description = "An external dependency"
+
+[mainapp]
+type = "system"
+name = "Main Application"
+technology = "Go"
+
+[mainapp.api]
+type = "container"
+name = "API Server"
+technology = "Go"
+
+[mainapp.db]
+type = "containerDb"
+name = "Database"
+technology = "PostgreSQL"
+
+[mainapp.api.handler]
+type = "component"
+name = "Request Handler"
+technology = "Go"

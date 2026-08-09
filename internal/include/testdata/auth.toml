@@ -1,0 +1,15 @@
+# Included half of the INC-01 / INC-09 fixture (Plan 32-02).
+# merged into main.toml by include.Resolve; its top-level units append onto the
+# entry file's UnitOrder in include-directive order (D-09).
+
+[authService]
+type = "system"
+name = "Auth Service"
+description = "Authentication boundary"
+technology = "Go"
+
+[tokenStore]
+type = "db"
+name = "Token Store"
+description = "Refresh-token store"
+technology = "PostgreSQL"

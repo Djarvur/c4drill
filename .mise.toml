@@ -1,0 +1,19 @@
+# Mise configuration for c4drill
+# https://mise.jdx.dev
+
+[tools]
+go = "1.26.1"
+golangci-lint = "2"
+
+[tasks.test]
+description = "Run Go tests with coverage and race detection"
+run = "go test -v -race -cover ./..."
+
+[tasks.lint]
+description = "Run golangci-lint (auto-fix first)"
+depends = ["lint-fix"]
+run = "golangci-lint run ./..."
+
+[tasks.lint-fix]
+description = "Run golangci-lint with auto-fix"
+run = "golangci-lint run --fix ./..."

@@ -1,0 +1,51 @@
+# golangci-lint configuration
+# https://golangci-lint.run/usage/configuration/
+
+version: '2'
+
+run:
+  timeout: 5m
+  issues-exit-code: 1
+  tests: true
+
+# Enable all linters
+linters:
+  default: all
+  disable:
+    - wsl # deprecated, replaced by wsl_v5
+    - exhaustruct # too noisy for partial struct initialization
+    - depguard # project-internal imports trigger false positives
+    - noinlineerr # inline error checks are fine
+    - ireturn # returning interfaces is acceptable
+    - varnamelen # short variable names are idiomatic in Go
+    - tagliatelle # JSON tags follow external API conventions
+    - cyclop # cyclomatic complexity covered by other linters
+    - goconst # repeated strings in test fixtures are intentional
+    - nlreturn # blank-line-before-return style, not enforced
+    - mnd # magic numbers are self-evident in context
+    - modernize # Go modernization suggestions, tracked separately
+    - nestif # nested-if complexity covered by gocognit
+  settings:
+    gocognit:
+      min-complexity: 15
+    testpackage:
+      # Private-state tests live in *_internal_test.go (same package);
+      # everything else must be an external _test package.
+      skip-regexp: _internal_test\.go$
+    gomoddirectives:
+      replace-allow-list:
+        - github.com/goccy/go-graphviz
+  exclusions:
+    rules:
+      # Exclude errcheck for deferred Close() calls
+      - linters:
+          - errcheck
+        text: 'Error return value of `.*Close` is not checked'
+      # dupl/funlen/gosmopolitan: test code is exempt (duplicated fixtures,
+      # long test functions, and intentional non-ASCII literals like the CJK
+      # wrap tests) — production code stays fully checked.
+      - linters:
+          - dupl
+          - funlen
+          - gosmopolitan
+        path: '(_test|_internal_test)\.go$'

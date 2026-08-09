@@ -1,0 +1,15 @@
+# D-10 cross-file subunit fixture (Plan 32-02).
+# entry file declares the [linuxSystem] parent; the included
+# nested_subunits_auth.toml adds [linuxSystem.auth] and [linuxSystem.db]
+# subunits that append onto the parent's Subunits/SubunitOrder.
+
+[properties]
+name = "Subunit Merge"
+
+[linuxSystem]
+type = "system"
+name = "Linux System"
+description = "Host platform whose auth domain lives in another file"
+
+[[include]]
+path = "nested_subunits_auth.toml"

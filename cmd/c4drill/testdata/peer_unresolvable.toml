@@ -1,0 +1,20 @@
+# peer_unresolvable.toml — fixture with a bare peer matching nothing.
+#
+# After peer.Resolve this model must produce a hard *ResolveError naming the
+# peer and the host unit. Plan 02's TestCLIUnresolvablePeerExits parses this
+# file and asserts the error path (no panic, clear diagnostic).
+#
+# The peer "nonexistent" is bare (no dot) and matches no ancestor scope's
+# child (lonelyUnit has no sibling, no aunt, and no top-level match).
+
+[properties]
+name = "Peer Unresolvable Test"
+description = "Fixture for the unresolvable bare-peer error path"
+
+[lonelyUnit]
+name = "Lonely Unit"
+type = "system"
+description = "Only top-level unit; its bare peer matches nothing"
+link = [
+  {peer = "nonexistent", technology = "internal"},
+]

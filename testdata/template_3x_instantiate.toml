@@ -1,0 +1,35 @@
+# Fixture for TMPL-08 / HS-1: one template instantiated THREE times with
+# distinct params. After Expand + validator.Validate, the three instantiations'
+# LinksFrom slices MUST be disjoint (no shared Link elements) because the
+# validator mutates LinksFrom in place (index.go:70-81) and a shallow Clone
+# would corrupt the 2nd/3rd instantiation. Re-expand on a fresh Parse must be
+# idempotent (deeply equal output).
+# svc=system (valid at top-level C1).
+[properties]
+name = "3x Instantiate HS-1 Test"
+
+[template.svc]
+params = ["name"]
+name = "${name} Service"
+type = "system"
+
+[[template.svc.link]]
+peer = "messageBus"
+description = "Publishes ${name} events"
+
+# Three instantiations with distinct name params.
+[[use]]
+template = "svc"
+name = "alpha"
+
+[[use]]
+template = "svc"
+name = "beta"
+
+[[use]]
+template = "svc"
+name = "gamma"
+
+[messageBus]
+type = "queue"
+name = "Message Bus"

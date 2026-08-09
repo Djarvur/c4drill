@@ -1,0 +1,17 @@
+# Fixture for TMPL-09 forward references: [[use]] appears textually BEFORE
+# [template.<name>] definition. Structured post-parse extraction makes this
+# order-independent — no "define-before-use" restriction.
+[properties]
+name = "Forward Ref Test"
+
+# [[use]] BEFORE [template.svc] — must parse without error.
+[[use]]
+template = "svc"
+name = "auth"
+tech = "Go"
+
+[template.svc]
+params = ["name", "tech"]
+name = "${name} Service"
+type = "container"
+technology = "${tech}"

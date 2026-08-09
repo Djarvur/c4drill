@@ -1,0 +1,51 @@
+[properties]
+name = "Expanded System"
+description = "Test with drill-down"
+
+[mainsystem]
+type = "system"
+name = "Main System"
+description = "The main system"
+expanded = ["mainsystem"]
+
+[mainsystem.webapp]
+type = "container"
+name = "Web Application"
+description = "Frontend"
+expanded = ["mainsystem.webapp"]
+
+[mainsystem.webapp.handler]
+type = "component"
+name = "Handler"
+description = "HTTP handlers"
+
+[[mainsystem.webapp.handler.link]]
+peer = "mainsystem.webapp.service"
+technology = "internal"
+
+[mainsystem.webapp.service]
+type = "component"
+name = "Service"
+description = "Business logic"
+
+[[mainsystem.webapp.service.linkFrom]]
+peer = "mainsystem.webapp.handler"
+technology = "internal"
+
+[mainsystem.api]
+type = "container"
+name = "API"
+description = "Backend API"
+
+[[mainsystem.api.link]]
+peer = "external"
+technology = "HTTPS"
+
+[external]
+type = "systemExternal"
+name = "External System"
+description = "External dependency"
+
+[[external.linkFrom]]
+peer = "mainsystem.api"
+technology = "HTTPS"
