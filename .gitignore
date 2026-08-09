@@ -64,9 +64,11 @@ Thumbs.db
 draft.txt
 /c4drill
 
-# GSD runtime installs for other tools (reinstallable via npx get-shit-done-cc)
+# GSD runtime installs (reinstallable via npx get-shit-done-cc)
 .agent/
+.claude/
 .cursor/
+.zcode/
 
 # Private test data — cyp-auth-infra architecture (keep local, never commit)
 cyp-auth-infra/
