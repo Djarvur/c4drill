@@ -817,7 +817,7 @@ func TestBuildExpandedGraphRealToml(t *testing.T) {
 	require.Len(t, client.Links, 1, "client should have 1 link")
 	assert.Equal(t, "externalSys", client.Links[0].Peer)
 	expectedLength := client.Links[0].Length
-	require.Greater(t, expectedLength, 0, "link should have Length > 0")
+	require.Positive(t, expectedLength, "link should have Length > 0")
 
 	// Generate expanded view and check edges
 	v := view.GenerateExpandedView(m)
