@@ -140,15 +140,11 @@ func render(g *graph.Graph, format graphviz.Format) ([]byte, error) {
 // xmlDeclOrDoctype matches the XML declaration (<?xml ...?>) and the SVG
 // DOCTYPE declaration that graphviz emits. Both are invalid inside an HTML
 // body and must be stripped before inlining the SVG.
-//
-//nolint:gochecknoglobals // Compiled once at init; regexp.Compile at every call would be wasteful
 var xmlDeclOrDoctype = regexp.MustCompile(`(?s)^\s*(<\?xml[^>]*\?>\s*)?(<!DOCTYPE[^>]*>\s*)?`)
 
 // svgHrefSuffix matches the .svg extension inside an href/xlink:href attribute
 // value, capturing the quote so we can rewrite it to .html. GraphViz always
 // emits double-quoted attribute values.
-//
-//nolint:gochecknoglobals // Compiled once at init
 var svgHrefSuffix = regexp.MustCompile(`((?:xlink:)?href="[^"]+)\.svg(")`)
 
 // htmlNavShim is the JS injected into every HTML-wrapped diagram. Safari
