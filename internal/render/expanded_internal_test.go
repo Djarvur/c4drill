@@ -24,7 +24,6 @@ func loadCYPAuthInfraModel(t *testing.T) *parser.Model {
 // createSyntheticCYPModel creates a model matching the private
 // auth-infrastructure fixture structure.
 //
-//nolint:funlen // Test helper that creates multiple related units
 func createSyntheticCYPModel(t *testing.T) *parser.Model {
 	t.Helper()
 

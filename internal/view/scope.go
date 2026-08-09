@@ -429,6 +429,24 @@ func GenerateC2View(m *parser.Model, systemPath string) *View {
 	return v
 }
 
+// c3ViewTitle derives the C3 view title and parent path from the expanded
+// container's location in the model.
+func c3ViewTitle(m *parser.Model, containerPath string, containerUnit *model.Unit) (string, string) {
+	title := containerUnit.Name + " - Components"
+	parentPath := ""
+
+	if idx := strings.LastIndex(containerPath, "."); idx > 0 {
+		parentPath = containerPath[:idx]
+
+		parentUnit := findUnitByPath(m, parentPath)
+		if parentUnit != nil {
+			title = parentUnit.Name + " - " + containerUnit.Name + " - Components"
+		}
+	}
+
+	return title, parentPath
+}
+
 // GenerateC3View creates a C3 (Component) level view for an expanded container.
 // It shows the subunits (components) of the specified container.
 func GenerateC3View(m *parser.Model, containerPath string) *View {
@@ -443,17 +461,7 @@ func GenerateC3View(m *parser.Model, containerPath string) *View {
 	}
 
 	// Extract parent path for title
-	parentPath := ""
-	title := containerUnit.Name + " - Components"
-
-	if idx := strings.LastIndex(containerPath, "."); idx > 0 {
-		parentPath = containerPath[:idx]
-
-		parentUnit := findUnitByPath(m, parentPath)
-		if parentUnit != nil {
-			title = parentUnit.Name + " - " + containerUnit.Name + " - Components"
-		}
-	}
+	parentPath, title := c3ViewTitle(m, containerPath, containerUnit)
 
 	v := &View{
 		Level:             LevelC3,
@@ -468,18 +476,8 @@ func GenerateC3View(m *parser.Model, containerPath string) *View {
 		AncestorNames:     buildAncestorNames(m, containerPath),
 	}
 
-	// Determine iteration order: use SubunitOrder if available, otherwise fallback to map keys
-	var subunitOrder []string
-	if len(containerUnit.SubunitOrder) > 0 {
-		subunitOrder = containerUnit.SubunitOrder
-	} else {
-		for name := range containerUnit.Subunits {
-			subunitOrder = append(subunitOrder, name)
-		}
-	}
-
 	// Add subunits (components) of the expanded container in definition order
-	for _, name := range subunitOrder {
+	for _, name := range subunitOrderOf(containerUnit) {
 		unit := containerUnit.Subunits[name]
 		if unit == nil {
 			continue
@@ -497,7 +495,7 @@ func GenerateC3View(m *parser.Model, containerPath string) *View {
 	}
 
 	// Add external boundary nodes for links from subunits
-	addExternalBoundaryNodesForSubunits(v, m, containerUnit.Subunits, subunitOrder, containerPath)
+	addExternalBoundaryNodesForSubunits(v, m, containerUnit.Subunits, subunitOrderOf(containerUnit), containerPath)
 
 	// Sort boundary nodes (the tail of UnitOrder) to match the model's top-level
 	// definition order. This ensures the same boundary nodes appear in the same
@@ -511,7 +509,7 @@ func GenerateC3View(m *parser.Model, containerPath string) *View {
 	// Resolve cross-subunit links: when a descendant of one component links to
 	// a descendant of another component (or to an external boundary node), create
 	// a resolved link between the components.
-	resolveSubunitCrossLinks(v, containerUnit.Subunits, subunitOrder, containerPath)
+	resolveSubunitCrossLinks(v, containerUnit.Subunits, subunitOrderOf(containerUnit), containerPath)
 
 	return v
 }

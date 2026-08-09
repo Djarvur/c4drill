@@ -19,14 +19,11 @@ linters:
     - ireturn # returning interfaces is acceptable
     - varnamelen # short variable names are idiomatic in Go
     - tagliatelle # JSON tags follow external API conventions
-    - dupl # duplicate detection too noisy for test code
     - cyclop # cyclomatic complexity covered by other linters
     - goconst # repeated strings in test fixtures are intentional
-    - funlen # test functions are long by design
     - nlreturn # blank-line-before-return style, not enforced
     - mnd # magic numbers are self-evident in context
     - modernize # Go modernization suggestions, tracked separately
-    - gosmopolitan # non-ASCII string literals (e.g. CJK wrap tests) are intentional
     - maintidx # maintainability index, not actionable
     - nestif # nested-if complexity covered by gocognit
   settings:
@@ -45,3 +42,11 @@ linters:
       - linters:
           - errcheck
         text: 'Error return value of `.*Close` is not checked'
+      # dupl/funlen/gosmopolitan: test code is exempt (duplicated fixtures,
+      # long test functions, and intentional non-ASCII literals like the CJK
+      # wrap tests) — production code stays fully checked.
+      - linters:
+          - dupl
+          - funlen
+          - gosmopolitan
+        path: '(_test|_internal_test)\.go$'

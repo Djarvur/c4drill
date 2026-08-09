@@ -298,7 +298,7 @@ func TestExternalNodes(t *testing.T) {
 	})
 }
 
-//nolint:paralleltest,funlen // go-graphviz WASM engine has concurrency issues
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestCreateNode_WithExploreURL(t *testing.T) {
 	t.Run("node with ExploreURL gets URL attribute in DOT output", func(t *testing.T) {
 		g := &graph.Graph{
@@ -393,7 +393,7 @@ func TestNodeRoundedStyle(t *testing.T) {
 	})
 }
 
-//nolint:paralleltest,funlen // go-graphviz WASM engine has concurrency issues
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestEdgeColorRendering(t *testing.T) {
 	t.Run("edge with color has color attribute in DOT", func(t *testing.T) {
 		g := &graph.Graph{
