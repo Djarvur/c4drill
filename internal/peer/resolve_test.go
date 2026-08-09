@@ -42,6 +42,7 @@ link = [{peer = "sessionManager"}]
 [mainSystem.localIDP.sessionManager]
 type = "component"
 `
+
 	m := mustParse(t, toml)
 	require.NoError(t, peer.Resolve(m))
 
@@ -68,10 +69,11 @@ type = "container"
 [frontend.api.handlers]
 type = "component"
 
-[frontend.api.handlers.auth]
+	[frontend.api.handlers.auth]
 type = "component"
 link = [{peer = "cache"}]
 `
+
 	m := mustParse(t, toml)
 	require.NoError(t, peer.Resolve(m))
 
@@ -98,6 +100,7 @@ type = "container"
 type = "component"
 link = [{peer = "messageBus"}]
 `
+
 	m := mustParse(t, toml)
 	require.NoError(t, peer.Resolve(m))
 
@@ -129,6 +132,7 @@ type = "component"
 type = "component"
 link = [{peer = "x"}]
 `
+
 	m := mustParse(t, toml)
 	require.NoError(t, peer.Resolve(m))
 
@@ -156,6 +160,7 @@ type = "container"
 [already.dotted.path]
 type = "component"
 `
+
 	m := mustParse(t, toml)
 	require.NoError(t, peer.Resolve(m))
 
@@ -181,6 +186,7 @@ type = "container"
 type = "component"
 link = [{peer = "x"}]
 `
+
 	m := mustParse(t, toml)
 	err := peer.Resolve(m)
 	require.Error(t, err)
@@ -209,21 +215,26 @@ type = "container"
 [[host.sibling.linkFrom]]
 peer = "target"
 `
+
 	m := mustParse(t, toml)
 	require.NoError(t, peer.Resolve(m))
 
 	// host.sibling.linkFrom[0].peer "target" should rewrite to host.target
 	found := false
+
 	walkUnits(t, m, func(unitPath string, unit *model.Unit) {
 		if unitPath != "host.sibling" {
 			return
 		}
+
 		for _, lf := range unit.LinksFrom {
 			if lf.Mirror {
 				continue // skip validator-synthesized mirrors; Resolve runs before they exist anyway
 			}
+
 			if lf.Peer == "host.target" || lf.Peer == "target" {
 				found = true
+
 				assert.Equal(t, "host.target", lf.Peer,
 					"authored linkFrom bare peer must rewrite like an outgoing link")
 			}
@@ -302,10 +313,12 @@ func mustFindLink(t *testing.T, m *parser.Model, hostPath, originalPeer, expecte
 	t.Helper()
 
 	var found *model.Link
+
 	walkUnits(t, m, func(unitPath string, unit *model.Unit) {
 		if unitPath != hostPath || found != nil {
 			return
 		}
+
 		for i := range unit.Links {
 			p := unit.Links[i].Peer
 			if p == originalPeer || p == expectedAfter {
@@ -314,6 +327,7 @@ func mustFindLink(t *testing.T, m *parser.Model, hostPath, originalPeer, expecte
 			}
 		}
 	})
+
 	if found == nil {
 		t.Fatalf("expected a link on %s with peer %q or %q; none found", hostPath, originalPeer, expectedAfter)
 	}
@@ -327,21 +341,26 @@ func walkUnits(t *testing.T, m *parser.Model, fn func(unitPath string, unit *mod
 	t.Helper()
 
 	var walk func(units map[string]*model.Unit, parentPath string)
+
 	walk = func(units map[string]*model.Unit, parentPath string) {
 		// Stable order so failure messages are reproducible.
 		names := make([]string, 0, len(units))
 		for name := range units {
 			names = append(names, name)
 		}
+
 		sort.Strings(names)
 
 		for _, name := range names {
 			unit := units[name]
 			fullPath := name
+
 			if parentPath != "" {
 				fullPath = parentPath + "." + name
 			}
+
 			fn(fullPath, unit)
+
 			if len(unit.Subunits) > 0 {
 				walk(unit.Subunits, fullPath)
 			}
@@ -357,14 +376,17 @@ func collectPeerSet(t *testing.T, m *parser.Model) []string {
 	t.Helper()
 
 	var pairs []string
+
 	walkUnits(t, m, func(unitPath string, unit *model.Unit) {
 		for _, l := range unit.Links {
 			pairs = append(pairs, unitPath+"\tLinks\t"+l.Peer)
 		}
+
 		for _, lf := range unit.LinksFrom {
 			if lf.Mirror {
 				continue
 			}
+
 			pairs = append(pairs, unitPath+"\tLinksFrom\t"+lf.Peer)
 		}
 	})

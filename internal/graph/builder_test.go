@@ -825,6 +825,7 @@ func TestBuildExpandedGraphRealToml(t *testing.T) {
 
 	// Find the edge from client to externalSys
 	var foundEdge *graph.Edge
+
 	for _, edge := range g.Edges {
 		if edge.Source == "mainSystem.storages.externalStorage.client" && edge.Target == "externalSys" {
 			foundEdge = edge
@@ -1318,12 +1319,15 @@ func TestBuildGraphDeterministicOrder(t *testing.T) {
 
 		// Call BuildGraph multiple times and collect results
 		orders := make([][]string, 0, 5)
+
 		for range 5 {
 			g := graph.BuildGraph(v)
+
 			ids := make([]string, len(g.Nodes))
 			for j, node := range g.Nodes {
 				ids[j] = node.ID
 			}
+
 			orders = append(orders, ids)
 		}
 
@@ -1931,6 +1935,7 @@ func TestBuildEdgesPenwidthLinkFromContributions(t *testing.T) {
 		g := graph.BuildGraph(v)
 
 		require.Len(t, g.Edges, 2)
+
 		for _, edge := range g.Edges {
 			assert.Zero(t, edge.PenWidth, "mirrors are synthetic duplicates, not contributing links (D-05)")
 		}

@@ -60,7 +60,9 @@ func wrapText(text string, maxChars int) string {
 		// Word fits on current line (with space if not first word on line)
 		if currentLen > 0 && currentLen+1+wordLen <= maxChars {
 			currentLine.WriteRune(' ')
+
 			currentLine.WriteString(word)
+
 			currentLen += 1 + wordLen
 
 			continue
@@ -74,6 +76,7 @@ func wrapText(text string, maxChars int) string {
 			}
 
 			currentLine.WriteString(word)
+
 			currentLen = wordLen
 
 			continue
@@ -82,7 +85,9 @@ func wrapText(text string, maxChars int) string {
 		// Word exceeds maxChars - force character-level break
 		if currentLen > 0 {
 			lines = append(lines, currentLine.String())
+
 			currentLine.Reset()
+
 			currentLen = 0
 		}
 
@@ -164,6 +169,7 @@ func labelMaxCharsNoIcon(rowCount int) int {
 	if chars < minCharsPerLine {
 		return minCharsPerLine
 	}
+
 	return chars
 }
 
@@ -181,6 +187,7 @@ func labelMaxCharsForCylinder(rowCount int) int {
 	if chars < minCharsForCylinder {
 		return minCharsForCylinder
 	}
+
 	return chars
 }
 
@@ -198,6 +205,7 @@ func labelMaxCharsForQueue(rowCount int) int {
 	if chars < minCharsForQueue {
 		return minCharsForQueue
 	}
+
 	return chars
 }
 
@@ -211,6 +219,7 @@ func labelMaxCharsForPerson(rowCount int) int {
 	if effectiveRows < 2 {
 		effectiveRows = 2
 	}
+
 	textWidth := calculateTextWidth(effectiveRows, LabelRatio)
 	chars := estimateCharsFromWidth(textWidth)
 	// Use lower minimum for Person to encourage wrapping for better proportions
@@ -218,5 +227,6 @@ func labelMaxCharsForPerson(rowCount int) int {
 	if chars < minCharsForPerson {
 		return minCharsForPerson
 	}
+
 	return chars
 }

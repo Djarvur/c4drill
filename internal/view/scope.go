@@ -608,6 +608,7 @@ func sortBoundaryNodesByModelOrder(v *View, m *parser.Model) {
 	// Split UnitOrder: internal entries (not IsBoundary/IsExternal) stay first,
 	// boundary entries get sorted by model definition order.
 	var internal, boundary []string
+
 	for _, path := range v.UnitOrder {
 		entry := v.Units[path]
 		if entry != nil && (entry.IsBoundary || entry.IsExternal) {
@@ -641,6 +642,7 @@ func sortBoundaryNodesByModelOrder(v *View, m *parser.Model) {
 		// Unknown keys sort after known ones, preserving relative order
 		oi, okI := topIndex[keyI]
 		oj, okJ := topIndex[keyJ]
+
 		if !okI && !okJ {
 			return boundary[i] < boundary[j]
 		}
@@ -771,6 +773,7 @@ func resolveBoundaryByDivergence(expandedUnit, peer string) string {
 
 	// Find the common prefix length
 	common := 0
+
 	for i := 0; i < len(expandedParts) && i < len(peerParts); i++ {
 		if expandedParts[i] == peerParts[i] {
 			common++
@@ -930,6 +933,7 @@ func resolveSubunitCrossLinks(v *View, subunits map[string]*model.Unit, subunitO
 
 		fullPath := parentPath + "." + name
 		subunitEntry := v.Units[fullPath]
+
 		if subunitEntry == nil {
 			continue
 		}

@@ -251,6 +251,7 @@ func TestQueueShape(t *testing.T) {
 		queueIdx := strings.Index(dotStr, `queue1`)
 		cylinderIdx := strings.Index(dotStr, `shape=cylinder`)
 		nextNodeIdx := strings.Index(dotStr[queueIdx+1:], "\n\t")
+
 		if nextNodeIdx == -1 || cylinderIdx < queueIdx+nextNodeIdx {
 			t.Error("Queue node should NOT have cylinder shape")
 		}
