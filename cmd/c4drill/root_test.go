@@ -1096,21 +1096,8 @@ func countBarePeers(m *parser.Model) int {
 
 	walk = func(units map[string]*model.Unit) {
 		for _, unit := range units {
-			for _, l := range unit.Links {
-				if !strings.Contains(l.Peer, ".") {
-					count++
-				}
-			}
-
-			for _, lf := range unit.LinksFrom {
-				if lf.Mirror {
-					continue
-				}
-
-				if !strings.Contains(lf.Peer, ".") {
-					count++
-				}
-			}
+			count += bareLinkPeers(unit.Links)
+			count += bareLinkFromPeers(unit.LinksFrom)
 
 			if len(unit.Subunits) > 0 {
 				walk(unit.Subunits)
@@ -1120,6 +1107,38 @@ func countBarePeers(m *parser.Model) int {
 	walk(m.Units)
 
 	return count
+}
+
+// bareLinkPeers counts Link.Peer values that contain no '.' (the relative
+// form peer.Resolve rewrites).
+func bareLinkPeers(links []model.Link) int {
+	n := 0
+
+	for _, l := range links {
+		if !strings.Contains(l.Peer, ".") {
+			n++
+		}
+	}
+
+	return n
+}
+
+// bareLinkFromPeers counts authored (non-mirror) LinksFrom.Peer values that
+// contain no '.' (the relative form peer.Resolve rewrites).
+func bareLinkFromPeers(links []model.Link) int {
+	n := 0
+
+	for _, lf := range links {
+		if lf.Mirror {
+			continue
+		}
+
+		if !strings.Contains(lf.Peer, ".") {
+			n++
+		}
+	}
+
+	return n
 }
 
 // --- Phase 32: include.Resolve pipeline wiring (Plan 32-02) ---

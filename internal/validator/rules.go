@@ -200,14 +200,7 @@ func validateUnitNesting(path string, info *UnitInfo, index map[string]*UnitInfo
 
 	// Top-level units must be C1 types
 	if info.Parent == "" {
-		if !c1Types[unitType] {
-			return ValidationErrors{&ValidationError{
-				Message: fmt.Sprintf(`unit "%s" has type %s which is not allowed at top level (C1 types only)`, path, unitType),
-				Path:    path,
-			}}
-		}
-
-		return nil
+		return requireChildType(path, unitType, c1Types, "is not allowed at top level (C1 types only)")
 	}
 
 	// Nested units: check parent type to determine allowed child types
@@ -217,76 +210,42 @@ func validateUnitNesting(path string, info *UnitInfo, index map[string]*UnitInfo
 		return nil
 	}
 
-	parentType := parentInfo.Unit.Type
-
-	// If parent is system, children must be C2
-	if parentType == model.TypeSystem {
-		if !c2Types[unitType] {
-			return ValidationErrors{&ValidationError{
-				Message: fmt.Sprintf(`unit "%s" has type %s which must be C2 type (inside system)`,
-					path, unitType),
-				Path:    path,
-			}}
-		}
-
+	switch parentInfo.Unit.Type {
+	case model.TypeSystem:
+		return requireChildType(path, unitType, c2Types, "must be C2 type (inside system)")
+	case model.TypeBox:
+		return requireChildType(path, unitType, c1Types, "must be C1 type (inside C1 box)")
+	case model.TypeContainer:
+		return requireChildType(path, unitType, c3Types, "must be C3 type (inside container)")
+	case model.TypeContainerBox:
+		return requireChildType(path, unitType, c2Types, "must be C2 type (inside containerBox)")
+	case model.TypeComponentBox:
+		return requireChildType(path, unitType, c3Types, "must be C3 type (inside componentBox)")
+	case model.TypePerson, model.TypePersonExternal, model.TypeSystemExternal,
+		model.TypeDb, model.TypeDbExternal, model.TypeQueue, model.TypeQueueExternal,
+		model.TypeContainerDb, model.TypeContainerQueue,
+		model.TypeComponent, model.TypeComponentDb, model.TypeComponentQueue:
+		// These parent types cannot have children — handled by ValidateSubunitRules.
 		return nil
 	}
 
-	// If parent is C1 box, children must be C1 (same-level grouping)
-	if parentType == model.TypeBox {
-		if !c1Types[unitType] {
-			return ValidationErrors{&ValidationError{
-				Message: fmt.Sprintf(`unit "%s" has type %s which must be C1 type (inside C1 box)`,
-					path, unitType),
-				Path:    path,
-			}}
-		}
-
-		return nil
-	}
-
-	// If parent is container, children must be C3
-	if parentType == model.TypeContainer {
-		if !c3Types[unitType] {
-			return ValidationErrors{&ValidationError{
-				Message: fmt.Sprintf(`unit "%s" has type %s which must be C3 type (inside container)`,
-					path, unitType),
-				Path:    path,
-			}}
-		}
-
-		return nil
-	}
-
-	// If parent is containerBox (C2), children must be C2 (same-level grouping)
-	if parentType == model.TypeContainerBox {
-		if !c2Types[unitType] {
-			return ValidationErrors{&ValidationError{
-				Message: fmt.Sprintf(`unit "%s" has type %s which must be C2 type (inside containerBox)`,
-					path, unitType),
-				Path:    path,
-			}}
-		}
-
-		return nil
-	}
-
-	// If parent is componentBox (C3), children must be C3 (same-level grouping)
-	if parentType == model.TypeComponentBox {
-		if !c3Types[unitType] {
-			return ValidationErrors{&ValidationError{
-				Message: fmt.Sprintf(`unit "%s" has type %s which must be C3 type (inside componentBox)`,
-					path, unitType),
-				Path:    path,
-			}}
-		}
-
-		return nil
-	}
-
-	// Other parent types (person, systemExternal, db, queue, C2/C3 leaf variants) cannot have children
-	// This is handled by ValidateSubunitRules, so we skip here
 	return nil
+}
+
+// requireChildType returns an error when unitType is not in the allowed set
+// for its parent; nil when it is.
+func requireChildType(
+	path string, unitType model.UnitType,
+	allowed map[model.UnitType]bool, expected string,
+) ValidationErrors {
+	if allowed[unitType] {
+		return nil
+	}
+
+	return ValidationErrors{&ValidationError{
+		Message: fmt.Sprintf(`unit "%s" has type %s which %s`, path, unitType, expected),
+		Path:    path,
+	}}
 }
 
 // externalTypes maps all C1 external types for O(1) lookup.

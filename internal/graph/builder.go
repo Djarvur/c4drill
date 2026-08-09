@@ -28,18 +28,33 @@ func BuildGraph(v *view.View) *Graph {
 
 	// For C2/C3 views, wrap internal nodes in a boundary cluster
 	if v.Level != view.LevelC1 && v.ExpandedUnit != "" {
-		boundaryCluster := buildBoundaryCluster(v)
+		buildBoundaryViewGraph(v, g)
+	} else {
+		// C1 view: build nodes and clusters in definition order
+		buildC1ViewGraph(v, g)
+	}
 
-		// Build nodes and clusters in definition order
-		for _, key := range v.UnitOrder {
-			entry := v.Units[key]
+	// Build edges
+	g.Edges = buildEdges(v)
 
-		// Boundary nodes (external entities and resolved siblings) go at top
-		// level — outside the expanded unit's cluster. IsBoundary covers both
-		// genuinely external units (actors, external systems) and sibling
-		// containers resolved as boundary nodes. IsExternal alone is not
-		// sufficient because regular containers/systems are IsExternal=false
-		// but still need top-level placement when they're boundary nodes.
+	return g
+}
+
+// buildBoundaryViewGraph renders C2/C3 views: boundary/external nodes go at
+// top level — outside the expanded unit's cluster — while internal nodes are
+// wrapped in the boundary cluster.
+func buildBoundaryViewGraph(v *view.View, g *Graph) {
+	boundaryCluster := buildBoundaryCluster(v)
+
+	// Build nodes and clusters in definition order
+	for _, key := range v.UnitOrder {
+		entry := v.Units[key]
+
+		// IsBoundary covers both genuinely external units (actors, external
+		// systems) and sibling containers resolved as boundary nodes.
+		// IsExternal alone is not sufficient because regular
+		// containers/systems are IsExternal=false but still need top-level
+		// placement when they're boundary nodes.
 		if entry.IsBoundary || entry.IsExternal {
 			node := buildNode(entry)
 			g.Nodes = append(g.Nodes, node)
@@ -47,48 +62,44 @@ func BuildGraph(v *view.View) *Graph {
 			continue
 		}
 
-			// Internal nodes go inside the boundary cluster. D-07 (same guard as
-			// the C1 branch): expansion only takes effect when there are subunits
-			// to show — an expanded-but-empty unit renders as a plain node.
-			if entry.IsExpanded && len(entry.Unit.Subunits) > 0 {
-				cluster := buildCluster(entry)
-				boundaryCluster.Clusters = append(boundaryCluster.Clusters, cluster)
-			} else {
-				node := buildNode(entry)
-				node.IsInCluster = true
-				boundaryCluster.Nodes = append(boundaryCluster.Nodes, node)
-			}
-		}
-
-		g.Clusters = append(g.Clusters, boundaryCluster)
-	} else {
-		// C1 view: build nodes and clusters in definition order (from view.UnitOrder)
-		for _, key := range v.UnitOrder {
-			// Visible subunits are rendered inside their parent cluster by
-			// buildCluster — skipping prevents duplicate node IDs in DOT.
-			// Nil-map reads are safe, so views without VisiblePaths (C2/C3,
-			// expanded, hand-built) are unaffected.
-			if v.VisiblePaths[key] {
-				continue
-			}
-
-			entry := v.Units[key]
-			// D-07: expansion only takes effect when there are subunits to
-			// show — an expanded-but-empty unit renders as a plain node.
-			if entry.IsExpanded && len(entry.Unit.Subunits) > 0 {
-				cluster := buildCluster(entry)
-				g.Clusters = append(g.Clusters, cluster)
-			} else {
-				node := buildNode(entry)
-				g.Nodes = append(g.Nodes, node)
-			}
+		// Internal nodes go inside the boundary cluster. D-07 (same guard as
+		// the C1 branch): expansion only takes effect when there are subunits
+		// to show — an expanded-but-empty unit renders as a plain node.
+		if entry.IsExpanded && len(entry.Unit.Subunits) > 0 {
+			cluster := buildCluster(entry)
+			boundaryCluster.Clusters = append(boundaryCluster.Clusters, cluster)
+		} else {
+			node := buildNode(entry)
+			node.IsInCluster = true
+			boundaryCluster.Nodes = append(boundaryCluster.Nodes, node)
 		}
 	}
 
-	// Build edges
-	g.Edges = buildEdges(v)
+	g.Clusters = append(g.Clusters, boundaryCluster)
+}
 
-	return g
+// buildC1ViewGraph renders the C1 view: nodes and clusters in definition
+// order (from view.UnitOrder). Visible subunits are rendered inside their
+// parent cluster by buildCluster — skipping prevents duplicate node IDs in
+// DOT. Nil-map reads are safe, so views without VisiblePaths (C2/C3,
+// expanded, hand-built) are unaffected.
+func buildC1ViewGraph(v *view.View, g *Graph) {
+	for _, key := range v.UnitOrder {
+		if v.VisiblePaths[key] {
+			continue
+		}
+
+		entry := v.Units[key]
+		// D-07: expansion only takes effect when there are subunits to
+		// show — an expanded-but-empty unit renders as a plain node.
+		if entry.IsExpanded && len(entry.Unit.Subunits) > 0 {
+			cluster := buildCluster(entry)
+			g.Clusters = append(g.Clusters, cluster)
+		} else {
+			node := buildNode(entry)
+			g.Nodes = append(g.Nodes, node)
+		}
+	}
 }
 
 // buildBoundaryCluster creates a cluster representing the expanded system/container
