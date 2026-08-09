@@ -2,7 +2,7 @@
 # Included once=true from entry.toml; defines [template.microservice] (XC-02).
 # This file is pulled in by [[include]] in entry.toml and the template it
 # defines becomes visible to the [[use]] in entry.toml ONLY because include.Resolve
-# runs BEFORE template.Expand in the pipeline (see SKILL.adoc ### Pipeline Ordering).
+# runs BEFORE template.Expand in the pipeline (see SKILL.md ### Pipeline Ordering).
 #
 # The template is a PARENT (has a cache subunit, TMPL-04); per the validator rule
 # the parent itself carries no direct links. The cache subunit carries the
