@@ -947,7 +947,7 @@ name = "Without Reference"
 
 	without, ok := gotNoKey.Units["without"]
 	require.True(t, ok, "missing 'without' unit")
-	assert.Equal(t, "", without.Reference, "absent reference key should parse to empty string")
+	assert.Empty(t, without.Reference, "absent reference key should parse to empty string")
 
 	// Case 2: explicit empty `reference = ""`.
 	dataEmpty := []byte(`
@@ -964,7 +964,7 @@ reference = ""
 
 	empty, ok := gotEmpty.Units["empty"]
 	require.True(t, ok, "missing 'empty' unit")
-	assert.Equal(t, "", empty.Reference, "empty reference value should parse to empty string")
+	assert.Empty(t, empty.Reference, "empty reference value should parse to empty string")
 }
 
 // TestReferenceField_NoPhantomSubunit exercises REF-05 / BC-1: a unit authored

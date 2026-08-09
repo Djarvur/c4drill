@@ -26,7 +26,6 @@ linters:
     - nlreturn # blank-line-before-return style, not enforced
     - mnd # magic numbers are self-evident in context
     - modernize # Go modernization suggestions, tracked separately
-    - testifylint # assertion style in tests, not enforced
     - testpackage # black-box test packages not required
     - revive # umbrella style linter; specific rules not adopted
     - nolintlint # nolint usage style, not enforced

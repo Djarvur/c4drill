@@ -437,7 +437,7 @@ func TestIntegrationC1ViewNoNestedBoundaryPollution(t *testing.T) {
 	require.NotNil(t, v)
 
 	// C1 should show exactly 5 top-level units: webUser, sshUser, adminUser, keycloak, linuxSystem
-	assert.Equal(t, 5, len(v.Units), "C1 should have exactly 5 nodes, got %d: %v", len(v.Units), keys(v.Units))
+	assert.Len(t, v.Units, 5, "C1 should have exactly 5 nodes, got %d: %v", len(v.Units), keys(v.Units))
 
 	// Verify each expected node is present
 	assert.Contains(t, v.Units, "webUser")
@@ -584,7 +584,7 @@ func TestIntegrationC1EdgeResolution(t *testing.T) {
 	require.NotNil(t, v)
 
 	// Should have 3 nodes: webUser, system, externaldb
-	assert.Equal(t, 3, len(v.Units))
+	assert.Len(t, v.Units, 3)
 
 	// webUser should have a resolved link to system (not system.api.handler)
 	if assert.NotNil(t, v.Units["webUser"].ResolvedLinks) {
