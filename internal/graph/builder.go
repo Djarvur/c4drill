@@ -631,7 +631,7 @@ func BuildGraphWithPath(v *view.View, currentPath, basename, format string) *Gra
 
 	// Add navigation for C2/C3 views
 	if v.Level != view.LevelC1 && v.ExpandedUnit != "" {
-		g.Navigation = buildNavigation(v, currentPath, basename, format)
+		g.Navigation = buildNavigation(v, basename, format)
 	}
 
 	return g
@@ -651,7 +651,11 @@ func shouldHaveExploreLink(node *Node, v *view.View) bool {
 		model.TypeContainer, model.TypeContainerBox,
 		model.TypeComponentBox:
 		// These types can have subunits
-	default:
+	case model.TypePerson, model.TypePersonExternal, model.TypeSystemExternal,
+		model.TypeDb, model.TypeDbExternal, model.TypeQueue, model.TypeQueueExternal,
+		model.TypeContainerDb, model.TypeContainerQueue,
+		model.TypeComponent, model.TypeComponentDb, model.TypeComponentQueue:
+		// Leaf types — no subunits
 		return false
 	}
 
@@ -666,7 +670,7 @@ func shouldHaveExploreLink(node *Node, v *view.View) bool {
 // entry (same destination, same label). The breadcrumb trail alone covers
 // up-navigation to any ancestor. ComputeBackLinkURL is still used internally
 // by buildBreadcrumbs to compute the root ancestor's URL.
-func buildNavigation(v *view.View, currentPath, basename, format string) *Navigation {
+func buildNavigation(v *view.View, basename, format string) *Navigation {
 	nav := &Navigation{}
 
 	// Build breadcrumbs from the expanded unit path

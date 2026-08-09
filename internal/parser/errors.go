@@ -44,7 +44,8 @@ func (e *ParseError) Unwrap() error {
 // If the error is not recognized, it returns a generic ParseError.
 func wrapDecodeError(err error) error {
 	// Handle unstable.ParserError (from unstable API)
-	if pe, ok := err.(*unstable.ParserError); ok {
+	var pe *unstable.ParserError
+	if errors.As(err, &pe) {
 		// ParserError has Highlight (byte offset), need to convert to line number
 		// We need the original data to calculate line - check if we can get it
 		return &ParseError{

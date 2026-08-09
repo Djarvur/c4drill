@@ -444,7 +444,7 @@ func GenerateC2View(m *parser.Model, systemPath string) *View {
 	// descendant of subunit B (or to an external boundary node), create a
 	// resolved link A -> B on subunit A's entry. Without this, edges between
 	// sibling subunits are lost because the peer path is too deep for isTargetInView.
-	resolveSubunitCrossLinks(v, m, systemUnit.Subunits, subunitOrder, systemPath)
+	resolveSubunitCrossLinks(v, systemUnit.Subunits, subunitOrder, systemPath)
 
 	return v
 }
@@ -531,7 +531,7 @@ func GenerateC3View(m *parser.Model, containerPath string) *View {
 	// Resolve cross-subunit links: when a descendant of one component links to
 	// a descendant of another component (or to an external boundary node), create
 	// a resolved link between the components.
-	resolveSubunitCrossLinks(v, m, containerUnit.Subunits, subunitOrder, containerPath)
+	resolveSubunitCrossLinks(v, containerUnit.Subunits, subunitOrder, containerPath)
 
 	return v
 }
@@ -921,7 +921,7 @@ func resolveToViewAncestor(v *View, peer string) string {
 // This ensures that edges between sibling subunits (e.g., dacProxy -> authModules)
 // appear in C2/C3 diagrams even though the actual links are between deeply nested
 // descendants (e.g., dacProxy.Unit.Links -> authModules.otp.settingsAPI).
-func resolveSubunitCrossLinks(v *View, m *parser.Model, subunits map[string]*model.Unit, subunitOrder []string, parentPath string) {
+func resolveSubunitCrossLinks(v *View, subunits map[string]*model.Unit, subunitOrder []string, parentPath string) {
 	for _, name := range subunitOrder {
 		unit := subunits[name]
 		if unit == nil {

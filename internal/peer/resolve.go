@@ -177,7 +177,7 @@ func ancestorScopes(hostPath string, m *parser.Model) []scope {
 	accPath := ""
 
 	// All segments except the last name ancestors of the host.
-	for i := 0; i < len(segments)-1; i++ {
+	for i := range len(segments) - 1 {
 		seg := segments[i]
 		unit, ok := current[seg]
 		if !ok {

@@ -153,20 +153,6 @@ func calculateTextWidth(rowCount int, ratio float64) int {
 	return textWidth
 }
 
-// labelMaxChars calculates the maximum characters per line for a label
-// based on the number of content rows and the current LabelRatio.
-// This is used for labels with an icon column (Person labels).
-func labelMaxChars(rowCount int) int {
-	textWidth := calculateTextWidth(rowCount, LabelRatio)
-	chars := estimateCharsFromWidth(textWidth)
-
-	if chars < minCharsPerLine {
-		return minCharsPerLine
-	}
-
-	return chars
-}
-
 // labelMaxCharsNoIcon calculates the maximum characters per line for a label
 // without an icon column, based on the number of content rows and the current LabelRatio.
 // This is used for single-column labels (DB, Queue, System, Container, Component).

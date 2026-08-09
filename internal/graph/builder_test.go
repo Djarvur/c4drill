@@ -1317,8 +1317,8 @@ func TestBuildGraphDeterministicOrder(t *testing.T) {
 		v := view.GenerateC1View(m)
 
 		// Call BuildGraph multiple times and collect results
-		var orders [][]string
-		for i := 0; i < 5; i++ {
+		orders := make([][]string, 0, 5)
+		for range 5 {
 			g := graph.BuildGraph(v)
 			ids := make([]string, len(g.Nodes))
 			for j, node := range g.Nodes {

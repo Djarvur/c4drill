@@ -172,8 +172,12 @@ func configureGraphSettings(cg *cgraph.Graph, g *graph.Graph) error {
 	cg.SetFontName("Helvetica")
 	cg.SetFontSize(fontSizeGraph)
 	// Set default fontname for nodes (kind=1) and edges (kind=2)
-	cg.Attr(1, "fontname", "Helvetica") // nodes
-	cg.Attr(2, "fontname", "Helvetica") // edges
+	if _, err := cg.Attr(1, "fontname", "Helvetica"); err != nil { // nodes
+		return fmt.Errorf("set node fontname: %w", err)
+	}
+	if _, err := cg.Attr(2, "fontname", "Helvetica"); err != nil { // edges
+		return fmt.Errorf("set edge fontname: %w", err)
+	}
 
 	// Build combined HTML graph label with navigation and title (Gap 2).
 	//

@@ -95,7 +95,7 @@ func splitWords(runes []rune) [][]rune {
 // hasLowerRun reports whether at least min consecutive lowercase runes begin at
 // runes[from]. Used to gate the upper→upper→lower split on a substantial
 // lowercase word following the upper run.
-func hasLowerRun(runes []rune, from, min int) bool {
+func hasLowerRun(runes []rune, from, minCount int) bool {
 	count := 0
 	for i := from; i < len(runes); i++ {
 		if !unicode.IsLower(runes[i]) {
@@ -104,7 +104,7 @@ func hasLowerRun(runes []rune, from, min int) bool {
 		count++
 	}
 
-	return count >= min
+	return count >= minCount
 }
 
 // titleWord formats a word for display. When preserveUpper is true the word is

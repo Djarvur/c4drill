@@ -1068,6 +1068,7 @@ func TestCLICorpusRendersUnchanged(t *testing.T) {
 
 	for _, fix := range corpus {
 		t.Run(fix, func(t *testing.T) {
+			//nolint:gosec // test fixture read, path comes from the fixed corpus above
 			data, err := os.ReadFile(filepath.Join("testdata", fix))
 			require.NoError(t, err, "failed to read corpus fixture %s", fix)
 

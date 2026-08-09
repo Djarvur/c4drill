@@ -197,7 +197,7 @@ func collectExpandedPaths(m *parser.Model) []string {
 
 	// Recursively find units with subunits (auto-detect expandable units)
 	for name, unit := range m.Units {
-		paths = append(paths, collectExpandableUnitPaths(m, name, unit)...)
+		paths = append(paths, collectExpandableUnitPaths(name, unit)...)
 	}
 
 	return paths
@@ -205,7 +205,7 @@ func collectExpandedPaths(m *parser.Model) []string {
 
 // collectExpandableUnitPaths recursively collects paths of units that should have sub-diagrams.
 // A unit gets a sub-diagram if it has subunits (auto-detect).
-func collectExpandableUnitPaths(m *parser.Model, parentPath string, unit *model.Unit) []string {
+func collectExpandableUnitPaths(parentPath string, unit *model.Unit) []string {
 	var paths []string
 
 	// Auto-detect: any unit with subunits should have a sub-diagram
@@ -229,7 +229,7 @@ func collectExpandableUnitPaths(m *parser.Model, parentPath string, unit *model.
 			}
 
 			subPath := parentPath + "." + subName
-			paths = append(paths, collectExpandableUnitPaths(m, subPath, subUnit)...)
+			paths = append(paths, collectExpandableUnitPaths(subPath, subUnit)...)
 		}
 	}
 
