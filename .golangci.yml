@@ -27,7 +27,6 @@ linters:
     - mnd # magic numbers are self-evident in context
     - modernize # Go modernization suggestions, tracked separately
     - testpackage # black-box test packages not required
-    - revive # umbrella style linter; specific rules not adopted
     - gosmopolitan # non-ASCII string literals (e.g. CJK wrap tests) are intentional
     - gocritic # stylistic suggestions, not adopted
     - godot # period-at-end-of-comment style, not enforced
