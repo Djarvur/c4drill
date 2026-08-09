@@ -27,13 +27,13 @@ func TestValidate_ValidModel(t *testing.T) {
 			"api": {
 				Type: model.TypeSystem,
 				Links: []model.Link{
-			{Peer: "db"},
+					{Peer: "db"},
 				},
 			},
 			"db": {
 				Type: model.TypeDb,
 				LinksFrom: []model.Link{
-			{Peer: "api"},
+					{Peer: "api"},
 				},
 			},
 		},
@@ -61,7 +61,7 @@ func TestValidate_InvalidModel(t *testing.T) {
 			"system": {
 				Type: model.TypeSystem,
 				Links: []model.Link{
-			{Peer: "undefined"},
+					{Peer: "undefined"},
 				},
 				Subunits: map[string]*model.Unit{
 					"api": {Type: model.TypeContainer},
@@ -98,7 +98,7 @@ func TestValidate_NestedUnits(t *testing.T) {
 					"api": {
 						Type: model.TypeContainer,
 						Links: []model.Link{
-			{Peer: "undefined"},
+							{Peer: "undefined"},
 						},
 					},
 				},

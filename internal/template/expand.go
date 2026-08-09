@@ -105,9 +105,9 @@ func expandInstantiation(
 	tmpl, ok := m.Templates[inst.Template]
 	if !ok {
 		return &ExpandError{
-			Kind:    "unknown template",
-			Site:    siteLabel(inst, index),
-			Detail:  fmt.Sprintf("template %q is not defined", inst.Template),
+			Kind:   "unknown template",
+			Site:   siteLabel(inst, index),
+			Detail: fmt.Sprintf("template %q is not defined", inst.Template),
 		}
 	}
 
@@ -147,8 +147,8 @@ func expandInstantiation(
 	name := inst.Params[nameParam]
 	if name == "" {
 		return &ExpandError{
-			Kind:   "missing parameter",
-			Site:   siteLabel(inst, index),
+			Kind: "missing parameter",
+			Site: siteLabel(inst, index),
 			Detail: fmt.Sprintf(
 				"template %q instantiation is missing the %q parameter "+
 					"(produces the unit path segment)",
@@ -453,7 +453,7 @@ func siteLabel(inst parser.Instantiation, index int) string {
 // pathTracker records the full paths claimed by hand-authored units and
 // expanded instances so a duplicate is caught as a single hard error (TMPL-07).
 type pathTracker struct {
-	owner  map[string]string // path -> source label
+	owner map[string]string // path -> source label
 }
 
 func newPathTracker(m *parser.Model) *pathTracker {

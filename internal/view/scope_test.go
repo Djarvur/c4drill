@@ -783,7 +783,7 @@ func TestGenerateC3View_CrossSubtreeLinkResolvesToSiblingBranch(t *testing.T) {
 										// these trigger boundary node resolution.
 										LinksFrom: []model.Link{
 											{Peer: "mainSystem.sshAuth.systemd.userdbd"}, // cross-subtree
-											{Peer: "mainSystem.dacProxy"},                 // different branch
+											{Peer: "mainSystem.dacProxy"},                // different branch
 										},
 									},
 								},
@@ -1291,9 +1291,9 @@ func expandedC1Model(sshAuthLinks []model.Link) *parser.Model {
 				Expanded: []string{linuxSystemPath},
 				Subunits: map[string]*model.Unit{
 					"sshAuth": {
-						Type:     model.TypeContainerBox,
-						Name:     "SSH Auth",
-						Links:    sshAuthLinks,
+						Type:  model.TypeContainerBox,
+						Name:  "SSH Auth",
+						Links: sshAuthLinks,
 						Subunits: map[string]*model.Unit{
 							"sshd": {
 								Type: model.TypeContainer,

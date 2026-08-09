@@ -232,12 +232,11 @@ func configureGraphSettings(cg *cgraph.Graph, g *graph.Graph) error {
 	combinedHTML := "<TABLE BORDER=\"0\" CELLBORDER=\"0\" CELLSPACING=\"0\" CELLPADDING=\"0\" ALIGN=\"CENTER\">" +
 		strings.Join(rows, "") + "</TABLE>"
 
-	htmlStr, err := cg.StrdupHTML(combinedHTML)
-	if err != nil {
-		return fmt.Errorf("create HTML graph label: %w", err)
-	}
-
-	cg.SetLabel(htmlStr)
+	// SetLabelHTML stores the label as a true HTML-like string (graphviz
+	// agsafeset_html). Since graphviz 13, the StrdupHTML+SetLabel round-trip
+	// loses HTML-ness (the string dict keys on is_html) and the breadcrumb
+	// renders as escaped text with dead TD HREF links.
+	cg.SetLabelHTML(combinedHTML)
 	cg.SetLabelLocation(cgraph.TopLocation)
 
 	return nil
@@ -262,9 +261,7 @@ func createNode(
 	}
 
 	// Build and set HTML label
-	if err := setNodeLabel(cg, cn, node); err != nil {
-		return nil, err
-	}
+	setNodeLabel(cn, node)
 
 	// Apply style
 	applyNodeStyle(cn, node.Style)
@@ -285,24 +282,17 @@ func createNode(
 }
 
 // setNodeLabel builds and sets the HTML label for a node.
-func setNodeLabel(cg *cgraph.Graph, cn *cgraph.Node, node *graph.Node) error {
+func setNodeLabel(cn *cgraph.Node, node *graph.Node) {
 	if node.Label == nil {
-		return nil
+		return
 	}
 
 	htmlLabel := buildHTMLLabelForType(node.Label, node.Type)
 	if htmlLabel == "" {
-		return nil
+		return
 	}
 
-	htmlStr, err := cg.StrdupHTML(htmlLabel)
-	if err != nil {
-		return fmt.Errorf("create HTML label: %w", err)
-	}
-
-	cn.SetLabel(htmlStr)
-
-	return nil
+	cn.SetLabelHTML(htmlLabel)
 }
 
 // applyNodeStyle applies visual styles to a node.
@@ -354,9 +344,7 @@ func createCluster(
 	}
 
 	// Set cluster label
-	if err := setClusterLabel(parent, subgraph, cluster); err != nil {
-		return err
-	}
+	setClusterLabel(subgraph, cluster)
 
 	// Apply style
 	if err := applyClusterStyle(subgraph, cluster.Style); err != nil {
@@ -384,24 +372,17 @@ func createCluster(
 }
 
 // setClusterLabel builds and sets the HTML label for a cluster.
-func setClusterLabel(parent *cgraph.Graph, subgraph *cgraph.Graph, cluster *graph.Cluster) error {
+func setClusterLabel(subgraph *cgraph.Graph, cluster *graph.Cluster) {
 	if cluster.Label == nil {
-		return nil
+		return
 	}
 
 	htmlLabel := buildHTMLLabelForType(cluster.Label, cluster.Type)
 	if htmlLabel == "" {
-		return nil
+		return
 	}
 
-	htmlStr, err := parent.StrdupHTML(htmlLabel)
-	if err != nil {
-		return fmt.Errorf("create HTML cluster label: %w", err)
-	}
-
-	subgraph.SetLabel(htmlStr)
-
-	return nil
+	subgraph.SetLabelHTML(htmlLabel)
 }
 
 // applyClusterStyle applies visual styles to a cluster.

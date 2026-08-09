@@ -14,7 +14,7 @@ func TestValidateReferences_ValidModel(t *testing.T) {
 		"api": {
 			Type: model.TypeSystem,
 			Links: []model.Link{
-								{Peer: "db"},
+				{Peer: "db"},
 			},
 		},
 		"db": {
@@ -37,7 +37,7 @@ func TestValidateReferences_UndefinedLinksTarget(t *testing.T) {
 		"api": {
 			Type: model.TypeSystem,
 			Links: []model.Link{
-								{Peer: "undefined"},
+				{Peer: "undefined"},
 			},
 		},
 	}
@@ -62,7 +62,7 @@ func TestValidateReferences_UndefinedLinksFromSource(t *testing.T) {
 		"api": {
 			Type: model.TypeSystem,
 			LinksFrom: []model.Link{
-								{Peer: "undefined"},
+				{Peer: "undefined"},
 			},
 		},
 	}
@@ -87,7 +87,7 @@ func TestValidateReferences_WithSuggestion(t *testing.T) {
 		"api": {
 			Type: model.TypeSystem,
 			Links: []model.Link{
-								{Peer: "dbb"}, // typo for "db"
+				{Peer: "dbb"}, // typo for "db"
 			},
 		},
 		"db": {
@@ -118,7 +118,7 @@ func TestValidateReferences_NestedUnits(t *testing.T) {
 				"api": {
 					Type: model.TypeContainer,
 					Links: []model.Link{
-										{Peer: "undefined"},
+						{Peer: "undefined"},
 					},
 				},
 			},
@@ -145,8 +145,8 @@ func TestValidateReferences_CollectsAllErrors(t *testing.T) {
 		"api": {
 			Type: model.TypeSystem,
 			Links: []model.Link{
-								{Peer: "undef1"},
-								{Peer: "undef2"},
+				{Peer: "undef1"},
+				{Peer: "undef2"},
 			},
 		},
 	}
@@ -357,7 +357,7 @@ func TestValidateLinkRules_AllowsValidLinks(t *testing.T) {
 		"api": {
 			Type: model.TypeSystem,
 			Links: []model.Link{
-								{Peer: "db"},
+				{Peer: "db"},
 			},
 		},
 		"db": {Type: model.TypeDb},
@@ -408,7 +408,7 @@ func TestValidateOrphanUnits_NoOrphans(t *testing.T) {
 		"api": {
 			Type: model.TypeSystem,
 			Links: []model.Link{
-								{Peer: "db"},
+				{Peer: "db"},
 			},
 		},
 		"db": {
@@ -497,7 +497,7 @@ func TestValidateOrphanUnits_UnitWithSubunits(t *testing.T) {
 				"api": {
 					Type: model.TypeContainer,
 					Links: []model.Link{
-				{Peer: "db"},
+						{Peer: "db"},
 					},
 				},
 			},
@@ -528,7 +528,7 @@ func TestValidateOrphanUnits_UnitWithLinksFrom(t *testing.T) {
 		"api": {
 			Type: model.TypeSystem,
 			Links: []model.Link{
-								{Peer: "db"},
+				{Peer: "db"},
 			},
 		},
 		"db": {
@@ -558,7 +558,7 @@ func TestValidateOrphanUnits_NestedOrphan(t *testing.T) {
 				"api": {
 					Type: model.TypeContainer,
 					Links: []model.Link{
-				{Peer: "db"},
+						{Peer: "db"},
 					},
 				},
 				"orphan": {Type: model.TypeContainer}, // No links
@@ -1032,8 +1032,8 @@ func TestValidateBoxMixedContents_MixedUnitsFails(t *testing.T) {
 		"mixedBox": {
 			Type: model.TypeBox,
 			Subunits: map[string]*model.Unit{
-				"person":     {Type: model.TypePerson},
-				"extSystem":  {Type: model.TypeSystemExternal},
+				"person":    {Type: model.TypePerson},
+				"extSystem": {Type: model.TypeSystemExternal},
 			},
 		},
 	}
@@ -1062,8 +1062,8 @@ func TestValidateBoxMixedContents_ContainerBoxNotValidated(t *testing.T) {
 				"containerBox": {
 					Type: model.TypeContainerBox,
 					Subunits: map[string]*model.Unit{
-						"container":    {Type: model.TypeContainer},
-						"containerDb":  {Type: model.TypeContainerDb},
+						"container":   {Type: model.TypeContainer},
+						"containerDb": {Type: model.TypeContainerDb},
 					},
 				},
 			},
@@ -1092,8 +1092,8 @@ func TestValidateBoxMixedContents_ComponentBoxNotValidated(t *testing.T) {
 						"componentBox": {
 							Type: model.TypeComponentBox,
 							Subunits: map[string]*model.Unit{
-								"component":    {Type: model.TypeComponent},
-								"componentDb":  {Type: model.TypeComponentDb},
+								"component":   {Type: model.TypeComponent},
+								"componentDb": {Type: model.TypeComponentDb},
 							},
 						},
 					},

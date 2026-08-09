@@ -135,12 +135,12 @@ func buildBoundaryCluster(v *view.View) *Cluster {
 	}
 
 	return &Cluster{
-		ID:        v.ExpandedUnit,
-		Label:     label,
-		Nodes:     make([]*Node, 0),
-		Clusters:  make([]*Cluster, 0),
-		Style:     style,
-		Type:      unitTypeOrDefault(unit),
+		ID:       v.ExpandedUnit,
+		Label:    label,
+		Nodes:    make([]*Node, 0),
+		Clusters: make([]*Cluster, 0),
+		Style:    style,
+		Type:     unitTypeOrDefault(unit),
 	}
 }
 

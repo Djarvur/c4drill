@@ -1414,4 +1414,3 @@ func TestParseNoIncludes(t *testing.T) {
 	assert.Equal(t, []string{"user", "webapp"}, got.UnitOrder, "UnitOrder unchanged")
 	assert.Len(t, got.Units, 2, "Units count unchanged")
 }
-

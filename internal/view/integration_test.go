@@ -375,9 +375,9 @@ func TestIntegrationC1ViewNoNestedBoundaryPollution(t *testing.T) {
 				},
 			},
 			"keycloak": {
-				Type:        model.TypeSystemExternal,
-				Name:        "Keycloak",
-				Technology:  "External IDP",
+				Type:       model.TypeSystemExternal,
+				Name:       "Keycloak",
+				Technology: "External IDP",
 			},
 			"linuxSystem": {
 				Type:        model.TypeSystem,

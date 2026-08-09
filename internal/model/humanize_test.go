@@ -32,7 +32,7 @@ func TestHumanize(t *testing.T) {
 		{name: "empty", in: "", want: ""},
 
 		// Edge cases discovered during implementation — additional coverage.
-		{name: "allCapsAPI", in: "API", want: "API"},  // trailing pure-upper acronym preserved
+		{name: "allCapsAPI", in: "API", want: "API"}, // trailing pure-upper acronym preserved
 		{name: "singleLowerA", in: "a", want: "A"},
 		{name: "singleUpperZ", in: "Z", want: "Z"},
 		{name: "pascalCaseTwoWords", in: "WebServer", want: "Web Server"},
