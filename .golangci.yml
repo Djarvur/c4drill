@@ -28,7 +28,6 @@ linters:
     - modernize # Go modernization suggestions, tracked separately
     - testpackage # black-box test packages not required
     - revive # umbrella style linter; specific rules not adopted
-    - nolintlint # nolint usage style, not enforced
     - gosmopolitan # non-ASCII string literals (e.g. CJK wrap tests) are intentional
     - godoclint # doc comment style, not enforced
     - gocritic # stylistic suggestions, not adopted
