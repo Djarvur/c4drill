@@ -1093,6 +1093,7 @@ func countBarePeers(m *parser.Model) int {
 	count := 0
 
 	var walk func(units map[string]*model.Unit)
+
 	walk = func(units map[string]*model.Unit) {
 		for _, unit := range units {
 			for _, l := range unit.Links {
@@ -1100,14 +1101,17 @@ func countBarePeers(m *parser.Model) int {
 					count++
 				}
 			}
+
 			for _, lf := range unit.LinksFrom {
 				if lf.Mirror {
 					continue
 				}
+
 				if !strings.Contains(lf.Peer, ".") {
 					count++
 				}
 			}
+
 			if len(unit.Subunits) > 0 {
 				walk(unit.Subunits)
 			}

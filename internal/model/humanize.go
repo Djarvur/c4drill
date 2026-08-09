@@ -51,6 +51,7 @@ func Humanize(segment string) string {
 // Humanize's godoc.
 func splitWords(runes []rune) [][]rune {
 	var words [][]rune
+
 	start := 0
 	lowerRun := 0 // length of the current trailing lowercase run
 
@@ -59,6 +60,7 @@ func splitWords(runes []rune) [][]rune {
 		cur := runes[i]
 
 		split := false
+
 		switch {
 		case unicode.IsLower(prev) && unicode.IsUpper(cur):
 			// lower→upper: split only when the lowercase run has length ≥ 2,
@@ -97,10 +99,12 @@ func splitWords(runes []rune) [][]rune {
 // lowercase word following the upper run.
 func hasLowerRun(runes []rune, from, minCount int) bool {
 	count := 0
+
 	for i := from; i < len(runes); i++ {
 		if !unicode.IsLower(runes[i]) {
 			break
 		}
+
 		count++
 	}
 

@@ -43,6 +43,7 @@ func BuildGraph(v *view.View) *Graph {
 		if entry.IsBoundary || entry.IsExternal {
 			node := buildNode(entry)
 			g.Nodes = append(g.Nodes, node)
+
 			continue
 		}
 
@@ -95,7 +96,9 @@ func BuildGraph(v *view.View) *Graph {
 // cluster, while external boundary nodes remain at the graph's top level.
 func buildBoundaryCluster(v *view.View) *Cluster {
 	unit := v.ExpandedUnitModel
+
 	var label *Label
+
 	var style *NodeStyle
 
 	if unit != nil {
@@ -112,6 +115,7 @@ func buildBoundaryCluster(v *view.View) *Cluster {
 		if idx := strings.LastIndex(name, "."); idx >= 0 {
 			name = name[idx+1:]
 		}
+
 		label = &Label{Name: name}
 		style = &NodeStyle{
 			BorderColor: model.PersonBorder,
@@ -134,6 +138,7 @@ func unitTypeOrDefault(unit *model.Unit) model.UnitType {
 	if unit == nil {
 		return model.TypeSystem
 	}
+
 	return unit.Type
 }
 

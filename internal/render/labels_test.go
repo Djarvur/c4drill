@@ -304,6 +304,7 @@ func TestBoxHTMLLabelGeneration(t *testing.T) {
 			if labelStart != -1 {
 				labelContent := dotStr[labelStart+7:]
 				labelEnd := strings.Index(labelContent, ">,")
+
 				if labelEnd != -1 {
 					labelContent = labelContent[:labelEnd]
 					// Check that label content does not contain curly brackets

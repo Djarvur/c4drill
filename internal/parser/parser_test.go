@@ -943,6 +943,7 @@ name = "Without Reference"
 `)
 	gotNoKey, err := parser.Parse(dataNoKey)
 	require.NoError(t, err, "Parse() should not error for the no-key case")
+
 	without, ok := gotNoKey.Units["without"]
 	require.True(t, ok, "missing 'without' unit")
 	assert.Equal(t, "", without.Reference, "absent reference key should parse to empty string")
@@ -959,6 +960,7 @@ reference = ""
 `)
 	gotEmpty, err := parser.Parse(dataEmpty)
 	require.NoError(t, err, "Parse() should not error for the empty case")
+
 	empty, ok := gotEmpty.Units["empty"]
 	require.True(t, ok, "missing 'empty' unit")
 	assert.Equal(t, "", empty.Reference, "empty reference value should parse to empty string")
@@ -1108,6 +1110,7 @@ func TestParseOmittedNameNoRegression(t *testing.T) {
 
 	t.Run("valid.toml", func(t *testing.T) {
 		t.Parallel()
+
 		data, err := os.ReadFile("../../testdata/valid.toml")
 		require.NoError(t, err, "failed to read testdata/valid.toml")
 
@@ -1127,6 +1130,7 @@ func TestParseOmittedNameNoRegression(t *testing.T) {
 
 	t.Run("nested.toml", func(t *testing.T) {
 		t.Parallel()
+
 		data, err := os.ReadFile("../../testdata/nested.toml")
 		require.NoError(t, err, "failed to read testdata/nested.toml")
 

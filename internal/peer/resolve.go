@@ -180,6 +180,7 @@ func ancestorScopes(hostPath string, m *parser.Model) []scope {
 	for i := range len(segments) - 1 {
 		seg := segments[i]
 		unit, ok := current[seg]
+
 		if !ok {
 			break // path not in tree; stop descent, keep what we have
 		}

@@ -175,6 +175,7 @@ func configureGraphSettings(cg *cgraph.Graph, g *graph.Graph) error {
 	if _, err := cg.Attr(1, "fontname", "Helvetica"); err != nil { // nodes
 		return fmt.Errorf("set node fontname: %w", err)
 	}
+
 	if _, err := cg.Attr(2, "fontname", "Helvetica"); err != nil { // edges
 		return fmt.Errorf("set edge fontname: %w", err)
 	}
@@ -472,6 +473,7 @@ func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge)
 
 	// Set edge label and font
 	e.SetFontName("Helvetica")
+
 	if edge.Label != nil {
 		e.SetLabel(buildEdgeLabel(edge.Label))
 		e.SetFontSize(fontSizeEdge)
