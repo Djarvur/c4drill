@@ -254,8 +254,10 @@ func TestGetBoxStyleByContents(t *testing.T) {
 		},
 	}
 	styleExternal := graph.GetBoxStyleByContents(boxWithExternal)
-	assert.Equal(t, model.PersonExternalBorder, styleExternal.BorderColor, "box with external subunits should have grey border")
-	assert.Equal(t, model.PersonExternalBorder, styleExternal.FontColor, "box with external subunits should have grey font color")
+	assert.Equal(t, model.PersonExternalBorder, styleExternal.BorderColor,
+		"box with external subunits should have grey border")
+	assert.Equal(t, model.PersonExternalBorder, styleExternal.FontColor,
+		"box with external subunits should have grey font color")
 	assert.Equal(t, "dashed", styleExternal.BorderStyle, "box should have dashed border")
 	assert.Empty(t, styleExternal.FillColor, "box should have transparent fill")
 
@@ -268,8 +270,10 @@ func TestGetBoxStyleByContents(t *testing.T) {
 		},
 	}
 	styleInternal := graph.GetBoxStyleByContents(boxWithInternal)
-	assert.Equal(t, model.PersonBorder, styleInternal.BorderColor, "box with only non-external subunits should have dark blue border")
-	assert.Equal(t, model.PersonBorder, styleInternal.FontColor, "box with only non-external subunits should have dark blue font color")
+	assert.Equal(t, model.PersonBorder, styleInternal.BorderColor,
+		"box with only non-external subunits should have dark blue border")
+	assert.Equal(t, model.PersonBorder, styleInternal.FontColor,
+		"box with only non-external subunits should have dark blue font color")
 	assert.Equal(t, "dashed", styleInternal.BorderStyle, "box should have dashed border")
 	assert.Empty(t, styleInternal.FillColor, "box should have transparent fill")
 

@@ -164,9 +164,31 @@ var svgHrefSuffix = regexp.MustCompile(`((?:xlink:)?href="[^"]+)\.svg(")`)
 // (preventDefault without navigation). Only scheme-less relative paths reach
 // window.location.href for internal drill-down.
 const htmlNavShim = `<script>(function(){
-function go(e){var a=e.currentTarget;var h=a.getAttribute("href")||a.getAttributeNS("http://www.w3.org/1999/xlink","href");if(!h){return;}e.preventDefault();if(/^https?:\/\//i.test(h)||h.indexOf("//")===0){window.open(h,"_blank");}else if(/^[a-z][a-z0-9+.\-]*:/i.test(h)){return;}else{window.location.href=h;}}
-function init(){var l=document.querySelectorAll("svg a");for(var i=0;i<l.length;i++){l[i].style.cursor="pointer";l[i].addEventListener("click",go);}}
-if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",init);}else{init();}
+function go(e){
+	var a = e.currentTarget;
+	var h = a.getAttribute("href") || a.getAttributeNS("http://www.w3.org/1999/xlink", "href");
+	if (!h) { return; }
+	e.preventDefault();
+	if (/^https?:\/\//i.test(h) || h.indexOf("//") === 0) {
+		window.open(h, "_blank");
+	} else if (/^[a-z][a-z0-9+.\-]*:/i.test(h)) {
+		return;
+	} else {
+		window.location.href = h;
+	}
+}
+function init(){
+	var l = document.querySelectorAll("svg a");
+	for (var i = 0; i < l.length; i++) {
+		l[i].style.cursor = "pointer";
+		l[i].addEventListener("click", go);
+	}
+}
+if (document.readyState === "loading") {
+	document.addEventListener("DOMContentLoaded", init);
+} else {
+	init();
+}
 })();</script>`
 
 // wrapSVGInHTML post-processes raw graphviz SVG bytes into a self-contained
