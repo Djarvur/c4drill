@@ -114,6 +114,9 @@ func subunitOrderOf(unit *model.Unit) []string {
 	return names
 }
 
+// GenerateC1View creates the C1 (Context) level view: all top-level units in
+// definition order, visible subunits of expanded units, and boundary nodes
+// resolved from every link in the model (including nested subunits).
 func GenerateC1View(m *parser.Model) *View {
 	if m == nil {
 		return nil
