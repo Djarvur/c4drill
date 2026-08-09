@@ -26,13 +26,16 @@ linters:
     - nlreturn # blank-line-before-return style, not enforced
     - mnd # magic numbers are self-evident in context
     - modernize # Go modernization suggestions, tracked separately
-    - testpackage # black-box test packages not required
     - gosmopolitan # non-ASCII string literals (e.g. CJK wrap tests) are intentional
     - maintidx # maintainability index, not actionable
     - nestif # nested-if complexity covered by gocognit
   settings:
     gocognit:
       min-complexity: 15
+    testpackage:
+      # Private-state tests live in *_internal_test.go (same package);
+      # everything else must be an external _test package.
+      skip-regexp: _internal_test\.go$
     gomoddirectives:
       replace-allow-list:
         - github.com/goccy/go-graphviz

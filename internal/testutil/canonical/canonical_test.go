@@ -1,9 +1,11 @@
-package canonical
+package canonical_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/Djarvur/c4drill/internal/testutil/canonical"
 )
 
 func TestCanonicalDOTPreservesLastAttribute(t *testing.T) {
@@ -18,7 +20,7 @@ func TestCanonicalDOTPreservesLastAttribute(t *testing.T) {
 		"}\n"
 
 	require.Equal(t, "attr\x00\"a\" -> \"b\"\x00key=\"a_to_b\"\x00style=solid",
-		Canonical(t, dot))
+		canonical.Canonical(t, dot))
 }
 
 func TestCanonicalDOTFinalAttributeDriftDetected(t *testing.T) {
@@ -36,8 +38,8 @@ func TestCanonicalDOTFinalAttributeDriftDetected(t *testing.T) {
 		"\t\tpenwidth=2];\n" +
 		"}\n"
 
-	require.NotEqual(t, Canonical(t, dotPenwidth1), Canonical(t, dotPenwidth2))
-	require.Contains(t, Canonical(t, dotPenwidth2), "penwidth=2")
+	require.NotEqual(t, canonical.Canonical(t, dotPenwidth1), canonical.Canonical(t, dotPenwidth2))
+	require.Contains(t, canonical.Canonical(t, dotPenwidth2), "penwidth=2")
 }
 
 func TestCanonicalDOTQuotedValuesDoNotTruncate(t *testing.T) {
@@ -52,7 +54,7 @@ func TestCanonicalDOTQuotedValuesDoNotTruncate(t *testing.T) {
 		"\t\"b\" -> \"c\" [label=\"uses {braces}\"];\n" +
 		"}\n"
 
-	canon := Canonical(t, dot)
+	canon := canonical.Canonical(t, dot)
 	require.Contains(t, canon, "description=\"SSH [session]; admin\"")
 	require.Contains(t, canon, "minlen=3")
 	require.Contains(t, canon, "label=\"uses {braces}\"")
@@ -68,5 +70,5 @@ func TestCanonicalDOTHTMLLabelDoesNotTruncate(t *testing.T) {
 		"\t\"a\" [label=<<b>SSH [session]; admin</b>>];\n" +
 		"}\n"
 
-	require.Contains(t, Canonical(t, dot), "label=<<b>SSH [session]; admin</b>>")
+	require.Contains(t, canonical.Canonical(t, dot), "label=<<b>SSH [session]; admin</b>>")
 }
