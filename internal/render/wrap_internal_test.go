@@ -109,6 +109,67 @@ func TestWrapText(t *testing.T) {
 }
 
 //nolint:paralleltest // Consistent with project test patterns
+func TestLabelMaxCharsForText(t *testing.T) {
+	tests := []struct {
+		name      string
+		fixedRows int
+		textLen   int
+		ratio     float64
+		expected  int
+	}{
+		{
+			name:      "long description widens the label",
+			fixedRows: 1,
+			textLen:   110,
+			ratio:     1.6,
+			expected:  21, // width 174.25 → 21.78 chars
+		},
+		{
+			name:      "medium description, name+tech rows",
+			fixedRows: 2,
+			textLen:   38,
+			ratio:     1.6,
+			expected:  15, // width 126.7 → 15.8 chars
+		},
+		{
+			name:      "short description, no fixed rows",
+			fixedRows: 0,
+			textLen:   14,
+			ratio:     1.6,
+			expected:  7, // width 56.8 → 7.1 chars
+		},
+		{
+			name:      "empty text keeps a floor",
+			fixedRows: 1,
+			textLen:   0,
+			ratio:     1.6,
+			expected:  6, // width 28.8 → 3.6 chars → floor 6
+		},
+		{
+			name:      "longer text widens monotonically",
+			fixedRows: 1,
+			textLen:   200,
+			ratio:     1.6,
+			expected:  28, // width 229.6 → 28.7 chars — must exceed the 50-char case
+		},
+		{
+			name:      "higher ratio widens",
+			fixedRows: 1,
+			textLen:   110,
+			ratio:     2.0,
+			expected:  24, // width 194.9 → 24.4 chars — must exceed the 1.6 case
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := labelMaxCharsForText(tt.fixedRows, tt.textLen, tt.ratio)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+//nolint:paralleltest // Consistent with project test patterns
 func TestEstimateCharsFromWidth(t *testing.T) {
 	tests := []struct {
 		name        string
