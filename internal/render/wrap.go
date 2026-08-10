@@ -37,7 +37,9 @@ var LabelRatio = defaultLabelRatio
 
 // wrapText wraps text at word boundaries to fit within maxChars per line.
 // Uses "<BR/>" as line separator (GraphViz HTML label line break).
-// Falls back to character-level breaking for words exceeding maxChars.
+// A word longer than maxChars starts its own line and stays unsplit,
+// overflowing the width (D-05): the document author may reword instead —
+// the tool never splits mid-word.
 func wrapText(text string, maxChars int) string {
 	if text == "" || maxChars <= 0 {
 		return text
@@ -79,14 +81,14 @@ func wrapText(text string, maxChars int) string {
 			continue
 		}
 
-		// Word exceeds maxChars - force character-level break
-		for _, chunk := range splitLongWord(word, maxChars) {
-			lines = flushIfPending(lines, &currentLine, &currentLen)
+		// Word exceeds maxChars - emit it unsplit on its own line (D-05):
+		// no character-level fallback, no safety cap, no hyphen-point
+		// splitting. The document author may reword instead.
+		lines = flushIfPending(lines, &currentLine, &currentLen)
 
-			currentLine.WriteString(chunk)
+		currentLine.WriteString(word)
 
-			currentLen = utf8.RuneCountInString(chunk)
-		}
+		currentLen = wordLen
 	}
 
 	if currentLen > 0 {
@@ -116,25 +118,6 @@ func flushIfPending(lines []string, currentLine *strings.Builder, currentLen *in
 	*currentLen = 0
 
 	return lines
-}
-
-// splitLongWord splits a word longer than maxChars into character-level
-// chunks of at most maxChars runes.
-func splitLongWord(word string, maxChars int) []string {
-	runes := []rune(word)
-	chunks := make([]string, 0, (len(runes)+maxChars-1)/maxChars)
-
-	for len(runes) > 0 {
-		chunkSize := maxChars
-		if chunkSize > len(runes) {
-			chunkSize = len(runes)
-		}
-
-		chunks = append(chunks, string(runes[:chunkSize]))
-		runes = runes[chunkSize:]
-	}
-
-	return chunks
 }
 
 // wrapAndEscape wraps text at word boundaries, then HTML-escapes each line.
