@@ -51,10 +51,8 @@ func buildRecordLabel(label *graph.Label) string {
 // The width derives from LabelRatio via labelMaxCharsForText — self-
 // consistent aspect-ratio sizing: both the technology and the description
 // wrap, so the total text length drives the width (supersedes the D-03
-// 2-row floor). The ratio is scaled by fontSizeEdge/pointsPerRow because
-// edge labels render at 10pt (not the 12pt the pointsPerRow model assumes),
-// so the modeled rectangle height must match the rendered height. A
-// minCharsPerLine floor prevents over-wrapping of short labels.
+// 2-row floor). A minCharsPerLine floor prevents over-wrapping of short
+// labels.
 func buildEdgeLabel(label *graph.EdgeLabel) string {
 	if label == nil {
 		return ""
@@ -67,9 +65,7 @@ func buildEdgeLabel(label *graph.EdgeLabel) string {
 	textLen := utf8.RuneCountInString(label.Technology) +
 		utf8.RuneCountInString(label.Description)
 
-	edgeRatio := LabelRatio * fontSizeEdge / pointsPerRow
-
-	maxChars := max(labelMaxCharsForText(0, textLen, edgeRatio), minCharsPerLine)
+	maxChars := max(labelMaxCharsForText(0, textLen, LabelRatio), minCharsPerLine)
 
 	var sb strings.Builder
 	writeLabelTableStart(&sb)
