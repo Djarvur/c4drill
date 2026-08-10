@@ -323,13 +323,26 @@ func labelMaxCharsForQueue(fixedRows, textLen int) int {
 	return labelMaxCharsForText(fixedRows, textLen, LabelRatio*1.6)
 }
 
+// personRatioFactor compensates the person label's icon column (36pt of
+// width that adds no rows) plus the token-packing overhead of wrapped
+// descriptions, so the rendered rectangle approximates LabelRatio instead of
+// collapsing toward square for long descriptions (UAT 34-05).
+const personRatioFactor = 1.5
+
 // labelMaxCharsForPerson calculates the maximum characters per line for Person labels.
-// Person labels have an icon column which reduces available text width.
+// Icon-aware closed form: the 36pt icon column adds to the width but not to
+// the row count, so the text column solves
+//
+//	textCol² + iconColumnWidth·textCol − C = 0,
+//	C = textLen·pointsPerChar·pointsPerRow·LabelRatio·personRatioFactor
+//
+// (height rows = textLen·pointsPerChar/textCol).
 func labelMaxCharsForPerson(fixedRows, textLen int) int {
-	width := labelMaxCharsForText(fixedRows, textLen, LabelRatio) * pointsPerChar
-	textWidth := width - iconColumnWidth
-	chars := estimateCharsFromWidth(textWidth)
-	// Reasonable minimum for the person text column (precedent: old behavior).
+	c := float64(textLen) * pointsPerChar * pointsPerRow * LabelRatio * personRatioFactor
+	textCol := (-iconColumnWidth + math.Sqrt(float64(iconColumnWidth*iconColumnWidth)+4*c)) / 2
+	chars := int(textCol / pointsPerChar)
+	// Floor of 10 keeps short actor names on one line ("Actor A"); the
+	// icon-aware formula takes over for longer descriptions.
 	if chars < 10 {
 		return 10
 	}

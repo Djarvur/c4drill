@@ -170,6 +170,42 @@ func TestLabelMaxCharsForText(t *testing.T) {
 }
 
 //nolint:paralleltest // Consistent with project test patterns
+func TestLabelMaxCharsForPerson(t *testing.T) {
+	tests := []struct {
+		name      string
+		fixedRows int
+		textLen   int
+		expected  int
+	}{
+		{
+			name:      "long actor description widens the text column",
+			fixedRows: 0,
+			textLen:   70,
+			expected:  17, // icon-aware textCol 138.6 → 17.3 chars
+		},
+		{
+			name:      "short actor name keeps a floor",
+			fixedRows: 0,
+			textLen:   11,
+			expected:  10, // textCol 46.2 → 5.8 chars → floor 10 ("Actor A" stays one line)
+		},
+		{
+			name:      "medium description",
+			fixedRows: 0,
+			textLen:   30,
+			expected:  10, // textCol 85.4 → 10.7 chars
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := labelMaxCharsForPerson(tt.fixedRows, tt.textLen)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+//nolint:paralleltest // Consistent with project test patterns
 func TestEstimateCharsFromWidth(t *testing.T) {
 	tests := []struct {
 		name        string
