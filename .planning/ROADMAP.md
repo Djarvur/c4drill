@@ -87,4 +87,4 @@ Plans:
 | 31. Template expansion | v1.10 | 2/2 | Complete | 2026-08-08 |
 | 32. Include directive | v1.10 | 2/2 | Complete | 2026-08-08 |
 | 33. Docs sweep + goldens | v1.10 | 4/4 | Complete | 2026-08-08 |
-| 34. Label formatting fixes | v1.11 | 2/2 | Complete   | 2026-08-10 |
+| 34. Label formatting fixes | v1.11 | 2/2 | Complete    | 2026-08-10 |
