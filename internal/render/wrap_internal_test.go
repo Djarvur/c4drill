@@ -62,6 +62,42 @@ func TestWrapText(t *testing.T) {
 			maxChars: 5,
 			expected: "hello",
 		},
+		{
+			name:     "hyphen break",
+			text:     "Multi-Consumer Broadcast",
+			maxChars: 10,
+			expected: "Multi-<BR/>Consumer<BR/>Broadcast",
+		},
+		{
+			name:     "arrow and colon break",
+			text:     "YUV420->EXTERNAL:TOKEN",
+			maxChars: 12,
+			expected: "YUV420-><BR/>EXTERNAL:<BR/>TOKEN",
+		},
+		{
+			name:     "underscore break",
+			text:     "IMAGE_NATIVE_PROCESSED",
+			maxChars: 9,
+			expected: "IMAGE_<BR/>NATIVE_<BR/>PROCESSED",
+		},
+		{
+			name:     "bracket attaches to following word",
+			text:     "[CGF Channel]",
+			maxChars: 9,
+			expected: "[CGF<BR/>Channel]",
+		},
+		{
+			name:     "punctuation-rejoin no space",
+			text:     "foo-bar",
+			maxChars: 20,
+			expected: "foo-bar",
+		},
+		{
+			name:     "over-budget letter run still unsplit",
+			text:     "abcdefghijkl",
+			maxChars: 5,
+			expected: "abcdefghijkl",
+		},
 	}
 
 	for _, tt := range tests {
