@@ -1,0 +1,21 @@
+# Minimal Example
+# Demonstrates the absolute minimum valid C4Drill TOML
+
+[properties]
+name = "Minimal Architecture"
+
+[user]
+type = "person"
+name = "User"
+
+[[user.linkFrom]]
+peer = "webapp"
+description = "Uses"
+
+[webapp]
+type = "system"
+name = "Web Application"
+
+[[webapp.link]]
+peer = "user"
+description = "Uses"

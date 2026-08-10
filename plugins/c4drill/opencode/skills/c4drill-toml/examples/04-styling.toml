@@ -1,0 +1,114 @@
+# Styling Example
+# Demonstrates visual customization with colors, borders, and edge styles
+
+[properties]
+name = "Styling Demo"
+description = "Visual customization examples"
+edges = "spline"  # Use curved edges globally
+color = "#FAFAFA"  # Light gray background
+border = "#BDBDBD"  # Gray borders
+
+# Person with custom styling
+[admin]
+type = "person"
+name = "Administrator"
+description = "System admin"
+color = "#FFF9C4"  # Light yellow
+border = "#F9A825"  # Dark yellow
+
+[[admin.linkFrom]]
+peer = "dashboard"
+description = "Manages"
+
+# System with custom colors
+[dashboard]
+type = "system"
+name = "Admin Dashboard"
+description = "Internal admin interface"
+technology = "React, Material-UI"
+color = "#E3F2FD"  # Light blue
+border = "#1565C0"  # Dark blue
+
+[[dashboard.link]]
+peer = "admin"
+technology = "HTTPS"
+description = "Manages"
+color = "#1565C0"
+
+# External system with distinct styling
+[monitoring]
+type = "systemExternal"
+name = "Monitoring Service"
+description = "External monitoring platform"
+technology = "Datadog"
+color = "#F3E5F5"  # Light purple
+border = "#7B1FA2"  # Dark purple
+style = "filled,dashed"
+
+[[monitoring.link]]
+peer = "dashboard"
+technology = "API"
+description = "Sends metrics"
+color = "#7B1FA2"
+style = "dashed"
+
+# Database with custom border
+[auditdb]
+type = "db"
+name = "Audit Database"
+description = "Audit trail storage"
+technology = "PostgreSQL"
+color = "#E8F5E9"  # Light green
+border = "#2E7D32"  # Dark green
+
+[[auditdb.link]]
+peer = "dashboard"
+technology = "SQL"
+description = "Logs actions"
+color = "#2E7D32"
+
+# Box grouping with custom styling
+[internal]
+type = "box"
+name = "Internal Services"
+description = "Internal infrastructure"
+color = "#FFF3E0"  # Light orange
+border = "#E65100"  # Dark orange
+edges = "ortho"  # Override to orthogonal edges for this group
+
+[internal.auth]
+type = "system"
+name = "Auth Service"
+description = "Authentication service"
+technology = "Node.js, JWT"
+color = "#FFECB3"  # Light amber
+border = "#FF8F00"  # Dark amber
+
+[[internal.auth.link]]
+peer = "dashboard"
+technology = "gRPC"
+description = "Validates tokens"
+color = "#FF8F00"
+
+[[internal.auth.link]]
+peer = "auditdb"
+technology = "SQL"
+description = "Writes audit logs"
+color = "#2E7D32"
+style = "solid"
+arrow = "forward"
+
+[internal.config]
+type = "system"
+name = "Config Service"
+description = "Configuration management"
+technology = "Go, Etcd"
+color = "#FFECB3"  # Light amber
+border = "#FF8F00"  # Dark amber
+
+[[internal.config.link]]
+peer = "dashboard"
+technology = "HTTP"
+description = "Fetches config"
+color = "#FF8F00"
+style = "dotted"

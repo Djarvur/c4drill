@@ -1,0 +1,25 @@
+# Include Directive Example (billing domain)
+# Included from entry.toml with once=true (INC-06). Contributes [platform.billing],
+# a cross-file subunit appended onto the entry's platform (D-10). The once=true
+# flag means any later [[include]] of this same file would be skipped.
+
+[platform]
+type = "system"
+name = "Platform"
+
+# platform.billing: appended onto entry.toml's platform. A container (C2).
+[platform.billing]
+type = "container"
+name = "Billing Domain"
+description = "Charges and invoicing; arrived via include from billing.toml"
+
+# platform.billing.charges: a C3 component. Links to messageBus to satisfy the
+# orphan rule and to participate in the rendered graph.
+[platform.billing.charges]
+type = "componentDb"
+name = "Charges Store"
+description = "Line-item store; subunit of the included billing domain"
+
+[[platform.billing.charges.link]]
+peer = "messageBus"
+description = "Publishes charge-captured events"

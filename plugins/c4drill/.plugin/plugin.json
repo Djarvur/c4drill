@@ -1,0 +1,10 @@
+{
+  "name": "c4drill",
+  "version": "0.1.0",
+  "description": "C4 architecture diagrams from TOML - authoring skill and CLI renderer",
+  "author": {
+    "name": "Djarvur"
+  },
+  "skills": "./skills/",
+  "commands": "./commands/"
+}
