@@ -88,6 +88,9 @@ type Edge struct {
 	Color string
 	// MinLen is the minimum length (minlen attribute) for the edge.
 	MinLen int
+	// NoConstraint excludes the edge from rank computation (constraint=false),
+	// so its endpoints may end up on the same rank. Set from link.Rank == "equal".
+	NoConstraint bool
 	// PenWidth is the edge line width. 0 means the renderer applies the default
 	// (1.0 in resolved views, 2.0 in --expanded mode).
 	PenWidth float64

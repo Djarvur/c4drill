@@ -604,6 +604,9 @@ func createEdge(source, target string, link model.Link, sourceEntry *view.Entry,
 	// Copy length to MinLen (D-01: length > 0 sets minlen attribute)
 	edge.MinLen = link.Length
 
+	// rank="equal" excludes the edge from rank computation (constraint=false)
+	edge.NoConstraint = link.Rank == model.RankEqual
+
 	return edge
 }
 

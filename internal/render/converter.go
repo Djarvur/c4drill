@@ -503,6 +503,11 @@ func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge)
 		e.SetMinLen(edge.MinLen)
 	}
 
+	// rank="equal": exclude from rank computation so endpoints can share a rank
+	if edge.NoConstraint {
+		e.SetConstraint(false)
+	}
+
 	// Set edge penwidth per D-04: collapsed pairs (2+ links) and --expanded
 	// edges carry PenWidth 2.0 from the builder; single edges (PenWidth 0)
 	// render at the default 1.0.
