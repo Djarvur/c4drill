@@ -2,6 +2,7 @@ package render
 
 import (
 	"html"
+	"math"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -273,74 +274,64 @@ func calculateTextWidth(rowCount int, ratio float64) int {
 	return textWidth
 }
 
-// labelMaxCharsNoIcon calculates the maximum characters per line for a label
-// without an icon column, based on the number of content rows and the current LabelRatio.
-// This is used for single-column labels (DB, Queue, System, Container, Component).
-func labelMaxCharsNoIcon(rowCount int) int {
-	totalHeight := rowCount * pointsPerRow
-	totalWidth := int(float64(totalHeight) * LabelRatio)
-	// No icon column subtraction - full width available
-	chars := estimateCharsFromWidth(totalWidth)
-	if chars < minCharsPerLine {
-		return minCharsPerLine
+// labelMaxCharsForText computes the per-line character budget for a label
+// whose rendered height is fixedRows content rows plus the wrapped text
+// lines, such that the resulting rectangle's width:height approximates the
+// given ratio (self-consistent aspect-ratio sizing, UAT 34-04).
+//
+// Closed-form solution (no iteration — a line-count loop oscillates because
+// of ceil rounding): with width = (fixedRows + textLen·pointsPerChar/width)
+// · pointsPerRow · ratio, the positive root is
+//
+//	width = (B + √(B² + 4C)) / 2,  B = fixedRows·pointsPerRow·ratio,
+//	C = textLen·pointsPerChar·pointsPerRow·ratio
+//
+// Returns chars per line = width / pointsPerChar, floored at 6 so tiny
+// labels never degenerate to a single-char column.
+func labelMaxCharsForText(fixedRows, textLen int, ratio float64) int {
+	b := float64(fixedRows) * pointsPerRow * ratio
+	c := float64(textLen) * pointsPerChar * pointsPerRow * ratio
+	width := (b + math.Sqrt(b*b+4*c)) / 2
+	chars := int(width / pointsPerChar)
+	if chars < 6 {
+		return 6
 	}
 
 	return chars
+}
+
+// labelMaxCharsNoIcon calculates the maximum characters per line for a label
+// without an icon column, so the rectangle's ratio approximates LabelRatio
+// (self-consistent: fixed rows plus the wrapped description lines).
+func labelMaxCharsNoIcon(fixedRows, textLen int) int {
+	return labelMaxCharsForText(fixedRows, textLen, LabelRatio)
 }
 
 // labelMaxCharsForCylinder calculates the maximum characters per line for DB labels.
 // DB nodes use cylinder shape which adds extra visual height for the 3D effect.
 // Uses a higher effective ratio to fill the wider space and maintain target aspect ratio.
-func labelMaxCharsForCylinder(rowCount int) int {
-	totalHeight := rowCount * pointsPerRow
+func labelMaxCharsForCylinder(fixedRows, textLen int) int {
 	// Use higher ratio to compensate for cylinder shape overhead (~37% extra height)
-	cylinderRatio := LabelRatio * 2.2
-	totalWidth := int(float64(totalHeight) * cylinderRatio)
-	chars := estimateCharsFromWidth(totalWidth)
-	// Use reasonable minimum for cylinder
-	minCharsForCylinder := 20
-	if chars < minCharsForCylinder {
-		return minCharsForCylinder
-	}
-
-	return chars
+	return labelMaxCharsForText(fixedRows, textLen, LabelRatio*2.2)
 }
 
 // labelMaxCharsForQueue calculates the maximum characters per line for Queue labels.
 // Queue nodes have an ASCII graphic row that adds height but limited width.
 // Uses a higher effective ratio to fill the wider space.
-func labelMaxCharsForQueue(rowCount int) int {
-	totalHeight := rowCount * pointsPerRow
+func labelMaxCharsForQueue(fixedRows, textLen int) int {
 	// Use higher ratio to compensate for ASCII graphic row overhead
-	queueRatio := LabelRatio * 1.6
-	totalWidth := int(float64(totalHeight) * queueRatio)
-	chars := estimateCharsFromWidth(totalWidth)
-	// Use reasonable minimum for queue
-	minCharsForQueue := 15
-	if chars < minCharsForQueue {
-		return minCharsForQueue
-	}
-
-	return chars
+	return labelMaxCharsForText(fixedRows, textLen, LabelRatio*1.6)
 }
 
 // labelMaxCharsForPerson calculates the maximum characters per line for Person labels.
 // Person labels have an icon column which reduces available text width.
-// Uses a lower minimum to encourage wrapping and create more proportional dimensions.
-// Enforces a minimum of 2 rows for better aspect ratio.
-func labelMaxCharsForPerson(rowCount int) int {
-	// Use minimum of 2 rows for better proportions
-	effectiveRows := rowCount
-	if effectiveRows < 2 {
-		effectiveRows = 2
-	}
-
-	textWidth := calculateTextWidth(effectiveRows, LabelRatio)
+func labelMaxCharsForPerson(fixedRows, textLen int) int {
+	width := labelMaxCharsForText(fixedRows, textLen, LabelRatio) * pointsPerChar
+	textWidth := width - iconColumnWidth
 	chars := estimateCharsFromWidth(textWidth)
-	// Use lower minimum for Person to encourage wrapping for better proportions
-	minCharsForPerson := 10
-	if chars < minCharsForPerson {
-		return minCharsForPerson
+	// Reasonable minimum for the person text column (precedent: old behavior).
+	if chars < 10 {
+		return 10
 	}
 
 	return chars
