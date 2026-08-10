@@ -3,6 +3,7 @@ package render
 import (
 	"html"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -35,18 +36,24 @@ const (
 //nolint:gochecknoglobals // CLI configuration set before render calls
 var LabelRatio = defaultLabelRatio
 
-// wrapText wraps text at word boundaries to fit within maxChars per line.
-// Uses "<BR/>" as line separator (GraphViz HTML label line break).
-// A word longer than maxChars starts its own line and stays unsplit,
-// overflowing the width (D-05): the document author may reword instead —
-// the tool never splits mid-word.
+// wrapText wraps text at word and punctuation boundaries to fit within
+// maxChars per line. Uses "<BR/>" as line separator (GraphViz HTML label
+// line break). Break opportunities are whitespace AND any punctuation or
+// symbol character (per UAT: "any punctuation must be considered word
+// boundary, not just spaces") — e.g. "Multi-Consumer", "YUV420->EXTERNAL",
+// "IMAGE_NATIVE_PROCESSED" all wrap at their separators. Punctuation
+// attaches to the word it belongs to, so rejoin on the same line never
+// inserts a space. A token longer than maxChars (a pure letter/digit run
+// with no separator) starts its own line and stays unsplit, overflowing
+// the width (D-05): the document author may reword instead — the tool
+// never splits inside a letter/digit run.
 func wrapText(text string, maxChars int) string {
 	if text == "" || maxChars <= 0 {
 		return text
 	}
 
-	words := strings.Fields(text)
-	if len(words) == 0 {
+	tokens := tokenizeWrapText(text)
+	if len(tokens) == 0 {
 		return ""
 	}
 
@@ -56,39 +63,42 @@ func wrapText(text string, maxChars int) string {
 
 	currentLen := 0
 
-	for _, word := range words {
-		wordLen := utf8.RuneCountInString(word)
+	for _, token := range tokens {
+		tokenLen := utf8.RuneCountInString(token.text)
 
-		// Word fits on current line (with space if not first word on line)
-		if fitsOnLine(currentLen, wordLen, maxChars) {
-			currentLine.WriteRune(' ')
+		// Token fits on current line (with space if whitespace-separated
+		// from the previous token)
+		if fitsOnLine(currentLen, tokenLen, maxChars, token.spaceBefore) {
+			if token.spaceBefore {
+				currentLine.WriteRune(' ')
+			}
 
-			currentLine.WriteString(word)
+			currentLine.WriteString(token.text)
 
-			currentLen += 1 + wordLen
+			currentLen += runeCountWithSpace(tokenLen, token.spaceBefore)
 
 			continue
 		}
 
-		// Word fits as the start of a new line
-		if wordLen <= maxChars {
+		// Token fits as the start of a new line
+		if tokenLen <= maxChars {
 			lines = flushIfPending(lines, &currentLine, &currentLen)
 
-			currentLine.WriteString(word)
+			currentLine.WriteString(token.text)
 
-			currentLen = wordLen
+			currentLen = tokenLen
 
 			continue
 		}
 
-		// Word exceeds maxChars - emit it unsplit on its own line (D-05):
-		// no character-level fallback, no safety cap, no hyphen-point
-		// splitting. The document author may reword instead.
+		// Token exceeds maxChars - emit it unsplit on its own line (D-05):
+		// no character-level fallback, no safety cap. The document author
+		// may reword instead.
 		lines = flushIfPending(lines, &currentLine, &currentLen)
 
-		currentLine.WriteString(word)
+		currentLine.WriteString(token.text)
 
-		currentLen = wordLen
+		currentLen = tokenLen
 	}
 
 	if currentLen > 0 {
@@ -98,10 +108,111 @@ func wrapText(text string, maxChars int) string {
 	return strings.Join(lines, htmlLineBreak)
 }
 
-// fitsOnLine reports whether the word fits on the current line with a
-// preceding space (when the line is non-empty).
-func fitsOnLine(currentLen, wordLen, maxChars int) bool {
-	return currentLen > 0 && currentLen+1+wordLen <= maxChars
+// wrapToken is a breakable unit of label text: a letter/digit run with any
+// attached separator run (trailing attachment; leading attachment for a
+// separator run at the start of the string).
+type wrapToken struct {
+	// text is the token content, including attached separators.
+	text string
+	// spaceBefore reports whether whitespace separated this token from the
+	// previous one (a space is re-inserted when rejoined on the same line).
+	spaceBefore bool
+}
+
+// tokenizeWrapText splits text into wrap tokens at whitespace and
+// punctuation/symbol boundaries. A separator is any rune that is neither a
+// letter/digit (unicode.IsLetter/IsDigit) nor whitespace (unicode.IsSpace) —
+// note this covers Unicode symbols like '>' in "->", which unicode.IsPunct
+// would miss. A separator run attaches to the word-like run that precedes
+// it ("Multi-", "YUV420->", "IMAGE_"); a leading separator run attaches to
+// the following word ("[CGF").
+func tokenizeWrapText(text string) []wrapToken {
+	runes := []rune(text)
+
+	var tokens []wrapToken
+
+	var current strings.Builder
+
+	var pendingSpace bool
+
+	hasWord := false
+
+	lastWasSeparator := false
+
+	flush := func(spaceBefore bool) {
+		if current.Len() > 0 {
+			tokens = append(tokens, wrapToken{text: current.String(), spaceBefore: spaceBefore})
+			current.Reset()
+		}
+	}
+
+	for i := 0; i < len(runes); {
+		r := runes[i]
+
+		switch {
+		case isWordChar(r):
+			// A word char after a trailing separator run ends the previous
+			// token ("Multi-" | "Consumer") — unless the current token holds
+			// only separators, which attach to this word ("[CGF").
+			if hasWord && lastWasSeparator {
+				flush(pendingSpace)
+				pendingSpace = false
+			}
+			current.WriteRune(r)
+			hasWord = true
+			lastWasSeparator = false
+			i++
+
+		case unicode.IsSpace(r):
+			// Whitespace ends the current token and marks the next one as
+			// space-separated.
+			flush(pendingSpace)
+			pendingSpace = true
+			hasWord = false
+			lastWasSeparator = false
+			// Consume the whole whitespace run.
+			for i < len(runes) && unicode.IsSpace(runes[i]) {
+				i++
+			}
+
+		default:
+			// Separator (punctuation or symbol): attach to the current token
+			// (trailing attachment), or start a pending token that will
+			// attach to the following word (leading attachment).
+			current.WriteRune(r)
+			lastWasSeparator = true
+			i++
+		}
+	}
+
+	flush(pendingSpace)
+
+	return tokens
+}
+
+// isWordChar reports whether r is part of a word-like run (letter or digit).
+func isWordChar(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r)
+}
+
+// runeCountWithSpace returns the line cost of a token: its rune count plus
+// one when it is whitespace-separated and not the first token on the line.
+func runeCountWithSpace(tokenLen int, spaceBefore bool) int {
+	if spaceBefore {
+		return 1 + tokenLen
+	}
+
+	return tokenLen
+}
+
+// fitsOnLine reports whether the token fits on the current line (with a
+// preceding space when whitespace-separated and the line is non-empty).
+func fitsOnLine(currentLen, tokenLen, maxChars int, spaceBefore bool) bool {
+	if currentLen == 0 {
+		return false
+	}
+
+	return currentLen+runeCountWithSpace(tokenLen, spaceBefore) <= maxChars
 }
 
 // flushIfPending appends the current line to lines and resets it when it is
