@@ -1,0 +1,27 @@
+# Composed Example - auth domain
+# Cross-file subunits under entry's [platform] (D-10). This included file
+# re-declares [platform] and contributes [platform.auditLog], which
+# include.Resolve attaches onto the entry's existing platform. The subunit
+# participates in peer walk-up and in the rendered graph like any hand-authored
+# subunit — that is the XC-05 composition guarantee.
+
+[platform]
+type = "system"
+name = "Platform"
+
+# platform.auditLog: a cross-file subunit appended onto entry's platform.
+# A container (C2 under system). Carries no direct links (it is a parent below).
+[platform.auditLog]
+type = "container"
+name = "Audit Log Domain"
+description = "Appended via include from domains/auth.toml (D-10)"
+
+# auditLog.sink: the leaf that actually links out. A C3 component.
+[platform.auditLog.sink]
+type = "componentQueue"
+name = "Audit Sink"
+description = "Drains audit events from the bus"
+
+[[platform.auditLog.sink.link]]
+peer = "messageBus"
+description = "Consumes audit events from the backbone"

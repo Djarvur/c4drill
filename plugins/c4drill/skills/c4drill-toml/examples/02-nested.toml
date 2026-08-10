@@ -1,0 +1,79 @@
+# Nested Structure Example
+# Demonstrates C2 (container) and C3 (component) levels using dotted notation
+
+[properties]
+name = "Nested Architecture"
+description = "System with containers and components"
+
+[user]
+type = "person"
+name = "Customer"
+
+[[user.link]]
+peer = "shop.webapp"
+technology = "HTTPS"
+description = "Browses and orders"
+
+# C1 Level: Main System
+[shop]
+type = "system"
+name = "E-Commerce Platform"
+description = "Online shopping platform"
+
+# C2 Level: Containers (inside system)
+[shop.webapp]
+type = "container"
+name = "Web Application"
+description = "Customer-facing frontend"
+technology = "React, TypeScript"
+
+# C2 Level: API Container (changed from system to container)
+[shop.api]
+type = "container"
+name = "API Service"
+description = "Backend API"
+technology = "Node.js, Express"
+
+# C3 Level: Components (inside container)
+[shop.api.handlers]
+type = "component"
+name = "HTTP Handlers"
+description = "Request routing and validation"
+technology = "Express Router"
+
+[[shop.api.handlers.link]]
+peer = "shop.webapp"
+technology = "REST/JSON"
+description = "Serves"
+
+[shop.api.services]
+type = "component"
+name = "Business Services"
+description = "Domain logic and orchestration"
+technology = "TypeScript"
+
+[[shop.api.services.link]]
+peer = "shop.api.handlers"
+description = "Called by"
+
+[shop.api.repository]
+type = "component"
+name = "Data Repository"
+description = "Database access layer"
+technology = "Prisma ORM"
+
+[[shop.api.repository.link]]
+peer = "shop.api.services"
+description = "Used by"
+
+# C2 Level: Database Container
+[shop.database]
+type = "containerDb"
+name = "Database"
+description = "Persistent storage"
+technology = "PostgreSQL"
+
+[[shop.database.link]]
+peer = "shop.api.repository"
+technology = "SQL"
+description = "Queries"

@@ -1,0 +1,118 @@
+# Link Syntax Example
+# Demonstrates all link attributes and variations
+
+[properties]
+name = "Link Examples"
+description = "Various link configurations"
+
+# Basic units
+[customer]
+type = "person"
+name = "Customer"
+
+[[customer.link]]
+peer = "webapp"
+arrow = "forward"
+technology = "HTTPS"
+description = "Browses"
+
+[webapp]
+type = "system"
+name = "Web Application"
+technology = "React"
+
+# Multiple links with different attributes
+[[webapp.link]]
+peer = "api"
+arrow = "reverse"
+technology = "REST/JSON"
+description = "Queries API"
+color = "blue"
+
+[[webapp.link]]
+peer = "cache"
+labelPosition = "tail"
+technology = "Redis"
+description = "Session cache"
+
+[api]
+type = "system"
+name = "API Gateway"
+technology = "Node.js"
+
+[[api.link]]
+peer = "cache"
+arrow = "bidirectional"
+technology = "Redis Protocol"
+description = "Caches/Retrieves"
+style = "dashed"
+
+[[api.link]]
+peer = "analytics"
+arrow = "none"
+technology = "HTTP POST"
+description = "Sends events"
+color = "gray"
+style = "dotted"
+
+[[api.link]]
+peer = "database"
+rank = "reverse"
+technology = "SQL"
+description = "Queries"
+color = "green"
+
+[[api.link]]
+peer = "payment"
+rank = "equal"
+technology = "HTTPS"
+description = "Processes payments"
+color = "orange"
+style = "solid"
+
+[[api.linkFrom]]
+peer = "payment"
+labelPosition = "head"
+technology = "Webhook"
+description = "Payment callback"
+color = "purple"
+
+[payment]
+type = "systemExternal"
+name = "Payment Service"
+description = "External payment processor"
+
+[[payment.linkFrom]]
+peer = "api"
+description = "Processes payments"
+
+[analytics]
+type = "systemExternal"
+name = "Analytics"
+description = "Usage analytics platform"
+
+[[analytics.linkFrom]]
+peer = "api"
+description = "Sends events"
+
+[database]
+type = "db"
+name = "Database"
+technology = "PostgreSQL"
+
+[[database.linkFrom]]
+peer = "api"
+description = "Queries"
+
+[cache]
+type = "db"
+name = "Cache"
+technology = "Redis"
+
+[[cache.linkFrom]]
+peer = "webapp"
+description = "Session cache"
+
+[[cache.linkFrom]]
+peer = "api"
+description = "Caches/Retrieves"

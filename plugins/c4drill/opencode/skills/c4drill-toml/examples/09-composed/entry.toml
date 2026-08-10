@@ -1,0 +1,71 @@
+# Composed Example (entry - all four features)
+# include + template + relative-peer + reference composed together (XC-05 golden
+# fixture). Renders to identical DOT as single-file-equivalent.toml through the
+# full pipeline (asserted by Plan 04's TestXC05_ComposedEquivSingleFile).
+#
+# Pipeline (see SKILL.md ### Pipeline Ordering):
+#   1. include.Resolve  - pulls in templates.toml (defines [template.microservice])
+#                         and domains/auth.toml (contributes [platform.auditLog])
+#   2. template.Expand  - the [[use]] instantiates microservice -> [platform.auth]
+#                         + [platform.auth.cache] with ${param} substituted
+#   3. peer.Resolve     - the cache's peer "messageBus" (substituted from
+#                         ${upstreamBus}) resolves at the instantiation site
+#   4. humanize -> validate -> views -> render
+
+[properties]
+name = "Composed Example"
+description = "include + templates + relative-peer + reference in one model"
+edges = "spline"
+expanded = ["platform"]
+
+# platform: parent system. Gains subunits from BOTH the [[use]] (platform.auth)
+# and the included domains/auth.toml (platform.auditLog).
+[platform]
+type = "system"
+name = "Platform"
+description = "Hosts the instantiated auth service and the included audit-log domain"
+
+# messageBus: the instantiation-site peer target. The template's cache subunit
+# links peer = ${upstreamBus}; the [[use]] below sets upstreamBus = "messageBus",
+# so after expansion + peer-resolve the cache links to THIS top-level unit.
+[messageBus]
+type = "queue"
+name = "Message Bus"
+description = "Top-level backbone; instantiation-site target for the template link"
+
+# ===== INCLUDE DIRECTIVES (run as pass 1 so the template is visible to [[use]]) =====
+
+# templates.toml defines [template.microservice]. Including it BEFORE the [[use]]
+# is what makes the instantiation succeed (XC-02: template-in-included-file).
+[[include]]
+path = "templates.toml"
+once = true
+
+# domains/auth.toml contributes [platform.auditLog] (cross-file subunit, D-10).
+[[include]]
+path = "domains/auth.toml"
+
+# ===== TEMPLATE INSTANTIATION (runs as pass 2, after include) =====
+# Produces platform.auth (container parent) + platform.auth.cache (componentDb
+# leaf with the parametrized link). All ${param} tokens substitute from these
+# fields; the cache's peer becomes "messageBus" (the concrete upstreamBus value).
+
+[[use]]
+template = "microservice"
+parent = "platform"
+name = "auth"
+domain = "authentication"
+tech = "Go, gRPC"
+upstreamBus = "messageBus"
+
+# ===== ACTOR (links to the instantiated leaf) =====
+
+[customer]
+type = "person"
+name = "Customer"
+description = "End user whose requests reach the instantiated auth service"
+
+[[customer.link]]
+peer = "platform.auth.cache" # the instantiated leaf (platform.auth is a parent)
+technology = "HTTPS"
+description = "Reads auth-cache entries produced by the instantiated service"

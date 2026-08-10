@@ -1,0 +1,329 @@
+# E-Commerce Architecture Example
+# Realistic full architecture demonstrating real-world usage
+
+[properties]
+name = "E-Commerce Platform"
+description = "Complete online shopping platform"
+edges = "spline"
+expanded = ["platform"]
+
+# ===== ACTORS =====
+
+[customer]
+type = "person"
+name = "Customer"
+description = "Online shopper"
+
+[[customer.link]]
+peer = "platform.webapp"
+technology = "HTTPS"
+description = "Browses and orders"
+
+[admin]
+type = "person"
+name = "Admin"
+description = "System administrator"
+color = "#FFF9C4"
+border = "#F9A825"
+
+[[admin.link]]
+peer = "platform.admin-panel"
+technology = "HTTPS"
+description = "Manages system"
+
+[support]
+type = "person"
+name = "Support Agent"
+description = "Customer support"
+color = "#FFF9C4"
+border = "#F9A825"
+
+[[support.link]]
+peer = "platform.support-tool"
+technology = "HTTPS"
+description = "Handles tickets"
+
+# ===== EXTERNAL SERVICES =====
+
+[stripe]
+type = "systemExternal"
+name = "Stripe"
+description = "Payment processor"
+technology = "Stripe API"
+color = "#E3F2FD"
+border = "#1976D2"
+reference = "https://docs.stripe.com/api"
+
+[[stripe.link]]
+peer = "platform.payment-service"
+description = "Webhooks"
+
+[sendgrid]
+type = "systemExternal"
+name = "SendGrid"
+description = "Email service"
+technology = "SendGrid API"
+color = "#E3F2FD"
+border = "#1976D2"
+
+[[sendgrid.link]]
+peer = "platform.notification-service"
+description = "Delivery status"
+
+[segment]
+type = "systemExternal"
+name = "Segment"
+description = "Analytics platform"
+technology = "Segment API"
+color = "#E3F2FD"
+border = "#1976D2"
+
+[[segment.link]]
+peer = "platform.event-bus"
+description = "Analytics pipeline"
+
+# ===== MAIN SYSTEM =====
+
+[platform]
+type = "system"
+name = "E-Commerce Platform"
+description = "Online shopping platform"
+technology = "Microservices"
+color = "#E8F5E9"
+border = "#388E3C"
+
+# C2: Frontends
+
+[platform.webapp]
+type = "container"
+name = "Web Application"
+description = "Customer-facing frontend"
+technology = "Next.js, React"
+
+[[platform.webapp.link]]
+peer = "platform.api-gateway"
+technology = "REST/JSON"
+description = "Calls"
+
+[platform.admin-panel]
+type = "container"
+name = "Admin Panel"
+description = "Internal admin interface"
+technology = "React, TypeScript"
+color = "#F3E5F5"
+border = "#7B1FA2"
+
+[[platform.admin-panel.link]]
+peer = "platform.api-gateway"
+technology = "REST/JSON"
+description = "Admin API"
+
+[platform.support-tool]
+type = "container"
+name = "Support Tool"
+description = "Customer support interface"
+technology = "React, TypeScript"
+color = "#F3E5F5"
+border = "#7B1FA2"
+
+[[platform.support-tool.link]]
+peer = "platform.api-gateway"
+technology = "REST/JSON"
+description = "Support API"
+
+# C2: API Gateway
+
+[platform.api-gateway]
+type = "container"
+name = "API Gateway"
+description = "API routing and rate limiting"
+technology = "Kong, Node.js"
+
+# C2: Microservices
+
+[platform.user-service]
+type = "container"
+name = "User Service"
+description = "User management and authentication"
+technology = "Go, gRPC"
+
+[[platform.user-service.link]]
+peer = "platform.api-gateway"
+technology = "gRPC"
+description = "Authenticates"
+
+[platform.order-service]
+type = "container"
+name = "Order Service"
+description = "Order processing and management"
+technology = "Go, gRPC"
+
+[[platform.order-service.link]]
+peer = "platform.api-gateway"
+technology = "gRPC"
+description = "Handles orders"
+
+[[platform.order-service.linkFrom]]
+peer = "platform.payment-service"
+technology = "gRPC"
+description = "Payment confirmation"
+
+[[platform.order-service.linkFrom]]
+peer = "platform.inventory-service"
+technology = "gRPC"
+description = "Stock check"
+
+[platform.inventory-service]
+type = "container"
+name = "Inventory Service"
+description = "Product catalog and stock management"
+technology = "Go, gRPC"
+
+[[platform.inventory-service.link]]
+peer = "platform.api-gateway"
+technology = "gRPC"
+description = "Product queries"
+
+[[platform.inventory-service.linkFrom]]
+peer = "platform.order-service"
+technology = "gRPC"
+description = "Stock check"
+
+[platform.payment-service]
+type = "container"
+name = "Payment Service"
+description = "Payment processing"
+technology = "Go, gRPC"
+color = "#FFEBEE"
+border = "#C62828"
+
+[[platform.payment-service.link]]
+peer = "platform.order-service"
+technology = "gRPC"
+description = "Processes payments"
+
+[[platform.payment-service.link]]
+peer = "stripe"
+technology = "Stripe API"
+description = "Processes payments"
+color = "#1976D2"
+style = "dashed"
+
+[[platform.payment-service.linkFrom]]
+peer = "stripe"
+technology = "Webhook"
+description = "Payment events"
+color = "#1976D2"
+
+[platform.notification-service]
+type = "container"
+name = "Notification Service"
+description = "Email and push notifications"
+technology = "Node.js, Redis"
+
+[[platform.notification-service.link]]
+peer = "sendgrid"
+technology = "SendGrid API"
+description = "Sends emails"
+color = "#1976D2"
+style = "dashed"
+
+[[platform.notification-service.linkFrom]]
+peer = "platform.order-service"
+technology = "Kafka"
+description = "Order events"
+
+[[platform.notification-service.linkFrom]]
+peer = "sendgrid"
+technology = "Webhook"
+description = "Delivery status"
+color = "#1976D2"
+
+# C2: Databases
+
+[platform.user-db]
+type = "containerDb"
+name = "User Database"
+description = "User profiles and sessions"
+technology = "PostgreSQL"
+
+[[platform.user-db.link]]
+peer = "platform.user-service"
+technology = "SQL"
+description = "Queries"
+color = "#4CAF50"
+
+[platform.order-db]
+type = "containerDb"
+name = "Order Database"
+description = "Orders and transactions"
+technology = "PostgreSQL"
+
+[[platform.order-db.link]]
+peer = "platform.order-service"
+technology = "SQL"
+description = "Queries"
+color = "#4CAF50"
+
+[platform.inventory-db]
+type = "containerDb"
+name = "Inventory Database"
+description = "Products and stock levels"
+technology = "PostgreSQL"
+
+[[platform.inventory-db.link]]
+peer = "platform.inventory-service"
+technology = "SQL"
+description = "Queries"
+color = "#4CAF50"
+
+# C2: Event Bus
+
+[platform.event-bus]
+type = "containerQueue"
+name = "Event Bus"
+description = "Async event processing"
+technology = "Kafka"
+color = "#FCE4EC"
+border = "#C2185B"
+
+[[platform.event-bus.linkFrom]]
+peer = "platform.order-service"
+technology = "Kafka Protocol"
+description = "Publishes events"
+color = "#C2185B"
+
+[[platform.event-bus.link]]
+peer = "platform.notification-service"
+technology = "Kafka Protocol"
+description = "Consumes events"
+color = "#C2185B"
+
+[[platform.event-bus.link]]
+peer = "segment"
+technology = "Kafka Connect"
+description = "Analytics pipeline"
+color = "#C2185B"
+style = "dashed"
+
+# C2: Caching
+
+[platform.cache]
+type = "containerDb"
+name = "Cache Layer"
+description = "Session and data caching"
+technology = "Redis"
+color = "#FFF3E0"
+border = "#E65100"
+
+[[platform.cache.linkFrom]]
+peer = "platform.user-service"
+technology = "Redis Protocol"
+description = "Session cache"
+color = "#E65100"
+
+[[platform.cache.linkFrom]]
+peer = "platform.inventory-service"
+technology = "Redis Protocol"
+description = "Product cache"
+color = "#E65100"

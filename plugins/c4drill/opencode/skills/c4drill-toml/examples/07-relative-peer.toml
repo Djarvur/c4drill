@@ -1,0 +1,101 @@
+# Relative Peer Resolution Example
+# Demonstrates bare peer walk-up resolution (ERGO-01/02): a bare `peer` value
+# (no dot) resolves by walking the enclosing parent's ancestor scopes
+# nearest-first. A peer WITH a dot is absolute and resolved untouched (D-16).
+#
+# Four labeled cases below (see comments "Case N"). Pipeline position:
+#   include.Resolve -> template.Expand -> peer.Resolve -> humanize -> validate
+# peer.Resolve runs as the 3rd pass, AFTER template.Expand (XC-03).
+
+[properties]
+name = "Relative Peer Resolution Example"
+description = "Four bare-peer walk-up cases plus an absolute-fallback peer"
+edges = "spline"
+
+# ===== TOP-LEVEL (root scope) =====
+
+# Root-scope target for Case 3 (root match). Top-level units form the root scope
+# the walk-up reaches when no nearer ancestor matches.
+[messageBus]
+type = "queue"
+name = "Message Bus"
+description = "Top-level backbone reachable by walk-up from any depth"
+
+# ===== platform SCOPE (provides the ancestor chain for the cases) =====
+
+[platform]
+type = "system"
+name = "Platform"
+description = "Parent system whose subunits exercise each walk-up case"
+
+# Case 1 target: sibling of platform.api. The bare peer "cache" inside
+# platform.api resolves here because cache is a sibling (a child of the nearest
+# ancestor scope = platform). Under system, children must be C2 → containerDb.
+[platform.cache]
+type = "containerDb"
+name = "Platform Cache"
+description = "Sibling of platform.api — Case 1 sibling-match target"
+
+[[platform.cache.link]]
+peer = "messageBus"
+description = "Publishes cache invalidations (keeps this leaf non-orphan)"
+
+# Case 2 target: aunt of platform.api.handlers.auth. platform.queue lives at
+# the platform scope; auth walks up past the empty handlers scope to find it.
+[platform.queue]
+type = "containerQueue"
+name = "Platform Queue"
+description = "Aunt of platform.api.handlers.auth — Case 2 aunt-match target"
+
+[[platform.queue.link]]
+peer = "messageBus"
+description = "Drains platform-level queue work (keeps this leaf non-orphan)"
+
+# Case 1 + Case 4 host. platform.router is a LEAF container (C2 under system)
+# with NO subunits, so it can carry direct links. Its bare peer "cache" resolves
+# to the sibling platform.cache (Case 1); its dotted peer resolves untouched.
+[platform.router]
+type = "container"
+name = "Router Service"
+description = "Case 1 + 4 host: sibling 'cache' + absolute 'externalGateway'"
+
+[[platform.router.link]]
+peer = "cache" # Case 1: sibling match (D-13) -> platform.cache
+description = "Reads/writes the shared platform cache"
+
+[[platform.router.link]]
+peer = "platform.api.handlers" # Case 4: absolute fallback (D-16) — dot = untouched
+description = "Routes to the handlers component via an absolute dotted peer (no walk-up)"
+
+# platform.api: a PARENT container (C2) hosting the Case 2/3 components below.
+# It carries no direct links (validator: parents with subunits cannot link).
+[platform.api]
+type = "container"
+name = "API Service"
+description = "Parent container hosting the Case 2 + Case 3 walk-up hosts"
+
+# platform.api.handlers: an intermediate nesting level with NO child named
+# "queue" or "messageBus" — forces Case 2 and Case 3 walks to climb past it.
+# A container (C2) under container is C3-incompatible; instead host auth at
+# platform.api directly and use a SIBLING intermediate to demonstrate depth.
+# Simpler valid chain: platform.api (container) hosts auth (component) directly.
+[platform.api.handlers]
+type = "component"
+name = "API Handlers Stub"
+description = "A C3 component under platform.api (forces walk-up past the api scope for Case 2/3)"
+
+[[platform.api.handlers.link]]
+peer = "queue" # Case 2: aunt match (D-14) -> platform.queue
+description = "Enqueues work to the aunt platform.queue"
+
+# auth: a sibling C3 component of handlers, also under platform.api. Its bare
+# peer "messageBus" must climb TWO scopes (api -> platform -> root) — proving
+# the walk-up reaches root when no nearer scope matches.
+[platform.api.auth]
+type = "component"
+name = "Auth Component"
+description = "Case 3 host: bare peer 'messageBus' climbs to root (D-15)"
+
+[[platform.api.auth.link]]
+peer = "messageBus" # Case 3: root match (D-15) -> messageBus (top-level)
+description = "Publishes auth events to the root-scope messageBus"

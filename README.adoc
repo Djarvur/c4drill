@@ -3,37 +3,25 @@
 :toc-title: Contents
 :icons: font
 
-Transform simple TOML architecture descriptions into professional,
-interactive C4 diagrams without manual drawing.
-
-*One TOML file → Clickable C1, C2, and C3 diagrams with automatic
-drill-down navigation.*
+Describe your architecture once in a TOML file; C4Drill generates a
+hierarchy of cross-linked C1/C2/C3 SVG diagrams with automatic drill-down
+navigation. The model is the diagram: edit the TOML, re-run the tool,
+and every level plus all navigation links is regenerated consistently.
+No runtime, no GUI, no manual drawing.
 
 == What It Is and What Problem It Solves
 
-C4Drill is *diagram-as-code for C4*: describe your architecture once in
-a TOML file, and get a hierarchy of nested, cross-linked SVG diagrams
-that let you zoom from context down to components — no runtime, no GUI,
-no manual drawing.
+One TOML model produces the C1 context diagram below, the C2 container
+diagrams, the C3 component diagrams, and every drill-down link between
+them. Open any generated SVG to click through.
 
 image::examples/cloud-system/cloud-system.svg[Cloud System — C1 diagram,width=400]
 
-One model produces the C1 context diagram above, the C2 container
-diagrams, the C3 component diagrams, and every drill-down link between
-them (see the Examples section). Open any generated SVG to click
-through.
-
-=== The Problem
-
-Real systems do not fit one sheet. A large architecture is dozens to
-hundreds of elements; drawing it on a single diagram produces an
-unreadable wall of boxes, and hand-maintaining a hierarchy of linked
-diagrams (C1 → C2 → C3) is a lot of manual work that drifts out of sync
-with the code.
-
-C4Drill makes the hierarchy automatic: *the model is the diagram*. Edit
-the TOML, re-run the tool, and every level plus all navigation links is
-regenerated consistently.
+Real systems do not fit one sheet: dozens to hundreds of elements on a
+single diagram are unreadable, and hand-maintaining a linked C1 → C2 →
+C3 hierarchy drifts out of sync with the code. C4Drill generates the
+hierarchy from the model, so every level and all navigation links stay
+consistent after each re-run.
 
 === Why Not an Existing Tool?
 
@@ -46,22 +34,20 @@ regenerated consistently.
 |LikeC4 |The closest: model + nested views with drill-down |Requires a runtime/workspace; C4Drill emits static files you can commit and open anywhere
 |===
 
-C4Drill is for the *static-artifact* case: diagrams that live in the
+C4Drill targets the *static-artifact* case: diagrams that live in the
 repository, are reviewed in pull requests, and render everywhere.
 
 === Why TOML?
 
-There is deliberately no new DSL to learn. TOML is a configuration
-format most engineers already read, and the schema *is* the C4 model:
-units, types, levels, links. `type = "container"` and
+No new DSL to learn. TOML is a configuration format most engineers
+already read, and the schema *is* the C4 model: `type = "container"` and
 `name = "API Service"` read like prose. A bespoke DSL (or HCL) would add
 syntax to learn without adding modeling power.
 
 === Is This for You?
 
-* *Yes*, if you have a system large enough that one diagram is
-  unreadable, and you want the level hierarchy generated and kept in
-  sync as versionable static files.
+* *Yes*, if you want the level hierarchy generated and kept in sync as
+  versionable static files.
 * *Probably not*, if you only need quick throwaway diagrams inside
   Markdown — Mermaid or PlantUML will serve you better.
 
@@ -97,22 +83,17 @@ c4drill architecture.toml -f dot -o ./output
 
 == Examples
 
-The https://github.com/likec4/likec4/tree/main/examples[likec4 examples]
-are popular real-world C4 models. The directories below are ports of a
-curated subset into C4Drill TOML — the generated diagrams are committed
-next to each source file, so what you see in this README is exactly what
-`c4drill` produces. Every port documents its adaptations in comments:
-features likec4 has and C4Drill does not (dynamic and deployment views,
-tags, metadata, view-local styles) are either mapped to the closest
-C4Drill equivalent or dropped with a note.
+The models below are adapted from the
+https://github.com/likec4/likec4/tree/main/examples[likec4 examples].
+Generated diagrams are committed next to their TOML sources, so what you
+see here is exactly what `c4drill` produces. Features likec4 has that
+C4Drill does not (dynamic and deployment views, tags, metadata,
+view-local styles) are either mapped to the closest C4Drill equivalent
+or dropped with a note in the source file.
 
-=== Cloud System (likec4 `cloud-system`)
+=== Cloud System
 
-The flagship example: a SaaS platform with two external parties and
-multi-level drill-down. Ported from
-https://github.com/likec4/likec4/tree/main/examples/cloud-system[likec4
-`cloud-system`] (a copy of
-https://github.com/likec4/example-cloud-system[`likec4/example-cloud-system`]).
+A SaaS platform with two external parties and multi-level drill-down.
 
 image::examples/cloud-system/cloud-system.svg[Cloud System — C1 diagram,width=720]
 
@@ -124,26 +105,6 @@ drills down further:
 * link:examples/cloud-system/cloud-system/amazon/rds.svg[RDS — C3 (PostgreSQL)]
 * link:examples/cloud-system/cloud-system/amazon/sqs.svg[SQS — C3 (queues)]
 * link:examples/cloud-system/cloud-system/amazon/lambdas.svg[Lambdas — C3 (enrichment)]
-
-==== What was adapted
-
-* `supportUser` is nested inside `cloud` in likec4; C4Drill C1 types are
-  top-level only, so the actor is hoisted to the root level.
-* Amazon is an `externalSystem` in likec4; C4Drill's `systemExternal`
-  cannot contain subunits, so it is modeled as a regular `system`.
-* `customer -> cloud "uses and pays"` targets the system itself; C4Drill
-  cannot link to a unit that has subunits (validation rule 3 below), so
-  the edge targets `cloud.ui` — the same endpoint likec4's own customer
-  view uses.
-* likec4 view-local edges (`cloud.* -> amazon.*`, `cloud.next.* ->
-  sqs.*`, ...) are modeled as regular links; each carries a comment
-  citing the source view.
-* The `tblUsers` table nested under PostgreSQL is dropped — C4Drill
-  components cannot have subunits.
-* Dynamic views, deployment views, groups, tags and view styles have no
-  C4Drill equivalent and are dropped.
-* `legacy`'s link to the update-diagrams workflow file maps to the
-  `reference` field (the 📖 marker).
 
 Regenerate:
 
@@ -160,14 +121,11 @@ navigation, useful for a one-shot review of the whole architecture:
 
 image::examples/cloud-system/cloud-system.expanded.svg[Cloud System — all-expanded diagram,width=720]
 
-=== Vehicle Platform (likec4 `overflow-test`)
+=== Vehicle Platform
 
-A stress test: very long display names and channel-technology labels
-ported verbatim from
-https://github.com/likec4/likec4/tree/main/examples/overflow-test[likec4
-`overflow-test`] to demonstrate label wrapping. C4Drill sizes labels
-from their content — tune the shape with `--label-ratio` (default 1.6,
-credit-card proportions) or the `C4DRILL_LABEL_RATIO` environment
+A stress test: very long display names and channel-technology labels.
+C4Drill sizes labels from their content — tune the shape with
+`--label-ratio` (default 1.6) or the `C4DRILL_LABEL_RATIO` environment
 variable.
 
 image::examples/overflow-test/overflow-test.svg[Vehicle Platform — C1 diagram,width=720]
@@ -180,11 +138,6 @@ Parallel edges between the same pair of units collapse to a single
 thicker edge in resolved views (first-wins dedup, D-01); the
 `--expanded` diagram shows every parallel link with its own label.
 
-* likec4 custom kinds (`service`, `component`) map onto C4Drill
-  `container` / `component`.
-* likec4 tags (`#sensor`, `#perception`, ...) have no C4Drill equivalent
-  and are dropped.
-
 Regenerate:
 
 [source,bash]
@@ -192,22 +145,15 @@ Regenerate:
 c4drill examples/overflow-test/overflow-test.toml
 ----
 
-=== Effect of Rank (likec4 `rank-for-better-layout`)
+=== Effect of Rank
 
-A minimal graph from
-https://github.com/likec4/likec4/tree/main/examples/rank-for-better-layout[likec4
-`rank-for-better-layout`] showing rank hints. likec4's view-level
-`rank same/source/max` directives have no direct C4Drill equivalent; the
-closest tool is the per-link `rank` attribute — `rank = "equal"` puts
-the link's endpoints on the same rank, `rank = "forward"` /
-`"reverse"` order them along the layout direction.
+A minimal graph showing rank hints. The per-link `rank` attribute puts
+the link's endpoints on the same rank (`rank = "equal"`) or orders them
+along the layout direction (`rank = "forward"` / `"reverse"`).
+`D` carries a link to `C` to satisfy the orphan rule (see
+<<Validation Rules>>).
 
 image::examples/rank-for-better-layout/rank-for-better-layout.svg[Effect of Rank — C1 diagram,width=520]
-
-* likec4's custom kind `block` maps onto C4Drill `system`.
-* likec4's `D` has no relations; C4Drill requires every leaf unit to
-  have at least one link (orphan rule), so `D` gains a link to `C` —
-  the other member of its `rank source` group.
 
 Regenerate:
 
@@ -215,21 +161,6 @@ Regenerate:
 ----
 c4drill examples/rank-for-better-layout/rank-for-better-layout.toml
 ----
-
-=== Not ported
-
-The remaining likec4 examples build on features C4Drill does not have,
-so ports would be more confusing than instructive:
-
-[cols="1,2a",options="header"]
-|===
-|likec4 example |Why it was not ported
-|`metadata-views` |View filtering on metadata (`where metadata.environment is "production"`) has no equivalent.
-|`issue-1624` |A bug reproduction (custom kinds, rich descriptions) rather than a showcase.
-|`multi-relation-extend` |Built on likec4's `extend` semantics (merging metadata/tags/links onto existing relations) — C4Drill's `[[include]]` merges units, not relation metadata.
-|`multi-metadata-extend` |Same `extend` semantics as above.
-|`multi-project` |Multiple independent projects in one workspace; C4Drill models one architecture per file.
-|===
 
 == TOML Format
 
@@ -383,10 +314,9 @@ description = "Cloud infrastructure"
 
 Any unit accepts an optional `reference` field — an external
 documentation URL. When set, a 📖 marker appears next to the unit name
-and the node becomes clickable: clicking it opens the URL (via
-GraphViz's native `URL` attribute in SVG). In `-f html` output, external
-`http(s)` references open in a new tab, distinct from internal
-drill-down navigation.
+and the node becomes clickable (GraphViz's native `URL` attribute in
+SVG). In `-f html` output, external `http(s)` references open in a new
+tab, distinct from internal drill-down navigation.
 
 [source,toml]
 ----
@@ -425,14 +355,12 @@ Local IDP".
 * Examples: `sessionManager` → "Session Manager", `localIDP` → "Local
 IDP", `linuxSystem` → "Linux System".
 
-*Acronyms:* acronym preservation is intentionally *not* supported (the
-split is deliberately dumb). `gRPC` humanizes to "Grpc". To preserve an
-acronym or set any custom label, set `name =` explicitly — an explicit
-`name =` always wins.
+*Acronyms:* acronym preservation is *not* supported — `gRPC` humanizes
+to "Grpc". Set `name =` explicitly to override; an explicit `name =`
+always wins.
 
-*Backward compatibility:* existing models that already set `name =` on
-every unit are completely unaffected — humanization only fires when
-`name` is omitted.
+*Backward compatibility:* models that set `name =` on every unit are
+unaffected — humanization only fires when `name` is omitted.
 
 === Optional Type (Inference)
 
@@ -658,11 +586,9 @@ from their content (see `--label-ratio` in the CLI Reference).
 
 === Templates
 
-Define a parametrized unit template once and instantiate it N times with
-distinct parameter values. A template is a
-`++[++template.++<++name++>]++` table declaring its parameters and the
-unit shape (including subunits and links); each `++[[++use++]]++`
-directive instantiates it with concrete values.
+A template is a `++[++template.++<++name++>++]++` table that declares
+parameters and a unit shape (including subunits and links); each
+`++[[++use++]]++` directive instantiates it with concrete values.
 
 [source,toml]
 ----

@@ -1,0 +1,109 @@
+# Templates Example
+# Demonstrates [template.*] define + [[use]] instantiate with ${param} substitution
+# (TMPL-01 through TMPL-10). Defines two parametrized templates:
+#   - [microservice]: a LEAF unit with a parametrized link (TMPL-03 fixed-link,
+#     TMPL-10 reference param). Instantiated twice under the same parent.
+#   - [dataService]: a PARENT unit with a subunit subtree (TMPL-04). Instantiated
+#     once. (Validator rule: a parent with subunits cannot carry direct links,
+#     so the subunit-bearing template is separate from the link-bearing one.)
+#
+# Pipeline position (see SKILL.md ### Pipeline Ordering):
+#   include.Resolve -> template.Expand -> peer.Resolve -> humanize -> validate
+# Templates expand as the 2nd pass; relative peers authored inside a template
+# resolve at the instantiation site (XC-03), NOT the template's lexical location.
+
+[properties]
+name = "Templates Example"
+description = "Parametrized templates instantiated into leaf and parent units"
+edges = "spline"
+expanded = ["platform"]
+
+# ===== TEMPLATE LIBRARY =====
+
+# microservice: a LEAF unit. Declared params; ${param} substitution into
+# name/description/technology/reference; one FIXED link whose peer is
+# parametrized (TMPL-03: no fan-out — N instantiations produce N links, not a
+# for_each). Reference URL is parametrized (TMPL-10).
+[template.microservice]
+params = ["name", "tech", "upstreamBus"]
+name = "${name} Service"
+type = "container"
+technology = "${tech}"
+description = "${name} handles its domain; publishes to ${upstreamBus}"
+reference = "https://wiki.example.com/${name}"
+
+[[template.microservice.link]]
+peer = "${upstreamBus}"
+description = "Publishes ${name} domain events"
+
+# dataService: a PARENT unit with a subunit subtree (TMPL-04). The cache key is
+# verbatim (D-04 — no structural parametrization); only field values substitute.
+# Parents cannot carry direct links (validator rule), so this template has none;
+# the cache subunit carries the link that keeps the parent non-orphan
+# transitively (a unit with subunits is never itself an orphan).
+[template.dataService]
+params = ["name", "tech"]
+name = "${name} Data Service"
+type = "container"
+technology = "${tech}"
+description = "${name} owns a private cache"
+
+[template.dataService.cache]
+type = "componentDb"
+name = "${name} Cache"
+technology = "Redis"
+
+[[template.dataService.cache.link]]
+peer = "messageBus"
+description = "Publishes ${name} cache invalidations"
+
+# ===== TOP-LEVEL UNITS =====
+
+[platform]
+type = "system"
+name = "Platform"
+description = "Parent system hosting the instantiated services"
+
+[messageBus]
+type = "queue"
+name = "Message Bus"
+description = "Backbone for domain event publication"
+
+# ===== INSTANTIATIONS (D-03/D-04) =====
+# Two [[use]] of microservice under the same parent with distinct params. The
+# produced unit paths are platform.auth and platform.billing (parent + name
+# param per D-04). Each carries its own substituted fields (TMPL-08 deep-copy).
+
+[[use]]
+template = "microservice"
+parent = "platform"
+name = "auth"
+tech = "Go, gRPC"
+upstreamBus = "messageBus"
+
+[[use]]
+template = "microservice"
+parent = "platform"
+name = "billing"
+tech = "Rust, gRPC"
+upstreamBus = "messageBus"
+
+# One [[use]] of dataService to demonstrate TMPL-04 subtree instantiation.
+# platform.users is a parent with platform.users.cache as its subunit.
+[[use]]
+template = "dataService"
+parent = "platform"
+name = "users"
+tech = "Go"
+
+# ===== ACTOR (proves TMPL-05: instantiated units participate in views) =====
+
+[customer]
+type = "person"
+name = "Customer"
+description = "End user whose requests flow into the instantiated services"
+
+[[customer.link]]
+peer = "platform.auth"
+technology = "HTTPS"
+description = "Authenticates and places orders"
