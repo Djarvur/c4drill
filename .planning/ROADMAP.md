@@ -48,14 +48,10 @@ Full details: [milestones/v1.10-ROADMAP.md](milestones/v1.10-ROADMAP.md)
 **Granularity:** standard (1 phase — small bug-fix milestone; both fixes live in `internal/render` and share the wrap machinery, so they must land coordinated)
 **Coverage:** 3/3 v1.11 requirements mapped ✓
 
-</details>
-
-## Phase Details
-
 ### Phase 34: Label formatting fixes
 
 **Goal**: Users see properly formatted labels: edge labels render as wrapped rectangles with invisible borders and aspect-ratio sizing (the same HTML table form unit labels use), and no label text is ever split mid-word.
-**Depends on**: Phase 33 (canonicalDOT helper `internal/testutil/canonical` ships there and enforces COMPAT-01 goldens)
+**Depends on**: Phase 33 (canonicalDOT helper `internal/testutil/canonical` enforces COMPAT-01 goldens)
 **Requirements**: LABEL-01, LABEL-02, COMPAT-01
 **Success Criteria** (what must be TRUE):
 
@@ -73,6 +69,8 @@ Full details: [milestones/v1.10-ROADMAP.md](milestones/v1.10-ROADMAP.md)
 
 **Plans**: TBD
 **UI hint**: yes
+
+</details>
 
 ## Progress
 
