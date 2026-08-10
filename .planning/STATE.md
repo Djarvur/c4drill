@@ -55,7 +55,9 @@ Last activity: 2026-08-08 — Milestone v1.10 completed and archived
 
 The five todos in `.planning/todos/pending/` (reference field, ergonomics, type-omittable docs, unit templates, include directive) are all in scope for v1.10 and mapped to phases 28-33. No separate todo action needed.
 
-New capture (2026-08-10): edge labels in generated TOML lack line breaks — must wrap like unit labels (rectangle with aspect ratio, invisible borders). See `.planning/todos/pending/2026-08-10-wrap-edge-labels-like-unit-labels-in-generated-toml.md`. Unplanned; candidate for a future phase.
+New captures (2026-08-10), both from inspecting generated TOML in cyp-mise-repo (`docs/mise-architecture.toml`), both unplanned — candidates for a future phase:
+- Edge labels in generated TOML lack line breaks — must wrap like unit labels (rectangle with aspect ratio, invisible borders). See `.planning/todos/pending/2026-08-10-wrap-edge-labels-like-unit-labels-in-generated-toml.md`.
+- Label wrapping splits long words mid-word — lines must break at word boundaries only (no char-level fallback; authors may reword). See `.planning/todos/pending/2026-08-10-wrap-labels-at-word-boundaries-only.md`.
 
 ### Blockers/Concerns (carry-forward, affect v1.10)
 
