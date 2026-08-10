@@ -64,20 +64,34 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - ✓ Example fixtures (DOC-03, D-17): `skill/examples/06-templates.toml`, `07-relative-peer.toml`, `08-include/` (3 files), `09-composed/` (4 files incl. hand-expanded single-file equivalent). All 5 runnable fixtures render cleanly through the full v1.10 pipeline.
 - ✓ End-to-end composition proofs (XC-01, XC-05, D-20): `TestXC05_ComposedEquivSingleFile` proves composed multi-file ≡ hand-expanded single-file (canonicalDOT, 3872 bytes identical); `TestXC01_PipelineOrdering` is a behavioral guard that the pipeline order include → template.Expand → peer.Resolve is load-bearing (covers XC-02 + XC-03). Both use `canonical.Canonical` (DI-1), never byte-exact `require.Equal`.
 
+### Validated in Phase 34 (v1.11) — label formatting fixes
+
+- ✓ LABEL-01 (edge labels as wrapped rectangles): `buildEdgeLabel` (labels.go) now emits a borderless HTML-table rectangle (`<table border="0" cellpadding="0" cellspacing="0">`) with the `[Technology]` row and the Description wrapped below via `wrapAndEscape`; width derived from `LabelRatio` via `labelMaxCharsNoIcon` with a 2-row floor (D-03); rectangle always emitted, tech-only and description-only edges included (D-04). `createEdge` emits via `e.SetLabelHTML` (graphviz-13 HTML-ness preserved; empty labels keep `SetLabel("")` for golden parity).
+- ✓ LABEL-02 (word-boundary-only breaking): `wrapText` over-budget branch emits the whole word unsplit on its own line; `splitLongWord` deleted (0 references); no character-level fallback anywhere (D-05).
+- ✓ COMPAT-01 (no regression): unit labels byte-identical absent over-budget words; all canonicalDOT goldens (COMPAT-02, REF-05, DI-1) pass unchanged; `go test ./...` green (12/12 packages).
+
 ## Current Milestone: v1.11 Label Formatting Fixes
 
 **Goal:** Generated diagram labels render with proper word wrapping and aspect-ratio sizing.
 
-**Target features:**
+**Status:** Complete (2026-08-10) — Phase 34 delivered both fixes; `go test ./...` green; all canonicalDOT goldens byte-stable.
 
-- **Edge labels: aspect-ratio sizing** — edge labels are formatted like unit labels: wrapped text in a rectangle with the configured aspect ratio (`LabelRatio`), invisible borders. Currently `buildEdgeLabel` (labels.go) emits a plain `\n`-joined string with no wrapping and no ratio sizing.
-- **Word-boundary-only line breaking** — lines break only at word boundaries; no mid-word splits. Currently `wrapText` (wrap.go) falls back to char-level breaking (`splitLongWord`) for long words — remove that fallback; authors may reword instead.
+**Target features (delivered):**
+
+- **Edge labels: aspect-ratio sizing** — edge labels are formatted like unit labels: wrapped text in a rectangle with the configured aspect ratio (`LabelRatio`), invisible borders. `buildEdgeLabel` (labels.go) now emits the borderless HTML-table rectangle (`<table border="0">` + `[Technology]` row + wrapped Description row) via `e.SetLabelHTML`.
+- **Word-boundary-only line breaking** — lines break only at word boundaries; no mid-word splits. `wrapText` (wrap.go) no longer falls back to char-level breaking; over-budget words stay unsplit on their own line (`splitLongWord` removed); authors may reword instead.
 
 **Key context:**
 - Unit labels already use HTML `<table border="0">` labels with `maxChars` derived from `LabelRatio` — edge labels should reuse this machinery.
 - Backward compatibility matters: existing diagrams must not regress (goldens via canonicalDOT, DI-1).
 
 ## Shipped
+
+### v1.11 Label Formatting Fixes (Shipped: 2026-08-10)
+
+**Goal:** Generated diagram labels render with proper word wrapping and aspect-ratio sizing — edge labels formatted like unit labels (wrapped rectangle with `LabelRatio` aspect ratio, invisible borders), and line breaks at word boundaries only (no mid-word splits).
+
+**Key accomplishments:** 1 phase (34), 2 plans (both TDD, RED→GREEN discipline), 5 files changed (+63/−55); LABEL-01 edge labels as borderless HTML-table rectangles via `e.SetLabelHTML` (D-01..D-04); LABEL-02 `splitLongWord` removed, over-budget words unsplit (D-05); COMPAT-01 enforced — all canonicalDOT goldens byte-stable (incl. REF-05 empty-label attribute emission preserved).
 
 ### v1.10 Model Composition (Shipped: 2026-08-08)
 
@@ -252,4 +266,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-10 — v1.11 Label Formatting Fixes milestone started*
+*Last updated: 2026-08-10 — v1.11 Label Formatting Fixes milestone complete (Phase 34 shipped)*
