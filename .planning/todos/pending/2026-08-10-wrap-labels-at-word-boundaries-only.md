@@ -2,6 +2,7 @@
 created: 2026-08-10T12:20:48.105Z
 title: Wrap labels at word boundaries only
 area: docs
+resolves_phase: 34
 files:
   - /Users/nil/DiskD/W/yadro/cyp-mise-repo/docs/mise-architecture.toml
 ---

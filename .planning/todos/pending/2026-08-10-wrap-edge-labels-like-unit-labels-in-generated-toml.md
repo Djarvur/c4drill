@@ -2,6 +2,7 @@
 created: 2026-08-10T12:16:39.502Z
 title: Wrap edge labels like unit labels in generated TOML
 area: docs
+resolves_phase: 34
 files:
   - /Users/nil/DiskD/W/yadro/cyp-mise-repo/docs/mise-architecture.toml
 ---
