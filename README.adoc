@@ -9,6 +9,62 @@ interactive C4 diagrams without manual drawing.
 *One TOML file → Clickable C1, C2, and C3 diagrams with automatic
 drill-down navigation.*
 
+== What It Is and What Problem It Solves
+
+C4Drill is *diagram-as-code for C4*: describe your architecture once in
+a TOML file, and get a hierarchy of nested, cross-linked SVG diagrams
+that let you zoom from context down to components — no runtime, no GUI,
+no manual drawing.
+
+image::examples/cloud-system/cloud-system.svg[Cloud System — C1 diagram,width=400]
+
+One model produces the C1 context diagram above, the C2 container
+diagrams, the C3 component diagrams, and every drill-down link between
+them (see the Examples section). Open any generated SVG to click
+through.
+
+=== The Problem
+
+Real systems do not fit one sheet. A large architecture is dozens to
+hundreds of elements; drawing it on a single diagram produces an
+unreadable wall of boxes, and hand-maintaining a hierarchy of linked
+diagrams (C1 → C2 → C3) is a lot of manual work that drifts out of sync
+with the code.
+
+C4Drill makes the hierarchy automatic: *the model is the diagram*. Edit
+the TOML, re-run the tool, and every level plus all navigation links is
+regenerated consistently.
+
+=== Why Not an Existing Tool?
+
+[cols="1,2,2",options="header",]
+|===
+|Tool |Good at |But
+|PlantUML (+ C4 module) |Rich syntax, Markdown integration |No enforced C4 levels; every level is a separate hand-written diagram — the drill-down hierarchy is not generated
+|Mermaid |Diagrams straight from Markdown (GitHub, Obsidian) |Flat pictures: no C4 model, no levels, no zoom-in navigation
+|Structurizr DSL |Purpose-built C4 modeling language |More general than the task — a modeling platform with workspaces; C4Drill is deliberately minimal and strict
+|LikeC4 |The closest: model + nested views with drill-down |Requires a runtime/workspace; C4Drill emits static files you can commit and open anywhere
+|===
+
+C4Drill is for the *static-artifact* case: diagrams that live in the
+repository, are reviewed in pull requests, and render everywhere.
+
+=== Why TOML?
+
+There is deliberately no new DSL to learn. TOML is a configuration
+format most engineers already read, and the schema *is* the C4 model:
+units, types, levels, links. `type = "container"` and
+`name = "API Service"` read like prose. A bespoke DSL (or HCL) would add
+syntax to learn without adding modeling power.
+
+=== Is This for You?
+
+* *Yes*, if you have a system large enough that one diagram is
+  unreadable, and you want the level hierarchy generated and kept in
+  sync as versionable static files.
+* *Probably not*, if you only need quick throwaway diagrams inside
+  Markdown — Mermaid or PlantUML will serve you better.
+
 == Install
 
 [source,bash]
