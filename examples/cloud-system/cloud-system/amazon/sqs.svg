@@ -44,7 +44,7 @@
 <text xml:space="preserve" text-anchor="start" x="34.2" y="-48" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#78a8d8">Queue with raw data</text>
 </g>
 <!-- cloud&#45;&gt;amazon.sqs.queue1 -->
-<g id="edge2" class="edge">
+<g id="edge1" class="edge">
 <title>cloud&#45;&gt;amazon.sqs.queue1</title>
 <path fill="none" stroke="#073b6f" d="M63.8,-215.04C63.73,-205.4 64.1,-193.16 65.8,-182.4 69.66,-158.02 77.32,-131.46 84.26,-110.44"/>
 <polygon fill="#073b6f" stroke="#073b6f" points="87.52,-111.71 87.41,-101.12 80.89,-109.47 87.52,-111.71"/>
@@ -61,7 +61,7 @@
 </g>
 </g>
 <!-- amazon.lambdas&#45;&gt;amazon.sqs.queue1 -->
-<g id="edge1" class="edge">
+<g id="edge2" class="edge">
 <title>amazon.lambdas&#45;&gt;amazon.sqs.queue1</title>
 <path fill="none" stroke="#3c7fc0" d="M190.79,-211.99C182.4,-207.01 174.16,-201.13 167.36,-194.4 143.28,-170.56 125.08,-136.54 113.44,-110.31"/>
 <polygon fill="#3c7fc0" stroke="#3c7fc0" points="116.75,-109.17 109.6,-101.36 110.32,-111.93 116.75,-109.17"/>
