@@ -21,8 +21,8 @@ github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 h1:zYyBkD/k9seD2A7fsi6Oo2LfFZAehjjQMERAvZLEDnQ=
 github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646/go.mod h1:jpp1/29i3P1S/RLdc7JQKbRpFeM1dOBd8T9ki5s+AY8=
-github.com/onokonem/go-graphviz v0.0.0-20260809224952-459d4fb09a82 h1:FiWNwKRvn6GV7ICTdlaXT6knr/L46+GV0S8h4pjA4pM=
-github.com/onokonem/go-graphviz v0.0.0-20260809224952-459d4fb09a82/go.mod h1:tNkJsKCBLE9vds1wKTwYbepOqjrZMa2Xqrr/Dac/Coc=
+github.com/onokonem/go-graphviz v0.0.0-20260810112110-d19e8171ebc7 h1:Suoe3voD34CG3D5t2fDtJkyRRqyCrumPw/HTiFRNAKU=
+github.com/onokonem/go-graphviz v0.0.0-20260810112110-d19e8171ebc7/go.mod h1:KDxgsc/931nTwfksnm5ZvIpjAw5nkZQgOn6WzKpHxJA=
 github.com/pelletier/go-toml/v2 v2.4.3 h1:GTRvJQutkOSftxIFD5xw9aepkYNuPWmVJpffdDPYVpY=
 github.com/pelletier/go-toml/v2 v2.4.3/go.mod h1:2gIqNv+qfxSVS7cM2xJQKtLSTLUE9V8t9Stt+h56mCY=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

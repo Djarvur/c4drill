@@ -11,7 +11,7 @@ import (
 	"sync"
 
 	"github.com/Djarvur/c4drill/internal/graph"
-	"github.com/goccy/go-graphviz"
+	"github.com/onokonem/go-graphviz"
 )
 
 // wasmMutex protects all WASM graphviz operations from concurrent access.
