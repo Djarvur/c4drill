@@ -492,6 +492,16 @@ func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge)
 		e.SetDir(cgraph.NoneDir)
 	}
 
+	applyEdgeAttributes(e, edge)
+
+	return nil
+}
+
+// applyEdgeAttributes sets the scalar cgraph attributes (color, minlen,
+// constraint, penwidth) derived from the builder edge. Mirrors the
+// setNodeLabel/applyNodeStyle and setClusterLabel/applyClusterStyle split
+// for nodes and clusters.
+func applyEdgeAttributes(e *cgraph.Edge, edge *graph.Edge) {
 	// Apply edge color (line and label) per D-01 and D-02
 	if edge.Color != "" {
 		e.SetColor(edge.Color)
@@ -516,8 +526,6 @@ func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge)
 	} else {
 		e.SetPenWidth(1.0)
 	}
-
-	return nil
 }
 
 // sanitizeForName converts a string to a safe identifier for use in edge/node names.
