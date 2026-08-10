@@ -43,7 +43,7 @@ Full details: [milestones/v1.10-ROADMAP.md](milestones/v1.10-ROADMAP.md)
 
 **Milestone Goal:** Generated diagram labels render with proper word wrapping and aspect-ratio sizing — edge labels formatted like unit labels (wrapped rectangle with `LabelRatio` aspect ratio, invisible borders), and line breaks at word boundaries only (no mid-word splits).
 
-- [ ] Phase 34: Label formatting fixes (0/2 plans) — planned
+- [x] Phase 34: Label formatting fixes (0/2 plans) — planned (completed 2026-08-10)
 
 **Granularity:** standard (1 phase — small bug-fix milestone; both fixes live in `internal/render` and share the wrap machinery, so they must land coordinated)
 **Coverage:** 3/3 v1.11 requirements mapped ✓
@@ -71,7 +71,7 @@ Full details: [milestones/v1.10-ROADMAP.md](milestones/v1.10-ROADMAP.md)
 
 Plans:
 - [x] 34-01-PLAN.md — word-boundary-only wrapping: over-budget words stay unsplit on their own line (LABEL-02)
-- [ ] 34-02-PLAN.md — edge labels render as borderless HTML-table rectangles with LabelRatio sizing (LABEL-01)
+- [x] 34-02-PLAN.md — edge labels render as borderless HTML-table rectangles with LabelRatio sizing (LABEL-01)
 
 **UI hint**: yes
 
@@ -87,4 +87,4 @@ Plans:
 | 31. Template expansion | v1.10 | 2/2 | Complete | 2026-08-08 |
 | 32. Include directive | v1.10 | 2/2 | Complete | 2026-08-08 |
 | 33. Docs sweep + goldens | v1.10 | 4/4 | Complete | 2026-08-08 |
-| 34. Label formatting fixes | v1.11 | 1/2 | In Progress|  |
+| 34. Label formatting fixes | v1.11 | 2/2 | Complete   | 2026-08-10 |

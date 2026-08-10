@@ -14,7 +14,7 @@ Source: captured todos (2026-08-10), `.planning/todos/pending/`.
 
 ### LABEL — Label rendering
 
-- [ ] **LABEL-01**: Edge labels render as wrapped rectangles with aspect-ratio sizing — an edge's label (`[Technology]` + Description) is formatted like a unit label: an HTML label with invisible borders (`border="0"`), text wrapped to fit the configured aspect ratio (`LabelRatio`), instead of the current plain `\n`-joined string.
+- [x] **LABEL-01**: Edge labels render as wrapped rectangles with aspect-ratio sizing — an edge's label (`[Technology]` + Description) is formatted like a unit label: an HTML label with invisible borders (`border="0"`), text wrapped to fit the configured aspect ratio (`LabelRatio`), instead of the current plain `\n`-joined string.
 - [x] **LABEL-02**: Lines break at word boundaries only — the wrapping procedure never splits a word mid-word; words longer than the per-line character budget overflow the budget on their own line (the document author may reword instead of the tool force-splitting).
 
 ### COMPAT — Backward compatibility
