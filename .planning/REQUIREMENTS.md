@@ -30,3 +30,15 @@ Source: captured todos (2026-08-10), `.planning/todos/pending/`.
 | Edge label style/styling options (colors, fonts, line styles) | Not requested; edge styling already handled by link attributes |
 | Manual label positioning | GraphViz auto-layout is a core design decision (see PROJECT.md) |
 | Hard-wrapping *into* the aspect ratio (scaling text to force-fit) | Violates LABEL-02 — the author chooses wording, not the tool |
+
+---
+
+## Traceability
+
+*Phase mapping filled by roadmapper (2026-08-10). 3/3 v1.11 requirements mapped.*
+
+| REQ-ID | Phase | Notes |
+|--------|-------|-------|
+| LABEL-01 | 34 | edge labels as wrapped HTML-table rectangles (`border="0"`), `LabelRatio` sizing |
+| LABEL-02 | 34 | word-boundary-only breaking; remove `splitLongWord` char-level fallback (wrap.go) |
+| COMPAT-01 | 34 | unit labels byte-identical (absent over-budget words); canonicalDOT (DI-1) goldens pass |
