@@ -8,8 +8,8 @@ import (
 
 	"github.com/Djarvur/c4drill/internal/graph"
 	"github.com/Djarvur/c4drill/internal/model"
-	"github.com/goccy/go-graphviz"
-	"github.com/goccy/go-graphviz/cgraph"
+	"github.com/onokonem/go-graphviz"
+	"github.com/onokonem/go-graphviz/cgraph"
 )
 
 // buildHTMLLabelForType returns the appropriate HTML label for a unit type.
