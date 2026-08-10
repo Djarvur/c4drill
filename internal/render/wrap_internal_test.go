@@ -27,10 +27,10 @@ func TestWrapText(t *testing.T) {
 			expected: "hello<BR/>world",
 		},
 		{
-			name:     "forced character break",
+			name:     "over-budget word stays unsplit",
 			text:     "abcdefghij",
 			maxChars: 5,
-			expected: "abcde<BR/>fghij",
+			expected: "abcdefghij",
 		},
 		{
 			name:     "short text unchanged",
@@ -48,7 +48,7 @@ func TestWrapText(t *testing.T) {
 			name:     "multi-byte unicode",
 			text:     "日本語テスト文字列",
 			maxChars: 4,
-			expected: "日本語テ<BR/>スト文字<BR/>列",
+			expected: "日本語テスト文字列",
 		},
 		{
 			name:     "multiple words wrapping",
