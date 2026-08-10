@@ -40,27 +40,49 @@ func buildRecordLabel(label *graph.Label) string {
 	return "{" + strings.Join(parts, "|") + "}"
 }
 
-// buildEdgeLabel generates a label for an edge.
-// Format: [Technology]\nDescription
-// - If only Technology: [Technology]
-// - If only Description: Description
-// - If both: [Technology]\nDescription.
+// buildEdgeLabel generates an HTML-table label for an edge.
+// Form (D-01/D-02/D-04): a borderless rectangle <table border="0"
+// cellpadding="0" cellspacing="0"> with the [Technology] row (italic) and
+// the wrapped Description row below it.
+// - If only Technology: table with the [Technology] row only
+// - If only Description: table with the Description row only
+// - If both: [Technology] row, then the Description wrapped below
+// The width is derived from LabelRatio via labelMaxCharsNoIcon with a 2-row
+// floor (D-03), like labelMaxCharsForPerson.
 func buildEdgeLabel(label *graph.EdgeLabel) string {
 	if label == nil {
 		return ""
 	}
 
-	var parts []string
-
+	rowCount := 0
 	if label.Technology != "" {
-		parts = append(parts, "["+label.Technology+"]")
+		rowCount++
 	}
 
 	if label.Description != "" {
-		parts = append(parts, label.Description)
+		rowCount++
 	}
 
-	return strings.Join(parts, "\n")
+	if rowCount == 0 {
+		return ""
+	}
+
+	// D-03: 2-row floor for the aspect-ratio width calc, so short labels
+	// still get a wide-enough rectangle (labelMaxCharsForPerson precedent).
+	effectiveRows := rowCount
+	if effectiveRows < 2 {
+		effectiveRows = 2
+	}
+
+	maxChars := labelMaxCharsNoIcon(effectiveRows)
+
+	var sb strings.Builder
+	writeLabelTableStart(&sb)
+	writeTechnologyRow(&sb, label.Technology, maxChars)
+	writeDescriptionRow(&sb, label.Description, maxChars)
+	writeLabelTableEnd(&sb)
+
+	return sb.String()
 }
 
 // HTML Label Builder Functions
