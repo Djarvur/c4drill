@@ -27,10 +27,10 @@ func TestWrapText(t *testing.T) {
 			expected: "hello<BR/>world",
 		},
 		{
-			name:     "forced character break",
+			name:     "over-budget word stays unsplit",
 			text:     "abcdefghij",
 			maxChars: 5,
-			expected: "abcde<BR/>fghij",
+			expected: "abcdefghij",
 		},
 		{
 			name:     "short text unchanged",
@@ -48,7 +48,7 @@ func TestWrapText(t *testing.T) {
 			name:     "multi-byte unicode",
 			text:     "日本語テスト文字列",
 			maxChars: 4,
-			expected: "日本語テ<BR/>スト文字<BR/>列",
+			expected: "日本語テスト文字列",
 		},
 		{
 			name:     "multiple words wrapping",
@@ -62,11 +62,144 @@ func TestWrapText(t *testing.T) {
 			maxChars: 5,
 			expected: "hello",
 		},
+		{
+			name:     "hyphen break",
+			text:     "Multi-Consumer Broadcast",
+			maxChars: 10,
+			expected: "Multi-<BR/>Consumer<BR/>Broadcast",
+		},
+		{
+			name:     "arrow and colon break",
+			text:     "YUV420->EXTERNAL:TOKEN",
+			maxChars: 12,
+			expected: "YUV420-><BR/>EXTERNAL:<BR/>TOKEN",
+		},
+		{
+			name:     "underscore break",
+			text:     "IMAGE_NATIVE_PROCESSED",
+			maxChars: 9,
+			expected: "IMAGE_<BR/>NATIVE_<BR/>PROCESSED",
+		},
+		{
+			name:     "bracket attaches to following word",
+			text:     "[CGF Channel]",
+			maxChars: 9,
+			expected: "[CGF<BR/>Channel]",
+		},
+		{
+			name:     "punctuation-rejoin no space",
+			text:     "foo-bar",
+			maxChars: 20,
+			expected: "foo-bar",
+		},
+		{
+			name:     "over-budget letter run still unsplit",
+			text:     "abcdefghijkl",
+			maxChars: 5,
+			expected: "abcdefghijkl",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := wrapText(tt.text, tt.maxChars)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+//nolint:paralleltest // Consistent with project test patterns
+func TestLabelMaxCharsForText(t *testing.T) {
+	tests := []struct {
+		name      string
+		fixedRows int
+		textLen   int
+		ratio     float64
+		expected  int
+	}{
+		{
+			name:      "long description widens the label",
+			fixedRows: 1,
+			textLen:   110,
+			ratio:     1.6,
+			expected:  21, // width 174.25 → 21.78 chars
+		},
+		{
+			name:      "medium description, name+tech rows",
+			fixedRows: 2,
+			textLen:   38,
+			ratio:     1.6,
+			expected:  15, // width 126.7 → 15.8 chars
+		},
+		{
+			name:      "short description, no fixed rows",
+			fixedRows: 0,
+			textLen:   14,
+			ratio:     1.6,
+			expected:  7, // width 56.8 → 7.1 chars
+		},
+		{
+			name:      "empty text keeps a floor",
+			fixedRows: 1,
+			textLen:   0,
+			ratio:     1.6,
+			expected:  6, // width 28.8 → 3.6 chars → floor 6
+		},
+		{
+			name:      "longer text widens monotonically",
+			fixedRows: 1,
+			textLen:   200,
+			ratio:     1.6,
+			expected:  28, // width 229.6 → 28.7 chars — must exceed the 50-char case
+		},
+		{
+			name:      "higher ratio widens",
+			fixedRows: 1,
+			textLen:   110,
+			ratio:     2.0,
+			expected:  24, // width 194.9 → 24.4 chars — must exceed the 1.6 case
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := labelMaxCharsForText(tt.fixedRows, tt.textLen, tt.ratio)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+//nolint:paralleltest // Consistent with project test patterns
+func TestLabelMaxCharsForPerson(t *testing.T) {
+	tests := []struct {
+		name      string
+		fixedRows int
+		textLen   int
+		expected  int
+	}{
+		{
+			name:      "long actor description widens the text column",
+			fixedRows: 0,
+			textLen:   70,
+			expected:  17, // icon-aware textCol 138.6 → 17.3 chars
+		},
+		{
+			name:      "short actor name keeps a floor",
+			fixedRows: 0,
+			textLen:   11,
+			expected:  10, // textCol 46.2 → 5.8 chars → floor 10 ("Actor A" stays one line)
+		},
+		{
+			name:      "medium description",
+			fixedRows: 0,
+			textLen:   30,
+			expected:  10, // textCol 85.4 → 10.7 chars
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := labelMaxCharsForPerson(tt.fixedRows, tt.textLen)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

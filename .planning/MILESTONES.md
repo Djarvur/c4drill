@@ -1,3 +1,18 @@
+## v1.11 Label Formatting Fixes (Shipped: 2026-08-10)
+
+**Phases completed:** 1 phase, 4 plans, 28 commits
+
+**Key accomplishments:**
+
+- Edge labels now render as borderless HTML-table rectangles (the unit-label form): `[Technology]` row + word-wrapped Description, emitted via SetLabelHTML with the v1.9 golden's empty-label attribute preserved.
+- wrapText breaks lines at word boundaries only — the splitLongWord character-level fallback is deleted; over-budget words emit unsplit on their own line (author may reword).
+- Punctuation-aware tokenizer (UAT fix): `->`, `:`, `-`, `_` and all Unicode punctuation/symbols are break opportunities; separator runs attach trailing ("Multi-", "YUV420->") or leading ("[CGF"); punctuation rejoin inserts no space — in-budget output byte-identical.
+- Self-consistent aspect-ratio sizing (UAT fix): closed-form quadratic labelMaxCharsForText replaces the fixed row-count model — edge and unit label rectangles approximate LabelRatio (measured edge label ≈1.84:1, was ≈0.2:1).
+- Multilevel expanded-DOT golden re-baselined twice with documented label-only deltas; canonicalDOT (DI-1) enforcement intact; 12/12 test packages green.
+- Known deferred items at close: 2 (pre-existing v1.10 debug-session artifacts — see STATE.md Deferred Items).
+
+---
+
 # Milestones
 
 ## v1.10 Model Composition (Shipped: 2026-08-08)

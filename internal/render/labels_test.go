@@ -87,10 +87,9 @@ func TestRecordLabelGeneration(t *testing.T) {
 //nolint:paralleltest // Table-driven test pattern; go-graphviz WASM concurrency issues
 func TestEdgeLabelGeneration(t *testing.T) {
 	tests := []struct {
-		name         string
-		edgeLabel    *graph.EdgeLabel
-		contains     []string
-		checkNewline bool
+		name      string
+		edgeLabel *graph.EdgeLabel
+		contains  []string
 	}{
 		{
 			name: "Technology and Description",
@@ -98,30 +97,29 @@ func TestEdgeLabelGeneration(t *testing.T) {
 				Technology:  "HTTP",
 				Description: "REST calls",
 			},
-			contains: []string{"HTTP", "REST calls"},
+			contains: []string{"<table border=\"0\"", "HTTP", "REST calls"},
 		},
 		{
 			name: "Description only",
 			edgeLabel: &graph.EdgeLabel{
 				Description: "Uses",
 			},
-			contains: []string{"Uses"},
+			contains: []string{"<table border=\"0\"", "Uses"},
 		},
 		{
 			name: "Technology only",
 			edgeLabel: &graph.EdgeLabel{
 				Technology: "TCP",
 			},
-			contains: []string{"TCP"},
+			contains: []string{"<table border=\"0\"", "<i>[TCP]</i>"},
 		},
 		{
-			name: "Technology and Description with newline",
+			name: "Technology and Description (gRPC)",
 			edgeLabel: &graph.EdgeLabel{
 				Technology:  "gRPC",
 				Description: "Protocol buffers",
 			},
-			contains:     []string{"gRPC", "Protocol buffers"},
-			checkNewline: true,
+			contains: []string{"<table border=\"0\"", "<i>[gRPC]</i>", "gRPC", "Protocol buffers"},
 		},
 	}
 
@@ -145,11 +143,6 @@ func TestEdgeLabelGeneration(t *testing.T) {
 			dotStr := string(output)
 			for _, c := range tt.contains {
 				assert.Contains(t, dotStr, c)
-			}
-
-			if tt.checkNewline {
-				assert.True(t, strings.Contains(dotStr, "\\n") || strings.Contains(dotStr, "\n"),
-					"Edge label should contain newline separator")
 			}
 		})
 	}

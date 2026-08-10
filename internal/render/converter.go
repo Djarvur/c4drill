@@ -456,7 +456,17 @@ func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge)
 	e.SetFontName("Helvetica")
 
 	if edge.Label != nil {
-		e.SetLabel(buildEdgeLabel(edge.Label))
+		// SetLabelHTML preserves HTML-ness under graphviz 13 (same
+		// agsafeset_html path nodes use — see setNodeLabel). Empty labels
+		// (no technology, no description) keep the plain SetLabel("") path:
+		// SafeSetHTML with "" omits the attribute, which would change the
+		// emitted DOT for label-less edges and break the COMPAT-01 goldens.
+		if htmlLabel := buildEdgeLabel(edge.Label); htmlLabel != "" {
+			e.SetLabelHTML(htmlLabel)
+		} else {
+			e.SetLabel("")
+		}
+
 		e.SetFontSize(fontSizeEdge)
 	}
 

@@ -64,26 +64,50 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - ✓ Example fixtures (DOC-03, D-17): `skill/examples/06-templates.toml`, `07-relative-peer.toml`, `08-include/` (3 files), `09-composed/` (4 files incl. hand-expanded single-file equivalent). All 5 runnable fixtures render cleanly through the full v1.10 pipeline.
 - ✓ End-to-end composition proofs (XC-01, XC-05, D-20): `TestXC05_ComposedEquivSingleFile` proves composed multi-file ≡ hand-expanded single-file (canonicalDOT, 3872 bytes identical); `TestXC01_PipelineOrdering` is a behavioral guard that the pipeline order include → template.Expand → peer.Resolve is load-bearing (covers XC-02 + XC-03). Both use `canonical.Canonical` (DI-1), never byte-exact `require.Equal`.
 
-## Current Milestone: v1.10 Model Composition — COMPLETE (2026-08-08)
+### Validated in Phase 34 (v1.11) — label formatting fixes
+
+- ✓ LABEL-01 (edge labels as wrapped rectangles): `buildEdgeLabel` (labels.go) now emits a borderless HTML-table rectangle (`<table border="0" cellpadding="0" cellspacing="0">`) with the `[Technology]` row and the Description wrapped below via `wrapAndEscape`; width derived from `LabelRatio` via `labelMaxCharsNoIcon` with a 2-row floor (D-03); rectangle always emitted, tech-only and description-only edges included (D-04). `createEdge` emits via `e.SetLabelHTML` (graphviz-13 HTML-ness preserved; empty labels keep `SetLabel("")` for golden parity).
+- ✓ LABEL-02 (word-boundary-only breaking): `wrapText` over-budget branch emits the whole word unsplit on its own line; `splitLongWord` deleted (0 references); no character-level fallback anywhere (D-05).
+- ✓ COMPAT-01 (no regression): unit labels byte-identical absent over-budget words; all canonicalDOT goldens (COMPAT-02, REF-05, DI-1) pass unchanged; `go test ./...` green (12/12 packages).
+
+## Current Milestone: v1.11 Label Formatting Fixes — COMPLETE (2026-08-10)
+
+**Goal:** Generated diagram labels render with proper word wrapping and aspect-ratio sizing.
+
+**Status:** Complete (2026-08-10) — Phase 34 delivered both fixes plus two UAT gap-closure plans; `go test ./...` 12/12 green; canonicalDOT goldens re-baselined with documented label-only deltas.
+
+**Target features (delivered):**
+
+- **Edge labels: aspect-ratio sizing** — edge labels are formatted like unit labels: wrapped text in a rectangle with the configured aspect ratio (`LabelRatio`), invisible borders. `buildEdgeLabel` (labels.go) emits the borderless HTML-table rectangle (`<table border="0">` + `[Technology]` row + wrapped Description row) via `e.SetLabelHTML`.
+- **Word-boundary-only line breaking** — lines break at word boundaries AND punctuation boundaries (UAT refinement); no mid-word splits. `wrapText` (wrap.go) tokenizes via `tokenizeWrapText`; `splitLongWord` removed; over-budget pure letter/digit runs stay unsplit on their own line.
+
+**Key context:**
+- Unit labels already use HTML `<table border="0">` labels with `maxChars` derived from `LabelRatio` — edge labels reuse this machinery.
+- Backward compatibility matters: existing diagrams must not regress (goldens via canonicalDOT, DI-1).
+
+## Current State (2026-08-10)
+
+**Shipped:** v1.11 Label Formatting Fixes — 1 phase (34), 4 plans (TDD), 28 commits. All 3 requirements validated (LABEL-01, LABEL-02, COMPAT-01). UAT: 3 gaps found and fixed (punctuation tokenizer 34-03, ratio sizing 34-04). Security: 9/9 threats closed. Full suite 12/12 green.
+
+## Next Milestone Goals
+
+*Not yet defined — run `/gsd:new-milestone` to gather requirements for the next cycle.*
+
+## Shipped
+
+### v1.11 Label Formatting Fixes (Shipped: 2026-08-10)
+
+**Goal:** Generated diagram labels render with proper word wrapping and aspect-ratio sizing — edge labels formatted like unit labels (wrapped rectangle with `LabelRatio` aspect ratio, invisible borders), and line breaks at word boundaries only (no mid-word splits).
+
+**Key accomplishments:** 1 phase (34), 4 plans (all TDD, RED→GREEN discipline), 28 commits; LABEL-01 edge labels as borderless HTML-table rectangles via `e.SetLabelHTML` (D-01..D-04); LABEL-02 `splitLongWord` removed, over-budget words unsplit (D-05); UAT fix 34-03 punctuation-aware tokenizer (`->`, `:`, `-`, `_` break opportunities — "any punctuation must be considered word boundary"); UAT fix 34-04 self-consistent aspect-ratio sizing (closed-form quadratic `labelMaxCharsForText`, edge + unit labels, measured edge label ≈1.84:1 vs ≈0.2:1); COMPAT-01 enforced — canonicalDOT goldens re-baselined with documented label-only deltas (incl. REF-05 empty-label attribute emission preserved).
+
+### v1.10 Model Composition (Shipped: 2026-08-08)
 
 **Goal:** Expand C4Drill's authoring model from a single static TOML file into a composable, parametrized, multi-file format — while preserving backward compatibility and the auto-generated-view philosophy.
 
-**Target features (in pipeline order `include → template-expand → relative-peer-resolve → validate → render`):**
+**Target features:** include directive (multi-file composition), unit templates (define once, instantiate with params), relative `peer` resolution, optional `name` humanization, `reference` field (📖), omittable-`type` docs.
 
-- **Include directive** — assemble a diagram from multiple TOML files; isolate template libraries and split large models across files
-- **Unit templates** — parametrized unit definitions (define once, instantiate with parameters) for near-identical units
-- **TOML ergonomic improvements** — relative `peer` resolution, optional `name` (humanized from identifier); compact link deferred
-- **`reference` field** — optional per-unit URL; units with a reference render a 📖 marker in the SVG
-- **Document omittable `type`** — surface the existing type-inference rules in README + SKILL docs
-
-**Key context:**
-- Two features carry **open design questions** flagged for discuss-phase resolution: include (parse-then-merge vs byte-concat — recommendation: parse-then-merge) and templates (structured post-parse vs text preprocess — recommendation: structured post-parse).
-- Pipeline ordering is load-bearing: include resolves first (template libraries in included files become visible), template expansion runs before relative-peer resolution (templated-unit links resolve correctly), validation runs last.
-- Backward compatibility is non-negotiable: all five features are additive; existing single-file models must parse and render unchanged.
-- References: go-metadot (`metadot.pl` — the Go port does NOT implement macros), PlantUML `!procedure` and `!include`/`!include_once`.
-- Out of scope (from LikeC4 comparison): custom kinds, tags, icons, metadata, deployment model, user-authored views.
-
-## Shipped
+**Key accomplishments:** pipeline `include → template.Expand → peer.Resolve → validate → render`; 6 phases (28-33), 13 plans, 35 tasks, 119 files changed (+17,703/−626); all 39 requirements validated; canonicalDOT (DI-1) golden enforcement.
 
 ### v1.8 Proper C1/C2/C3 View Generation
 
@@ -250,4 +274,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-08 — v1.10 milestone complete (Phase 33 final phase shipped)*
+*Last updated: 2026-08-10 — v1.11 milestone archived; ready for next milestone*

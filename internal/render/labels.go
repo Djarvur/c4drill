@@ -2,6 +2,7 @@ package render
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	"github.com/Djarvur/c4drill/internal/graph"
 )
@@ -40,27 +41,39 @@ func buildRecordLabel(label *graph.Label) string {
 	return "{" + strings.Join(parts, "|") + "}"
 }
 
-// buildEdgeLabel generates a label for an edge.
-// Format: [Technology]\nDescription
-// - If only Technology: [Technology]
-// - If only Description: Description
-// - If both: [Technology]\nDescription.
+// buildEdgeLabel generates an HTML-table label for an edge.
+// Form (D-01/D-02/D-04): a borderless rectangle <table border="0"
+// cellpadding="0" cellspacing="0"> with the [Technology] row (italic) and
+// the wrapped Description row below it.
+// - If only Technology: table with the [Technology] row only
+// - If only Description: table with the Description row only
+// - If both: [Technology] row, then the Description wrapped below
+// The width derives from LabelRatio via labelMaxCharsForText — self-
+// consistent aspect-ratio sizing: both the technology and the description
+// wrap, so the total text length drives the width (supersedes the D-03
+// 2-row floor). A minCharsPerLine floor prevents over-wrapping of short
+// labels.
 func buildEdgeLabel(label *graph.EdgeLabel) string {
 	if label == nil {
 		return ""
 	}
 
-	var parts []string
-
-	if label.Technology != "" {
-		parts = append(parts, "["+label.Technology+"]")
+	if label.Technology == "" && label.Description == "" {
+		return ""
 	}
 
-	if label.Description != "" {
-		parts = append(parts, label.Description)
-	}
+	textLen := utf8.RuneCountInString(label.Technology) +
+		utf8.RuneCountInString(label.Description)
 
-	return strings.Join(parts, "\n")
+	maxChars := max(labelMaxCharsForText(0, textLen, LabelRatio), minCharsPerLine)
+
+	var sb strings.Builder
+	writeLabelTableStart(&sb)
+	writeTechnologyRow(&sb, label.Technology, maxChars)
+	writeDescriptionRow(&sb, label.Description, maxChars)
+	writeLabelTableEnd(&sb)
+
+	return sb.String()
 }
 
 // HTML Label Builder Functions
@@ -73,13 +86,13 @@ func buildPersonHTMLLabel(label *graph.Label) string {
 		return ""
 	}
 
-	// Calculate max characters for word wrapping
-	rowCount := 1 // name
-	if label.Description != "" {
-		rowCount++
-	}
+	// Calculate max characters for word wrapping: the name and description
+	// both wrap, so the total text length drives the width (self-consistent
+	// ratio sizing, icon column subtracted).
+	textLen := utf8.RuneCountInString(label.Name) +
+		utf8.RuneCountInString(label.Description)
 
-	maxChars := labelMaxCharsForPerson(rowCount)
+	maxChars := labelMaxCharsForPerson(0, textLen)
 
 	var sb strings.Builder
 	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
@@ -138,8 +151,14 @@ func buildQueueHTMLLabel(label *graph.Label) string {
 		return ""
 	}
 
-	// Graphic row doesn't wrap but counts for proportion.
-	maxChars := labelMaxCharsForQueue(labelRowCount(label) + 1)
+	// The ASCII graphic row doesn't wrap but counts for proportion; the name,
+	// technology and description all wrap, so their total length drives the
+	// width via labelMaxCharsForText.
+	textLen := utf8.RuneCountInString(label.Name) +
+		utf8.RuneCountInString(label.Technology) +
+		utf8.RuneCountInString(label.Description)
+
+	maxChars := max(labelMaxCharsForQueue(1, textLen), minCharsPerLine)
 
 	var sb strings.Builder
 	writeLabelTableStart(&sb)
@@ -185,12 +204,19 @@ func buildBoxHTMLLabel(label *graph.Label) string {
 
 // buildNoIconHTMLLabel builds the standard name/technology/description table
 // label without an icon column, using maxCharsFor for word-wrapping.
-func buildNoIconHTMLLabel(label *graph.Label, maxCharsFor func(rowCount int) int) string {
+func buildNoIconHTMLLabel(label *graph.Label, maxCharsFor func(fixedRows, textLen int) int) string {
 	if label == nil {
 		return ""
 	}
 
-	maxChars := maxCharsFor(labelRowCount(label))
+	// Name, technology and description all wrap; their total text length
+	// drives the width (self-consistent ratio sizing). The minCharsPerLine
+	// floor prevents over-wrapping of short labels.
+	textLen := utf8.RuneCountInString(label.Name) +
+		utf8.RuneCountInString(label.Technology) +
+		utf8.RuneCountInString(label.Description)
+
+	maxChars := max(maxCharsFor(0, textLen), minCharsPerLine)
 
 	var sb strings.Builder
 	writeLabelTableStart(&sb)
@@ -200,21 +226,6 @@ func buildNoIconHTMLLabel(label *graph.Label, maxCharsFor func(rowCount int) int
 	writeLabelTableEnd(&sb)
 
 	return sb.String()
-}
-
-// labelRowCount counts the content rows: name plus optional technology and
-// description.
-func labelRowCount(label *graph.Label) int {
-	rowCount := 1 // name
-	if label.Technology != "" {
-		rowCount++
-	}
-
-	if label.Description != "" {
-		rowCount++
-	}
-
-	return rowCount
 }
 
 func writeLabelTableStart(sb *strings.Builder) {
