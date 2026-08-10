@@ -55,6 +55,8 @@ Last activity: 2026-08-08 — Milestone v1.10 completed and archived
 
 The five todos in `.planning/todos/pending/` (reference field, ergonomics, type-omittable docs, unit templates, include directive) are all in scope for v1.10 and mapped to phases 28-33. No separate todo action needed.
 
+New capture (2026-08-10): edge labels in generated TOML lack line breaks — must wrap like unit labels (rectangle with aspect ratio, invisible borders). See `.planning/todos/pending/2026-08-10-wrap-edge-labels-like-unit-labels-in-generated-toml.md`. Unplanned; candidate for a future phase.
+
 ### Blockers/Concerns (carry-forward, affect v1.10)
 
 - **Discuss-phase design forks (MUST settle before planning 31 & 32):** HS-2 relative-peer resolution site for template-authored links (recommended: instantiation-parent); forward-reference policy (TM-2/10); unresolved-`${param}` strictness (TM-5); include merge semantics (IN-2/IN-7); diamond behavior (IN-3/INC-05); directive-table naming + reserved-word collision (BC-2). See ROADMAP.md phase Notes + research §6.
