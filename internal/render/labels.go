@@ -228,21 +228,6 @@ func buildNoIconHTMLLabel(label *graph.Label, maxCharsFor func(fixedRows, textLe
 	return sb.String()
 }
 
-// labelRowCount counts the content rows: name plus optional technology and
-// description.
-func labelRowCount(label *graph.Label) int {
-	rowCount := 1 // name
-	if label.Technology != "" {
-		rowCount++
-	}
-
-	if label.Description != "" {
-		rowCount++
-	}
-
-	return rowCount
-}
-
 func writeLabelTableStart(sb *strings.Builder) {
 	sb.WriteString(`<table border="0" cellpadding="0" cellspacing="0">`)
 }

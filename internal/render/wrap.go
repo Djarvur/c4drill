@@ -159,8 +159,11 @@ func tokenizeWrapText(text string) []wrapToken {
 				flush(pendingSpace)
 				pendingSpace = false
 			}
+
 			current.WriteRune(r)
+
 			hasWord = true
+
 			lastWasSeparator = false
 			i++
 
@@ -181,6 +184,7 @@ func tokenizeWrapText(text string) []wrapToken {
 			// (trailing attachment), or start a pending token that will
 			// attach to the following word (leading attachment).
 			current.WriteRune(r)
+
 			lastWasSeparator = true
 			i++
 		}
@@ -293,6 +297,7 @@ func labelMaxCharsForText(fixedRows, textLen int, ratio float64) int {
 	c := float64(textLen) * pointsPerChar * pointsPerRow * ratio
 	width := (b + math.Sqrt(b*b+4*c)) / 2
 	chars := int(width / pointsPerChar)
+
 	if chars < 6 {
 		return 6
 	}
@@ -337,7 +342,7 @@ const personRatioFactor = 1.5
 //	C = textLen·pointsPerChar·pointsPerRow·LabelRatio·personRatioFactor
 //
 // (height rows = textLen·pointsPerChar/textCol).
-func labelMaxCharsForPerson(fixedRows, textLen int) int {
+func labelMaxCharsForPerson(_ int, textLen int) int {
 	c := float64(textLen) * pointsPerChar * pointsPerRow * LabelRatio * personRatioFactor
 	textCol := (-iconColumnWidth + math.Sqrt(float64(iconColumnWidth*iconColumnWidth)+4*c)) / 2
 	chars := int(textCol / pointsPerChar)
