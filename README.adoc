@@ -39,6 +39,142 @@ c4drill architecture.toml -o ./docs/diagrams
 c4drill architecture.toml -f dot -o ./output
 ----
 
+== Examples
+
+The https://github.com/likec4/likec4/tree/main/examples[likec4 examples]
+are popular real-world C4 models. The directories below are ports of a
+curated subset into C4Drill TOML — the generated diagrams are committed
+next to each source file, so what you see in this README is exactly what
+`c4drill` produces. Every port documents its adaptations in comments:
+features likec4 has and C4Drill does not (dynamic and deployment views,
+tags, metadata, view-local styles) are either mapped to the closest
+C4Drill equivalent or dropped with a note.
+
+=== Cloud System (likec4 `cloud-system`)
+
+The flagship example: a SaaS platform with two external parties and
+multi-level drill-down. Ported from
+https://github.com/likec4/likec4/tree/main/examples/cloud-system[likec4
+`cloud-system`] (a copy of
+https://github.com/likec4/example-cloud-system[`likec4/example-cloud-system`]).
+
+image::examples/cloud-system/cloud-system.svg[Cloud System — C1 diagram,width=720]
+
+The C1 diagram already shows one nesting level; clicking the nodes
+drills down further:
+
+* link:examples/cloud-system/cloud-system/cloud.svg[Cloud System — C2 containers]
+* link:examples/cloud-system/cloud-system/amazon.svg[Amazon — C2 containers]
+* link:examples/cloud-system/cloud-system/amazon/rds.svg[RDS — C3 (PostgreSQL)]
+* link:examples/cloud-system/cloud-system/amazon/sqs.svg[SQS — C3 (queues)]
+* link:examples/cloud-system/cloud-system/amazon/lambdas.svg[Lambdas — C3 (enrichment)]
+
+==== What was adapted
+
+* `supportUser` is nested inside `cloud` in likec4; C4Drill C1 types are
+  top-level only, so the actor is hoisted to the root level.
+* Amazon is an `externalSystem` in likec4; C4Drill's `systemExternal`
+  cannot contain subunits, so it is modeled as a regular `system`.
+* `customer -> cloud "uses and pays"` targets the system itself; C4Drill
+  cannot link to a unit that has subunits (validation rule 3 below), so
+  the edge targets `cloud.ui` — the same endpoint likec4's own customer
+  view uses.
+* likec4 view-local edges (`cloud.* -> amazon.*`, `cloud.next.* ->
+  sqs.*`, ...) are modeled as regular links; each carries a comment
+  citing the source view.
+* The `tblUsers` table nested under PostgreSQL is dropped — C4Drill
+  components cannot have subunits.
+* Dynamic views, deployment views, groups, tags and view styles have no
+  C4Drill equivalent and are dropped.
+* `legacy`'s link to the update-diagrams workflow file maps to the
+  `reference` field (the 📖 marker).
+
+Regenerate:
+
+[source,bash]
+----
+c4drill examples/cloud-system/cloud-system.toml
+c4drill examples/cloud-system/cloud-system.toml --expanded
+----
+
+==== All-Expanded Diagram
+
+`--expanded` renders every unit on a single diagram — no drill-down
+navigation, useful for a one-shot review of the whole architecture:
+
+image::examples/cloud-system/cloud-system.expanded.svg[Cloud System — all-expanded diagram,width=720]
+
+=== Vehicle Platform (likec4 `overflow-test`)
+
+A stress test: very long display names and channel-technology labels
+ported verbatim from
+https://github.com/likec4/likec4/tree/main/examples/overflow-test[likec4
+`overflow-test`] to demonstrate label wrapping. C4Drill sizes labels
+from their content — tune the shape with `--label-ratio` (default 1.6,
+credit-card proportions) or the `C4DRILL_LABEL_RATIO` environment
+variable.
+
+image::examples/overflow-test/overflow-test.svg[Vehicle Platform — C1 diagram,width=720]
+
+The longest labels live in the sensor processing pipeline (C3):
+
+image::examples/overflow-test/overflow-test/vehiclePlatform/sensorProcessing.svg[Sensor processing pipeline — C3 diagram,width=720]
+
+Parallel edges between the same pair of units collapse to a single
+thicker edge in resolved views (first-wins dedup, D-01); the
+`--expanded` diagram shows every parallel link with its own label.
+
+* likec4 custom kinds (`service`, `component`) map onto C4Drill
+  `container` / `component`.
+* likec4 tags (`#sensor`, `#perception`, ...) have no C4Drill equivalent
+  and are dropped.
+
+Regenerate:
+
+[source,bash]
+----
+c4drill examples/overflow-test/overflow-test.toml
+----
+
+=== Effect of Rank (likec4 `rank-for-better-layout`)
+
+A minimal graph from
+https://github.com/likec4/likec4/tree/main/examples/rank-for-better-layout[likec4
+`rank-for-better-layout`] showing rank hints. likec4's view-level
+`rank same/source/max` directives have no direct C4Drill equivalent; the
+closest tool is the per-link `rank` attribute — `rank = "equal"` puts
+the link's endpoints on the same rank, `rank = "forward"` /
+`"reverse"` order them along the layout direction.
+
+image::examples/rank-for-better-layout/rank-for-better-layout.svg[Effect of Rank — C1 diagram,width=520]
+
+* likec4's custom kind `block` maps onto C4Drill `system`.
+* likec4's `D` has no relations; C4Drill requires every leaf unit to
+  have at least one link (orphan rule), so `D` gains a link to `C` —
+  the other member of its `rank source` group.
+
+Regenerate:
+
+[source,bash]
+----
+c4drill examples/rank-for-better-layout/rank-for-better-layout.toml
+----
+
+=== Not ported
+
+The remaining likec4 examples build on features C4Drill does not have,
+so ports would be more confusing than instructive:
+
+[cols="1,2a",options="header"]
+|===
+|likec4 example |Why it was not ported
+|`metadata-views` |View filtering on metadata (`where metadata.environment is "production"`) has no equivalent.
+|`issue-1624` |A bug reproduction (custom kinds, rich descriptions) rather than a showcase.
+|`multi-relation-extend` |Built on likec4's `extend` semantics (merging metadata/tags/links onto existing relations) — C4Drill's `[[include]]` merges units, not relation metadata.
+|`multi-metadata-extend` |Same `extend` semantics as above.
+|`multi-project` |Multiple independent projects in one workspace; C4Drill models one architecture per file.
+|===
+
 == TOML Format
 
 === Minimal Example
@@ -55,6 +191,11 @@ name = "User"
 [webapp]
 type = "system"
 name = "Web Application"
+
+# Every unit needs at least one link (orphan rule)
+[[webapp.link]]
+peer = "user"
+description = "Uses"
 ----
 
 === Properties Section
@@ -67,7 +208,11 @@ architecture:
 [properties]
 name = "E-Commerce Platform"        # Required: Architecture name
 description = "Online store system" # Optional: Description
+color = "#E3F2FD"                   # Optional: Default background color
+style = "filled"                    # Optional: Default visual style
+border = "#1565C0"                  # Optional: Default border color
 edges = "spline"                    # Optional: Edge routing (straight|spline|square)
+lineLength = 40                     # Optional: Max line length before wrap (0=auto)
 expanded = ["payments"]             # Optional: Units to expand by default
 ----
 
@@ -90,6 +235,19 @@ unit's identifier.
 type = "person"                     # Required
 name = "Customer"                   # Optional: defaults to humanized identifier
 description = "Online shopper"      # Optional
+----
+
+==== External Person (External Actor)
+
+An actor outside the organization (partner, regulator, third-party
+user). Same fields as `person`:
+
+[source,toml]
+----
+[auditor]
+type = "personExternal"
+name = "Compliance Auditor"
+description = "External regulatory auditor"
 ----
 
 ==== System
@@ -309,7 +467,9 @@ name = "Business Services"
 
 === Links (Relationships)
 
-Define relationships between units using `link` or `linkFrom`:
+Define relationships between units using `[[link]]` (outgoing) or
+`[[linkFrom]]` (incoming). Define each relationship exactly once — the
+two forms are just different places to write the same edge:
 
 [source,toml]
 ----
@@ -320,14 +480,22 @@ name = "User"
 [webapp]
 type = "system"
 name = "Web Application"
-# Outgoing link: User → Webapp
-link = { "user" = { technology = "HTTPS", description = "Browses" } }
+
+# Outgoing link: User → Webapp (defined on the source)
+[[webapp.link]]
+peer = "user"
+technology = "HTTPS"
+description = "Browses"
 
 [api]
 type = "system"
 name = "API Service"
-# Incoming link: Webapp → API (defined on target)
-linkFrom = { "webapp" = { technology = "REST/JSON", description = "Calls" } }
+
+# Incoming link: Webapp → API (defined on the target)
+[[api.linkFrom]]
+peer = "webapp"
+technology = "REST/JSON"
+description = "Calls"
 ----
 
 ==== Link Attributes
@@ -335,12 +503,14 @@ linkFrom = { "webapp" = { technology = "REST/JSON", description = "Calls" } }
 [cols=",,",options="header",]
 |===
 |Attribute |Description |Example
+|`peer` |Target unit identifier (required) |`"user"`, `"platform.api"`
 |`technology` |Protocol/technology label |`"HTTPS"`, `"gRPC"`, `"TCP"`
 |`description` |Relationship description |`"Sends events to"`
-|`arrow` |Arrow direction |`"forward"`, `"reverse"`, `"both"`, `"none"`
-|`rank` |Layout ranking hint |`"forward"`, `"reverse"`
+|`arrow` |Arrow direction |`"forward"`, `"reverse"`, `"bidirectional"`, `"none"`
+|`rank` |Layout ranking hint |`"forward"`, `"reverse"`, `"equal"`
 |`color` |Edge color |`"blue"`, `"++#++FF5733"`
 |`style` |Line style |`"solid"`, `"dashed"`, `"dotted"`
+|`labelPosition` |Where the label appears |`"middle"`, `"tail"`, `"head"`
 |===
 
 ==== Multiple Links
@@ -350,11 +520,21 @@ linkFrom = { "webapp" = { technology = "REST/JSON", description = "Calls" } }
 [api]
 type = "system"
 name = "API"
-link = {
-  "user" = { technology = "HTTPS", description = "Authenticates" },
-  "webapp" = { technology = "REST", description = "Serves data" }
-}
+
+[[api.link]]
+peer = "user"
+technology = "HTTPS"
+description = "Authenticates"
+
+[[api.link]]
+peer = "webapp"
+technology = "REST"
+description = "Serves data"
 ----
+
+*Parallel edges:* when several links connect the same pair of units,
+resolved views collapse them into a single thicker edge (the first one
+wins); the `--expanded` diagram shows every parallel link separately.
 
 === Expanded Units (Drill-Down)
 
@@ -372,7 +552,7 @@ name = "Main Application"
 expanded = ["mainapp.api"]    # Generate C3 for mainapp.api
 
 [mainapp.api]
-type = "system"
+type = "container"
 name = "API Service"
 
 [mainapp.api.handlers]
@@ -382,6 +562,10 @@ name = "Handlers"
 [mainapp.api.services]
 type = "component"
 name = "Services"
+
+[[mainapp.api.handlers.link]]
+peer = "mainapp.api.services"
+description = "Calls"
 ----
 
 *Output structure:*
@@ -408,7 +592,13 @@ name = "Web Application"
 color = "#4A90D9"              # Background color
 border = "#2E5A8B"             # Border color
 style = "solid"                # Border style (solid|dashed|dotted)
+edges = "spline"               # Edge routing for this unit's links
+width = 300                    # Explicit label width (0=auto)
+height = 200                   # Explicit label height (0=auto)
 ----
+
+`width` and `height` are rarely needed — labels are normally sized
+from their content (see `--label-ratio` in the CLI Reference).
 
 === Templates
 
@@ -557,16 +747,15 @@ name = "Web Application"
 description = "Main e-commerce platform"
 technology = "Go, React"
 expanded = ["webapp.api"]
-link = { "customer" = { technology = "HTTPS", description = "Shops" } }
 
 [webapp.frontend]
-type = "system"
+type = "container"
 name = "Frontend"
 description = "React web application"
 technology = "React, TypeScript"
 
 [webapp.api]
-type = "system"
+type = "container"
 name = "API Service"
 description = "Backend REST API"
 technology = "Go"
@@ -587,6 +776,7 @@ type = "db"
 name = "PostgreSQL"
 description = "Primary database"
 technology = "PostgreSQL 15"
+# generic `db` is promoted to `containerDb` by the nesting level
 
 # External dependencies
 [stripe]
@@ -600,15 +790,40 @@ name = "Redis"
 description = "Session cache"
 technology = "Redis"
 
-# Relationships
-[webapp.api.linkFrom]
-"webapp.frontend" = { technology = "REST/JSON", description = "Calls" }
+# Relationships (every unit needs at least one — orphan rule)
+[[customer.link]]
+peer = "webapp.frontend"
+technology = "HTTPS"
+description = "Shops"
 
-[stripe.linkFrom]
-"webapp.api" = { technology = "Stripe API", description = "Processes payments" }
+[[admin.link]]
+peer = "webapp.frontend"
+technology = "HTTPS"
+description = "Administers"
 
-[redis.linkFrom]
-"webapp.api" = { technology = "TCP", description = "Caches sessions" }
+[[webapp.frontend.link]]
+peer = "webapp.api.handlers"
+technology = "REST/JSON"
+description = "Calls"
+
+[[webapp.api.handlers.link]]
+peer = "webapp.api.services"
+description = "Dispatches"
+
+[[webapp.api.services.link]]
+peer = "webapp.db"
+technology = "SQL"
+description = "Persists"
+
+[[stripe.linkFrom]]
+peer = "webapp.api.services"
+technology = "Stripe API"
+description = "Processes payments"
+
+[[redis.linkFrom]]
+peer = "webapp.api.services"
+technology = "TCP"
+description = "Caches sessions"
 ----
 
 == CLI Reference
@@ -618,11 +833,23 @@ technology = "Redis"
 c4drill <input.toml> [flags]
 
 Flags:
-  -f, --format string   Output format (dot|svg|html) (default "svg")
-  -o, --output string   Output directory (default ".")
-      --version         Print version information
-  -h, --help            Show help
+      --expanded            Generate all-expanded diagram showing all units
+  -f, --format string       Output format (dot|svg|html) (default "svg")
+  -h, --help                help for c4drill
+      --label-ratio float   Width:height ratio for unit labels (default: 1.6, credit card proportions)
+  -o, --output string       Output directory (default: same as input file)
+  -v, --version             version for c4drill
 ----
+
+* `--expanded` renders a single diagram containing *all* units (every
+  level), instead of the per-level drill-down set. The file is named
+  `++{basename}++.expanded.++{format}++` and contains no drill-down
+  links.
+* `--label-ratio` overrides the width:height ratio used to size unit
+  labels (default 1.6 — credit-card proportions). Higher values produce
+  wider, shorter labels; lower values produce narrower, taller ones.
+  The same value can be set via the `C4DRILL_LABEL_RATIO` environment
+  variable; the flag takes precedence.
 
 === Output Format
 
@@ -645,10 +872,17 @@ Errors are written to stderr, making the tool suitable for scripting.
 [arabic]
 . *Referenced units must exist* - Links can only reference defined units
 . *No links on containers* - Units with subunits cannot have their own
-links
+links (`link` or `linkFrom`)
 . *No linking to containers* - Cannot link to units that have subunits
-. *Subunits only for system/box* - Only systems and boxes can contain
-subunits
+. *Subunits only for grouping types* - Only `system`, `box`,
+`container`, `containerBox`, and `componentBox` can contain subunits
+(leaf types such as `db`, `queue`, and the level-specific variants
+cannot)
+. *Nesting hierarchy* - Top-level units must be C1 types; inside a
+`system` — C2 types (containers); inside a `container` — C3 types
+(components); boxes group same-level units only
+. *No orphans* - Every unit must have at least one incoming or outgoing
+link, or contain subunits
 
 == Architecture
 

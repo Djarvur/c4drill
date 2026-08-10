@@ -1,0 +1,172 @@
+# Cloud System
+#
+# Ported from the likec4 example "cloud-system":
+#   https://github.com/likec4/likec4/tree/main/examples/cloud-system
+# (a copy of https://github.com/likec4/example-cloud-system)
+#
+# Translation notes — what was adapted and why:
+#
+#  1. likec4 nests the `supportUser` actor inside the cloud system;
+#     c4drill C1 types (person, system, ...) are top-level only, so the
+#     actor is hoisted to the root level.
+#  2. likec4 marks Amazon as an `externalSystem`; c4drill's
+#     `systemExternal` cannot host subunits, so Amazon is modeled as a
+#     regular `system` (with a comment on the C1 diagram explaining the
+#     relationship).
+#  3. `customer -> cloud "uses and pays"` targets the system itself;
+#     c4drill cannot link to a unit that has subunits (VALD-03), so the
+#     edge targets `cloud.ui` — the same endpoint likec4's own customer
+#     view uses (`customer -> cloud.ui.*`).
+#  4. likec4 expresses several edges only inside view definitions
+#     (`cloud.* -> amazon.*`, `cloud.next.* -> sqs.*`, ...); c4drill has
+#     no view-local edges, so these are modeled as regular links,
+#     attributed in the comments.
+#  5. `tblUsers` (a table nested under the PostgreSQL component) is
+#     dropped — c4drill components cannot have subunits.
+#  6. likec4 dynamic views, deployment views, groups, tags and styles
+#     (colors, opacity) have no c4drill equivalent and are dropped.
+#  7. The `legacy` container's `link` to a GitHub workflow file maps to
+#     c4drill's `reference` field (📖 marker, clickable).
+#
+# Generate:
+#   c4drill examples/cloud-system/cloud-system.toml
+#   c4drill examples/cloud-system/cloud-system.toml --expanded
+
+[properties]
+name = "Cloud System"
+description = "Our SaaS platform that allows customers to interact with the latest technologies"
+expanded = ["cloud", "amazon"]   # C2 drill-down for both systems
+
+# ===== Actors =====
+
+[customer]
+type = "person"
+name = "Cloud System Customer"
+description = "The regular customer of the system"
+
+[[customer.link]]
+peer = "cloud.ui"
+description = "Uses and pays"
+# likec4: `customer -> cloud 'uses and pays'`. Retargeted to cloud.ui —
+# c4drill cannot link to a unit with subunits (VALD-03); likec4's own
+# customer view draws the same edge (`customer -> cloud.ui.*`).
+
+[supportUser]
+type = "person"
+name = "Support Team"
+description = "An employee from the support team. Has limited access to the system"
+# likec4 nests this actor inside cloud; c4drill C1 types are top-level
+# only, so the actor is hoisted to the root (note 1).
+
+[[supportUser.link]]
+peer = "customer"
+description = "Helps with questions"
+
+# ===== Cloud System =====
+
+[cloud]
+type = "system"
+name = "Cloud System"
+# likec4's view-level styles (color sky/primary, opacity) are dropped (note 6).
+
+[cloud.ui]
+type = "container"
+name = "Frontends"
+description = "All the frontend applications of the cloud system"
+
+[[cloud.ui.link]]
+peer = "cloud.next"
+description = "Requests data"
+# likec4 expresses this edge only in its dynamic view
+# (`ui.dashboard -> cloud.graphql 'requests data'`); c4drill has no
+# view-local edges, so it is modeled as a regular link (note 4).
+
+[cloud.legacy]
+type = "container"
+name = "Cloud Legacy"
+description = "The legacy version of our SaaS MVP as was presented to the first customers"
+reference = "https://github.com/likec4/example-cloud-system/blob/main/.github/workflows/update-diagrams.yml#L19-L25"
+# likec4: `link ./.github/workflows/update-diagrams.yml#L19-L25` — maps
+# to c4drill's `reference` field (📖 marker, clickable; note 7).
+
+[cloud.next]
+type = "container"
+name = "Cloud Next"
+description = "Cloud Next is the next version of our cloud systems"
+
+[[cloud.next.link]]
+peer = "cloud.legacy"
+description = "Calls legacy"
+# from likec4's dynamic view:
+# `cloud.next.backend -> cloud.legacy.backend.services 'calls legacy'` (note 4).
+
+[[cloud.next.link]]
+peer = "amazon.rds.pg"
+description = "Queries"
+# from likec4's amazon_rds view: `cloud.* -> amazon.rds.pg.*` (note 4).
+
+[[cloud.next.link]]
+peer = "amazon.sqs.queue1"
+description = "Publishes events"
+# from likec4's amazon_sqs view: `cloud.next.* -> sqs.*` (note 4).
+
+# ===== Amazon (external provider) =====
+
+[amazon]
+type = "system"
+name = "Amazon"
+description = "Cloud and managed services provider"
+# likec4: `externalSystem` — modeled as `system` because c4drill's
+# `systemExternal` cannot host subunits (note 2).
+expanded = ["amazon.rds", "amazon.sqs", "amazon.lambdas"]   # C3 drill-down
+
+[amazon.rds]
+type = "container"
+name = "RDS"
+description = "Relational Database Service"
+expanded = ["amazon.rds.pg"]
+
+[amazon.rds.pg]
+type = "componentDb"
+name = "PostgreSQL"
+# likec4 tags pg with `#db` (hence componentDb) and nests a `tblUsers`
+# table under it — dropped: c4drill components cannot have subunits (note 5).
+
+[[amazon.rds.pg.linkFrom]]
+peer = "cloud.next"
+description = "Queries"
+# incoming half of `cloud.next -> amazon.rds.pg` (defined once on the
+# source; linkFrom is the mirror — see the Links section in the README).
+
+[amazon.sqs]
+type = "container"
+name = "SQS"
+description = "Simple Queue Service"
+
+[amazon.sqs.queue1]
+type = "componentQueue"
+name = "Raw Data"
+description = "Queue with raw data"
+
+[amazon.sqs.queue2]
+type = "componentQueue"
+name = "Enriched Data"
+description = "Filtered and preprocessed data. Ready for further processing"
+
+[amazon.lambdas]
+type = "container"
+name = "Lambdas"
+description = "Serverless compute"
+
+[amazon.lambdas.fn_enrich]
+type = "component"
+name = "Enrichment"
+description = "Enriches raw data by adding additional information"
+
+[[amazon.lambdas.fn_enrich.link]]
+peer = "amazon.sqs.queue1"
+description = "Reads raw data"
+
+[[amazon.lambdas.fn_enrich.link]]
+peer = "amazon.sqs.queue2"
+description = "Writes enriched data"

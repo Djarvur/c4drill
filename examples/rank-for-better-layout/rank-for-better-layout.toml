@@ -1,0 +1,78 @@
+# Effect of Rank — ported from likec4 example "rank-for-better-layout"
+# https://github.com/likec4/likec4/tree/main/examples/rank-for-better-layout
+#
+# Translation notes — what was adapted and why:
+#
+#  1. likec4's custom kind `block` maps onto c4drill `system`.
+#  2. likec4's view-level rank directives (`rank same/source/max`) have
+#     no direct c4drill equivalent. The closest analog is the per-link
+#     `rank` attribute:
+#       - `rank same { A, B }`   -> link A -> B with rank = "equal"
+#         (source and target on the same rank);
+#       - `rank source { C, D }` and `rank max { F }` (place at the
+#         beginning / end of the layout) are not expressible and are
+#         dropped — see the `rank = "forward"` / `rank = "reverse"`
+#         link hints in the README for the available tooling.
+#  3. likec4's `D` has no relations; c4drill requires every leaf unit to
+#     have at least one incoming or outgoing link (orphan rule), so `D`
+#     gains a link to `C` — the other member of its `rank source` group.
+#
+# Generate:
+#   c4drill examples/rank-for-better-layout/rank-for-better-layout.toml
+
+[properties]
+name = "Effect of Rank"
+description = "likec4 rank-for-better-layout demo — rank hints on a small graph"
+
+[A]
+type = "system"
+name = "A"
+
+[B]
+type = "system"
+name = "B"
+
+[C]
+type = "system"
+name = "C"
+
+[D]
+type = "system"
+name = "D"
+# likec4: no relations (included in the view only). The link to C is a
+# c4drill adaptation — the orphan rule demands connectivity (note 3).
+
+[E]
+type = "system"
+name = "E"
+
+[F]
+type = "system"
+name = "F"
+
+[G]
+type = "system"
+name = "G"
+
+[[A.link]]
+peer = "B"
+description = "A -> B"
+rank = "equal"
+# likec4: `rank same { A, B }` — A and B on the same rank (note 2).
+
+[[B.link]]
+peer = "G"
+description = "B -> G"
+
+[[C.link]]
+peer = "E"
+description = "C -> E"
+
+[[D.link]]
+peer = "C"
+description = "D -> C"
+# adaptation (note 3).
+
+[[F.link]]
+peer = "E"
+description = "F -> E"
