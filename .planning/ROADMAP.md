@@ -70,7 +70,7 @@ Full details: [milestones/v1.10-ROADMAP.md](milestones/v1.10-ROADMAP.md)
 **Plans**: 2 plans
 
 Plans:
-- [ ] 34-01-PLAN.md — word-boundary-only wrapping: over-budget words stay unsplit on their own line (LABEL-02)
+- [x] 34-01-PLAN.md — word-boundary-only wrapping: over-budget words stay unsplit on their own line (LABEL-02)
 - [ ] 34-02-PLAN.md — edge labels render as borderless HTML-table rectangles with LabelRatio sizing (LABEL-01)
 
 **UI hint**: yes
@@ -87,4 +87,4 @@ Plans:
 | 31. Template expansion | v1.10 | 2/2 | Complete | 2026-08-08 |
 | 32. Include directive | v1.10 | 2/2 | Complete | 2026-08-08 |
 | 33. Docs sweep + goldens | v1.10 | 4/4 | Complete | 2026-08-08 |
-| 34. Label formatting fixes | v1.11 | 0/1 | Not started | - |
+| 34. Label formatting fixes | v1.11 | 1/2 | In Progress|  |
