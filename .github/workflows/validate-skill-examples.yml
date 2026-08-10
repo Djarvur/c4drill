@@ -1,4 +1,4 @@
-name: Validate Skill Examples
+name: Validate Examples
 
 on:
   push:
@@ -6,12 +6,14 @@ on:
       - master
     paths:
       - 'skill/**'
+      - 'examples/**'
   pull_request:
     paths:
       - 'skill/**'
+      - 'examples/**'
 
 concurrency:
-  group: validate-skill-examples-${{ github.workflow }}-${{ github.ref }}
+  group: validate-examples-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -33,6 +35,13 @@ jobs:
       - name: Validate skill examples
         run: |
           for file in skill/examples/*.toml; do
+            echo "Validating $file..."
+            ./c4drill "$file" -f dot > /dev/null
+          done
+
+      - name: Validate ported likec4 examples
+        run: |
+          for file in examples/*/*.toml; do
             echo "Validating $file..."
             ./c4drill "$file" -f dot > /dev/null
           done

@@ -1,0 +1,131 @@
+# Vehicle Platform — ported from likec4 example "overflow-test"
+# https://github.com/likec4/likec4/tree/main/examples/overflow-test
+#
+# Translation notes — what was adapted and why:
+#
+#  1. likec4's custom kinds (`system`, `service`, `component`) map onto
+#     c4drill `system` / `container` / `component`.
+#  2. likec4 tags (#sensor, #perception, #plugin, ...) have no c4drill
+#     equivalent and are dropped.
+#  3. The long display names and channel-technology labels are kept
+#     verbatim — the whole point of this example is stress-testing
+#     label wrapping. Tune the label shape with `--label-ratio`
+#     (default 1.6, credit-card proportions) or the `C4DRILL_LABEL_RATIO`
+#     environment variable.
+#  4. likec4's `index` view (`include *`) maps to the C1 diagram; the
+#     `of sensorProcessing` / `of perceptionStack` views map to the C2
+#     drill-down (the C3 views of the containers).
+#
+# Generate:
+#   c4drill examples/overflow-test/overflow-test.toml
+
+[properties]
+name = "Vehicle Platform"
+description = "Central vehicle computing platform for autonomous driving"
+expanded = ["vehiclePlatform"]
+
+[vehiclePlatform]
+type = "system"
+name = "Vehicle Platform"
+expanded = ["vehiclePlatform.sensorProcessing", "vehiclePlatform.perceptionStack"]
+
+# ===== Sensor Processing Pipeline =====
+
+[vehiclePlatform.sensorProcessing]
+type = "container"
+name = "SensorProcessingPipeline"
+description = "Handles raw sensor data acquisition, preprocessing and calibration"
+
+[vehiclePlatform.sensorProcessing.cameraFrameAcquisition]
+type = "component"
+name = "CameraFrameAcquisitionController"
+description = "Acquires raw camera frames from ISP hardware via DMA ring buffer"
+
+[[vehiclePlatform.sensorProcessing.cameraFrameAcquisition.link]]
+peer = "vehiclePlatform.sensorProcessing.rawFrameDecoder"
+technology = "CGF Channel DMA Transfer"
+description = "RAW_FRAME -> TIMESTAMPED_FRAME :dwCameraFrameHandle_t"
+
+[vehiclePlatform.sensorProcessing.rawFrameDecoder]
+type = "component"
+name = "RawBayerFrameDecoderModule"
+description = "Decodes raw Bayer pattern frames into RGB"
+
+[[vehiclePlatform.sensorProcessing.rawFrameDecoder.link]]
+peer = "vehiclePlatform.sensorProcessing.outputSelector"
+technology = "CGF Channel Zero-Copy Transfer"
+description = "CAMERA_FRAME -> CAMERA_FRAME :dwCameraFrameHandle_t"
+
+[vehiclePlatform.sensorProcessing.frameTimestampSync]
+type = "component"
+name = "FrameTimestampSynchronizationModule"
+description = "Synchronizes frame timestamps across multiple camera sensors"
+
+[[vehiclePlatform.sensorProcessing.frameTimestampSync.link]]
+peer = "vehiclePlatform.sensorProcessing.outputSelector"
+technology = "CGF Channel Synchronized Pipeline"
+description = "SYNCED_FRAME -> PROCESSED_FRAME :dwImageHandle_t"
+
+[vehiclePlatform.sensorProcessing.outputSelector]
+type = "component"
+name = "outputSelectorIsp0.CameraOutputSelectorNode :CameraOutputSelectorDispatcherGraphlet :FisheyeRectificationPipelineStageController"
+description = "Routes processed frames to downstream perception consumers based on ISP pipeline configuration"
+
+# ===== Perception Processing Stack =====
+
+[vehiclePlatform.perceptionStack]
+type = "container"
+name = "PerceptionProcessingStack"
+description = "Multi-modal perception fusion for object detection"
+
+[vehiclePlatform.perceptionStack.objectDetector]
+type = "component"
+name = "LidarCameraFusionObjectDetector"
+description = "Fuses lidar point clouds with camera images for 3D object detection"
+
+[vehiclePlatform.perceptionStack.sceneClassifier]
+type = "component"
+name = "DrivableSpaceGridClassifier"
+description = "Classifies road surface into drivable and non-drivable grid cells"
+
+[vehiclePlatform.perceptionStack.trackingModule]
+type = "component"
+name = "MultiObjectTrackingStateEstimator"
+description = "Maintains temporal object tracks using extended Kalman filtering"
+
+# ===== Cross-pipeline links (from likec4, verbatim) =====
+
+[[vehiclePlatform.sensorProcessing.outputSelector.link]]
+peer = "vehiclePlatform.perceptionStack.objectDetector"
+technology = "CGF Channel Multi-Consumer Broadcast Pipeline with Zero-Copy DMA Transfer and Temporal Synchronization"
+description = "IMAGE_NATIVE_PROCESSED_CUDA_YUV420->EXTERNAL:PERCEPTION_CAMERA_SENSOR0_FISHEYE0_CUDA_PROCESSED_RECTIFIED:dwImageHandle_t"
+
+[[vehiclePlatform.sensorProcessing.outputSelector.link]]
+peer = "vehiclePlatform.perceptionStack.objectDetector"
+technology = "Shared Memory IPC Zero-Copy Feedback Channel with Hardware-Accelerated Buffer Management"
+description = "CALIBRATION_INTRINSICS_EEPROM_FISHEYE0->CALIBRATION_OVERLAY_INTRINSICS_UNDISTORTED:dwCameraIntrinsicsHandle_t"
+
+[[vehiclePlatform.sensorProcessing.outputSelector.link]]
+peer = "vehiclePlatform.perceptionStack.objectDetector"
+technology = "CGF Channel Synchronized Metadata Pipeline with Temporal Alignment and Jitter Compensation"
+description = "TIMESTAMP_METADATA_PTP_SYNCED_CORRECTED->DETECTION_TIMESTAMP_SYNC_ALIGNED_EXTRAPOLATED:dwSensorTimestamp_t"
+
+[[vehiclePlatform.perceptionStack.objectDetector.link]]
+peer = "vehiclePlatform.perceptionStack.sceneClassifier"
+technology = "dwframework::dwBaseDrainerTemplate<dwObjectArray_t>::CGFNodeChannelPacketFingerprint_v2::FUSED_DETECTIONS_CUDA"
+description = "FUSED_DETECTIONS->DRIVABLE_SPACE_OBSTACLE_OVERLAY:dwObjectArray_t"
+
+[[vehiclePlatform.sensorProcessing.outputSelector.link]]
+peer = "vehiclePlatform.perceptionStack.sceneClassifier"
+technology = "CGF Channel Filtered Pipeline"
+description = "IMAGE_NATIVE_PROCESSED -> DRIVABLE_SPACE_INPUT :dwImageHandle_t"
+
+[[vehiclePlatform.sensorProcessing.outputSelector.link]]
+peer = "vehiclePlatform.perceptionStack.trackingModule"
+technology = "CGF Channel Temporal Buffer"
+description = "IMAGE_NATIVE_PROCESSED -> TRACKING_IMAGE_INPUT :dwImageHandle_t"
+
+[[vehiclePlatform.perceptionStack.objectDetector.link]]
+peer = "vehiclePlatform.perceptionStack.trackingModule"
+technology = "CGF Channel Low-Latency Pipeline"
+description = "DETECTED_OBJECTS -> TRACKING_OBSERVATIONS :dwObjectArray_t"
