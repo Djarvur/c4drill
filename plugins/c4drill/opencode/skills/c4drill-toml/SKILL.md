@@ -15,7 +15,7 @@ OpenCode, or any AI with skill support.
 
 ## Quick Reference
 
-### Unit Types (16 total)
+### Unit Types (17 total)
 
 **C1 Context Level:**
 
@@ -27,19 +27,26 @@ OpenCode, or any AI with skill support.
 * `dbExternal` - External database
 * `queue` - Message queue
 * `queueExternal` - External queue
-* `box` - Grouping container (can appear at any level: C1, C2, C3)
+* `box` - Grouping container. A universal shorthand: write `type = "box"`
+  anywhere and it promotes to the level-appropriate variant
+  (`containerBox` at C2, `componentBox` at C3); at C1 (root or inside
+  another `box`) it stays `box`. See Type inference rules below.
 
 **C2 Container Level:**
 
 * `container` - Container within system
 * `containerDb` - Container database
 * `containerQueue` - Container queue
+* `containerBox` - Explicit C2 grouping box (synonym for `box` inside a
+  system/containerBox; use `box` to let inference pick the level)
 
 **C3 Component Level:**
 
 * `component` - Component within container
 * `componentDb` - Component database
 * `componentQueue` - Component queue
+* `componentBox` - Explicit C3 grouping box (synonym for `box` inside a
+  container/componentBox; use `box` to let inference pick the level)
 
 ### Required Fields
 
@@ -167,6 +174,19 @@ reference = "https://wiki.example.com/api-runbook"
 | `system` or `containerBox` | `containerDb` | `containerQueue` | C2 |
 | `container` or `componentBox` | `componentDb` | `componentQueue` | C3 |
 
+**`box` promotion by nesting level** (same `inferGenericType` pass):
+
+| Parent type | `box` becomes | Level |
+|---|---|---|
+| (none) or `box` | `box` | C1 (unchanged — same-level grouping) |
+| `system` or `containerBox` | `containerBox` | C2 |
+| `container` or `componentBox` | `componentBox` | C3 |
+
+So `type = "box"` is valid at any nesting depth and resolves to the
+correct variant. Once promoted, the box's children follow the
+level-specific default (`container` under `containerBox`, `component`
+under `componentBox`).
+
 ```toml
 [platform]
 # type omitted → inferred "system" (no parent)
@@ -175,9 +195,15 @@ reference = "https://wiki.example.com/api-runbook"
 [platform.webapp.cache]
 type = "db"
 # explicit generic db → promoted to "componentDb" (parent is container)
+[platform.group]
+type = "box"
+# box inside system → promoted to "containerBox"; its children default to container
 ```
 
-An explicit non-generic `type =` always wins (no inference runs).
+An explicit non-generic `type =` always wins (no inference runs). The
+explicit variants `containerBox` and `componentBox` are themselves
+non-generic, so they pass through unchanged — use them only when you
+want to pin the level regardless of position.
 Source: `defaultTypeForParent` and `inferGenericType` in
 `internal/parser/parser.go`.
 

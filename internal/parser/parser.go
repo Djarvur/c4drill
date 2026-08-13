@@ -691,13 +691,21 @@ func defaultTypeForParent(parentType model.UnitType) model.UnitType {
 	}
 }
 
-// inferGenericType transforms generic types (db, queue) to level-specific types
-// based on the nesting level determined by parent type.
-// - C1 (no parent or inside C1 box): db -> db, queue -> queue
-// - C2 (inside system or containerBox): db -> containerDb, queue -> containerQueue
-// - C3 (inside container or componentBox): db -> componentDb, queue -> componentQueue.
+// inferGenericType transforms generic (level-agnostic) types to level-specific
+// types based on the nesting level determined by parent type.
+// Generic types are db, queue, and box; each resolves by parent:
+//   - C1 (no parent or inside C1 box): db -> db, queue -> queue, box -> box
+//   - C2 (inside system or containerBox): db -> containerDb, queue -> containerQueue,
+//     box -> containerBox
+//   - C3 (inside container or componentBox): db -> componentDb, queue -> componentQueue,
+//     box -> componentBox.
+//
+// box is a universal grouping shorthand: writing type = "box" anywhere promotes
+// it to the level-appropriate variant. Explicit containerBox/componentBox pass
+// through unchanged (they are not TypeBox).
 func inferGenericType(unitType model.UnitType, parentType model.UnitType) model.UnitType {
-	if !genericDbTypes[unitType] {
+	// Only db, queue, and box are generic (level-agnostic) types.
+	if !genericDbTypes[unitType] && unitType != model.TypeBox {
 		return unitType // Not a generic type, return as-is
 	}
 
@@ -705,22 +713,26 @@ func inferGenericType(unitType model.UnitType, parentType model.UnitType) model.
 	//nolint:exhaustive // Default case handles all remaining types
 	switch parentType {
 	case "", model.TypeBox: // C1 level (root or C1 box)
-		return unitType // db stays db, queue stays queue
+		return unitType // db/queue/box unchanged at C1
 	case model.TypeSystem, model.TypeContainerBox: // C2 level
-		//nolint:exhaustive // Only db/queue are generic types, handled explicitly
+		//nolint:exhaustive // Only db/queue/box are generic types, handled explicitly
 		switch unitType {
 		case model.TypeDb:
 			return model.TypeContainerDb
 		case model.TypeQueue:
 			return model.TypeContainerQueue
+		case model.TypeBox:
+			return model.TypeContainerBox
 		}
 	case model.TypeContainer, model.TypeComponentBox: // C3 level
-		//nolint:exhaustive // Only db/queue are generic types, handled explicitly
+		//nolint:exhaustive // Only db/queue/box are generic types, handled explicitly
 		switch unitType {
 		case model.TypeDb:
 			return model.TypeComponentDb
 		case model.TypeQueue:
 			return model.TypeComponentQueue
+		case model.TypeBox:
+			return model.TypeComponentBox
 		}
 	}
 

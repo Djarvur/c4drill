@@ -291,3 +291,43 @@ func TestGetBoxStyleByContents(t *testing.T) {
 	assert.Equal(t, model.PersonBorder, styleNil.BorderColor, "nil unit should have dark blue border")
 	assert.Equal(t, "dashed", styleNil.BorderStyle, "box should have dashed border")
 }
+
+func TestGetBoxStyleByContents_LevelAware(t *testing.T) {
+	t.Parallel()
+
+	// A C1 box (TypeBox) with only internal subunits uses the C1 colour.
+	c1Box := &model.Unit{
+		Type:     model.TypeBox,
+		Subunits: map[string]*model.Unit{"svc": {Type: model.TypeSystem}},
+	}
+	assert.Equal(t, model.PersonBorder, graph.GetBoxStyleByContents(c1Box).BorderColor,
+		"internal C1 box should use PersonBorder")
+
+	// A promoted C2 box (containerBox) uses the C2 colour.
+	c2Box := &model.Unit{
+		Type:     model.TypeContainerBox,
+		Subunits: map[string]*model.Unit{"svc": {Type: model.TypeContainer}},
+	}
+	assert.Equal(t, model.ContainerBorder, graph.GetBoxStyleByContents(c2Box).BorderColor,
+		"internal C2 box should use ContainerBorder")
+
+	// A promoted C3 box (componentBox) uses the C3 colour.
+	c3Box := &model.Unit{
+		Type:     model.TypeComponentBox,
+		Subunits: map[string]*model.Unit{"svc": {Type: model.TypeComponent}},
+	}
+	assert.Equal(t, model.ComponentBorder, graph.GetBoxStyleByContents(c3Box).BorderColor,
+		"internal C3 box should use ComponentBorder")
+
+	// Any box containing an external subunit uses grey regardless of level.
+	c2BoxExternal := &model.Unit{
+		Type:     model.TypeContainerBox,
+		Subunits: map[string]*model.Unit{"ext": {Type: model.TypeSystemExternal}},
+	}
+	assert.Equal(t, model.PersonExternalBorder, graph.GetBoxStyleByContents(c2BoxExternal).BorderColor,
+		"C2 box with external subunit should use PersonExternalBorder")
+
+	// All box variants keep the dashed border style.
+	assert.Equal(t, "dashed", graph.GetBoxStyleByContents(c2Box).BorderStyle)
+	assert.Equal(t, "dashed", graph.GetBoxStyleByContents(c3Box).BorderStyle)
+}
