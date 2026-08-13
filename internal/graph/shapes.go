@@ -104,24 +104,27 @@ func HasExternalSubunits(unit *model.Unit) bool {
 	return false
 }
 
-// GetBoxStyleByContents returns the style for a C1 box based on its contents.
+// GetBoxStyleByContents returns the style for a box based on its contents.
 // - Boxes with external subunits: grey border (PersonExternalBorder)
-// - Boxes with only non-external subunits: dark blue border (PersonBorder)
-// - Both cases: dashed border style.
+// - Internal boxes: level-coloured border (C1 dark blue / C2 blue / C3 light blue)
+// - All boxes: transparent background, dashed border.
 func GetBoxStyleByContents(unit *model.Unit) *NodeStyle {
-	if HasExternalSubunits(unit) {
-		return &NodeStyle{
-			FillColor:   "",                         // Transparent background
-			BorderColor: model.PersonExternalBorder, // Grey for external boxes
-			FontColor:   model.PersonExternalBorder, // Font color matches border color
-			BorderStyle: "dashed",
+	borderColor := model.PersonBorder // C1 default (dark blue)
+	if unit != nil && HasExternalSubunits(unit) {
+		borderColor = model.PersonExternalBorder // Grey for boxes containing externals
+	} else if unit != nil {
+		switch LevelForType(unit.Type) {
+		case levelC2:
+			borderColor = model.ContainerBorder // Blue
+		case levelC3:
+			borderColor = model.ComponentBorder // Light blue
 		}
 	}
 
 	return &NodeStyle{
-		FillColor:   "",                 // Transparent background
-		BorderColor: model.PersonBorder, // Dark blue for internal boxes
-		FontColor:   model.PersonBorder, // Font color matches border color
+		FillColor:   "",            // Transparent background
+		BorderColor: borderColor,
+		FontColor:   borderColor,   // Font color matches border color
 		BorderStyle: "dashed",
 	}
 }

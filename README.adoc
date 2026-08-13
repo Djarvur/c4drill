@@ -310,6 +310,11 @@ name = "AWS Cloud"
 description = "Cloud infrastructure"
 ----
 
+`box` is a *universal shorthand*: write it at any nesting depth and it
+promotes to the level-appropriate variant (`containerBox` at C2,
+`componentBox` at C3); at C1 (root or inside another `box`) it stays
+`box`. See <<_optional_type_inference>> below.
+
 ==== Reference (External Documentation URL)
 
 Any unit accepts an optional `reference` field — an external
@@ -365,9 +370,9 @@ unaffected — humanization only fires when `name` is omitted.
 === Optional Type (Inference)
 
 The `type` field is *optional*. When omitted, the type is inferred from
-the parent unit's type (and, for the generic `db`/`queue` types,
-promoted to the level-specific variant based on nesting). Two rules
-apply:
+the parent unit's type. The generic types — `db`/`queue` and the
+grouping `box` — are also promoted to the level-specific variant based
+on nesting. Three rules apply:
 
 *1. Default type by parent* — the type assigned when `type` is omitted
 entirely:
@@ -396,6 +401,20 @@ level-specific variant based on the parent:
 |`container` or `componentBox` |`componentDb` |`componentQueue` |C3
 |===
 
+*3. `box` promotion* — `type = "box"` is valid at any depth and promotes
+to the level-appropriate grouping variant based on the parent:
+
+[cols=",,",options="header",]
+|===
+|Parent type |`box` becomes |Level
+|(none) or `box` |`box` |C1 (unchanged — same-level grouping)
+|`system` or `containerBox` |`containerBox` |C2
+|`container` or `componentBox` |`componentBox` |C3
+|===
+
+Once promoted, the box's children follow the level-specific default
+(`container` under `containerBox`, `component` under `componentBox`).
+
 *Before/after example:*
 
 [source,toml]
@@ -416,9 +435,18 @@ type = "componentDb"     # generic db promoted because parent is container
 [platform.webapp.cache]
 type = "db"
 # explicit generic db → promoted to "componentDb" (parent is container)
+
+# box shorthand anywhere — promoted to "containerBox"; children default to container
+[platform.group]
+type = "box"
+[platform.group.svc]
+# type omitted → inferred "container" (parent promoted to containerBox)
 ----
 
-An explicit non-generic `type =` always wins (no inference runs).
+An explicit non-generic `type =` always wins (no inference runs). The
+explicit variants `containerBox` and `componentBox` are themselves
+non-generic, so they pass through unchanged — use them only to pin the
+level regardless of position.
 Source: `defaultTypeForParent` and `inferGenericType` in
 `internal/parser/parser.go`.
 

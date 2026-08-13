@@ -774,6 +774,190 @@ name = "Database"
 	assert.Equal(t, model.TypeDb, mydb.Type, "db inside C1 box should stay as db (same-level grouping)")
 }
 
+func TestParseGenericTypeInference_BoxAtC1(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Generic Type Test"
+
+[mybox]
+type = "box"
+name = "Box"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	mybox, ok := got.Units["mybox"]
+	require.True(t, ok, "missing 'mybox' unit")
+	assert.Equal(t, model.TypeBox, mybox.Type, "box at C1 (root) should stay as box")
+}
+
+func TestParseGenericTypeInference_BoxAtC2(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Generic Type Test"
+
+[system]
+type = "system"
+name = "System"
+
+[system.mybox]
+type = "box"
+name = "Group"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	system, ok := got.Units["system"]
+	require.True(t, ok, "missing 'system' unit")
+
+	mybox, ok := system.Subunits["mybox"]
+	require.True(t, ok, "missing 'system.mybox' subunit")
+	assert.Equal(t, model.TypeContainerBox, mybox.Type, "box inside system should promote to containerBox")
+}
+
+func TestParseGenericTypeInference_BoxAtC3(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Generic Type Test"
+
+[system]
+type = "system"
+name = "System"
+
+[system.api]
+type = "container"
+name = "API"
+
+[system.api.mybox]
+type = "box"
+name = "Group"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	system := got.Units["system"]
+	require.NotNil(t, system, "missing 'system' unit")
+
+	api := system.Subunits["api"]
+	require.NotNil(t, api, "missing 'system.api' subunit")
+
+	mybox, ok := api.Subunits["mybox"]
+	require.True(t, ok, "missing 'system.api.mybox' subunit")
+	assert.Equal(t, model.TypeComponentBox, mybox.Type, "box inside container should promote to componentBox")
+}
+
+func TestParseGenericTypeInference_BoxInBoxStaysBox(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Generic Type Test"
+
+[outer]
+type = "box"
+name = "Outer"
+
+[outer.inner]
+type = "box"
+name = "Inner"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	outer, ok := got.Units["outer"]
+	require.True(t, ok, "missing 'outer' unit")
+
+	inner, ok := outer.Subunits["inner"]
+	require.True(t, ok, "missing 'outer.inner' subunit")
+	// A box inside a C1 box is same-level C1 grouping, so it stays box.
+	assert.Equal(t, model.TypeBox, inner.Type, "box inside C1 box should stay as box")
+}
+
+func TestParseGenericTypeInference_PromotedBoxChildrenDefaultToContainer(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Generic Type Test"
+
+[system]
+type = "system"
+name = "System"
+
+[system.group]
+type = "box"
+name = "Group"
+
+[system.group.svc]
+name = "Service"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	system := got.Units["system"]
+	require.NotNil(t, system, "missing 'system' unit")
+
+	group := system.Subunits["group"]
+	require.NotNil(t, group, "missing 'system.group' subunit")
+	assert.Equal(t, model.TypeContainerBox, group.Type, "box inside system should promote to containerBox")
+
+	svc, ok := group.Subunits["svc"]
+	require.True(t, ok, "missing 'system.group.svc' subunit")
+	// Once promoted to containerBox, children default to container (C2), not system.
+	assert.Equal(t, model.TypeContainer, svc.Type,
+		"child of promoted box should default to container, not system")
+}
+
+func TestParseGenericTypeInference_ExplicitBoxVariantsUnchanged(t *testing.T) {
+	t.Parallel()
+
+	// Explicit containerBox/componentBox are not TypeBox, so inference must not touch them.
+	data := []byte(`
+[properties]
+name = "Explicit Box Test"
+
+[system]
+type = "system"
+
+[system.cbox]
+type = "containerBox"
+
+[system.api]
+type = "container"
+
+[system.api.mpbox]
+type = "componentBox"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	system := got.Units["system"]
+	require.NotNil(t, system, "missing 'system' unit")
+
+	cbox := system.Subunits["cbox"]
+	require.NotNil(t, cbox, "missing 'system.cbox' subunit")
+	assert.Equal(t, model.TypeContainerBox, cbox.Type, "explicit containerBox should stay as containerBox")
+
+	api := system.Subunits["api"]
+	require.NotNil(t, api, "missing 'system.api' subunit")
+
+	mpbox := api.Subunits["mpbox"]
+	require.NotNil(t, mpbox, "missing 'system.api.mpbox' subunit")
+	assert.Equal(t, model.TypeComponentBox, mpbox.Type, "explicit componentBox should stay as componentBox")
+}
+
 func TestParseGenericTypeInference_InSystemExternal(t *testing.T) {
 	t.Parallel()
 

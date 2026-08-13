@@ -203,9 +203,9 @@ func BuildExpandedGraph(v *view.View) *Graph {
 // buildNestedCluster recursively creates a cluster with nested clusters for subunits.
 // This is used by BuildExpandedGraph to show the complete hierarchy in a single diagram.
 func buildNestedCluster(entry *view.Entry, path string, v *view.View) *Cluster {
-	// For C1 boxes, use content-based styling
+	// Boxes use content-based styling (border colour derived from subunits)
 	var style *NodeStyle
-	if entry.Unit.Type == model.TypeBox {
+	if IsBoxType(entry.Unit.Type) {
 		style = GetBoxStyleByContents(entry.Unit)
 	} else {
 		style = GetStyleForType(entry.Unit.Type, entry.IsExternal)
@@ -282,9 +282,9 @@ func buildNode(entry *view.Entry) *Node {
 		label.Name += " 📖"
 	}
 
-	// For C1 boxes, use content-based styling
+	// Boxes use content-based styling (border colour derived from subunits)
 	var style *NodeStyle
-	if entry.Unit.Type == model.TypeBox {
+	if IsBoxType(entry.Unit.Type) {
 		style = GetBoxStyleByContents(entry.Unit)
 	} else {
 		style = GetStyleForType(entry.Unit.Type, entry.IsExternal)
@@ -303,9 +303,9 @@ func buildNode(entry *view.Entry) *Node {
 
 // buildCluster creates a cluster for an expanded unit.
 func buildCluster(entry *view.Entry) *Cluster {
-	// For C1 boxes, use content-based styling
+	// Boxes use content-based styling (border colour derived from subunits)
 	var style *NodeStyle
-	if entry.Unit.Type == model.TypeBox {
+	if IsBoxType(entry.Unit.Type) {
 		style = GetBoxStyleByContents(entry.Unit)
 	} else {
 		style = GetStyleForType(entry.Unit.Type, entry.IsExternal)

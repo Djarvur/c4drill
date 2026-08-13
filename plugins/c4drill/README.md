@@ -9,7 +9,7 @@ Version: 0.1.0 · Publisher: Djarvur
 
 | Component | Name | What it does |
 | --- | --- | --- |
-| Skill | `c4drill-toml` | Authors valid C4Drill TOML architecture definitions (16 unit types, links, templates, includes; 9 example sets) |
+| Skill | `c4drill-toml` | Authors valid C4Drill TOML architecture definitions (17 unit types, links, templates, includes; 9 example sets) |
 | Command | `c4drill-render` | Runs the `c4drill` CLI to validate a TOML file and render SVG/HTML/DOT diagrams |
 
 ## Prerequisite
