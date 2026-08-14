@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Label Formatting Fixes
 status: executing
-last_updated: "2026-08-14T17:50:37.889Z"
+last_updated: "2026-08-14T18:47:37.094Z"
 last_activity: 2026-08-14
 progress:
   total_phases: 1
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-08-10)
 ## Current Position
 
 Phase: 35 (add-a-simple-dsl-alternative-to-the-toml-diagram-definition) — EXECUTING
-Plan: 6 of 9
+Plan: 7 of 9
 **Progress:** [██████████] 100%
 Status: Ready to execute
 Last activity: 2026-08-14
@@ -48,6 +48,7 @@ Last activity: 2026-08-14
 | Phase 35 P03 | 24min | 2 tasks | 7 files |
 | Phase 35 P04 | 21min | 2 tasks | 4 files |
 | Phase 35 P05 | 30min | 3 tasks | 13 files |
+| Phase 35 P06 | 53min | 3 tasks | 19 files |
 
 ## Accumulated Context
 
@@ -85,7 +86,7 @@ Both captured todos (`.planning/todos/pending/2026-08-10-wrap-edge-labels-like-u
 
 ## Session Continuity
 
-Last session: 2026-08-14T17:50:37.854Z
+Last session: 2026-08-14T18:47:37.072Z
 Stopped at: Completed 35-05-PLAN.md (ToModel parity hub + ParseAST export + mixed-format includes); next 35-06
 Resume file: None
 
@@ -106,6 +107,9 @@ Resume file: None
 - [Phase ?]: [35-05] C4D glyph->Link mapping: ->/<->/-- carry their ArrowDirection in Links, <- -> LinksFrom{ArrowForward} (mirror-consistent incoming edge); the twin TOML states arrow = "forward" where the fixture omits it (D-22 explicit-defaults normalization)
 - [Phase ?]: [35-05] c4d.Parse returns *parser.Model (D-21) composing exported ParseAST+ToModel; ParseAST/ParseASTFile stay exported for fmt (35-08) and canonsrc (35-06); ToModel honors FromModel's Body.Type template-root recording — the 35-04 gap closed at Model level
 - [Phase ?]: [35-05] include.Resolve dispatches per included-file extension (.c4d -> c4d.ParseFile, .toml -> parser.ParseFile); unknown extensions hard-error naming .toml/.c4d — mixed-format graphs merge at Model level (D-26/T-35-05-01)
+- [Phase ?]: 35-06: D-22 glyph mapping revision — -> maps to the OMITTED arrow default (Arrow ""), not ArrowForward (renderer emits dir=forward only for the explicit value, so the explicit mapping made C4D models render apart from TOML twins); forward/reverse ride -> { arrow: X }, non-default LinksFrom arrows ride <- { arrow: X }
+- [Phase ?]: 35-06: template root types ride a template-body type: statement (grammar admits it in template bodies only; unit bodies still reject it; EmitC4D renders Body.Type/External) and PeerRef segments accept ${param} tokens — the 35-04 deferred text gap closed, parametrized peers round-trip
+- [Phase ?]: 35-06: pre-existing parser nondeterminism fixed — recordHandAuthored ignored table paths deeper than 2 segments and parseUnitWithOrder looked orders up by short names, so C3+ subunits ordered by Go map iteration (masked until the round-trip contract made order load-bearing); every ancestor pair now records and the recursion carries full lookup paths
 
 ## Operator Next Steps
 
