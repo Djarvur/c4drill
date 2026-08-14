@@ -36,8 +36,8 @@ func TestHelpText(t *testing.T) {
 
 	output := buf.String()
 
-	// Verify key content per CLII-04
-	assert.Contains(t, output, "c4drill <input.toml>", "Usage should show command syntax")
+	// Verify key content per CLII-04 (Plan 35-07: usage names both extensions, D-27)
+	assert.Contains(t, output, "c4drill <input.toml|input.c4d>", "Usage should show command syntax")
 	assert.Contains(t, output, "Examples:", "Help should include examples section")
 	assert.Contains(t, output, "--format", "Help should document --format flag")
 	assert.Contains(t, output, "--output", "Help should document --output flag")
@@ -72,16 +72,17 @@ func TestHelpSubcommand(t *testing.T) {
 	_ = err2
 
 	// Both should contain the same key elements
-	assert.Contains(t, helpOutput, "c4drill <input.toml>")
+	assert.Contains(t, helpOutput, "c4drill <input.toml|input.c4d>")
 }
 
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestNewRootCmd(t *testing.T) {
 	cmd := NewRootCmd()
 
-	assert.Equal(t, "c4drill <input.toml>", cmd.Use)
-	assert.Equal(t, "Generate C4 architecture diagrams from TOML", cmd.Short)
+	assert.Equal(t, "c4drill <input.toml|input.c4d>", cmd.Use)
+	assert.Equal(t, "Generate C4 architecture diagrams from TOML and C4D", cmd.Short)
 	assert.NotEmpty(t, cmd.Long)
+	assert.Contains(t, cmd.Long, ".c4d", "Long help must mention .c4d acceptance (D-27)")
 	assert.True(t, cmd.SilenceUsage)
 	assert.NotNil(t, cmd.RunE)
 	// Verify Args requires exactly 1 argument
@@ -1375,4 +1376,102 @@ func TestXC01_PipelineOrdering(t *testing.T) {
 		"XC-03: the templated cache's parametrized peer ${upstreamBus} expanded "+
 			"to messageBus and resolved as an edge to the instantiation-site target "+
 			"— proves template.Expand ran before peer.Resolve")
+}
+
+// --- Phase 35: C4D direct render + extension dispatch (Plan 35-07 Task 1) ---
+
+// c4dMinimalTwin is the hand-written C4D twin of skill/examples/01-minimal.toml:
+// same properties, same units, same edges (linkFrom rides `<-`, link rides
+// `->`), so rendering the .c4d file directly through the pipeline must
+// produce the same view outputs as the .toml original (D-29: C4D is a
+// first-class authoring format, not a converter curiosity).
+const c4dMinimalTwin = `properties {
+	name: "Minimal Architecture"
+}
+
+user: person "User" {
+	<- webapp: Uses
+}
+
+webapp: system "Web Application" {
+	-> user: Uses
+}
+`
+
+// runRenderDot renders inputPath through the real cobra root command into a
+// fresh temp output dir in DOT format and returns the C1 {basename}.dot
+// content. Asserts the output file was created inside the temp dir (D-29).
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func runRenderDot(t *testing.T, inputPath string) string {
+	t.Helper()
+
+	outDir := t.TempDir()
+	cmd := NewRootCmd()
+	cmd.SetArgs([]string{inputPath, "--output", outDir, "--format", "dot"})
+
+	require.NoError(t, cmd.Execute(), "render %s must succeed", inputPath)
+
+	dotPath := filepath.Join(outDir,
+		strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))+".dot")
+
+	data, err := os.ReadFile(dotPath) //nolint:gosec // G304: path inside t.TempDir()
+	require.NoError(t, err, "C1 DOT output should exist next to the render dir for %s", inputPath)
+
+	return string(data)
+}
+
+// TestC4DRenderDirect proves D-29: a .c4d document renders directly through
+// the full pipeline (parse -> include -> expand -> peer -> validate -> views
+// -> render) producing the SAME C1 view as its .toml twin, compared under
+// the order-insensitive canonicalDOT contract (DI-1 — layout geometry and
+// map-order siblings are normalized away).
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestC4DRenderDirect(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// The .toml original: skill/examples/01-minimal.toml verbatim.
+	src, err := os.ReadFile(filepath.Join("..", "..", "skill", "examples", "01-minimal.toml"))
+	require.NoError(t, err, "read 01-minimal.toml fixture")
+
+	tomlPath := filepath.Join(tmpDir, "minimal.toml")
+	require.NoError(t, os.WriteFile(tomlPath, src, 0o600), "write .toml original")
+
+	// The hand-written .c4d twin.
+	c4dPath := filepath.Join(tmpDir, "minimal.c4d")
+	require.NoError(t, os.WriteFile(c4dPath, []byte(c4dMinimalTwin), 0o600), "write .c4d twin")
+
+	tomlDot := runRenderDot(t, tomlPath)
+	c4dDot := runRenderDot(t, c4dPath)
+
+	require.Equal(t, canonical.Canonical(t, tomlDot), canonical.Canonical(t, c4dDot),
+		"D-29: rendering the .c4d twin directly must produce the same C1 view "+
+			"as the .toml original (canonicalDOT, DI-1)")
+}
+
+// TestRootInputUnknownExtension proves D-27's fail-closed dispatch: an input
+// whose extension is neither .toml nor .c4d is a hard parse error naming BOTH
+// accepted extensions — no fallback parsing, no content sniffing.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestRootInputUnknownExtension(t *testing.T) {
+	tmpDir := t.TempDir()
+	jsonPath := filepath.Join(tmpDir, "diagram.json")
+	require.NoError(t, os.WriteFile(jsonPath, []byte(`{"not": "c4drill input"}`), 0o600),
+		"write .json input")
+
+	cmd := NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	cmd.SetArgs([]string{jsonPath})
+
+	err := cmd.Execute()
+	require.Error(t, err, "unknown input extension must be a hard error (D-27)")
+
+	msg := err.Error()
+	assert.Contains(t, msg, "parse", "error must keep the parse: stage prefix")
+	assert.Contains(t, msg, ".toml", "error must name the .toml extension")
+	assert.Contains(t, msg, ".c4d", "error must name the .c4d extension")
 }
