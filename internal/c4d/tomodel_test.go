@@ -11,11 +11,16 @@ package c4d_test
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/Djarvur/c4drill/internal/c4d"
+	"github.com/Djarvur/c4drill/internal/include"
 	"github.com/Djarvur/c4drill/internal/model"
 	"github.com/Djarvur/c4drill/internal/parser"
+	"github.com/Djarvur/c4drill/internal/peer"
+	"github.com/Djarvur/c4drill/internal/template"
+	"github.com/Djarvur/c4drill/internal/validator"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -534,4 +539,109 @@ name = "user"
 	require.Equal(t, tomlModel.Templates, roundTripped.Templates,
 		"template root type survives Model->AST->Model (35-04 deferred gap closed)")
 	require.Equal(t, tomlModel.Instantiations, roundTripped.Instantiations, "instantiations survive")
+}
+
+// TestC4DFullPipelineComposed (D-21/D-26/D-10 proof, Plan 35-05 Task 3): a
+// composed .c4d document — templates + use + relative peers + a .c4d
+// include — runs the REAL pipeline stages in the load-bearing order
+// (include.Resolve -> template.Expand -> peer.Resolve -> validator.Validate)
+// with zero errors. The include is .c4d-from-.c4d through include.Resolve's
+// extension dispatch (D-26); render is deliberately not invoked (WASM
+// parallel rule; render equivalence is 35-06).
+func TestC4DFullPipelineComposed(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+
+	sharedC4d := `messageBus: queue "Message Bus" { }
+
+template worker(name, tech) {
+	name: "${name} Worker"
+	technology: ${tech}
+	-> messageBus: AMQP |
+}
+`
+	mainC4d := `properties { name: Composed }
+
+gateway: system "Gateway" {
+	api: container {
+		-> extract
+	}
+}
+
+use worker(name: extract, tech: Go)
+
+include ./shared.c4d
+`
+
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "shared.c4d"), []byte(sharedC4d), 0o600), "write shared.c4d")
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "main.c4d"), []byte(mainC4d), 0o600), "write main.c4d")
+
+	mainPath := filepath.Join(dir, "main.c4d")
+
+	// Stage 1: C4D parse — the Model hub (D-21).
+	m, err := c4d.ParseFile(mainPath)
+	require.NoError(t, err, "c4d.ParseFile")
+
+	// Stage 1a: include.Resolve — the .c4d include parses through the C4D
+	// front-end via extension dispatch (D-26).
+	m, err = include.Resolve(m, dir, mainPath)
+	require.NoError(t, err, "include.Resolve")
+
+	// Stage 1.5: template.Expand — the shared template instantiated.
+	m, err = template.Expand(m)
+	require.NoError(t, err, "template.Expand")
+
+	// Stage 1.6: peer.Resolve — bare peers rewritten to absolute paths (D-10).
+	require.NoError(t, peer.Resolve(m), "peer.Resolve")
+
+	// Stage 2: validator.Validate — the composed model is valid.
+	valErrors := validator.Validate(m)
+	require.Empty(t, valErrors, "validator.Validate returns zero errors on the composed .c4d document")
+
+	// Spot-check the expanded units and resolved peers.
+	extract := m.Units["extract"]
+	require.NotNil(t, extract, "worker instantiated at top level (D-04 produced path)")
+	assert.Equal(t, model.TypeSystem, extract.Type, "extract.Type (template root default)")
+	assert.Equal(t, "extract Worker", extract.Name, "extract.Name (${name} substituted)")
+	assert.Equal(t, "Go", extract.Technology, "extract.Technology (${tech} substituted)")
+	require.Len(t, extract.Links, 1, "extract.Links")
+	assert.Equal(t, "messageBus", extract.Links[0].Peer,
+		"bare peer resolved to the included top-level unit (D-10)")
+	assert.Equal(t, "AMQP", extract.Links[0].Technology, "template link technology")
+
+	gateway := m.Units["gateway"]
+	require.NotNil(t, gateway, "gateway")
+
+	api := gateway.Subunits["api"]
+	require.Len(t, api.Links, 1, "api.Links")
+	assert.Equal(t, "extract", api.Links[0].Peer,
+		"bare peer resolved against root after the enclosing-parent miss (D-10)")
+}
+
+// TestC4DUnresolvablePeerMatchesTomlTwin (D-10): an unresolvable bare peer
+// in .c4d produces the same peer.Resolve error as the TOML twin — the C4D
+// front-end stores peer strings verbatim and the existing pass does the
+// resolving.
+func TestC4DUnresolvablePeerMatchesTomlTwin(t *testing.T) {
+	t.Parallel()
+
+	c4dModel := toModel(t, "a: system { -> nosuch }")
+
+	tomlModel, err := parser.Parse([]byte(`
+[a]
+type = "system"
+
+[[a.link]]
+peer = "nosuch"
+`))
+	require.NoError(t, err, "parser.Parse(TOML twin)")
+
+	c4dErr := peer.Resolve(c4dModel)
+	tomlErr := peer.Resolve(tomlModel)
+
+	require.Error(t, c4dErr, "unresolvable bare peer in .c4d errors")
+	require.Error(t, tomlErr, "unresolvable bare peer in TOML errors")
+	require.Equal(t, tomlErr.Error(), c4dErr.Error(),
+		"identical peer.Resolve error for equivalent documents (D-10)")
 }

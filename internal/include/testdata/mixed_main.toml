@@ -1,0 +1,13 @@
+# Mixed-format include graph, TOML entry (D-26, Plan 35-05 Task 3): this
+# TOML file includes shared.c4d — include graphs may mix .toml and .c4d
+# freely; include.Resolve dispatches per extension and merges at Model
+# level.
+[properties]
+name = "Mixed Entry TOML"
+
+[entrySvc]
+type = "system"
+name = "Entry Service"
+
+[[include]]
+path = "./shared.c4d"

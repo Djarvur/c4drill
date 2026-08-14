@@ -1,0 +1,7 @@
+# Mixed-format include graph, C4D entry (D-26, Plan 35-05 Task 3): this
+# C4D file includes shared.toml — the mirror direction of mixed_main.toml.
+properties { name: Mixed Entry C4D }
+
+entrySvc: system "Entry Service" { }
+
+include ./shared.toml

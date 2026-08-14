@@ -1,0 +1,3 @@
+# Included from mixed_main.toml (D-26 mixed-format graph). Parsed by the
+# C4D front-end, merged at Model level.
+sharedDb: db "Shared DB" { }
