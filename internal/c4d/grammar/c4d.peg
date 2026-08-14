@@ -671,7 +671,9 @@ FieldStmt <- key:FieldKey _ ':' _ value:Literal {
 	return &ast.FieldStmt{Pos: c.pos.line, Key: key.(string), Value: value.(ast.Literal)}, nil
 }
 
-FieldKey <- ("description" / "technology" / "reference" / "expanded" / "name" / "color" / "style" / "border" / "edges") !IdentChar {
+// width/height are the TOML unit styling twins (integer fields like
+// lineLength; the Model carries them as float64 — F-02 parity).
+FieldKey <- ("description" / "technology" / "reference" / "expanded" / "name" / "color" / "style" / "border" / "edges" / "width" / "height") !IdentChar {
 	return string(c.text), nil
 }
 

@@ -580,6 +580,55 @@ func TestRoundTripC4DToTOMLToC4D(t *testing.T) {
 	}
 }
 
+// TestUnitWidthHeightRoundTrip pins the F-02 parity fix: TOML-authored
+// width/height styling (README 'Styling' — width = 300, height = 200) must
+// survive the full TOML -> C4D -> TOML loop. The C4D side carries them as
+// body fields, the TOML side re-serializes them, and both the canonical-text
+// and model comparisons would catch a silent drop back to 0.
+func TestUnitWidthHeightRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	m1, err := parser.Parse([]byte(`[webapp]
+type = "system"
+name = "Web App"
+width = 300
+height = 200
+`))
+	require.NoError(t, err, "TOML with width/height parses")
+
+	require.Contains(t, m1.Units, "webapp", "unit present")
+	require.InDelta(t, 300.0, m1.Units["webapp"].Width, 0.0001, "TOML width parses")
+	require.InDelta(t, 200.0, m1.Units["webapp"].Height, 0.0001, "TOML height parses")
+
+	c4dText := c4d.EmitC4D(c4d.FromModel(m1))
+	assert.Contains(t, c4dText, "width: 300", "C4D emission carries width")
+	assert.Contains(t, c4dText, "height: 200", "C4D emission carries height")
+
+	m2, err := c4d.Parse([]byte(c4dText))
+	require.NoError(t, err, "emitted C4D re-parses")
+	require.InDelta(t, 300.0, m2.Units["webapp"].Width, 0.0001, "C4D width maps into the Model")
+	require.InDelta(t, 200.0, m2.Units["webapp"].Height, 0.0001, "C4D height maps into the Model")
+
+	tomlText, err := c4d.EmitTOML(m2)
+	require.NoError(t, err, "TOML emission")
+	assert.Contains(t, tomlText, "width = 300", "TOML emission carries width")
+	assert.Contains(t, tomlText, "height = 200", "TOML emission carries height")
+
+	m3, err := parser.Parse([]byte(tomlText))
+	require.NoError(t, err, "round-tripped TOML parses")
+
+	firstEmit, err := c4d.EmitTOML(m1)
+	require.NoError(t, err, "first TOML emission")
+
+	require.Equal(t,
+		canonsrc.NormalizeTOML(t, firstEmit),
+		canonsrc.NormalizeTOML(t, tomlText),
+		"width/height survive the TOML -> C4D -> TOML loop (F-02)")
+
+	require.Equal(t, canonicalModel(m1), canonicalModel(m3),
+		"models equal after the width/height round trip")
+}
+
 // TestInvalidFixturesRefuseConversion: invalid corpus fixtures assert
 // conversion REFUSAL — some stage of the pre-render pipeline (parse,
 // expand, peer.Resolve, validate) must error, mirroring D-24's convert gate

@@ -138,6 +138,20 @@ func appendUnitBody(node *ast.UnitNode, unit *model.Unit) {
 	add("border", unit.Border)
 	add("edges", unit.Edges)
 
+	if unit.Width != 0 {
+		node.Fields = append(node.Fields, &ast.FieldStmt{
+			Key:   "width",
+			Value: ast.Literal{Kind: ast.KindBareword, Str: formatFloat(unit.Width)},
+		})
+	}
+
+	if unit.Height != 0 {
+		node.Fields = append(node.Fields, &ast.FieldStmt{
+			Key:   "height",
+			Value: ast.Literal{Kind: ast.KindBareword, Str: formatFloat(unit.Height)},
+		})
+	}
+
 	if len(unit.Expanded) > 0 {
 		node.Fields = append(node.Fields, &ast.FieldStmt{
 			Key:   "expanded",
@@ -354,4 +368,11 @@ func literalFor(s string) ast.Literal {
 	default:
 		return ast.Literal{Kind: ast.KindQuoted, Str: s}
 	}
+}
+
+// formatFloat renders a float64 unit field (width, height) in its shortest
+// exact decimal form — 300 stays "300" (the bareword/TOML integer spelling),
+// 300.5 keeps its fraction.
+func formatFloat(v float64) string {
+	return strconv.FormatFloat(v, 'f', -1, 64)
 }

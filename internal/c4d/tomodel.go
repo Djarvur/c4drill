@@ -413,8 +413,8 @@ func applyUnitFields(unit *model.Unit, node *ast.UnitNode, path string) error {
 }
 
 // applyUnitField maps one body field onto the unit. Scalar fields reject
-// list literals; `expanded` rejects scalars — the same shapes the TOML
-// unmarshal rejects.
+// list literals; `expanded` rejects scalars; `width`/`height` reject
+// non-numeric values — the same shapes the TOML unmarshal rejects.
 func applyUnitField(unit *model.Unit, f *ast.FieldStmt, path string) error {
 	if f.Key == "expanded" {
 		list, err := listValue(f)
@@ -423,6 +423,25 @@ func applyUnitField(unit *model.Unit, f *ast.FieldStmt, path string) error {
 		}
 
 		unit.Expanded = list
+
+		return nil
+	}
+
+	if f.Key == "width" || f.Key == "height" {
+		if f.Value.Kind == ast.KindList {
+			return listRejected(f, "unit "+path)
+		}
+
+		n, err := floatValue(f)
+		if err != nil {
+			return err
+		}
+
+		if f.Key == "width" {
+			unit.Width = n
+		} else {
+			unit.Height = n
+		}
 
 		return nil
 	}
@@ -832,6 +851,20 @@ func intValue(f *ast.FieldStmt) (int, error) {
 	if err != nil {
 		return 0, &parser.ParseError{
 			Message: fmt.Sprintf("field %q must be an integer, got %q", f.Key, f.Value.Str),
+			Line:    f.Pos,
+		}
+	}
+
+	return n, nil
+}
+
+// floatValue parses a numeric field value (width, height) — the Model carries
+// them as float64, so integer and decimal spellings both parse.
+func floatValue(f *ast.FieldStmt) (float64, error) {
+	n, err := strconv.ParseFloat(f.Value.Str, 64)
+	if err != nil {
+		return 0, &parser.ParseError{
+			Message: fmt.Sprintf("field %q must be a number, got %q", f.Key, f.Value.Str),
 			Line:    f.Pos,
 		}
 	}

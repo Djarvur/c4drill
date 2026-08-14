@@ -108,6 +108,8 @@ func TestEmitTOMLCanonicalUnitFieldOrder(t *testing.T) {
 				Style:       "dashed",
 				Border:      "black",
 				Edges:       "spline",
+				Width:       300,
+				Height:      200,
 				Expanded:    []string{"api"},
 			},
 		},
@@ -117,7 +119,7 @@ func TestEmitTOMLCanonicalUnitFieldOrder(t *testing.T) {
 	require.NoError(t, err, "EmitTOML() should not error")
 
 	// D-23 fixed order: type, name, description, technology, reference,
-	// color, style, border, edges, expanded.
+	// color, style, border, edges, width, height, expanded.
 	assertOrdered(t, out,
 		"[webapp]",
 		"type = ",
@@ -129,8 +131,12 @@ func TestEmitTOMLCanonicalUnitFieldOrder(t *testing.T) {
 		"style = ",
 		"border = ",
 		"edges = ",
+		"width = ",
+		"height = ",
 		"expanded = ",
 	)
+	assert.Contains(t, out, `width = 300`, "width emits as an integer spelling")
+	assert.Contains(t, out, `height = 200`, "height emits as an integer spelling")
 	assert.Contains(t, out, `expanded = ["api"]`, "expanded emits as an array")
 }
 

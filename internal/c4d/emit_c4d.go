@@ -21,7 +21,9 @@ var unitFieldRank = map[string]int{
 	"style":       5,
 	"border":      6,
 	"edges":       7,
-	"expanded":    8,
+	"width":       8,
+	"height":      9,
+	"expanded":    10,
 }
 
 // propertyFieldRank is the D-23 canonical field order for the properties

@@ -167,11 +167,11 @@ func writeUnitCanonTOML(b *strings.Builder, name string, unit *model.Unit, prefi
 	}
 }
 
-// unitFieldMapTOML collects a unit's present scalar/array fields. Width and
-// Height are outside the D-23 canonical field set and never emitted by the
-// converters, so they are outside the canonical form too.
+// unitFieldMapTOML collects a unit's present scalar/array/numeric fields.
+// Width and height ride the canonical form like every other unit field, so
+// round-trip comparisons catch a converter dropping them (F-02).
 func unitFieldMapTOML(unit *model.Unit) map[string]string {
-	fields := make(map[string]string, 9)
+	fields := make(map[string]string, 11)
 	putString(fields, "type", string(unit.Type))
 	putString(fields, "name", unit.Name)
 	putString(fields, "description", unit.Description)
@@ -181,6 +181,14 @@ func unitFieldMapTOML(unit *model.Unit) map[string]string {
 	putString(fields, "style", unit.Style)
 	putString(fields, "border", unit.Border)
 	putString(fields, "edges", unit.Edges)
+
+	if unit.Width != 0 {
+		fields["width"] = strconv.FormatFloat(unit.Width, 'f', -1, 64)
+	}
+
+	if unit.Height != 0 {
+		fields["height"] = strconv.FormatFloat(unit.Height, 'f', -1, 64)
+	}
 
 	if len(unit.Expanded) > 0 {
 		fields["expanded"] = canonicalTOMLArray(unit.Expanded)

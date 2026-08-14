@@ -11,9 +11,10 @@ import (
 
 // EmitTOML renders m as TOML text in the fixed canonical field order (D-23):
 // unit fields type, name, description, technology, reference, color, style,
-// border, edges, expanded; link fields peer, arrow, rank, color, style,
-// technology, description, labelPosition, length; properties fields name,
-// description, color, style, border, edges, lineLength, expanded. Sections
+// border, edges, width, height, expanded; link fields peer, arrow, rank,
+// color, style, technology, description, labelPosition, length; properties
+// fields name, description, color, style, border, edges, lineLength,
+// expanded. Sections
 // emit in the fixed order [properties], unit tables (UnitOrder/SubunitOrder,
 // recursively), [template.<name>], [[use]], [[template.<name>.use]] and
 // [[include]] — mirroring the fixture files, which are the de-facto style
@@ -162,6 +163,14 @@ func emitUnitFieldsTOML(b *strings.Builder, unit *model.Unit) {
 
 	if unit.Edges != "" {
 		fmt.Fprintf(b, "edges = %s\n", quoteTOML(unit.Edges))
+	}
+
+	if unit.Width != 0 {
+		fmt.Fprintf(b, "width = %s\n", formatFloat(unit.Width))
+	}
+
+	if unit.Height != 0 {
+		fmt.Fprintf(b, "height = %s\n", formatFloat(unit.Height))
 	}
 
 	if len(unit.Expanded) > 0 {
