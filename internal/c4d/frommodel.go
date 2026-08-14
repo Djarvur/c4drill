@@ -158,11 +158,13 @@ func appendUnitBody(node *ast.UnitNode, unit *model.Unit) {
 	}
 }
 
-// edgeStmtFromLink maps a model link to an edge statement. Outgoing links
-// use the D-05 arrow-glyph inverse (ArrowReverse renders through the
-// linkFrom statement form "<-"); LinksFrom entries always emit "<-".
-// Options follow the canonical option order: rank, color, style,
-// labelPosition, length.
+// edgeStmtFromLink maps a model link to an edge statement with EXACT
+// round-trip arrow forms (D-22): the glyph carries only non-default arrow
+// semantics (`->` IS the omitted default, `<->` bidirectional, `--` none),
+// so forward and reverse ride as the `arrow` option; LinksFrom entries emit
+// the `<-` form with any non-default arrow as the option. Options follow
+// the canonical option order: arrow, rank, color, style, labelPosition,
+// length.
 func edgeStmtFromLink(link model.Link, from bool) *ast.EdgeStmt {
 	glyph := "<-"
 	if !from {
@@ -182,6 +184,14 @@ func edgeStmtFromLink(link model.Link, from bool) *ast.EdgeStmt {
 		}
 	}
 
+	if from {
+		// `<-` alone is the omitted default; every explicit arrow value
+		// rides the option verbatim.
+		addOpt("arrow", string(link.Arrow))
+	} else {
+		addOpt("arrow", arrowOptionValue(link.Arrow))
+	}
+
 	addOpt("rank", string(link.Rank))
 	addOpt("color", link.Color)
 	addOpt("style", link.Style)
@@ -197,20 +207,34 @@ func edgeStmtFromLink(link model.Link, from bool) *ast.EdgeStmt {
 	return edge
 }
 
-// arrowGlyphFor maps the model arrow direction to the C4D glyph — the
-// inverse of the Model conversion's glyph mapping.
+// arrowGlyphFor maps the model arrow direction to the C4D glyph. Only
+// non-default semantics ride the glyph: `->` is the default's exact twin
+// (the omitted `arrow` key), `<->` and `--` carry bidirectional/none, and
+// reverse pairs `->` with an `arrow: reverse` option — the glyph set has no
+// reverse form of its own (D-05).
 func arrowGlyphFor(a model.ArrowDirection) string {
-	switch a {
+	switch a { //nolint:exhaustive // default covers forward, reverse and the omitted ""
 	case model.ArrowBidirectional:
 		return "<->"
 	case model.ArrowNone:
 		return "--"
-	case model.ArrowReverse:
-		return "<-"
-	case model.ArrowForward:
-		return "->"
 	default:
+		// forward (with an `arrow: forward` option), reverse (option), and
+		// the omitted default all ride `->`.
 		return "->"
+	}
+}
+
+// arrowOptionValue returns the explicit arrow option for an outgoing link —
+// forward states the default explicitly, reverse cannot ride the glyph;
+// the omitted default, bidirectional and none are glyph-exact and carry no
+// option.
+func arrowOptionValue(a model.ArrowDirection) string {
+	switch a { //nolint:exhaustive // default covers "", bidirectional and none
+	case model.ArrowForward, model.ArrowReverse:
+		return string(a)
+	default:
+		return ""
 	}
 }
 
@@ -218,9 +242,9 @@ func arrowGlyphFor(a model.ArrowDirection) string {
 // template unit's fields (name included — `name` is a legal body field,
 // unlike the header-only unit form), edges and subunits; subunits build
 // BEFORE uses so parented uses can find their host block. The body's
-// Type/External slots record the template root's type, but the C4D grammar
-// has no template-root-type syntax (D-13 bodies are typeless at the root),
-// so EmitC4D does not render them — see the 35-04 SUMMARY known-stub note.
+// Type/External slots record the template root's type; EmitC4D renders them
+// as the body's `type:` statement (the D-22 text form — the grammar admits
+// it in template bodies since 35-06, closing the 35-04 deferred gap).
 func templateDeclFromModel(name string, tmpl *parser.TemplateDef) *ast.TemplateDecl {
 	decl := &ast.TemplateDecl{Name: name, Params: tmpl.Params}
 

@@ -28,7 +28,10 @@
 package grammar
 
 import (
+	"fmt"
 	"strings"
+
+	c4dparser "github.com/Djarvur/c4drill/internal/parser"
 
 	"github.com/Djarvur/c4drill/internal/c4d/ast"
 )
@@ -46,6 +49,16 @@ type stmtWithComments struct {
 // edgeLabel carries the two halves of the D-09 pipe shorthand.
 type edgeLabel struct {
 	tech, desc string
+}
+
+// templateType carries a template body's root type statement
+// (`type: container external`): the D-22 text form of a TOML template's
+// root `type` key. Template roots have no unit header to carry the type,
+// and unit bodies reject `type:` as an unknown field — only template
+// bodies admit it.
+type templateType struct {
+	typ      string
+	external bool
 }
 
 // toAnySlice normalizes a pigeon sequence/iteration capture to []any.
@@ -347,10 +360,20 @@ Ident <- [A-Za-z0-9_-]+ {
 
 IdentChar <- [A-Za-z0-9_-]
 
-// PeerRef — bare identifier or dotted absolute path (D-07, D-10).
-PeerRef <- [A-Za-z0-9_-]+ ('.' [A-Za-z0-9_-]+)* {
+// PeerRef — bare identifier or dotted absolute path (D-07, D-10); each
+// segment may alternatively be a ${param} token, because template bodies
+// parametrize link peers (XC-03/D-13 — tokens ride verbatim to
+// template.Expand; FromModel emits such peers verbatim).
+PeerRef <- PeerSeg ('.' PeerSeg)* {
 	return string(c.text), nil
 }
+
+// PeerSeg — one dotted-path segment: an identifier or a ${param} token.
+PeerSeg <- [A-Za-z0-9_-]+ / ParamToken
+
+// ParamToken — a ${param} reference matched verbatim (segments only: the
+// token may not itself contain dots or braces beyond its delimiters).
+ParamToken <- "${" [A-Za-z0-9_-]+ "}"
 
 // EdgeStmt — D-05/D-08/D-09. The glyph is recorded verbatim; mapping to
 // model.ArrowDirection happens in the Model conversion.
@@ -447,11 +470,13 @@ OptionBareword <- (!OptionBarewordStop .)+ {
 OptionBarewordStop <- EOL / [{};|,"#] / [ \t]
 
 // TemplateDecl — D-13 function-like declaration. The body is the SAME
-// BodyPart machinery units use, so template bodies accept the full unit
-// grammar (fields, edges with relative peers, nesting — and use, D-17).
+// BodyPart machinery units use (via TemplateBodyPart, which additionally
+// admits a root type statement — the D-22 text form of a TOML template's
+// root `type` key), so template bodies accept the full unit grammar
+// (fields, edges with relative peers, nesting — and use, D-17).
 // `${param}` tokens ride the literal values verbatim; substitution is the
 // TemplateDef/Expand contract, never parse's.
-TemplateDecl <- "template" !IdentChar _ name:Ident _ '(' _ params:ParamList? _ ')' _ '{' _ parts:BodyPart* _ '}' {
+TemplateDecl <- "template" !IdentChar _ name:Ident _ '(' _ params:ParamList? _ ')' _ '{' _ parts:TemplateBodyPart* _ '}' {
 	tmpl := &ast.TemplateDecl{Pos: c.pos.line, Name: name.(string), Body: &ast.UnitNode{Pos: c.pos.line}}
 
 	if params != nil {
@@ -469,6 +494,16 @@ TemplateDecl <- "template" !IdentChar _ name:Ident _ '(' _ params:ParamList? _ '
 		}
 
 		switch n := part.stmt.(type) {
+		case *templateType:
+			if tmpl.Body.Type != "" {
+				return nil, &c4dparser.ParseError{
+					Message: fmt.Sprintf("duplicate type statement in template %q", tmpl.Name),
+					Line:    c.pos.line,
+				}
+			}
+
+			tmpl.Body.Type = n.typ
+			tmpl.Body.External = n.external
 		case *ast.FieldStmt:
 			tmpl.Body.Fields = append(tmpl.Body.Fields, n)
 		case *ast.EdgeStmt:
@@ -485,6 +520,26 @@ TemplateDecl <- "template" !IdentChar _ name:Ident _ '(' _ params:ParamList? _ '
 	}
 
 	return tmpl, nil
+}
+
+// TemplateBodyPart — one statement of a TEMPLATE body: the BodyPart
+// machinery plus the root type statement template bodies alone admit
+// (template roots have no header; unit bodies reject `type:` via
+// UnknownFieldStmt).
+TemplateBodyPart <- lead:(_ Comment _)* _ stmt:TemplateBodyStmt tail:StmtEnd {
+	return &stmtWithComments{comments: toComments(lead), stmt: stmt, tail: toComment(tail)}, nil
+} / _ cm:Comment {
+	return &stmtWithComments{trailing: cm.(*ast.Comment)}, nil
+}
+
+// TemplateBodyStmt — statement dispatch inside template bodies: the root
+// type statement first, then every unit-body statement form.
+TemplateBodyStmt <- TemplateTypeStmt / BodyStmt
+
+// TemplateTypeStmt — the template root's type: `type: <TypeKeyword>
+// [external]` (the TOML `[template.X] type = ...` twin; D-22 text form).
+TemplateTypeStmt <- "type" !IdentChar _ ':' _ typ:TypeKeyword _ ext:ExternalModifier? {
+	return &templateType{typ: typ.(string), external: boolVal(ext)}, nil
 }
 
 // ParamList — declared template parameter names, comma-separated (D-13).

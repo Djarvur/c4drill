@@ -309,6 +309,8 @@ func TestFixtureUnicodeCoverage(t *testing.T) {
 // the parity loop asserts conversion REFUSAL for them (the D-24 convert
 // gate mirrored at model level: parse/expand/peer/validate must error), not
 // round-trip output. Paths are repo-root-relative.
+//
+//nolint:gochecknoglobals // immutable invalid-fixture set (the refusal list)
 var invalidCorpusFixtures = map[string]bool{
 	"testdata/invalid_links.toml":                 true,
 	"testdata/invalid_references.toml":            true,
@@ -324,62 +326,82 @@ var invalidCorpusFixtures = map[string]bool{
 // (recursive, minus the 09-composed include graph which the composed-graph
 // test converts as a whole). filepath.WalkDir never follows symlinked
 // directories and only *.toml files pass the filter (T-35-06-01).
-func corpusTOMLPaths(t *testing.T) (valid, invalid []string) {
+func corpusTOMLPaths(t *testing.T) ([]string, []string) {
 	t.Helper()
 
-	collect := func(paths []string, intoValid, intoInvalid *[]string) {
+	var validPaths, invalidPaths []string
+
+	collect := func(paths []string) {
 		for _, p := range paths {
 			rel, err := filepath.Rel(repoRoot(), p)
 			require.NoError(t, err, "corpus path under repo root")
 
 			if invalidCorpusFixtures[rel] {
-				*intoInvalid = append(*intoInvalid, p)
+				invalidPaths = append(invalidPaths, p)
 
 				continue
 			}
 
-			*intoValid = append(*intoValid, p)
+			validPaths = append(validPaths, p)
 		}
 	}
 
-	flat := []string{"testdata", "testdata/c4d", "cmd/c4drill/testdata"}
-	for _, dir := range flat {
+	collect(flatCorpusTOMLs(t))
+	collect(walkedExamplesTOMLs(t))
+	slices.Sort(validPaths)
+	slices.Sort(invalidPaths)
+
+	return validPaths, invalidPaths
+}
+
+// flatCorpusTOMLs lists the *.toml files of the three top-level-only corpus
+// directories.
+func flatCorpusTOMLs(t *testing.T) []string {
+	t.Helper()
+
+	var out []string
+
+	for _, dir := range []string{"testdata", "testdata/c4d", "cmd/c4drill/testdata"} {
 		entries, err := os.ReadDir(filepath.Join(repoRoot(), dir))
 		require.NoError(t, err, "read corpus dir %s", dir)
 
 		for _, e := range entries {
 			if !e.IsDir() && strings.HasSuffix(e.Name(), ".toml") {
-				collect([]string{filepath.Join(repoRoot(), dir, e.Name())}, &valid, &invalid)
+				out = append(out, filepath.Join(repoRoot(), dir, e.Name()))
 			}
 		}
 	}
 
-	examples := filepath.Join(repoRoot(), "skill", "examples")
-	var walked []string
+	return out
+}
 
-	err := filepath.WalkDir(examples, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
+// walkedExamplesTOMLs recursively lists skill/examples/*.toml, skipping the
+// 09-composed include graph (converted as a whole graph separately).
+func walkedExamplesTOMLs(t *testing.T) []string {
+	t.Helper()
 
-		switch {
-		case d.IsDir() && d.Name() == "09-composed":
-			return filepath.SkipDir // converted as a whole graph separately
-		case d.IsDir() || !strings.HasSuffix(d.Name(), ".toml"):
+	var out []string
+
+	err := filepath.WalkDir(filepath.Join(repoRoot(), "skill", "examples"),
+		func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+
+			switch {
+			case d.IsDir() && d.Name() == "09-composed":
+				return filepath.SkipDir
+			case d.IsDir() || !strings.HasSuffix(d.Name(), ".toml"):
+				return nil
+			}
+
+			out = append(out, path)
+
 			return nil
-		}
-
-		walked = append(walked, path)
-
-		return nil
-	})
+		})
 	require.NoError(t, err, "walk skill/examples")
 
-	collect(walked, &valid, &invalid)
-	slices.Sort(valid)
-	slices.Sort(invalid)
-
-	return valid, invalid
+	return out
 }
 
 // canonicalModel returns a deep copy of m with the D-22 explicit-default
@@ -467,18 +489,19 @@ func canonicalLinkDefaults(link *model.Link) {
 func TestRoundTripTOMLToC4DToTOML(t *testing.T) {
 	t.Parallel()
 
-	valid, _ := corpusTOMLPaths(t)
-	require.Greater(t, len(valid), 15, "corpus walker must cover >15 fixtures (anti-shrinkage)")
+	validPaths, _ := corpusTOMLPaths(t)
+	require.Greater(t, len(validPaths), 15, "corpus walker must cover >15 fixtures (anti-shrinkage)")
 
-	t.Logf("round-trip corpus tally: %d fixtures", len(valid))
+	t.Logf("round-trip corpus tally: %d fixtures", len(validPaths))
 
-	for _, path := range valid {
+	for _, path := range validPaths {
 		rel, err := filepath.Rel(repoRoot(), path)
 		require.NoError(t, err)
 
 		t.Run(rel, func(t *testing.T) {
 			t.Parallel()
 
+			//nolint:gosec // G304: path from the pinned corpus walker, not user input
 			data, err := os.ReadFile(path)
 			require.NoError(t, err, "read corpus fixture")
 
@@ -518,15 +541,17 @@ func TestRoundTripTOMLToC4DToTOML(t *testing.T) {
 func TestRoundTripC4DToTOMLToC4D(t *testing.T) {
 	t.Parallel()
 
-	valid, _ := corpusTOMLPaths(t)
+	validPaths, _ := corpusTOMLPaths(t)
 
-	for _, path := range valid {
+	for _, path := range validPaths {
 		rel, err := filepath.Rel(repoRoot(), path)
 		require.NoError(t, err)
 
 		t.Run(rel, func(t *testing.T) {
 			t.Parallel()
 
+			//nolint:gosec // G304: path from the pinned corpus walker, not user input
+			//nolint:gosec // G304: path from the pinned corpus walker, not user input
 			data, err := os.ReadFile(path)
 			require.NoError(t, err, "read corpus fixture")
 
@@ -561,16 +586,17 @@ func TestRoundTripC4DToTOMLToC4D(t *testing.T) {
 func TestInvalidFixturesRefuseConversion(t *testing.T) {
 	t.Parallel()
 
-	_, invalid := corpusTOMLPaths(t)
-	require.NotEmpty(t, invalid, "invalid corpus fixtures present")
+	_, invalidPaths := corpusTOMLPaths(t)
+	require.NotEmpty(t, invalidPaths, "invalid corpus fixtures present")
 
-	for _, path := range invalid {
+	for _, path := range invalidPaths {
 		rel, err := filepath.Rel(repoRoot(), path)
 		require.NoError(t, err)
 
 		t.Run(rel, func(t *testing.T) {
 			t.Parallel()
 
+			//nolint:gosec // G304: path from the pinned corpus walker, not user input
 			data, err := os.ReadFile(path)
 			require.NoError(t, err, "read invalid fixture")
 
@@ -603,6 +629,7 @@ func twinExtension(path string) string {
 func convertGraphFileToC4D(t *testing.T, srcRoot, relPath, dstRoot string) {
 	t.Helper()
 
+	//nolint:gosec // G304/G703: path from the pinned example graph, not user input
 	src, err := os.ReadFile(filepath.Join(srcRoot, relPath))
 	require.NoError(t, err, "read graph file")
 
@@ -616,7 +643,9 @@ func convertGraphFileToC4D(t *testing.T, srcRoot, relPath, dstRoot string) {
 	dst := filepath.Join(dstRoot, twinExtension(relPath))
 	require.NoError(t, os.MkdirAll(filepath.Dir(dst), 0o750), "mkdir for twin")
 
-	require.NoError(t, os.WriteFile(dst, []byte(c4d.EmitC4D(c4d.FromModel(m))), 0o600),
+	require.NoError(t,
+		os.WriteFile( //nolint:gosec // G304/G703: paths from the pinned example graph
+			dst, []byte(c4d.EmitC4D(c4d.FromModel(m))), 0o600),
 		"write converted twin")
 }
 
@@ -681,35 +710,45 @@ func TestComposedGraphRoundTrip(t *testing.T) {
 		convertGraphFileToC4D(t, srcRoot, rel, dstRoot)
 	}
 
+	// Compare BEFORE validating: Validate mutates the models in place
+	// (populateIncomingLinks appends mirrors in map-iteration order), which
+	// would make the comparison itself nondeterministic.
 	original := composedPipeline(t, filepath.Join(srcRoot, "entry.toml"))
-	require.Empty(t, validator.Validate(original), "original graph validates")
-
 	converted := composedPipelineC4D(t, filepath.Join(dstRoot, "entry.c4d"))
-	require.Empty(t, validator.Validate(converted), "converted graph validates (D-26)")
 
 	require.Equal(t, canonicalModel(original), canonicalModel(converted),
 		"converted include graph expands to the same model (D-22/D-26)")
+
+	// D-24 gate on fresh parses: both graphs validate clean end to end.
+	require.Empty(t, validator.Validate(composedPipeline(t, filepath.Join(srcRoot, "entry.toml"))),
+		"original graph validates")
+	require.Empty(t, validator.Validate(composedPipelineC4D(t, filepath.Join(dstRoot, "entry.c4d"))),
+		"converted graph validates (D-26)")
 }
 
 // renderEquivalenceFixtures is the pinned render set (DI-1): the four
-// classic corpus fixtures plus the six testdata/c4d edge cases.
+// classic corpus fixtures plus the six testdata/c4d edge cases (paths are
+// repo-root-relative; the loop joins repoRoot()).
+//
+//nolint:gochecknoglobals // immutable pinned fixture set
 var renderEquivalenceFixtures = []string{
 	"testdata/valid.toml",
 	"testdata/nested.toml",
 	"testdata/links.toml",
 	"testdata/template_basic.toml",
-	filepath.Join(c4dFixtureDir, "external-types.toml"),
-	filepath.Join(c4dFixtureDir, "linkfrom.toml"),
-	filepath.Join(c4dFixtureDir, "multiline-strings.toml"),
-	filepath.Join(c4dFixtureDir, "rank-equal.toml"),
-	filepath.Join(c4dFixtureDir, "template-nested-use.toml"),
-	filepath.Join(c4dFixtureDir, "unicode-strings.toml"),
+	"testdata/c4d/external-types.toml",
+	"testdata/c4d/linkfrom.toml",
+	"testdata/c4d/multiline-strings.toml",
+	"testdata/c4d/rank-equal.toml",
+	"testdata/c4d/template-nested-use.toml",
+	"testdata/c4d/unicode-strings.toml",
 }
 
 // expandedPathsOf replicates cmd/c4drill's collectExpandedPaths: C1 plus
 // every unit with subunits, recursively.
 func expandedPathsOf(m *parser.Model) []string {
 	paths := []string{""}
+
 	walkFixtureUnits(m, func(path string, u *model.Unit) {
 		if len(u.Subunits) > 0 {
 			paths = append(paths, path)
@@ -725,7 +764,8 @@ func expandedPathsOf(m *parser.Model) []string {
 func renderAllViewsDOT(t *testing.T, m *parser.Model) string {
 	t.Helper()
 
-	render.LabelRatio = 1.6 // the CLI default; both sides render under it
+	// The CLI default ratio; both sides render under it.
+	render.LabelRatio = 1.6
 
 	parts := make([]string, 0, 4)
 
@@ -779,6 +819,7 @@ func TestRenderEquivalence(t *testing.T) {
 	for _, rel := range renderEquivalenceFixtures {
 		path := filepath.Join(repoRoot(), rel)
 
+		//nolint:gosec // G304: path from the pinned render set, not user input
 		data, err := os.ReadFile(path)
 		require.NoError(t, err, "read render fixture %s", rel)
 

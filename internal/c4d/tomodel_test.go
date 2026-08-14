@@ -182,11 +182,13 @@ func TestToModelExternalModifier(t *testing.T) {
 	})
 }
 
-// TestToModelEdges pins the glyph->Link mapping: `->` Links with
-// ArrowForward, `<-` LinksFrom (TOML linkFrom semantics, arrowhead at the
-// owner), `<->` ArrowBidirectional, `--` ArrowNone; option block keys map to
-// Link fields; the arrow option overrides the glyph default; peer strings
-// ride verbatim (bare or dotted — peer.Resolve resolves, D-10).
+// TestToModelEdges pins the glyph->Link mapping: `->` Links with the
+// OMITTED arrow default (Arrow "", the exact TOML twin of an absent arrow
+// key — D-22; the render layer distinguishes "" from "forward"), `<-`
+// LinksFrom (TOML linkFrom semantics, arrowhead at the owner, also the
+// omitted default), `<->` ArrowBidirectional, `--` ArrowNone; option block
+// keys map to Link fields; the arrow option overrides the glyph default;
+// peer strings ride verbatim (bare or dotted — peer.Resolve resolves, D-10).
 func TestToModelEdges(t *testing.T) {
 	t.Parallel()
 
@@ -197,6 +199,7 @@ func TestToModelEdges(t *testing.T) {
 	-- plain
 	-> dotted.path
 	-> rev { arrow: reverse }
+	-> fwd { arrow: forward }
 }
 `)
 
@@ -204,18 +207,19 @@ func TestToModelEdges(t *testing.T) {
 
 	require.Equal(t, []model.Link{
 		{
-			Peer: "db", Arrow: model.ArrowForward, Technology: "sql", Description: "queries",
+			Peer: "db", Technology: "sql", Description: "queries",
 			Color: "red", Rank: model.RankEqual, LabelPosition: model.LabelHead, Length: 2,
 		},
 		{Peer: "both", Arrow: model.ArrowBidirectional},
 		{Peer: "plain", Arrow: model.ArrowNone},
-		{Peer: "dotted.path", Arrow: model.ArrowForward},
+		{Peer: "dotted.path"},
 		{Peer: "rev", Arrow: model.ArrowReverse},
+		{Peer: "fwd", Arrow: model.ArrowForward},
 	}, unit.Links, "Links (statement order, glyph mapping)")
 
 	require.Equal(t, []model.Link{
-		{Peer: "other", Arrow: model.ArrowForward},
-	}, unit.LinksFrom, "LinksFrom (`<-` — arrowhead at the owner, mirror-consistent)")
+		{Peer: "other"},
+	}, unit.LinksFrom, "LinksFrom (`<-` — arrowhead at the owner, omitted default)")
 }
 
 // TestToModelDuplicateEdgeError pins D-11: two edge statements for the same
@@ -509,9 +513,70 @@ use svc(name: auth, tech: Go)
 	require.Equal(t, tomlModel.Includes, dslModel.Includes, "Includes equal")
 }
 
+// TestToModelTemplateTypeStatement pins the template-body root type
+// statement (the D-22 text form of a TOML template's root `type` key):
+// `type: container external` sets Body.Type/External, a duplicate is a hard
+// error, and unit bodies still reject `type:` as an unknown field.
+func TestToModelTemplateTypeStatement(t *testing.T) {
+	t.Parallel()
+
+	t.Run("type and external modifier", func(t *testing.T) {
+		t.Parallel()
+
+		doc, err := c4d.ParseAST([]byte("template edge(p) {\n\ttype: system external\n\tname: ${p}\n}"))
+		require.NoError(t, err, "type statement parses")
+
+		require.Len(t, doc.Templates, 1, "one template")
+		assert.Equal(t, "system", doc.Templates[0].Body.Type, "Body.Type from the type statement")
+		assert.True(t, doc.Templates[0].Body.External, "Body.External from the modifier")
+
+		m, err := c4d.ToModel(doc)
+		require.NoError(t, err, "ToModel")
+
+		assert.Equal(t, model.TypeSystemExternal, m.Templates["edge"].Unit.Type,
+			"root type survives conversion (systemExternal)")
+	})
+
+	t.Run("duplicate type statement errors", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := c4d.ParseAST([]byte("template x() {\n\ttype: db\n\ttype: queue\n}"))
+
+		var perr *parser.ParseError
+		require.ErrorAs(t, err, &perr, "*parser.ParseError")
+		assert.Contains(t, err.Error(), "duplicate", "message names the duplicate")
+	})
+
+	t.Run("unit bodies still reject type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := c4d.ParseAST([]byte("a: system {\n\ttype: db\n}"))
+
+		assert.Contains(t, err.Error(), "unknown field", "type stays unknown in unit bodies")
+	})
+}
+
+// TestToModelParametrizedPeerRoundTrip pins the ${param} peer form:
+// template link peers may be param tokens (XC-03), they ride the AST and
+// Model verbatim, and FromModel's emission re-parses (D-22 round-trip).
+func TestToModelParametrizedPeerRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	m := toModel(t, "template svc(bus) {\n\t-> ${bus}: HTTP | publishes\n}")
+
+	require.Len(t, m.Templates["svc"].Unit.Links, 1, "template link")
+	assert.Equal(t, "${bus}", m.Templates["svc"].Unit.Links[0].Peer, "parametrized peer rides verbatim")
+
+	text := c4d.EmitC4D(c4d.FromModel(m))
+
+	m2, err := c4d.Parse([]byte(text))
+	require.NoError(t, err, "emitted C4D with a ${param} peer re-parses")
+
+	require.Equal(t, m.Templates, m2.Templates, "parametrized peer round-trips exactly")
+}
+
 // TestToModelTemplateRootTypeFromModel closes the 35-04 gap: FromModel
-// records a template root's type on Body.Type (the grammar has no
-// template-root-type syntax), and ToModel honors it —
+// records a template root's type on Body.Type, and ToModel honors it —
 // ToModel(FromModel(m)) preserves the template root type.
 func TestToModelTemplateRootTypeFromModel(t *testing.T) {
 	t.Parallel()

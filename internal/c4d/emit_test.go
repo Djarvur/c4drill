@@ -494,14 +494,16 @@ func TestFromModelArrowGlyphs(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name  string
-		arrow model.ArrowDirection
-		glyph string
+		name     string
+		arrow    model.ArrowDirection
+		glyph    string
+		arrowOpt string
 	}{
-		{"forward", model.ArrowForward, "->"},
-		{"reverse renders via the linkFrom statement form", model.ArrowReverse, "<-"},
-		{"bidirectional", model.ArrowBidirectional, "<->"},
-		{"none", model.ArrowNone, "--"},
+		{"omitted default", "", "->", ""},
+		{"forward states the default explicitly", model.ArrowForward, "->", "forward"},
+		{"reverse rides the arrow option", model.ArrowReverse, "->", "reverse"},
+		{"bidirectional", model.ArrowBidirectional, "<->", ""},
+		{"none", model.ArrowNone, "--", ""},
 	}
 
 	for _, tc := range cases {
@@ -519,10 +521,18 @@ func TestFromModelArrowGlyphs(t *testing.T) {
 
 			require.Len(t, doc.Units[0].Edges, 1, "one edge per link")
 			assert.Equal(t, tc.glyph, doc.Units[0].Edges[0].ArrowGlyph, "arrow glyph inverse mapping")
+
+			if tc.arrowOpt == "" {
+				assertNoEdgeOption(t, doc.Units[0].Edges[0], "arrow")
+			} else {
+				require.Len(t, doc.Units[0].Edges[0].Options, 1, "one option")
+				assert.Equal(t, "arrow", doc.Units[0].Edges[0].Options[0].Key, "arrow option key")
+				assert.Equal(t, tc.arrowOpt, doc.Units[0].Edges[0].Options[0].Value.Str, "arrow option value")
+			}
 		})
 	}
 
-	t.Run("linksFrom emit as reverse statements", func(t *testing.T) {
+	t.Run("linksFrom emit as incoming statements", func(t *testing.T) {
 		t.Parallel()
 
 		m := &parser.Model{
@@ -537,7 +547,26 @@ func TestFromModelArrowGlyphs(t *testing.T) {
 		require.Len(t, doc.Units[0].Edges, 1, "one edge per linkFrom entry")
 		assert.Equal(t, "<-", doc.Units[0].Edges[0].ArrowGlyph, "LinksFrom statement form")
 		assert.Equal(t, "api", doc.Units[0].Edges[0].Peer, "LinksFrom peer")
+		assertNoEdgeOption(t, doc.Units[0].Edges[0], "arrow")
+
+		m.Units["db"].LinksFrom[0].Arrow = model.ArrowReverse
+
+		doc = c4d.FromModel(m)
+
+		require.Len(t, doc.Units[0].Edges, 1, "one edge per explicit-arrow linkFrom")
+		assert.Equal(t, "<-", doc.Units[0].Edges[0].ArrowGlyph, "LinksFrom statement form")
+		require.Len(t, doc.Units[0].Edges[0].Options, 1, "arrow option present")
+		assert.Equal(t, "reverse", doc.Units[0].Edges[0].Options[0].Value.Str, "arrow option value")
 	})
+}
+
+// assertNoEdgeOption asserts the edge carries no option with the given key.
+func assertNoEdgeOption(t *testing.T, edge *ast.EdgeStmt, key string) {
+	t.Helper()
+
+	for _, opt := range edge.Options {
+		assert.NotEqual(t, key, opt.Key, "edge must not carry a %s option", key)
+	}
 }
 
 func TestFromModelInstantiationPlacement(t *testing.T) {

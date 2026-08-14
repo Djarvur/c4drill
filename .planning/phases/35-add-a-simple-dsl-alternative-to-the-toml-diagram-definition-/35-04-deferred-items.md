@@ -37,3 +37,22 @@ remains: the grammar still cannot parse a template root type, so
 TOML -> C4D(text) -> TOML round-trips still lose it unless D-22's
 explicit-defaults normalization covers the fixture. Remaining owner: 35-06
 (round-trip contract) or a grammar extension in a later plan.
+
+## Update (35-06, 2026-08-14): CLOSED (text level too)
+
+The grammar now admits a root type statement in template bodies only —
+`template X(p) { type: container external ... }` (TemplateBodyStmt adds
+TemplateTypeStmt ahead of the shared BodyStmt forms; unit bodies still
+reject `type:` as an unknown field, and a duplicate type statement is a
+hard parse error). EmitC4D renders Body.Type/External as that statement,
+so TOML -> C4D -> TOML round-trips preserve non-default template root
+types — enforced by the 35-06 corpus round-trip suite (06-templates.toml,
+template_reserved.toml carry `type = "container"` roots) and pinned by
+TestToModelTemplateTypeStatement. The same plan extended PeerRef with
+${param} segments so parametrized template link peers (XC-03) round-trip.
+
+The pipe-in-edge-label constraint below remains an authoring constraint
+(canonical C4D quoting keeps embedded pipes round-trip safe in the
+tech+desc label; a desc-ONLY value containing a pipe cannot survive the
+D-09 first-pipe split — all corpus fixtures are pipe-free).
+

@@ -33,7 +33,13 @@ func ToModel(doc *ast.Document) (*parser.Model, error) {
 		return nil, &parser.ParseError{Message: "cannot convert a nil document"}
 	}
 
-	m := &parser.Model{Units: make(map[string]*model.Unit)}
+	// UnitOrder starts as an EMPTY (non-nil) slice — parser.Parse always
+	// returns make([]string, 0) from captureDefinitionOrder, and the parity
+	// contract compares models with require.Equal (nil != empty).
+	m := &parser.Model{
+		UnitOrder: make([]string, 0),
+		Units:     make(map[string]*model.Unit),
+	}
 
 	if err := applyProperties(m, doc.Properties); err != nil {
 		return nil, err
@@ -619,16 +625,22 @@ func linkFromEdge(e *ast.EdgeStmt) (model.Link, bool, error) {
 func arrowFromGlyph(e *ast.EdgeStmt, link *model.Link) (bool, error) {
 	switch e.ArrowGlyph {
 	case "->":
-		link.Arrow = model.ArrowForward
+		// The DEFAULT arrow: the same Link value the TOML front-end produces
+		// for an omitted `arrow` key — "" (D-22 explicit-defaults rule at
+		// Model level; the render layer distinguishes "" from "forward" via
+		// the dir attribute, so exact parity requires the omitted form).
+		// `arrow: forward` in the option block states the default explicitly.
+		link.Arrow = ""
 	case "<->":
 		link.Arrow = model.ArrowBidirectional
 	case "--":
 		link.Arrow = model.ArrowNone
 	case "<-":
 		// The glyph's arrowhead sits at the owning unit, i.e. at the TARGET
-		// of the peer->owner edge — ArrowForward in LinksFrom orientation,
-		// the same value the validator's mirror of `peer -> owner` carries.
-		link.Arrow = model.ArrowForward
+		// of the peer->owner edge — the default (omitted) arrow in LinksFrom
+		// orientation, the same value the TOML twin's bare [[...linkFrom]]
+		// entry carries.
+		link.Arrow = ""
 
 		return true, nil
 	default:

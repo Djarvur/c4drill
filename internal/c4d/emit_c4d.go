@@ -411,11 +411,11 @@ func unitHeaderC4D(unit *ast.UnitNode) string {
 	return h.String()
 }
 
-// emitTemplateC4D writes a template declaration: the param list, then the
-// body's fields (D-23 order), edges, uses and subunits — the same body
-// machinery units use. The body's own Type/External/Name header slots stay
-// unrendered — the grammar has no template-root-type syntax (D-13);
-// FromModel records them on the AST only.
+// emitTemplateC4D writes a template declaration: the param list, the root
+// type statement when the AST records one (the D-22 text form of a TOML
+// template's root `type` key — non-default root types must survive
+// round-trips), then the body's fields (D-23 order), edges, uses and
+// subunits — the same body machinery units use.
 func emitTemplateC4D(b *strings.Builder, tmpl *ast.TemplateDecl, sc stmtComments) {
 	if tmpl == nil {
 		return
@@ -425,6 +425,15 @@ func emitTemplateC4D(b *strings.Builder, tmpl *ast.TemplateDecl, sc stmtComments
 	fmt.Fprintf(b, "template %s(%s) {\n", tmpl.Name, strings.Join(tmpl.Params, ", "))
 
 	if body := tmpl.Body; body != nil {
+		if body.Type != "" {
+			stmt := "  type: " + body.Type
+			if body.External {
+				stmt += " external"
+			}
+
+			b.WriteString(stmt + "\n")
+		}
+
 		for _, s := range unitInnerStatements(body, sortedFields(body.Fields, unitFieldRank), 1) {
 			s.render(b, s.sc)
 		}

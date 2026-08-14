@@ -189,7 +189,7 @@ func Parse(data []byte) (*Model, error) {
 
 		subunitOrder := subunitOrders[name]
 
-		unit, err := parseUnitWithOrder(name, value, "", subunitOrder, subunitOrders)
+		unit, err := parseUnitWithOrder(name, name, value, "", subunitOrder, subunitOrders)
 		if err != nil {
 			return nil, err
 		}
@@ -279,7 +279,7 @@ func parseTemplateDef(
 	// and `name.child`) so template subunits preserve authoring order.
 	subOrder := templateSubunitOrders[name]
 
-	unit, err := parseUnitWithOrder(name, unitMapCopy, "", subOrder, templateSubunitOrders)
+	unit, err := parseUnitWithOrder(name, name, unitMapCopy, "", subOrder, templateSubunitOrders)
 	if err != nil {
 		return nil, err
 	}
@@ -790,9 +790,10 @@ func recordTemplateSubunit(
 	}
 }
 
-// recordHandAuthored records a hand-authored top-level unit ([name], len==1)
-// or subunit ([parent.child], len==2) into the appropriate order slice.
-// Deeper nesting (len > 2) is ignored — not supported for hand-authored units.
+// recordHandAuthored records a hand-authored unit table into the order
+// slices: [name] into unitOrder, and every ancestor pair of a deeper path
+// into subunitOrders (absolute-path keys, document order) so nested units
+// at any depth keep their authored order.
 // unitOrder is passed by pointer because append may reallocate the slice.
 func recordHandAuthored(
 	parts []string,
@@ -813,25 +814,37 @@ func recordHandAuthored(
 		return
 	}
 
-	if len(parts) == subunitParts {
-		// Subunit [parent.child]
-		parent := parts[0]
-		child := parts[1]
-		key := parent + "." + child
+	if len(parts) >= subunitParts {
+		// Subunit [parent.child] and deeper: every ancestor pair registers
+		// so each segment lands under its parent's dotted path in document
+		// order. Deep tables ([a.b.c]) used to be ignored here, which left
+		// the parent's subunit order empty and pushed its children through
+		// the raw-map fallback — a nondeterministic (map-iteration) order
+		// that broke the 35-06 round-trip contract's order preservation.
+		for i := 1; i < len(parts); i++ {
+			parent := strings.Join(parts[:i], ".")
+			child := parts[i]
+			key := parent + "." + child
 
-		if !seenSubunits[key] {
-			subunitOrders[parent] = append(subunitOrders[parent], child)
-			seenSubunits[key] = true
+			if !seenSubunits[key] {
+				subunitOrders[parent] = append(subunitOrders[parent], child)
+				seenSubunits[key] = true
+			}
 		}
 	}
-	// Ignore deeper nesting (len(parts) > 2) - not supported
 }
 
-// parseUnitWithOrder parses a unit with explicit subunit order.
+// parseUnitWithOrder parses a unit with explicit subunit order. name is the
+// display segment (humanize hook, error Context); path is the subunitOrders
+// lookup key: the full dotted path for hand-authored units (the capture pass
+// keys absolute paths) and the template-relative path for template bodies
+// (recordTemplateSubunit keys relative paths). path == name at every
+// entry point; only the recursion extends it.
 //
 //nolint:gocognit,nestif,funlen // pre-existing; metrics surface only after Plan 31-01 grew the package
 func parseUnitWithOrder(
 	name string,
+	path string,
 	value any,
 	parentType model.UnitType,
 	subunitOrder []string,
@@ -888,10 +901,10 @@ func parseUnitWithOrder(
 			}
 
 			// Get the subunit's own subunit order
-			fullPath := name + "." + subName
-			subSubunitOrder := subunitOrders[fullPath]
+			subPath := joinPath(path, subName)
+			subSubunitOrder := subunitOrders[subPath]
 
-			subunit, err := parseUnitWithOrder(subName, subVal, unit.Type, subSubunitOrder, subunitOrders)
+			subunit, err := parseUnitWithOrder(subName, subPath, subVal, unit.Type, subSubunitOrder, subunitOrders)
 			if err != nil {
 				return nil, err
 			}
@@ -907,7 +920,9 @@ func parseUnitWithOrder(
 			}
 
 			// This must be a subunit
-			subunit, err := parseUnitWithOrder(key, val, unit.Type, nil, subunitOrders)
+			subPath := joinPath(path, key)
+
+			subunit, err := parseUnitWithOrder(key, subPath, val, unit.Type, subunitOrders[subPath], subunitOrders)
 			if err != nil {
 				return nil, err
 			}
