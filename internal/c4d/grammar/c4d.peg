@@ -1,0 +1,25 @@
+// C4D DSL grammar (pigeon PEG). The initializer below must carry the package
+// clause verbatim; keep it comment-free so it does not become a second
+// package godoc (godoclint) in the generated parser_gen.go.
+
+{
+package grammar
+}
+
+Document <- statements:Statement* !. {
+	return statements, nil
+}
+
+Statement <- _ comment:Comment {
+	return comment, nil
+}
+
+Comment <- '#' (!EOL .)* (EOL / !.) {
+	return string(c.text), nil
+}
+
+_ <- (Whitespace / EOL)*
+
+Whitespace <- [ \t]
+
+EOL <- "\r\n" / "\n" / "\r"
