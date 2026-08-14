@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Label Formatting Fixes
-status: executing
-last_updated: "2026-08-14T19:33:40.296Z"
+status: verifying
+last_updated: "2026-08-14T19:55:07.088Z"
 last_activity: 2026-08-14
 progress:
   total_phases: 1
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-08-10)
 Phase: 35 (add-a-simple-dsl-alternative-to-the-toml-diagram-definition) — EXECUTING
 Plan: 9 of 9
 **Progress:** [██████████] 100%
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-14
 
 ## Performance Metrics
@@ -51,6 +51,7 @@ Last activity: 2026-08-14
 | Phase 35 P06 | 53min | 3 tasks | 19 files |
 | Phase 35 P07 | 13min | 3 tasks | 4 files |
 | Phase 35 P08 | 24min | 3 tasks | 5 files |
+| Phase 35 P09 | 15min | 4 tasks | 51 files |
 
 ## Accumulated Context
 
@@ -88,8 +89,8 @@ Both captured todos (`.planning/todos/pending/2026-08-10-wrap-edge-labels-like-u
 
 ## Session Continuity
 
-Last session: 2026-08-14T19:33:31.624Z
-Stopped at: Completed 35-05-PLAN.md (ToModel parity hub + ParseAST export + mixed-format includes); next 35-06
+Last session: 2026-08-14T19:55:07.059Z
+Stopped at: Completed 35-09-PLAN.md (docs+twins+skill surface; phase 35 all 9 plans done)
 Resume file: None
 
 ## Decisions
@@ -118,6 +119,8 @@ Resume file: None
 - [Phase ?]: 35-08: fmt preserves the AUTHOR's key order on .toml (contrast with convert's D-23); values render from raw source bytes verbatim — idempotent by construction
 - [Phase ?]: 35-08: fmt's T-35-08-01 gate — candidate must re-parse DeepEqual to the original Model BEFORE any write (applyFormatted seam, both failure legs tested)
 - [Phase ?]: 35-08: corpus .c4d coverage via internal/include/testdata real fixtures + converted twins of every valid TOML fixture (the plan's four roots ship zero .c4d files)
+- [Phase ?]: 35-09: twins are convert-generated, hand-finished with header comments, fmt-canonicalized — TestExampleTwins enforces model parity (12 pairs), render parity (standalone + graphs) and self-contained .c4d include graphs; classification is structure-driven (has-Includes = entry, include-target = fragment)
+- [Phase ?]: 35-09: 04-styling.toml formatted in place (Rule 3) so fmt --check skill/examples/ exits 0 — formatting-only normalization, comment text verbatim; c4drill-toml skill name kept (D-35 compat) with dual-format description; both plugin skill copies + all 5 manifests synced
 
 ## Operator Next Steps
 
