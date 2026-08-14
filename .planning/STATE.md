@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Label Formatting Fixes
 status: executing
-last_updated: "2026-08-14T18:47:37.094Z"
+last_updated: "2026-08-14T19:06:50.841Z"
 last_activity: 2026-08-14
 progress:
   total_phases: 1
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-08-10)
 ## Current Position
 
 Phase: 35 (add-a-simple-dsl-alternative-to-the-toml-diagram-definition) — EXECUTING
-Plan: 7 of 9
+Plan: 8 of 9
 **Progress:** [██████████] 100%
 Status: Ready to execute
 Last activity: 2026-08-14
@@ -49,6 +49,7 @@ Last activity: 2026-08-14
 | Phase 35 P04 | 21min | 2 tasks | 4 files |
 | Phase 35 P05 | 30min | 3 tasks | 13 files |
 | Phase 35 P06 | 53min | 3 tasks | 19 files |
+| Phase 35 P07 | 13min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -86,7 +87,7 @@ Both captured todos (`.planning/todos/pending/2026-08-10-wrap-edge-labels-like-u
 
 ## Session Continuity
 
-Last session: 2026-08-14T18:47:37.072Z
+Last session: 2026-08-14T19:04:18.909Z
 Stopped at: Completed 35-05-PLAN.md (ToModel parity hub + ParseAST export + mixed-format includes); next 35-06
 Resume file: None
 
@@ -110,6 +111,9 @@ Resume file: None
 - [Phase ?]: 35-06: D-22 glyph mapping revision — -> maps to the OMITTED arrow default (Arrow ""), not ArrowForward (renderer emits dir=forward only for the explicit value, so the explicit mapping made C4D models render apart from TOML twins); forward/reverse ride -> { arrow: X }, non-default LinksFrom arrows ride <- { arrow: X }
 - [Phase ?]: 35-06: template root types ride a template-body type: statement (grammar admits it in template bodies only; unit bodies still reject it; EmitC4D renders Body.Type/External) and PeerRef segments accept ${param} tokens — the 35-04 deferred text gap closed, parametrized peers round-trip
 - [Phase ?]: 35-06: pre-existing parser nondeterminism fixed — recordHandAuthored ignored table paths deeper than 2 segments and parseUnitWithOrder looked orders up by short names, so C3+ subunits ordered by Go map iteration (masked until the round-trip contract made order load-bearing); every ancestor pair now records and the recursion carries full lookup paths
+- [Phase ?]: 35-07: convert emission NEVER sees the pipeline — D-24 gate (parse->include->expand->peer->validate) runs on a discarded copy; twins emit from a fresh source parse so includes/templates/use/bare peers survive verbatim (D-25/D-22 parity with 35-06)
+- [Phase ?]: 35-07: --follow-includes converts each graph file from its own fresh parse, rewriting only include-path strings (once + relative form preserved); already-target-format files are skipped — conversion is additive, so mixed .toml/.c4d graphs stay coherent (D-26)
+- [Phase ?]: 35-07: unknown input extension is a hard parse error naming .toml/.c4d (parseInput helper shared by render and convert); convert's direction gate mirrors it
 
 ## Operator Next Steps
 
