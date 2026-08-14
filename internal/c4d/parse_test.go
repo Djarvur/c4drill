@@ -1,25 +1,25 @@
 package c4d_test
 
 import (
+	"io/fs"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/Djarvur/c4drill/internal/c4d"
 	"github.com/Djarvur/c4drill/internal/c4d/ast"
-	"github.com/Djarvur/c4drill/internal/c4d/grammar"
+	"github.com/Djarvur/c4drill/internal/parser"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// parseDoc runs the pigeon-generated grammar over src and returns the typed
-// AST document. Task 2 tests exercise the grammar layer directly; Task 3
-// re-routes the front-end through c4d.Parse.
+// parseDoc runs the C4D front-end over src and returns the typed AST
+// document.
 func parseDoc(t *testing.T, src string) *ast.Document {
 	t.Helper()
 
-	result, err := grammar.Parse("", []byte(src), grammar.Memoize(true), grammar.MaxExpressions(1000000))
-	require.NoError(t, err, "grammar.Parse() should not error")
-
-	doc, ok := result.(*ast.Document)
-	require.True(t, ok, "grammar.Parse() result should be *ast.Document, got %T", result)
+	doc, err := c4d.Parse([]byte(src))
+	require.NoError(t, err, "c4d.Parse() should not error")
 
 	return doc
 }
@@ -28,8 +28,8 @@ func parseDoc(t *testing.T, src string) *ast.Document {
 func parseErr(t *testing.T, src string) {
 	t.Helper()
 
-	_, err := grammar.Parse("", []byte(src), grammar.Memoize(true), grammar.MaxExpressions(1000000))
-	require.Error(t, err, "grammar.Parse() should error on invalid input %q", src)
+	_, err := c4d.Parse([]byte(src))
+	require.Error(t, err, "c4d.Parse() should error on invalid input %q", src)
 }
 
 // firstUnit returns the single top-level unit of a parsed document.
@@ -366,6 +366,82 @@ func TestParseReservedKeywordsNotUnitIds(t *testing.T) {
 	} {
 		parseErr(t, src)
 	}
+}
+
+func TestParseSyntaxErrorLineNumbers(t *testing.T) {
+	t.Parallel()
+
+	// 3-line document with the offending statement on line 3.
+	_, err := c4d.Parse([]byte("a: system { }\nb: db { }\n=\n"))
+
+	require.Error(t, err, "c4d.Parse() should error on invalid input")
+
+	var perr *parser.ParseError
+	require.ErrorAs(t, err, &perr, "errors.As must decode *parser.ParseError")
+	assert.Equal(t, 3, perr.Line, "ParseError.Line (1-indexed, DSL-native, D-21)")
+}
+
+func TestParseErrorContract(t *testing.T) {
+	t.Parallel()
+
+	_, err := c4d.Parse([]byte("a: system {"))
+
+	require.Error(t, err, "c4d.Parse() should error on invalid input")
+
+	var perr *parser.ParseError
+	require.ErrorAs(t, err, &perr, "errors.As must decode *parser.ParseError")
+	assert.NotEmpty(t, perr.Message, "ParseError.Message")
+	assert.Equal(t, 1, perr.Line, "ParseError.Line")
+	assert.NotNil(t, perr.Cause, "ParseError.Cause (pigeon error)")
+	assert.Contains(t, perr.Cause.Error(), "no match found", "Cause is the pigeon error")
+
+	// Error() follows the parser.ParseError format priority (line >
+	// context > plain).
+	assert.Contains(t, perr.Error(), "parse error at line 1", "ParseError.Error() format")
+}
+
+func TestParseSuccessPath(t *testing.T) {
+	t.Parallel()
+
+	doc, err := c4d.Parse([]byte(`system "Payment Gateway" { description: processes cards }`))
+
+	require.NoError(t, err, "c4d.Parse() success path")
+	require.NotNil(t, doc, "c4d.Parse() document")
+	require.Len(t, doc.Units, 1, "doc.Units")
+	assert.Equal(t, "Payment Gateway", doc.Units[0].Name, "Units[0].Name")
+}
+
+func TestParseFileReadError(t *testing.T) {
+	t.Parallel()
+
+	_, err := c4d.ParseFile(filepath.Join(t.TempDir(), "missing.c4d"))
+
+	require.Error(t, err, "c4d.ParseFile() should error on unreadable file")
+
+	var perr *parser.ParseError
+	require.ErrorAs(t, err, &perr, "errors.As must decode *parser.ParseError")
+	assert.Equal(t, "failed to read file", perr.Message, "ParseError.Message")
+	assert.Contains(t, perr.Context, "missing.c4d", "ParseError.Context carries the file path")
+
+	// Unwrap reaches the underlying os error.
+	require.NotNil(t, perr.Cause, "ParseError.Cause")
+	var pathErr *fs.PathError
+	assert.ErrorAs(t, perr.Cause, &pathErr, "Cause decodes to *fs.PathError")
+}
+
+func TestParseFileSuccess(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "diagram.c4d")
+	require.NoError(t, os.WriteFile(path, []byte("properties { name: Demo }\na: system { }"), 0o600), "write fixture")
+
+	doc, err := c4d.ParseFile(path)
+
+	require.NoError(t, err, "c4d.ParseFile() success path")
+	require.NotNil(t, doc, "c4d.ParseFile() document")
+	require.NotNil(t, doc.Properties, "Document.Properties")
+	assert.Equal(t, "Demo", doc.Properties.Fields[0].Value.Str, "Properties.Fields[0].Value")
+	require.Len(t, doc.Units, 1, "doc.Units")
 }
 
 func TestParseSyntaxErrors(t *testing.T) {
