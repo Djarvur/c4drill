@@ -228,7 +228,7 @@ Document <- _ parts:TopPart* _ !. {
 	return doc, nil
 }
 
-TopPart <- lead:(_ Comment _)* _ stmt:(Properties / TemplateDecl / UseStmt / IncludeStmt / Unit) tail:StmtEnd {
+TopPart <- lead:(_ Comment _)* _ stmt:(Properties / TemplateDecl / UseStmt / IncludeStmt / ReservedUnitId / Unit) tail:StmtEnd {
 	return &stmtWithComments{comments: toComments(lead), stmt: stmt, tail: toComment(tail)}, nil
 } / _ cm:Comment {
 	return &stmtWithComments{trailing: cm.(*ast.Comment)}, nil
@@ -242,7 +242,19 @@ BodyPart <- lead:(_ Comment _)* _ stmt:BodyStmt tail:StmtEnd {
 	return &stmtWithComments{trailing: cm.(*ast.Comment)}, nil
 }
 
-BodyStmt <- EdgeStmt / FieldStmt / UseStmt / Unit
+// BodyStmt — statement dispatch inside unit and template bodies.
+// ReservedUnitId precedes FieldStmt so reserved-led UNIT-SHAPED statements
+// get the D-19 quality error before FieldStmt commits the choice;
+// UnknownFieldStmt runs last, after every legal form has failed.
+BodyStmt <- EdgeStmt / ReservedUnitId / FieldStmt / UseStmt / Unit / UnknownFieldStmt
+
+// UnknownFieldStmt — D-19: a key:value statement whose key is outside the
+// known field-key set. It only matches after every legal statement form
+// failed, and its action is always an error — recorded with the position
+// and surfaced through the parse error list.
+UnknownFieldStmt <- key:Ident _ ':' _ value:Literal {
+	return nil, UnknownFieldError(key.(string), c.pos.line)
+}
 
 // Unit is a brace-block unit. The header action builds the UnitNode; this
 // rule fills in the body statements in match order.
@@ -295,9 +307,22 @@ UnitHeader <- id:UnitId _ ':' _ typ:TypeKeyword _ ext:ExternalModifier? _ name:Q
 	return &ast.UnitNode{Pos: c.pos.line, ID: id.(string)}, nil
 }
 
-// ReservedKeyword — statement keywords that cannot be unit ids (D-19
-// groundwork). Full error reporting with suggestions lands in Plan 03.
-ReservedKeyword <- ("use" / "include" / "template" / "properties") !IdentChar
+// ReservedKeyword — words a unit id cannot use (D-19): the
+// internal/parser isBuiltinField set plus the statement keywords
+// once/use/include/template/properties. reserved.go is the single source;
+// suggestion-carrying quality errors fire in ReservedUnitId.
+ReservedKeyword <- kw:Ident &{ return isReservedKeyword(kw.(string)), nil }
+
+// ReservedUnitId — D-19 quality error: a unit-shaped statement whose header
+// id collides with a reserved word. The brace lookaheads keep this rule
+// from firing on plain field statements whose value merely starts with a
+// type keyword (`description: system handles auth` stays a FieldStmt) —
+// only genuinely unit-shaped collisions record the error.
+ReservedUnitId <- rid:ReservedKeyword _ ':' _ typ:TypeKeyword _ ext:ExternalModifier? _ name:QuotedString? &(_ "{") {
+	return nil, CheckUnitID(strVal(rid), c.pos.line)
+} / rid:ReservedKeyword &(_ "{") {
+	return nil, CheckUnitID(strVal(rid), c.pos.line)
+}
 
 UnitId <- !ReservedKeyword id:Ident {
 	return id, nil

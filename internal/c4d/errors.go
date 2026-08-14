@@ -15,6 +15,11 @@ import (
 // instead (T-35-01-02: no content dumps, caller-controlled context only).
 var pigeonErrorPrefix = regexp.MustCompile(`^(\d+):(\d+) \(\d+\)(: rule [^:]+)?: (.*)$`)
 
+// nestedParseErrorPrefix matches the rendering a *parser.ParseError adds
+// when an action-level check (grammar/reserved.go, D-19) is recorded inside
+// pigeon's error list — stripped so the final message is not doubled.
+var nestedParseErrorPrefix = regexp.MustCompile(`^parse error at line \d+: `)
+
 // wrapPigeonError converts the generated parser's error (an errList whose
 // entries render as `line:col (offset)[: rule X]: message`) into the repo's
 // standard *parser.ParseError with the DSL-native line number extracted
@@ -37,7 +42,7 @@ func wrapPigeonError(err error, context string) error {
 			line, _ = strconv.Atoi(m[1])
 		}
 
-		messages = append(messages, m[4])
+		messages = append(messages, nestedParseErrorPrefix.ReplaceAllString(m[4], ""))
 	}
 
 	return &parser.ParseError{

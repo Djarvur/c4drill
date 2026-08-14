@@ -174,6 +174,8 @@ func TestParseTemplateBodyFullGrammar(t *testing.T) {
 
 // reservedKeywords pins the D-19 closed set: the internal/parser
 // isBuiltinField strings plus the statement keywords (19 total).
+//
+//nolint:gochecknoglobals // Pinned closed set per D-19, immutable after init
 var reservedKeywords = []string{
 	// isBuiltinField (internal/parser/parser.go)
 	"type", "name", "description", "technology",
@@ -194,7 +196,7 @@ func TestParseReservedUnitIdError(t *testing.T) {
 
 	var perr *parser.ParseError
 	require.ErrorAs(t, err, &perr, "error must decode to *parser.ParseError")
-	assert.Greater(t, perr.Line, 0, "ParseError.Line must carry the DSL-native line")
+	assert.Positive(t, perr.Line, "ParseError.Line must carry the DSL-native line")
 	assert.Contains(t, err.Error(), `(did you mean`, "message must carry a Levenshtein suggestion")
 	assert.Contains(t, err.Error(), `"description"`, "message must name the offending token")
 }
@@ -221,7 +223,7 @@ func TestParseReservedKeywordsTable(t *testing.T) {
 
 				var perr *parser.ParseError
 				require.ErrorAs(t, err, &perr, "error for %q", src)
-				assert.Greater(t, perr.Line, 0, "ParseError.Line for %q", src)
+				assert.Positive(t, perr.Line, "ParseError.Line for %q", src)
 			}
 		})
 	}
@@ -231,15 +233,16 @@ func TestParseReservedKeywordsList(t *testing.T) {
 	t.Parallel()
 
 	assert.Len(t, grammar.ReservedKeywords(), 19, "19 reserved words: 14 builtin fields + 5 statement keywords")
-	assert.ElementsMatch(t, reservedKeywords, grammar.ReservedKeywords(), "grammar.ReservedKeywords must match the pinned set")
+	assert.ElementsMatch(t, reservedKeywords, grammar.ReservedKeywords(),
+		"grammar.ReservedKeywords must match the pinned set")
 }
 
 func TestParseNearMissUnitIdLegal(t *testing.T) {
 	t.Parallel()
 
 	// Only EXACT collisions error — a near-miss id is a legal unit id.
-	unit := firstUnit(t, "descripton: system { }\n")
-	assert.Equal(t, "descripton", unit.ID, "near-miss id must parse")
+	unit := firstUnit(t, "descripton: system { }\n") //nolint:misspell // the near-miss IS the fixture
+	assert.Equal(t, "descripton", unit.ID, "near-miss id must parse") //nolint:misspell // see above
 }
 
 func TestParseUnknownFieldKeyError(t *testing.T) {
@@ -254,7 +257,7 @@ func TestParseUnknownFieldKeyError(t *testing.T) {
 
 		var perr *parser.ParseError
 		require.ErrorAs(t, err, &perr)
-		assert.Greater(t, perr.Line, 0, "ParseError.Line")
+		assert.Positive(t, perr.Line, "ParseError.Line")
 	})
 
 	t.Run("near-miss key gets suggestion", func(t *testing.T) {
