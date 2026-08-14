@@ -69,14 +69,30 @@ Full details: [milestones/v1.11-ROADMAP.md](milestones/v1.11-ROADMAP.md)
 **Requirements**: D-01..D-35 (35-CONTEXT.md decisions — REQUIREMENTS.md archived with v1.11)
 **Depends on:** Phase 34
 **Plans:** 9 plans
-
 Plans:
+**Wave 1**
+
 - [ ] 35-01-PLAN.md — Pigeon toolchain + core C4D grammar + typed AST + error contract
 - [ ] 35-02-PLAN.md — Nested use TOML sugar + template-body use + recursive Expand with cycle detection
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 35-03-PLAN.md — Composition grammar: template/use/include + list forms + reserved keywords
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 35-04-PLAN.md — Emitters: Model→TOML canonical order + AST→C4D compact style + frommodel inverse
 - [ ] 35-05-PLAN.md — toModel: AST→*parser.Model + inference parity + mixed include dispatch
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 35-06-PLAN.md — Round-trip parity: canonsrc normalizer + fixture corpus + render equivalence
 - [ ] 35-07-PLAN.md — CLI: .c4d render dispatch + convert subcommand with --follow-includes
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 35-08-PLAN.md — fmt subcommand + comment-preserving TOML formatter
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
 - [ ] 35-09-PLAN.md — Docs, .c4d example twins, c4drill-toml skill extension
