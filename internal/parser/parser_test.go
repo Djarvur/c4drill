@@ -1820,7 +1820,7 @@ name = "api-cache"
 	require.Len(t, svc.Instantiations, 2, "svc.Instantiations has the two body uses")
 
 	assert.Equal(t, "leaf", svc.Instantiations[0].Template, "svc.Instantiations[0].Template")
-	assert.Equal(t, "", svc.Instantiations[0].Parent, "svc.Instantiations[0].Parent (empty = template root)")
+	assert.Empty(t, svc.Instantiations[0].Parent, "svc.Instantiations[0].Parent (empty = template root)")
 	assert.Equal(t, "root-cache", svc.Instantiations[0].Params["name"], "svc.Instantiations[0] name param")
 
 	assert.Equal(t, "leaf", svc.Instantiations[1].Template, "svc.Instantiations[1].Template")

@@ -80,6 +80,33 @@ type TemplateDef struct {
 	// tokens awaiting substitution. Populated manually via parseUnitWithOrder
 	// (NOT direct toml unmarshal), so no toml tag is needed here.
 	Unit *model.Unit
+	// Instantiations holds [[template.<name>.<path>.use]] array-of-tables
+	// entries parsed from the template body (D-17, Plan 35-02):
+	// template-instantiating-template. Parent paths are RELATIVE to the
+	// template's unit root (empty = the produced unit attaches as a direct
+	// subunit of the instantiated root); an explicit `parent` key in an entry
+	// is relative to the site's path. NOT expanded at parse time —
+	// internal/template.Expand recurses through them when the outer template
+	// is instantiated (params flow outer-to-inner). Equivalent authoring
+	// form: a top-level [[use]] with parent = the enclosing unit's dotted
+	// path (D-16) — both normalize to the same Instantiation mechanism.
+	Instantiations []Instantiation
+}
+
+// UseSite records one [[use]]-family array-of-tables site in document order:
+// a top-level [[use]], a unit-nested [[unit.<path>.use]] (D-16), or a
+// template-body [[template.<name>.<path>.use]] (D-17). captureDefinitionOrder
+// records the sites (Go maps lose document order) so the extraction pass can
+// interleave all three forms in authoring order; entry VALUES are read from
+// the raw map afterwards.
+type UseSite struct {
+	// Parent is the dotted unit path the site's uses attach under. Empty for
+	// a top-level [[use]]. For template sites it is relative to the template's
+	// unit root.
+	Parent string
+	// Template is the owning [template.<name>] when the site lives inside a
+	// template body ([[template.<name>...use]]); empty otherwise.
+	Template string
 }
 
 // Instantiation captures a single [[use]] array-of-tables entry: the template
@@ -101,7 +128,7 @@ type Instantiation struct {
 // Definition order of units and subunits is preserved.
 func Parse(data []byte) (*Model, error) {
 	// First pass: capture definition order using unstable API
-	unitOrder, subunitOrders, templateSubunitOrders, err := captureDefinitionOrder(data)
+	unitOrder, subunitOrders, templateSubunitOrders, useSites, err := captureDefinitionOrder(data)
 	if err != nil {
 		return nil, wrapDecodeError(err)
 	}
@@ -139,7 +166,7 @@ func Parse(data []byte) (*Model, error) {
 		return nil, err
 	}
 
-	if err := extractInstantiations(rawMap, m); err != nil {
+	if err := extractUses(rawMap, useSites, m); err != nil {
 		return nil, err
 	}
 
@@ -273,32 +300,126 @@ func toStringSlice(arr []any) []string {
 	return out
 }
 
-// extractInstantiations pulls rawMap["use"] into m.Instantiations, preserving
-// the array-of-tables document order. Each [[use]] table's fixed fields
-// (template, parent) are decoded directly; the remaining keys are the supplied
-// named parameters (including "name" as a regular parameter per D-04).
-func extractInstantiations(rawMap map[string]any, m *Model) error {
-	useRoot, ok := rawMap["use"]
-	if !ok {
-		return nil
-	}
+// extractUses desugars every [[use]]-family site into Instantiation entries
+// in document order (Plan 35-02). Top-level [[use]] and unit-nested
+// [[unit.<path>.use]] entries (D-16) land in m.Instantiations — the nested
+// form's Parent is the enclosing unit's dotted path, an explicit `parent` key
+// being relative to it. Template-body [[template.<name>.<path>.use]] entries
+// (D-17) land in m.Templates[<name>].Instantiations with Parents relative to
+// the template's unit root. The two unit-level forms are the SAME
+// Instantiation mechanism the expansion pass consumes; no parallel semantics.
+func extractUses(rawMap map[string]any, useSites []UseSite, m *Model) error {
+	// cursors tracks how many entries of each site path's array have been
+	// consumed: the Nth site with the same path pairs with the Nth element of
+	// the array at that path (every [[...use]] header appends exactly one
+	// element), preserving document order across repeated blocks.
+	cursors := make(map[string]int)
 
-	useArr, ok := useRoot.([]any)
-	if !ok {
-		return &ParseError{
-			Message: "invalid [[use]] format: expected an array of tables",
-			Context: "use",
+	for _, site := range useSites {
+		if err := extractSiteUses(rawMap, site, cursors, m); err != nil {
+			return err
 		}
 	}
 
-	m.Instantiations = make([]Instantiation, 0, len(useArr))
+	return nil
+}
+
+// extractSiteUses desugars the single site's paired array element (see
+// extractUses for the cursor pairing) into either m.Instantiations (top-level
+// and unit-nested sites) or the owning template's Instantiations.
+func extractSiteUses(
+	rawMap map[string]any,
+	site UseSite,
+	cursors map[string]int,
+	m *Model,
+) error {
+	context := useContext(site)
+
+	raw := lookupUseArray(rawMap, site)
+
+	useArr, ok := raw.([]any)
+	if !ok {
+		// Malformed site (e.g. a bare [x.use] table): parseUseEntries renders
+		// the standard format error.
+		_, err := parseUseEntries(raw, context)
+
+		return err
+	}
+
+	idx := cursors[context]
+	cursors[context]++
+
+	if idx >= len(useArr) {
+		return &ParseError{
+			Message: "invalid [[use]] site: no entry matches the recorded site",
+			Context: context,
+		}
+	}
+
+	entries, err := parseUseEntries([]any{useArr[idx]}, context)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		// An explicit `parent` key resolves RELATIVE to the site's path
+		// (for a top-level site the site path is "" — absolute, exactly
+		// the Phase 31 semantics).
+		entry.Parent = joinPath(site.Parent, entry.Parent)
+
+		if site.Template != "" {
+			if err := appendTemplateUse(m, site, entry, context); err != nil {
+				return err
+			}
+
+			continue
+		}
+
+		m.Instantiations = append(m.Instantiations, entry)
+	}
+
+	return nil
+}
+
+// appendTemplateUse routes a template-body use entry into the owning
+// template's Instantiations (D-17). Hard error when the owning template is
+// not defined.
+func appendTemplateUse(m *Model, site UseSite, entry Instantiation, context string) error {
+	tmpl := m.Templates[site.Template]
+	if tmpl == nil {
+		return &ParseError{
+			Message: "invalid [[use]] site: template is not defined",
+			Context: context,
+		}
+	}
+
+	tmpl.Instantiations = append(tmpl.Instantiations, entry)
+
+	return nil
+}
+
+// parseUseEntries decodes one [[use]]-family array into Instantiation entries,
+// mirroring the Phase 31 top-level strictness: every value must be a string
+// (all template params are string-substituted); `template` and `parent` are
+// the fixed fields; every other key is a supplied named parameter (including
+// "name" per D-04). context names the site in error messages.
+func parseUseEntries(raw any, context string) ([]Instantiation, error) {
+	useArr, ok := raw.([]any)
+	if !ok {
+		return nil, &ParseError{
+			Message: "invalid [[use]] format: expected an array of tables",
+			Context: context,
+		}
+	}
+
+	out := make([]Instantiation, 0, len(useArr))
 
 	for _, entry := range useArr {
 		useMap, ok := entry.(map[string]any)
 		if !ok {
-			return &ParseError{
+			return nil, &ParseError{
 				Message: "invalid [[use]] entry: expected a table",
-				Context: "use",
+				Context: context,
 			}
 		}
 
@@ -310,9 +431,9 @@ func extractInstantiations(rawMap map[string]any, m *Model) error {
 				// Non-string values are not supported for [[use]] params
 				// (all template params are string-substituted). Surface as
 				// a parse error naming the offending key.
-				return &ParseError{
+				return nil, &ParseError{
 					Message: "invalid [[use]] field: expected a string value",
-					Context: "use." + k,
+					Context: context + "." + k,
 				}
 			}
 
@@ -326,10 +447,72 @@ func extractInstantiations(rawMap map[string]any, m *Model) error {
 			}
 		}
 
-		m.Instantiations = append(m.Instantiations, inst)
+		out = append(out, inst)
 	}
 
-	return nil
+	return out, nil
+}
+
+// lookupUseArray walks rawMap along the site's path and returns the raw "use"
+// value at that site (top-level sites read rawMap["use"] directly). Returns
+// nil when any segment is missing — impossible for a site recorded from the
+// same document, so nil flows into parseUseEntries as the malformed-format
+// error (defensive).
+func lookupUseArray(rawMap map[string]any, site UseSite) any {
+	var segments []string
+	if site.Template != "" {
+		segments = append(segments, reservedTemplate, site.Template)
+	}
+
+	if site.Parent != "" {
+		segments = append(segments, strings.Split(site.Parent, ".")...)
+	}
+
+	current := any(rawMap)
+
+	for _, seg := range segments {
+		curMap, ok := current.(map[string]any)
+		if !ok {
+			return nil
+		}
+
+		current, ok = curMap[seg]
+		if !ok {
+			return nil
+		}
+	}
+
+	unitMap, ok := current.(map[string]any)
+	if !ok {
+		return nil
+	}
+
+	return unitMap["use"]
+}
+
+// useContext renders the error-attribution name for a use site: "use" for a
+// top-level site (identical to the Phase 31 error contexts), the dotted unit
+// path + ".use" for unit-nested sites, "template.<name>[.<path>].use" for
+// template-body sites.
+func useContext(site UseSite) string {
+	if site.Template != "" {
+		return joinPath(joinPath(reservedTemplate, site.Template), site.Parent) + "." + reservedUse
+	}
+
+	return joinPath(site.Parent, reservedUse)
+}
+
+// joinPath joins two dotted path segments, treating "" as identity
+// (joinPath("", "a") = "a", joinPath("a", "") = "a", joinPath("", "") = "").
+func joinPath(base, rel string) string {
+	switch {
+	case base == "":
+		return rel
+	case rel == "":
+		return base
+	default:
+		return base + "." + rel
+	}
 }
 
 // extractIncludes pulls rawMap["include"] into m.Includes, preserving the
@@ -424,13 +607,16 @@ const (
 	reservedInclude    = "include"
 )
 
-// captureDefinitionOrder uses the unstable API to capture the order of units and subunits.
-// Returns: unitOrder (top-level), subunitOrders (nested, hand-authored),
-// templateSubunitOrders (nested, WITHIN the [template.*] namespace), error.
-func captureDefinitionOrder(data []byte) ([]string, map[string][]string, map[string][]string, error) {
+// captureDefinitionOrder uses the unstable API to capture the order of units
+// and subunits. Returns: unitOrder (top-level), subunitOrders (nested,
+// hand-authored), templateSubunitOrders (nested, WITHIN the [template.*]
+// namespace), useSites ([[use]]-family array-of-tables in document order,
+// Plan 35-02), error.
+func captureDefinitionOrder(data []byte) ([]string, map[string][]string, map[string][]string, []UseSite, error) {
 	unitOrder := make([]string, 0)
 	subunitOrders := make(map[string][]string)
 	templateSubunitOrders := make(map[string][]string)
+	useSites := make([]UseSite, 0)
 
 	seenUnits := make(map[string]bool)
 	seenSubunits := make(map[string]bool)
@@ -441,8 +627,9 @@ func captureDefinitionOrder(data []byte) ([]string, map[string][]string, map[str
 
 	for p.NextExpression() {
 		expr := p.Expression()
-		if expr.Kind != unstable.Table {
-			continue // Skip non-table expressions
+
+		if !isTableExpression(expr) {
+			continue // Skip key-value / comment expressions
 		}
 
 		parts := extractKeyParts(expr.Key())
@@ -451,40 +638,114 @@ func captureDefinitionOrder(data []byte) ([]string, map[string][]string, map[str
 			continue
 		}
 
-		// Skip [properties] section
-		if len(parts) == 1 && parts[0] == reservedProperties {
-			continue
-		}
-
-		// BC-1 (D-08, Plan 31-01): skip reserved top-level tables so they
-		// neither register phantom units nor leak into the unit loop.
-		// - [[use]] and [[include]] are array-of-tables whose first key segment
-		//   is the bare name; skip them wholesale (use is extracted into
-		//   Model.Instantiations below; include is reserved for Phase 32).
-		if len(parts) == 1 && (parts[0] == reservedUse || parts[0] == reservedInclude) {
-			continue
-		}
-
-		// [template.*] subtrees: do NOT enter unitOrder/subunitOrders, but DO
-		// capture the subunit structure within the template namespace so the
-		// extraction pass can preserve authoring order. Paths of the form
-		// [template.<name>] define a template root; [template.<name>.<child>]
-		// and deeper define its subunit subtree.
-		if parts[0] == reservedTemplate {
-			recordTemplateSubunit(parts, templateSubunitOrders, seenTemplateSubunits)
+		// [[use]]-family sites (D-16/D-17, Plan 35-02): top-level [[use]],
+		// unit-nested [[unit.<path>.use]], template-body
+		// [[template.<name>.<path>.use]]. Recorded in document order for the
+		// extraction pass (Go maps lose authoring order); never units or
+		// subunits. A bare [x.use] table also records so extraction can reject
+		// the malformed form with the standard error.
+		if parts[len(parts)-1] == reservedUse {
+			recordUseSite(parts, &useSites)
 
 			continue
 		}
 
-		recordHandAuthored(parts, &unitOrder, subunitOrders, seenUnits, seenSubunits)
+		if expr.Kind == unstable.Table {
+			recordUnitTable(parts, &unitOrder, subunitOrders, templateSubunitOrders,
+				seenUnits, seenSubunits, seenTemplateSubunits)
+		}
+		// Other array-of-tables ([[a.link]] etc.) are not units — skip.
 	}
 
 	if err := p.Error(); err != nil {
 		//nolint:wrapcheck // unstable.Parser error is wrapped by Parse's caller via wrapDecodeError
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
-	return unitOrder, subunitOrders, templateSubunitOrders, nil
+	return unitOrder, subunitOrders, templateSubunitOrders, useSites, nil
+}
+
+// isTableExpression reports whether expr is a [table] or [[array-of-tables]]
+// header — the only expression kinds this pass records from. Array-of-tables
+// expressions pass ONLY on their way to the [[...use]] site check; every other
+// array-of-tables is skipped exactly as before use sites existed.
+func isTableExpression(expr *unstable.Node) bool {
+	return expr.Kind == unstable.Table || expr.Kind == unstable.ArrayTable
+}
+
+// recordUnitTable records a regular [table] header into the order structures:
+// [properties]/[[include]] are skipped (reserved), [template.*] subtrees feed
+// the template-namespace orders, everything else is a hand-authored unit or
+// subunit.
+func recordUnitTable(
+	parts []string,
+	unitOrder *[]string,
+	subunitOrders map[string][]string,
+	templateSubunitOrders map[string][]string,
+	seenUnits, seenSubunits, seenTemplateSubunits map[string]bool,
+) {
+	// Skip [properties] section
+	if len(parts) == 1 && parts[0] == reservedProperties {
+		return
+	}
+
+	// BC-1 (D-08, Plan 31-01): skip reserved top-level tables so they neither
+	// register phantom units nor leak into the unit loop. [[include]] is an
+	// array-of-tables skipped by the Kind filter in the caller; this catches a
+	// bare [include] table. [[use]] is handled by the site check in the caller.
+	if len(parts) == 1 && parts[0] == reservedInclude {
+		return
+	}
+
+	// [template.*] subtrees: do NOT enter unitOrder/subunitOrders, but DO
+	// capture the subunit structure within the template namespace so the
+	// extraction pass can preserve authoring order. Paths of the form
+	// [template.<name>] define a template root; [template.<name>.<child>]
+	// and deeper define its subunit subtree.
+	if parts[0] == reservedTemplate {
+		recordTemplateSubunit(parts, templateSubunitOrders, seenTemplateSubunits)
+
+		return
+	}
+
+	recordHandAuthored(parts, unitOrder, subunitOrders, seenUnits, seenSubunits)
+}
+
+// recordUseSite records one [[use]]-family site in document order (Plan
+// 35-02): a top-level [[use]] (empty Parent), a unit-nested
+// [[unit.<path>.use]] whose Parent is the enclosing unit's dotted path (D-16),
+// or a template-body [[template.<name>.<path>.use]] whose Template is the
+// owning template and whose Parent is relative to the template's unit root
+// (D-17).
+func recordUseSite(parts []string, useSites *[]UseSite) {
+	// minTemplateUseParts: template + name + use — a shorter template-path
+	// form ([[template.use]]) names a template "use" as an array, which
+	// extractTemplates rejects; do not record it as a site.
+	const minTemplateUseParts = 3
+
+	if len(parts) == 1 {
+		// Top-level [[use]] / [use]: no enclosing path.
+		*useSites = append(*useSites, UseSite{})
+
+		return
+	}
+
+	if parts[0] == reservedTemplate {
+		if len(parts) < minTemplateUseParts {
+			return
+		}
+
+		*useSites = append(*useSites, UseSite{
+			Template: parts[1],
+			Parent:   strings.Join(parts[2:len(parts)-1], "."),
+		})
+
+		return
+	}
+
+	*useSites = append(*useSites, UseSite{
+		Parent: strings.Join(parts[:len(parts)-1], "."),
+	})
 }
 
 // extractKeyParts reads the dotted key segments from an unstable iterator.
@@ -740,7 +1001,9 @@ func inferGenericType(unitType model.UnitType, parentType model.UnitType) model.
 	return unitType
 }
 
-// isBuiltinField returns true if the key is a known Unit struct field.
+// isBuiltinField returns true if the key is a known Unit struct field or a
+// reserved unit-section key (the [[...use]] syntax extracted before unit
+// parsing, Plan 35-02) — either way, never a subunit.
 func isBuiltinField(key string) bool {
 	return slices.Contains([]string{
 		"type", "name", "description", "technology",
@@ -748,6 +1011,7 @@ func isBuiltinField(key string) bool {
 		"color", "style", "border", "edges",
 		"width", "height", "expanded",
 		"link", "linkFrom",
+		"use",
 	}, key)
 }
 
