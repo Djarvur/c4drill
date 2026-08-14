@@ -86,6 +86,7 @@ technology = "SSH"
 // authored blank-line group, one space before a trailing comment, and the
 // author's key order untouched.
 const normalizedGolden = `# Header comment.
+
 [properties]
 color = "#FAFAFA"
 name = "Demo"
@@ -159,6 +160,16 @@ func TestFormatMalformedFailsClosed(t *testing.T) {
 	}
 }
 
+// syntaxInvalidCorpus pins corpus fixtures whose TOML SYNTAX is invalid
+// (parse-level, not validation-level): fmt must REFUSE them — the fail-closed
+// half of the D-31 contract, proven against a real shipped fixture. Paths are
+// repo-root-relative (the 35-06 invalidCorpusFixtures pattern).
+//
+//nolint:gochecknoglobals // immutable invalid-fixture set (the refusal list)
+var syntaxInvalidCorpus = map[string]bool{
+	"cmd/c4drill/testdata/invalid.toml": true,
+}
+
 func TestFormatIdempotentOverCorpus(t *testing.T) {
 	t.Parallel()
 
@@ -166,8 +177,17 @@ func TestFormatIdempotentOverCorpus(t *testing.T) {
 	assert.Greater(t, len(paths), 10, "corpus walk covers more than 10 fixtures")
 
 	for _, p := range paths {
+		//nolint:gosec // G304: path from the pinned corpus walker, not user input
 		data, err := os.ReadFile(p)
 		require.NoError(t, err, "read corpus fixture %s", p)
+
+		if isSyntaxInvalid(t, p) {
+			_, err := tomlfmt.Format(data)
+			require.Error(t, err,
+				"fmt refuses the syntactically invalid fixture %s", p)
+
+			continue
+		}
 
 		once, err := tomlfmt.Format(data)
 		require.NoError(t, err, "format corpus fixture %s", p)
@@ -203,8 +223,18 @@ func TestFormatPreservesSemanticsOverCorpus(t *testing.T) {
 	t.Parallel()
 
 	for _, p := range corpusTOMLPaths(t) {
+		//nolint:gosec // G304: path from the pinned corpus walker, not user input
 		data, err := os.ReadFile(p)
 		require.NoError(t, err, "read corpus fixture %s", p)
+
+		if isSyntaxInvalid(t, p) {
+			_, fmtErr := tomlfmt.Format(data)
+			_, parseErr := parser.Parse(data)
+			require.Error(t, parseErr, "pinned fixture %s fails TOML parse", p)
+			require.Error(t, fmtErr, "fmt refuses the syntactically invalid fixture %s", p)
+
+			continue
+		}
 
 		formatted, err := tomlfmt.Format(data)
 		require.NoError(t, err, "format corpus fixture %s", p)
@@ -320,6 +350,17 @@ func corpusTOMLPaths(t *testing.T) []string {
 	slices.Sort(out)
 
 	return out
+}
+
+// isSyntaxInvalid reports whether p is a pinned syntactically invalid corpus
+// fixture.
+func isSyntaxInvalid(t *testing.T, p string) bool {
+	t.Helper()
+
+	rel, err := filepath.Rel(repoRoot(t), p)
+	require.NoError(t, err, "corpus path under repo root")
+
+	return syntaxInvalidCorpus[rel]
 }
 
 // repoRoot resolves the repository root from this package's directory.
