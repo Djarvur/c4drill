@@ -32,6 +32,8 @@ func toModel(t *testing.T, src string) *parser.Model {
 }
 
 // toModelErr asserts that src fails the full front-end (parse or convert).
+//
+//nolint:wrapcheck // tests inspect the *parser.ParseError unwrapped
 func toModelErr(t *testing.T, src string) error {
 	t.Helper()
 

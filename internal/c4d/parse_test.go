@@ -13,13 +13,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// parseDoc runs the C4D front-end over src and returns the typed AST
-// document.
+// parseDoc runs the C4D front-end's AST entry over src and returns the
+// typed AST document (the 35-05 sweep: c4d.Parse is Model-returning now;
+// these AST-shape tests consume ParseAST).
 func parseDoc(t *testing.T, src string) *ast.Document {
 	t.Helper()
 
-	doc, err := c4d.Parse([]byte(src))
-	require.NoError(t, err, "c4d.Parse() should not error")
+	doc, err := c4d.ParseAST([]byte(src))
+	require.NoError(t, err, "c4d.ParseAST() should not error")
 
 	return doc
 }
@@ -28,8 +29,8 @@ func parseDoc(t *testing.T, src string) *ast.Document {
 func parseErr(t *testing.T, src string) {
 	t.Helper()
 
-	_, err := c4d.Parse([]byte(src))
-	require.Error(t, err, "c4d.Parse() should error on invalid input %q", src)
+	_, err := c4d.ParseAST([]byte(src))
+	require.Error(t, err, "c4d.ParseAST() should error on invalid input %q", src)
 }
 
 // firstUnit returns the single top-level unit of a parsed document.
@@ -407,10 +408,10 @@ func TestParseErrorContract(t *testing.T) {
 func TestParseSuccessPath(t *testing.T) {
 	t.Parallel()
 
-	doc, err := c4d.Parse([]byte(`system "Payment Gateway" { description: processes cards }`))
+	doc, err := c4d.ParseAST([]byte(`system "Payment Gateway" { description: processes cards }`))
 
-	require.NoError(t, err, "c4d.Parse() success path")
-	require.NotNil(t, doc, "c4d.Parse() document")
+	require.NoError(t, err, "c4d.ParseAST() success path")
+	require.NotNil(t, doc, "c4d.ParseAST() document")
 	require.Len(t, doc.Units, 1, "doc.Units")
 	assert.Equal(t, "Payment Gateway", doc.Units[0].Name, "Units[0].Name")
 }
@@ -440,10 +441,10 @@ func TestParseFileSuccess(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "diagram.c4d")
 	require.NoError(t, os.WriteFile(path, []byte("properties { name: Demo }\na: system { }"), 0o600), "write fixture")
 
-	doc, err := c4d.ParseFile(path)
+	doc, err := c4d.ParseASTFile(path)
 
-	require.NoError(t, err, "c4d.ParseFile() success path")
-	require.NotNil(t, doc, "c4d.ParseFile() document")
+	require.NoError(t, err, "c4d.ParseASTFile() success path")
+	require.NotNil(t, doc, "c4d.ParseASTFile() document")
 	require.NotNil(t, doc.Properties, "Document.Properties")
 	assert.Equal(t, "Demo", doc.Properties.Fields[0].Value.Str, "Properties.Fields[0].Value")
 	require.Len(t, doc.Units, 1, "doc.Units")
