@@ -1,17 +1,26 @@
 package c4d_test
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"unicode/utf8"
 
+	"github.com/Djarvur/c4drill/internal/c4d"
+	"github.com/Djarvur/c4drill/internal/graph"
+	"github.com/Djarvur/c4drill/internal/include"
 	"github.com/Djarvur/c4drill/internal/model"
 	"github.com/Djarvur/c4drill/internal/parser"
 	"github.com/Djarvur/c4drill/internal/peer"
+	"github.com/Djarvur/c4drill/internal/render"
 	"github.com/Djarvur/c4drill/internal/template"
+	"github.com/Djarvur/c4drill/internal/testutil/canonical"
+	"github.com/Djarvur/c4drill/internal/testutil/canonsrc"
 	"github.com/Djarvur/c4drill/internal/validator"
+	"github.com/Djarvur/c4drill/internal/view"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -22,6 +31,11 @@ import (
 
 // c4dFixtureDir is the edge-case fixture corpus root.
 const c4dFixtureDir = "../../testdata/c4d"
+
+// repoRoot is the repository root seen from internal/c4d tests.
+func repoRoot() string {
+	return filepath.Clean("../..")
+}
 
 // expectedC4DFixtures is the pinned corpus manifest — every file must exist,
 // parse, and pass the full pre-render pipeline. The list doubles as the
@@ -289,4 +303,497 @@ func TestFixtureUnicodeCoverage(t *testing.T) {
 		"long single word carries multi-byte runes: got %q", longWord)
 	assert.GreaterOrEqual(t, utf8.RuneCountInString(longWord), 10,
 		"long single word is long enough to stress wrapping: got %q", longWord)
+}
+
+// invalidCorpusFixtures lists corpus fixtures that are INVALID by design —
+// the parity loop asserts conversion REFUSAL for them (the D-24 convert
+// gate mirrored at model level: parse/expand/peer/validate must error), not
+// round-trip output. Paths are repo-root-relative.
+var invalidCorpusFixtures = map[string]bool{
+	"testdata/invalid_links.toml":                 true,
+	"testdata/invalid_references.toml":            true,
+	"testdata/invalid_subunits.toml":              true,
+	"testdata/template_duplicate_path.toml":       true,
+	"testdata/template_missing_param.toml":        true,
+	"cmd/c4drill/testdata/invalid.toml":           true,
+	"cmd/c4drill/testdata/peer_unresolvable.toml": true,
+}
+
+// corpusTOMLPaths walks the full fixture corpus (35-RESEARCH §3): testdata/,
+// testdata/c4d/, cmd/c4drill/testdata/ (top level only) and skill/examples/
+// (recursive, minus the 09-composed include graph which the composed-graph
+// test converts as a whole). filepath.WalkDir never follows symlinked
+// directories and only *.toml files pass the filter (T-35-06-01).
+func corpusTOMLPaths(t *testing.T) (valid, invalid []string) {
+	t.Helper()
+
+	collect := func(paths []string, intoValid, intoInvalid *[]string) {
+		for _, p := range paths {
+			rel, err := filepath.Rel(repoRoot(), p)
+			require.NoError(t, err, "corpus path under repo root")
+
+			if invalidCorpusFixtures[rel] {
+				*intoInvalid = append(*intoInvalid, p)
+
+				continue
+			}
+
+			*intoValid = append(*intoValid, p)
+		}
+	}
+
+	flat := []string{"testdata", "testdata/c4d", "cmd/c4drill/testdata"}
+	for _, dir := range flat {
+		entries, err := os.ReadDir(filepath.Join(repoRoot(), dir))
+		require.NoError(t, err, "read corpus dir %s", dir)
+
+		for _, e := range entries {
+			if !e.IsDir() && strings.HasSuffix(e.Name(), ".toml") {
+				collect([]string{filepath.Join(repoRoot(), dir, e.Name())}, &valid, &invalid)
+			}
+		}
+	}
+
+	examples := filepath.Join(repoRoot(), "skill", "examples")
+	var walked []string
+
+	err := filepath.WalkDir(examples, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		switch {
+		case d.IsDir() && d.Name() == "09-composed":
+			return filepath.SkipDir // converted as a whole graph separately
+		case d.IsDir() || !strings.HasSuffix(d.Name(), ".toml"):
+			return nil
+		}
+
+		walked = append(walked, path)
+
+		return nil
+	})
+	require.NoError(t, err, "walk skill/examples")
+
+	collect(walked, &valid, &invalid)
+	slices.Sort(valid)
+	slices.Sort(invalid)
+
+	return valid, invalid
+}
+
+// canonicalModel returns a deep copy of m with the D-22 explicit-default
+// list filled in (arrow "" == "forward", rank "" == "forward",
+// labelPosition "" == "middle") so require.Equal can compare models whose
+// only difference is defaults made explicit by a round-trip through the DSL
+// (the `->` glyph IS the arrow spec).
+func canonicalModel(m *parser.Model) *parser.Model {
+	clone := &parser.Model{
+		Properties:     m.Properties,
+		UnitOrder:      slices.Clone(m.UnitOrder),
+		Units:          make(map[string]*model.Unit, len(m.Units)),
+		Templates:      make(map[string]*parser.TemplateDef, len(m.Templates)),
+		Instantiations: slices.Clone(m.Instantiations),
+		Includes:       slices.Clone(m.Includes),
+	}
+
+	for name, unit := range m.Units {
+		clone.Units[name] = canonicalUnitForCompare(unit)
+	}
+
+	for name, tmpl := range m.Templates {
+		if tmpl == nil {
+			continue
+		}
+
+		t := *tmpl
+		t.Params = slices.Clone(tmpl.Params)
+		t.Unit = canonicalUnitForCompare(tmpl.Unit)
+		t.Instantiations = slices.Clone(tmpl.Instantiations)
+		clone.Templates[name] = &t
+	}
+
+	return clone
+}
+
+// canonicalUnitForCompare clones a unit and fills link defaults recursively.
+func canonicalUnitForCompare(unit *model.Unit) *model.Unit {
+	clone := unit.Clone()
+	if clone == nil {
+		return nil
+	}
+
+	fillLinkDefaults(clone)
+
+	return clone
+}
+
+// fillLinkDefaults applies the D-22 default list to every link in the
+// subtree, in place, on an already-cloned unit.
+func fillLinkDefaults(unit *model.Unit) {
+	for i := range unit.Links {
+		canonicalLinkDefaults(&unit.Links[i])
+	}
+
+	for i := range unit.LinksFrom {
+		canonicalLinkDefaults(&unit.LinksFrom[i])
+	}
+
+	for _, sub := range unit.Subunits {
+		fillLinkDefaults(sub)
+	}
+}
+
+// canonicalLinkDefaults fills one link's D-22 defaults.
+func canonicalLinkDefaults(link *model.Link) {
+	if link.Arrow == "" {
+		link.Arrow = model.ArrowForward
+	}
+
+	if link.Rank == "" {
+		link.Rank = model.RankForward
+	}
+
+	if link.LabelPosition == "" {
+		link.LabelPosition = model.LabelMiddle
+	}
+}
+
+// TestRoundTripTOMLToC4DToTOML is the D-22 forward contract over the FULL
+// corpus: parser.Parse -> EmitC4D(FromModel(m)) -> c4d.Parse -> EmitTOML ->
+// parser.Parse must produce canonically-equal TOML text (canonsrc) and
+// require.Equal Models — modulo the explicit-defaults list — so UnitOrder
+// and every authored value survive (order-preservation contract).
+func TestRoundTripTOMLToC4DToTOML(t *testing.T) {
+	t.Parallel()
+
+	valid, _ := corpusTOMLPaths(t)
+	require.Greater(t, len(valid), 15, "corpus walker must cover >15 fixtures (anti-shrinkage)")
+
+	t.Logf("round-trip corpus tally: %d fixtures", len(valid))
+
+	for _, path := range valid {
+		rel, err := filepath.Rel(repoRoot(), path)
+		require.NoError(t, err)
+
+		t.Run(rel, func(t *testing.T) {
+			t.Parallel()
+
+			data, err := os.ReadFile(path)
+			require.NoError(t, err, "read corpus fixture")
+
+			m1, err := parser.Parse(data)
+			require.NoError(t, err, "fixture parses")
+
+			c4dText := c4d.EmitC4D(c4d.FromModel(m1))
+
+			m2, err := c4d.Parse([]byte(c4dText))
+			require.NoError(t, err, "emitted C4D re-parses")
+
+			secondEmit, err := c4d.EmitTOML(m2)
+			require.NoError(t, err, "second TOML emission")
+
+			m3, err := parser.Parse([]byte(secondEmit))
+			require.NoError(t, err, "second TOML parses")
+
+			firstEmit, err := c4d.EmitTOML(m1)
+			require.NoError(t, err, "first TOML emission")
+
+			require.Equal(t,
+				canonsrc.NormalizeTOML(t, firstEmit),
+				canonsrc.NormalizeTOML(t, secondEmit),
+				"TOML -> C4D -> TOML canonical text equality (D-22)")
+
+			require.Equal(t, m2, m3, "post-DSL models exactly equal")
+
+			require.Equal(t, canonicalModel(m1), canonicalModel(m3),
+				"models equal modulo the D-22 explicit-defaults list")
+		})
+	}
+}
+
+// TestRoundTripC4DToTOMLToC4D is the D-22 reverse contract over the full
+// corpus: emit C4D, parse it, emit TOML, parse, emit C4D again — the C4D
+// text must be canonically stable across the loop.
+func TestRoundTripC4DToTOMLToC4D(t *testing.T) {
+	t.Parallel()
+
+	valid, _ := corpusTOMLPaths(t)
+
+	for _, path := range valid {
+		rel, err := filepath.Rel(repoRoot(), path)
+		require.NoError(t, err)
+
+		t.Run(rel, func(t *testing.T) {
+			t.Parallel()
+
+			data, err := os.ReadFile(path)
+			require.NoError(t, err, "read corpus fixture")
+
+			m1, err := parser.Parse(data)
+			require.NoError(t, err, "fixture parses")
+
+			c4dFirst := c4d.EmitC4D(c4d.FromModel(m1))
+
+			m2, err := c4d.Parse([]byte(c4dFirst))
+			require.NoError(t, err, "first C4D emission re-parses")
+
+			tomlText, err := c4d.EmitTOML(m2)
+			require.NoError(t, err, "TOML emission")
+
+			m3, err := parser.Parse([]byte(tomlText))
+			require.NoError(t, err, "TOML re-parses")
+
+			c4dSecond := c4d.EmitC4D(c4d.FromModel(m3))
+
+			require.Equal(t,
+				canonsrc.NormalizeC4D(t, c4dFirst),
+				canonsrc.NormalizeC4D(t, c4dSecond),
+				"C4D -> TOML -> C4D canonical stability (D-22)")
+		})
+	}
+}
+
+// TestInvalidFixturesRefuseConversion: invalid corpus fixtures assert
+// conversion REFUSAL — some stage of the pre-render pipeline (parse,
+// expand, peer.Resolve, validate) must error, mirroring D-24's convert gate
+// at model level. No output is ever produced for them.
+func TestInvalidFixturesRefuseConversion(t *testing.T) {
+	t.Parallel()
+
+	_, invalid := corpusTOMLPaths(t)
+	require.NotEmpty(t, invalid, "invalid corpus fixtures present")
+
+	for _, path := range invalid {
+		rel, err := filepath.Rel(repoRoot(), path)
+		require.NoError(t, err)
+
+		t.Run(rel, func(t *testing.T) {
+			t.Parallel()
+
+			data, err := os.ReadFile(path)
+			require.NoError(t, err, "read invalid fixture")
+
+			m, perr := parser.Parse(data)
+			if perr != nil {
+				return // parse refusal IS refusal
+			}
+
+			if m, eerr := template.Expand(m); eerr == nil {
+				if eerr := peer.Resolve(m); eerr == nil {
+					require.NotEmpty(t, validator.Validate(m),
+						"invalid fixture must fail somewhere in the D-24 gate")
+
+					return
+				}
+			}
+		})
+	}
+}
+
+// twinExtension rewrites a .toml path to its .c4d twin (the include-graph
+// conversion D-26 groundwork for --follow-includes).
+func twinExtension(path string) string {
+	return strings.TrimSuffix(path, ".toml") + ".c4d"
+}
+
+// convertGraphFileToC4D parses one TOML file of an include graph, rewrites
+// its include paths to the twin extension, and writes the converted .c4d
+// twin under dstRoot at the same relative location.
+func convertGraphFileToC4D(t *testing.T, srcRoot, relPath, dstRoot string) {
+	t.Helper()
+
+	src, err := os.ReadFile(filepath.Join(srcRoot, relPath))
+	require.NoError(t, err, "read graph file")
+
+	m, err := parser.Parse(src)
+	require.NoError(t, err, "graph file parses")
+
+	for i := range m.Includes {
+		m.Includes[i].Path = twinExtension(m.Includes[i].Path)
+	}
+
+	dst := filepath.Join(dstRoot, twinExtension(relPath))
+	require.NoError(t, os.MkdirAll(filepath.Dir(dst), 0o750), "mkdir for twin")
+
+	require.NoError(t, os.WriteFile(dst, []byte(c4d.EmitC4D(c4d.FromModel(m))), 0o600),
+		"write converted twin")
+}
+
+// composedPipeline runs the load-bearing stage order (include.Resolve ->
+// template.Expand -> peer.Resolve) and returns the expanded model, ready
+// for comparison.
+func composedPipeline(t *testing.T, path string) *parser.Model {
+	t.Helper()
+
+	m, err := parser.ParseFile(path)
+	require.NoError(t, err, "parse graph entry")
+
+	dir := filepath.Dir(path)
+
+	m, err = include.Resolve(m, dir, path)
+	require.NoError(t, err, "include.Resolve")
+
+	m, err = template.Expand(m)
+	require.NoError(t, err, "template.Expand")
+
+	require.NoError(t, peer.Resolve(m), "peer.Resolve")
+
+	return m
+}
+
+// composedPipelineC4D is composedPipeline's C4D-entry twin (extension
+// dispatch through include.Resolve, D-26).
+func composedPipelineC4D(t *testing.T, path string) *parser.Model {
+	t.Helper()
+
+	m, err := c4d.ParseFile(path)
+	require.NoError(t, err, "parse .c4d graph entry")
+
+	dir := filepath.Dir(path)
+
+	m, err = include.Resolve(m, dir, path)
+	require.NoError(t, err, "include.Resolve")
+
+	m, err = template.Expand(m)
+	require.NoError(t, err, "template.Expand")
+
+	require.NoError(t, peer.Resolve(m), "peer.Resolve")
+
+	return m
+}
+
+// TestComposedGraphRoundTrip converts the 09-composed include graph (entry
+// + 3 includes) file-by-file to .c4d twins with include paths rewritten to
+// the twin extension (the in-test graph conversion mirroring what
+// convert --follow-includes will do; D-26), then proves the converted
+// graph expands and validates to the SAME model as the original.
+func TestComposedGraphRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	srcRoot := filepath.Join(repoRoot(), "skill", "examples", "09-composed")
+	dstRoot := t.TempDir()
+
+	// The graph: entry plus its transitive includes (templates.toml,
+	// domains/auth.toml). single-file-equivalent.toml is documentation, not
+	// part of the graph.
+	for _, rel := range []string{"entry.toml", "templates.toml", filepath.Join("domains", "auth.toml")} {
+		convertGraphFileToC4D(t, srcRoot, rel, dstRoot)
+	}
+
+	original := composedPipeline(t, filepath.Join(srcRoot, "entry.toml"))
+	require.Empty(t, validator.Validate(original), "original graph validates")
+
+	converted := composedPipelineC4D(t, filepath.Join(dstRoot, "entry.c4d"))
+	require.Empty(t, validator.Validate(converted), "converted graph validates (D-26)")
+
+	require.Equal(t, canonicalModel(original), canonicalModel(converted),
+		"converted include graph expands to the same model (D-22/D-26)")
+}
+
+// renderEquivalenceFixtures is the pinned render set (DI-1): the four
+// classic corpus fixtures plus the six testdata/c4d edge cases.
+var renderEquivalenceFixtures = []string{
+	"testdata/valid.toml",
+	"testdata/nested.toml",
+	"testdata/links.toml",
+	"testdata/template_basic.toml",
+	filepath.Join(c4dFixtureDir, "external-types.toml"),
+	filepath.Join(c4dFixtureDir, "linkfrom.toml"),
+	filepath.Join(c4dFixtureDir, "multiline-strings.toml"),
+	filepath.Join(c4dFixtureDir, "rank-equal.toml"),
+	filepath.Join(c4dFixtureDir, "template-nested-use.toml"),
+	filepath.Join(c4dFixtureDir, "unicode-strings.toml"),
+}
+
+// expandedPathsOf replicates cmd/c4drill's collectExpandedPaths: C1 plus
+// every unit with subunits, recursively.
+func expandedPathsOf(m *parser.Model) []string {
+	paths := []string{""}
+	walkFixtureUnits(m, func(path string, u *model.Unit) {
+		if len(u.Subunits) > 0 {
+			paths = append(paths, path)
+		}
+	})
+
+	return paths
+}
+
+// renderAllViewsDOT renders every auto-detected view of m to DOT through
+// the real pipeline composition (views -> graph -> render, format=dot) and
+// returns the per-view canonicalDOT forms joined in view order — DI-1.
+func renderAllViewsDOT(t *testing.T, m *parser.Model) string {
+	t.Helper()
+
+	render.LabelRatio = 1.6 // the CLI default; both sides render under it
+
+	parts := make([]string, 0, 4)
+
+	for _, path := range expandedPathsOf(m) {
+		var v *view.View
+
+		switch {
+		case path == "":
+			v = view.GenerateC1View(m)
+		case !strings.Contains(path, "."):
+			v = view.GenerateC2View(m, path)
+		default:
+			v = view.GenerateC3View(m, path)
+		}
+
+		require.NotNil(t, v, "view for %q", path)
+
+		g := graph.BuildGraphWithPath(v, path, "parity", "dot")
+		require.NotNil(t, g, "graph for %q", path)
+
+		data, err := render.Render(g, "dot")
+		require.NoError(t, err, "render view %q", path)
+
+		parts = append(parts, canonical.Canonical(t, string(data)))
+	}
+
+	return strings.Join(parts, "\x00view\x00")
+}
+
+// pipelineForRender runs expand + peer.Resolve (validation is NOT required:
+// the classic fixtures include by-design orphan units like testdata/valid's
+// unlinked pair, which the render path itself does not depend on).
+func pipelineForRender(t *testing.T, m *parser.Model) *parser.Model {
+	t.Helper()
+
+	m, err := template.Expand(m)
+	require.NoError(t, err, "expand for render")
+
+	require.NoError(t, peer.Resolve(m), "peer.Resolve for render")
+
+	return m
+}
+
+// TestRenderEquivalence proves Model-level equivalence end to end (DI-1):
+// for the pinned set, the .toml Model and the round-tripped .c4d Model
+// render to canonically-equal DOT through the real view/graph/render
+// composition.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestRenderEquivalence(t *testing.T) {
+	for _, rel := range renderEquivalenceFixtures {
+		path := filepath.Join(repoRoot(), rel)
+
+		data, err := os.ReadFile(path)
+		require.NoError(t, err, "read render fixture %s", rel)
+
+		t.Run(rel, func(t *testing.T) {
+			m1, err := parser.Parse(data)
+			require.NoError(t, err, "fixture parses")
+
+			m2, err := c4d.Parse([]byte(c4d.EmitC4D(c4d.FromModel(m1))))
+			require.NoError(t, err, "round-tripped .c4d parses")
+
+			dotTOML := renderAllViewsDOT(t, pipelineForRender(t, m1))
+			dotC4D := renderAllViewsDOT(t, pipelineForRender(t, m2))
+
+			require.Equal(t, dotTOML, dotC4D,
+				"canonicalDOT equality of .toml and round-tripped .c4d renders (DI-1)")
+		})
+	}
 }
