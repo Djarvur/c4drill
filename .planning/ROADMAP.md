@@ -68,7 +68,7 @@ Full details: [milestones/v1.11-ROADMAP.md](milestones/v1.11-ROADMAP.md)
 **Goal:** Deliver the C4D format — a `.c4d` brace-block D2-inspired DSL with full TOML feature parity — parseable directly to `*parser.Model` and renderable through the unchanged pipeline, with bidirectional canonical-equivalent converters (`convert to-toml`/`to-c4d`), a gofmt-style comment-preserving formatter (`fmt`) for both formats, nested use (`[[unit.use]]` in TOML, `use` in blocks in C4D) and recursive template-instantiating-template expansion, plus full README/skill/example documentation.
 **Requirements**: D-01..D-35 (35-CONTEXT.md decisions — REQUIREMENTS.md archived with v1.11)
 **Depends on:** Phase 34
-**Plans:** 2/9 plans executed
+**Plans:** 3/9 plans executed
 Plans:
 **Wave 1**
 
@@ -77,7 +77,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 35-03-PLAN.md — Composition grammar: template/use/include + list forms + reserved keywords
+- [x] 35-03-PLAN.md — Composition grammar: template/use/include + list forms + reserved keywords
 
 **Wave 3** *(blocked on Wave 2 completion)*
 

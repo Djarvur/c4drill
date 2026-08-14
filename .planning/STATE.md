@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Label Formatting Fixes
 status: executing
-last_updated: "2026-08-14T16:14:30.329Z"
+last_updated: "2026-08-14T16:42:49.478Z"
 last_activity: 2026-08-14
 progress:
   total_phases: 1
@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-08-10)
 ## Current Position
 
 Phase: 35 (add-a-simple-dsl-alternative-to-the-toml-diagram-definition) — EXECUTING
-Plan: 3 of 9
-**Progress:** [██░░░░░░░░] 22% (2/9 phase-35 plans; milestone-scoped auto-progress still counts the archived v1.11 phase)
+Plan: 4 of 9
+**Progress:** [██████████] 100%
 Status: Ready to execute
 Last activity: 2026-08-14
 
@@ -45,6 +45,7 @@ Last activity: 2026-08-14
 | Phase 34 P02 | 20 | 3 tasks | 3 files |
 | Phase 35 P01 | 42min | 3 tasks | 11 files |
 | Phase 35 P02 | 21min | 2 tasks | 4 files |
+| Phase 35 P03 | 24min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -82,8 +83,8 @@ Both captured todos (`.planning/todos/pending/2026-08-10-wrap-edge-labels-like-u
 
 ## Session Continuity
 
-Last session: 2026-08-14T16:13:55.207Z
-Stopped at: Completed 35-02-PLAN.md (nested use + template-body use); next 35-03
+Last session: 2026-08-14T16:42:49.456Z
+Stopped at: Completed 35-03-PLAN.md (composition grammar + reserved words); next 35-04
 Resume file: None
 
 ## Decisions
@@ -95,6 +96,9 @@ Resume file: None
 - [Phase 35]: [35-02] Nested-use explicit parent keys are site-relative; template-body-use parents are clone-root-relative in Expand (basePath joinPath) — produced units never escape the enclosing clone
 - [Phase 35]: [35-02] claimSubtree claims every produced subtree path (closes pre-existing TMPL-07 silent-overwrite gap); cycle detection + maxTemplateDepth=100 mirror the include pattern
 - [Phase 35]: [35-02] Template-declared types stay fixed at parse time — nested template authors write final level-specific types (containerBox/containerDb), pinned by the validating HS-1 test
+- [Phase ?]: [35-03] C4D use args use ONE ordered []Arg{Name, Value} representation (named keys, positional empty Name); positional values containing ':' must be quoted — the named form wins
+- [Phase ?]: [35-03] D-19 errors fire from pigeon grammar ACTIONS, not a post-parse walk: action errors record with position but do not fail the match, riding errList through wrapPigeonError; ReservedUnitId's brace lookahead is the false-positive guard (Risk 2)
+- [Phase ?]: [35-03] ReservedKeyword single-sourced in grammar/reserved.go (19 words: 14 isBuiltinField + 5 statement keywords); reserved.go lives in package grammar — peg actions compile there (import-cycle forced, 35-01 layout)
 
 ## Operator Next Steps
 
