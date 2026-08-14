@@ -3,7 +3,10 @@ package c4d_test
 import (
 	"testing"
 
+	"github.com/Djarvur/c4drill/internal/c4d"
 	"github.com/Djarvur/c4drill/internal/c4d/ast"
+	"github.com/Djarvur/c4drill/internal/c4d/grammar"
+	"github.com/Djarvur/c4drill/internal/parser"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -167,4 +170,108 @@ func TestParseTemplateBodyFullGrammar(t *testing.T) {
 	assert.Equal(t, "cache", body.Subunits[0].ID, "Subunits[0].ID")
 	require.Len(t, body.Subunits[1].Subunits, 1, "nested subunit inside template body")
 	assert.Equal(t, "web", body.Subunits[1].Subunits[0].ID, "Subunits[1].Subunits[0].ID")
+}
+
+// reservedKeywords pins the D-19 closed set: the internal/parser
+// isBuiltinField strings plus the statement keywords (19 total).
+var reservedKeywords = []string{
+	// isBuiltinField (internal/parser/parser.go)
+	"type", "name", "description", "technology",
+	"reference",
+	"color", "style", "border", "edges",
+	"width", "height", "expanded",
+	"link", "linkFrom",
+	"use",
+	// statement keywords
+	"include", "template", "properties", "once",
+}
+
+func TestParseReservedUnitIdError(t *testing.T) {
+	t.Parallel()
+
+	_, err := c4d.Parse([]byte("description: system { }\n"))
+	require.Error(t, err, "reserved word as unit id must be a hard parse error (D-19)")
+
+	var perr *parser.ParseError
+	require.ErrorAs(t, err, &perr, "error must decode to *parser.ParseError")
+	assert.Greater(t, perr.Line, 0, "ParseError.Line must carry the DSL-native line")
+	assert.Contains(t, err.Error(), `(did you mean`, "message must carry a Levenshtein suggestion")
+	assert.Contains(t, err.Error(), `"description"`, "message must name the offending token")
+}
+
+func TestParseReservedKeywordsTable(t *testing.T) {
+	t.Parallel()
+
+	// Risk-2 disambiguation pin: EVERY reserved keyword used as a unit id
+	// errors — in both the id-led and id-only header forms.
+	for _, kw := range reservedKeywords {
+		t.Run(kw, func(t *testing.T) {
+			t.Parallel()
+
+			for _, src := range []string{
+				kw + ": system { }\n",
+				kw + " { }\n", // properties { } alone is a valid empty block
+			} {
+				if src == "properties { }\n" {
+					continue
+				}
+
+				_, err := c4d.Parse([]byte(src))
+				require.Error(t, err, "reserved keyword %q as unit id in %q", kw, src)
+
+				var perr *parser.ParseError
+				require.ErrorAs(t, err, &perr, "error for %q", src)
+				assert.Greater(t, perr.Line, 0, "ParseError.Line for %q", src)
+			}
+		})
+	}
+}
+
+func TestParseReservedKeywordsList(t *testing.T) {
+	t.Parallel()
+
+	assert.Len(t, grammar.ReservedKeywords(), 19, "19 reserved words: 14 builtin fields + 5 statement keywords")
+	assert.ElementsMatch(t, reservedKeywords, grammar.ReservedKeywords(), "grammar.ReservedKeywords must match the pinned set")
+}
+
+func TestParseNearMissUnitIdLegal(t *testing.T) {
+	t.Parallel()
+
+	// Only EXACT collisions error — a near-miss id is a legal unit id.
+	unit := firstUnit(t, "descripton: system { }\n")
+	assert.Equal(t, "descripton", unit.ID, "near-miss id must parse")
+}
+
+func TestParseUnknownFieldKeyError(t *testing.T) {
+	t.Parallel()
+
+	t.Run("unknown key in unit body", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := c4d.Parse([]byte("api: system {\n\tunknown: x\n}\n"))
+		require.Error(t, err, "field key outside the known set must error")
+		assert.Contains(t, err.Error(), "unknown field key", "message must name the offending key")
+
+		var perr *parser.ParseError
+		require.ErrorAs(t, err, &perr)
+		assert.Greater(t, perr.Line, 0, "ParseError.Line")
+	})
+
+	t.Run("near-miss key gets suggestion", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := c4d.Parse([]byte("api: system {\n\tdescriptio: x\n}\n"))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `(did you mean "description"?)`, "candidates = reserved set + field keywords")
+	})
+}
+
+func TestParseReservedLedFieldStatementsStillParse(t *testing.T) {
+	t.Parallel()
+
+	// Risk-2 pin the other way: a field whose value merely STARTS with a
+	// type keyword stays a FieldStmt — only unit-shaped collisions error.
+	unit := firstUnit(t, "api: system {\n\tdescription: system handles auth\n\ttechnology: Go\n}\n")
+	assert.Equal(t, "system handles auth", fieldByKey(t, unit, "description").Value.Str, "description field")
+	assert.Equal(t, "Go", fieldByKey(t, unit, "technology").Value.Str, "technology field")
 }
