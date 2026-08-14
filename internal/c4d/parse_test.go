@@ -392,7 +392,7 @@ func TestParseErrorContract(t *testing.T) {
 	require.ErrorAs(t, err, &perr, "errors.As must decode *parser.ParseError")
 	assert.NotEmpty(t, perr.Message, "ParseError.Message")
 	assert.Equal(t, 1, perr.Line, "ParseError.Line")
-	assert.NotNil(t, perr.Cause, "ParseError.Cause (pigeon error)")
+	require.Error(t, perr.Cause, "ParseError.Cause (pigeon error)")
 	assert.Contains(t, perr.Cause.Error(), "no match found", "Cause is the pigeon error")
 
 	// Error() follows the parser.ParseError format priority (line >
@@ -424,7 +424,8 @@ func TestParseFileReadError(t *testing.T) {
 	assert.Contains(t, perr.Context, "missing.c4d", "ParseError.Context carries the file path")
 
 	// Unwrap reaches the underlying os error.
-	require.NotNil(t, perr.Cause, "ParseError.Cause")
+	require.Error(t, perr.Cause, "ParseError.Cause")
+
 	var pathErr *fs.PathError
 	assert.ErrorAs(t, perr.Cause, &pathErr, "Cause decodes to *fs.PathError")
 }
