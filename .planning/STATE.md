@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Label Formatting Fixes
-status: milestone_complete
-last_updated: 2026-08-10T13:48:01.467Z
+status: completed
+last_updated: "2026-08-14T14:02:33.503Z"
 last_activity: 2026-08-10
 progress:
   total_phases: 1
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 4
+  completed_plans: 4
   percent: 100
-stopped_at: Milestone complete (Phase 34 was final phase)
 ---
 
 # Project State
@@ -62,6 +61,10 @@ Both captured todos (`.planning/todos/pending/2026-08-10-wrap-edge-labels-like-u
 - **KNOWN LIMITATION (cosmetic, deferred):** boundary nodes in C3 clusters draw inside the cluster box (go-graphviz WASM cgraph `agsubnode` on edge creation reassigns root nodes to the cluster subgraph; compound=true doesn't help). Out of scope for v1.11.
 - **Docs-drift item (deferred, pre-existing):** README "Validation Rules" section (line 551) missing VAL-01 orphan rule; root `testdata/valid.toml`+`nested.toml` unused. Not a v1.11 regression.
 
+### Roadmap Evolution
+
+- Phase 35 added: Add a simple DSL alternative to the TOML diagram definition (likec4/d2-style, less verbose syntax) with converters to and from TOML
+
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
@@ -75,9 +78,9 @@ Both captured todos (`.planning/todos/pending/2026-08-10-wrap-edge-labels-like-u
 
 ## Session Continuity
 
-Last session: 2026-08-10T13:05:06.965Z
-Stopped at: Phase 34 context gathered
-Resume file: .planning/phases/34-label-formatting-fixes-0-1-plans/34-CONTEXT.md
+Last session: 2026-08-14T14:02:33.469Z
+Stopped at: Phase 35 context gathered
+Resume file: .planning/phases/35-add-a-simple-dsl-alternative-to-the-toml-diagram-definition-/35-CONTEXT.md
 
 ## Decisions
 
