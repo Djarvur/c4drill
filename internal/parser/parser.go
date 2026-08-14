@@ -859,11 +859,11 @@ func parseUnitWithOrder(
 
 	// Apply default type if not specified
 	if unit.Type == "" {
-		unit.Type = defaultTypeForParent(parentType)
+		unit.Type = DefaultTypeForParent(parentType)
 	}
 
 	// Infer level-specific type for generic types (db, queue)
-	unit.Type = inferGenericType(unit.Type, parentType)
+	unit.Type = InferGenericType(unit.Type, parentType)
 
 	// v1.10 ERGO-03/05: derive the display name from the identifier segment
 	// when the author omits `name`. Explicit name = always wins (backward
@@ -924,14 +924,19 @@ func parseUnitWithOrder(
 	return &unit, nil
 }
 
-// defaultTypeForParent returns the default unit type based on parent type.
+// DefaultTypeForParent returns the default unit type based on parent type.
 // - No parent (C1 level): system
 // - Parent is system (C2 level): container
 // - Parent is box (C1 level): system (C1 same-level grouping)
 // - Parent is container (C3 level): component
 // - Parent is containerBox (C2 level): container (C2 same-level grouping)
-// - Parent is componentBox (C3 level): component (C3 same-level grouping).
-func defaultTypeForParent(parentType model.UnitType) model.UnitType {
+// - Parent is componentBox (C3 level): component (C3 same-level grouping)
+//
+// Exported for the C4D front-end (internal/c4d.ToModel, Plan 35-05): the DSL
+// applies the IDENTICAL omitted-type inference at the same hook point
+// parseUnitWithOrder does, so both front-ends produce equal *model.Unit
+// structs for equivalent documents (D-02).
+func DefaultTypeForParent(parentType model.UnitType) model.UnitType {
 	//nolint:exhaustive // Default case handles all remaining types
 	switch parentType {
 	case "": // No parent = C1 level (root)
@@ -952,7 +957,7 @@ func defaultTypeForParent(parentType model.UnitType) model.UnitType {
 	}
 }
 
-// inferGenericType transforms generic (level-agnostic) types to level-specific
+// InferGenericType transforms generic (level-agnostic) types to level-specific
 // types based on the nesting level determined by parent type.
 // Generic types are db, queue, and box; each resolves by parent:
 //   - C1 (no parent or inside C1 box): db -> db, queue -> queue, box -> box
@@ -964,7 +969,12 @@ func defaultTypeForParent(parentType model.UnitType) model.UnitType {
 // box is a universal grouping shorthand: writing type = "box" anywhere promotes
 // it to the level-appropriate variant. Explicit containerBox/componentBox pass
 // through unchanged (they are not TypeBox).
-func inferGenericType(unitType model.UnitType, parentType model.UnitType) model.UnitType {
+//
+// Exported for the C4D front-end (internal/c4d.ToModel, Plan 35-05): the DSL
+// applies the identical generic-type promotion at the same hook point
+// parseUnitWithOrder does (D-02 inference parity). genericDbTypes stays
+// unexported — only InferGenericType consults it.
+func InferGenericType(unitType model.UnitType, parentType model.UnitType) model.UnitType {
 	// Only db, queue, and box are generic (level-agnostic) types.
 	if !genericDbTypes[unitType] && unitType != model.TypeBox {
 		return unitType // Not a generic type, return as-is

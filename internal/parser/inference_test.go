@@ -73,13 +73,13 @@ func TestInferGenericType(t *testing.T) {
 		{name: "db in containerBox", unitType: model.TypeDb, parentType: model.TypeContainerBox, want: model.TypeContainerDb},
 		// C3 level (inside container or componentBox).
 		{name: "db in container", unitType: model.TypeDb, parentType: model.TypeContainer, want: model.TypeComponentDb},
-		{name: "queue in container", unitType: model.TypeQueue, parentType: model.TypeContainer, want: model.TypeComponentQueue},
+		{name: "queue in container", unitType: model.TypeQueue, parentType: model.TypeContainer, want: model.TypeComponentQueue}, //nolint:lll // table row
 		{name: "box in container", unitType: model.TypeBox, parentType: model.TypeContainer, want: model.TypeComponentBox},
 		{name: "db in componentBox", unitType: model.TypeDb, parentType: model.TypeComponentBox, want: model.TypeComponentDb},
 		// Explicit level-specific variants pass through (not generic types).
-		{name: "explicit containerDb", unitType: model.TypeContainerDb, parentType: model.TypeSystem, want: model.TypeContainerDb},
-		{name: "explicit componentQueue", unitType: model.TypeComponentQueue, parentType: model.TypeContainer, want: model.TypeComponentQueue},
-		{name: "explicit containerBox stays", unitType: model.TypeContainerBox, parentType: model.TypeSystem, want: model.TypeContainerBox},
+		{name: "explicit containerDb", unitType: model.TypeContainerDb, parentType: model.TypeSystem, want: model.TypeContainerDb}, //nolint:lll // table row
+		{name: "explicit componentQueue", unitType: model.TypeComponentQueue, parentType: model.TypeContainer, want: model.TypeComponentQueue}, //nolint:lll // table row
+		{name: "explicit containerBox stays", unitType: model.TypeContainerBox, parentType: model.TypeSystem, want: model.TypeContainerBox}, //nolint:lll // table row
 		// Non-generic types are returned as-is regardless of parent.
 		{name: "system unchanged", unitType: model.TypeSystem, parentType: model.TypeSystem, want: model.TypeSystem},
 		{name: "person unchanged", unitType: model.TypePerson, parentType: "", want: model.TypePerson},
