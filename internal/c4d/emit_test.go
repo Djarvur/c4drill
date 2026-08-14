@@ -6,8 +6,10 @@ import (
 	"testing"
 
 	"github.com/Djarvur/c4drill/internal/c4d"
+	"github.com/Djarvur/c4drill/internal/c4d/ast"
 	"github.com/Djarvur/c4drill/internal/model"
 	"github.com/Djarvur/c4drill/internal/parser"
+	"github.com/Djarvur/c4drill/internal/validator"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -142,15 +144,15 @@ func TestEmitTOMLLinkFieldOrderAndTables(t *testing.T) {
 				Type: model.TypeSystem,
 				Name: "API",
 				Links: []model.Link{{
-					Peer:           "db",
-					Arrow:          model.ArrowReverse,
-					Rank:           model.RankReverse,
-					Color:          "green",
-					Style:          "dashed",
-					Technology:     "SQL",
-					Description:    "Queries",
-					LabelPosition:  model.LabelHead,
-					Length:         2,
+					Peer:          "db",
+					Arrow:         model.ArrowReverse,
+					Rank:          model.RankReverse,
+					Color:         "green",
+					Style:         "dashed",
+					Technology:    "SQL",
+					Description:   "Queries",
+					LabelPosition: model.LabelHead,
+					Length:        2,
 				}},
 				LinksFrom: []model.Link{{
 					Peer:        "webapp",
@@ -428,4 +430,421 @@ func TestEmitTOMLNilModelError(t *testing.T) {
 
 	_, err := c4d.EmitTOML(nil)
 	require.Error(t, err, "EmitTOML(nil) must error")
+}
+
+// --- FromModel: Model -> AST (35-04 Task 2) ---
+
+func TestFromModelMapsDocument(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Demo"},
+		UnitOrder:  []string{"webapp", "user"},
+		Units: map[string]*model.Unit{
+			"webapp": {
+				Type:        model.TypeSystem,
+				Name:        "Web App",
+				Description: "Serves",
+				Links:       []model.Link{{Peer: "db", Technology: "SQL", Description: "Queries"}},
+			},
+			"user": {Type: model.TypePerson, Name: "User"},
+		},
+		Templates: map[string]*parser.TemplateDef{
+			"svc": {Params: []string{"name"}, Unit: &model.Unit{Type: model.TypeSystem, Name: "${name} Service"}},
+		},
+		Instantiations: []parser.Instantiation{
+			{Template: "svc", Params: map[string]string{"name": "auth"}},
+		},
+		Includes: []parser.IncludeDirective{{Path: "./shared.c4d", Once: true}},
+	}
+
+	doc := c4d.FromModel(m)
+
+	// Units in UnitOrder with id/type/name from the Model.
+	require.Len(t, doc.Units, 2, "doc.Units in UnitOrder")
+	assert.Equal(t, "webapp", doc.Units[0].ID, "Units[0].ID")
+	assert.Equal(t, "system", doc.Units[0].Type, "Units[0].Type")
+	assert.Equal(t, "Web App", doc.Units[0].Name, "Units[0].Name (header slot)")
+	assert.Equal(t, "user", doc.Units[1].ID, "Units[1].ID")
+
+	// Links map to edge statements.
+	require.Len(t, doc.Units[0].Edges, 1, "Edges from Links")
+	assert.Equal(t, "db", doc.Units[0].Edges[0].Peer, "Edges[0].Peer")
+	assert.Equal(t, "SQL", doc.Units[0].Edges[0].Technology, "Edges[0].Technology")
+	assert.Equal(t, "Queries", doc.Units[0].Edges[0].Description, "Edges[0].Description")
+
+	// Templates, uses, includes map 1:1.
+	require.Len(t, doc.Templates, 1, "doc.Templates")
+	assert.Equal(t, "svc", doc.Templates[0].Name, "Templates[0].Name")
+	assert.Equal(t, []string{"name"}, doc.Templates[0].Params, "Templates[0].Params")
+	require.Len(t, doc.UseStmts, 1, "doc.UseStmts")
+	assert.Equal(t, "svc", doc.UseStmts[0].Template, "UseStmts[0].Template")
+	require.Len(t, doc.Includes, 1, "doc.Includes")
+	assert.Equal(t, "./shared.c4d", doc.Includes[0].Path, "Includes[0].Path")
+	assert.True(t, doc.Includes[0].Once, "Includes[0].Once")
+
+	// Properties map to the properties block.
+	require.NotNil(t, doc.Properties, "doc.Properties")
+	require.Len(t, doc.Properties.Fields, 1, "Properties.Fields")
+	assert.Equal(t, "name", doc.Properties.Fields[0].Key, "Properties.Fields[0].Key")
+	assert.Equal(t, "Demo", doc.Properties.Fields[0].Value.Str, "Properties.Fields[0].Value")
+}
+
+func TestFromModelArrowGlyphs(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		arrow model.ArrowDirection
+		glyph string
+	}{
+		{"forward", model.ArrowForward, "->"},
+		{"reverse renders via the linkFrom statement form", model.ArrowReverse, "<-"},
+		{"bidirectional", model.ArrowBidirectional, "<->"},
+		{"none", model.ArrowNone, "--"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			m := &parser.Model{
+				UnitOrder: []string{"api"},
+				Units: map[string]*model.Unit{
+					"api": {Type: model.TypeSystem, Name: "API", Links: []model.Link{{Peer: "db", Arrow: tc.arrow}}},
+				},
+			}
+
+			doc := c4d.FromModel(m)
+
+			require.Len(t, doc.Units[0].Edges, 1, "one edge per link")
+			assert.Equal(t, tc.glyph, doc.Units[0].Edges[0].ArrowGlyph, "arrow glyph inverse mapping")
+		})
+	}
+
+	t.Run("linksFrom emit as reverse statements", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			UnitOrder: []string{"db"},
+			Units: map[string]*model.Unit{
+				"db": {Type: model.TypeDb, Name: "DB", LinksFrom: []model.Link{{Peer: "api", Description: "Queries"}}},
+			},
+		}
+
+		doc := c4d.FromModel(m)
+
+		require.Len(t, doc.Units[0].Edges, 1, "one edge per linkFrom entry")
+		assert.Equal(t, "<-", doc.Units[0].Edges[0].ArrowGlyph, "LinksFrom statement form")
+		assert.Equal(t, "api", doc.Units[0].Edges[0].Peer, "LinksFrom peer")
+	})
+}
+
+func TestFromModelInstantiationPlacement(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		UnitOrder: []string{"platform"},
+		Units: map[string]*model.Unit{
+			"platform": {Type: model.TypeSystem, Name: "Platform"},
+		},
+		Instantiations: []parser.Instantiation{
+			{Template: "svc", Parent: "platform", Params: map[string]string{"name": "auth"}},
+			{Template: "svc", Params: map[string]string{"name": "edge"}},
+		},
+	}
+
+	doc := c4d.FromModel(m)
+
+	// D-16: a use with a Parent lands INSIDE that unit's block; a parentless
+	// use stays at top level.
+	require.Len(t, doc.Units, 1, "doc.Units")
+	require.Len(t, doc.Units[0].UseStmts, 1, "parented use attaches inside the unit block")
+	assert.Equal(t, "svc", doc.Units[0].UseStmts[0].Template, "nested use template")
+	require.Len(t, doc.UseStmts, 1, "parentless use stays top level")
+	assert.Equal(t, "svc", doc.UseStmts[0].Template, "top-level use template")
+
+	out := c4d.EmitC4D(doc)
+	assert.Contains(t, out, "platform: system \"Platform\" {\n  use svc(name: auth)\n}\n",
+		"nested use emits inside the block")
+	assert.Contains(t, out, "\nuse svc(name: edge)\n", "top-level use emits after the units")
+}
+
+func TestFromModelExternalType(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		UnitOrder: []string{"pay"},
+		Units: map[string]*model.Unit{
+			"pay": {Type: model.TypeSystemExternal, Name: "Pay"},
+		},
+	}
+
+	doc := c4d.FromModel(m)
+
+	require.Len(t, doc.Units, 1, "doc.Units")
+	assert.Equal(t, "system", doc.Units[0].Type, "external variants split to the base keyword")
+	assert.True(t, doc.Units[0].External, "External records the modifier (D-04)")
+
+	out := c4d.EmitC4D(doc)
+	assert.Equal(t, "pay: system external \"Pay\" { }\n", out, "external modifier in the header")
+}
+
+func TestFromModelNewlineValueTripleQuoted(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		UnitOrder: []string{"webapp"},
+		Units: map[string]*model.Unit{
+			"webapp": {Type: model.TypeSystem, Name: "W", Description: "line1\nline2"},
+		},
+	}
+
+	out := c4d.EmitC4D(c4d.FromModel(m))
+
+	// D-06 inverse: newline-containing values emit as a triple-quoted block.
+	assert.Contains(t, out, `"""`, "triple-quoted block")
+	assert.Contains(t, out, "line1\nline2", "raw newline inside the triple block")
+
+	// The single-line leaf rule requires single-line-able values — a unit
+	// carrying a triple value NEVER emits as a one-line leaf.
+	assert.Contains(t, out, "webapp: system \"W\" {\n", "multi-line header (not a one-line leaf)")
+}
+
+func TestFromModelValidFixtureToC4D(t *testing.T) {
+	t.Parallel()
+
+	data, err := os.ReadFile("../../testdata/valid.toml")
+	require.NoError(t, err, "failed to read test fixture")
+
+	m, err := parser.Parse(data)
+	require.NoError(t, err, "parser.Parse(fixture)")
+
+	out := c4d.EmitC4D(c4d.FromModel(m))
+
+	// Properties block first with the D-23 property field order.
+	assertOrdered(t, out, "properties {", "name: Test System", "description: A test architecture",
+		"color: transparent", "edges: straight", "lineLength: 40", "expanded: [webapp]")
+
+	// Units in UnitOrder.
+	assertOrdered(t, out, "properties {", "user: person", "webapp: system")
+
+	// Compact-leaf one-liners with the D-23 body field order (description
+	// before technology) and safe-value quoting ("Go, React" carries a comma).
+	assert.Contains(t, out, "user: person \"User\" { description: End user of the system }\n")
+	assert.Contains(t, out, "webapp: system \"Web Application\" { description: Main web application; technology: \"Go, React\" }\n")
+}
+
+func TestEmittersSkipMirrorLinks(t *testing.T) {
+	t.Parallel()
+
+	// The validator synthesizes mirror LinksFrom entries in place — the only
+	// way to observe Mirror outside package model. Emitters must skip them.
+	m := &parser.Model{
+		UnitOrder: []string{"user", "webapp"},
+		Units: map[string]*model.Unit{
+			"user":   {Type: model.TypePerson, Name: "User", Links: []model.Link{{Peer: "webapp", Description: "Uses"}}},
+			"webapp": {Type: model.TypeSystem, Name: "Web"},
+		},
+	}
+	require.Empty(t, validator.Validate(m).Errors, "fixture model must validate")
+	require.Len(t, m.Units["webapp"].LinksFrom, 1, "validator synthesized a LinksFrom entry")
+	require.True(t, m.Units["webapp"].LinksFrom[0].IsMirror(), "the synthesized entry is a mirror")
+
+	out, err := c4d.EmitTOML(m)
+	require.NoError(t, err, "EmitTOML() should not error")
+	assert.NotContains(t, out, "[[webapp.linkFrom]]", "mirror links never emit as TOML")
+
+	doc := c4d.FromModel(m)
+	for _, unit := range doc.Units {
+		assert.Empty(t, unit.Edges, "mirror links never map to C4D edges (%s)", unit.ID)
+	}
+}
+
+// --- EmitC4D: AST -> text, compact-leaf style (D-33) ---
+
+func TestEmitC4DCompactLeaf(t *testing.T) {
+	t.Parallel()
+
+	// A multi-line-authored leaf normalizes to the one-line form (D-33).
+	doc := parseDoc(t, "db: db {\n\tdescription: cache\n}\n")
+
+	out := c4d.EmitC4D(doc)
+
+	assert.Equal(t, "db: db { description: cache }\n", out, "one-line leaf block")
+
+	// No newline between the braces of a leaf.
+	line := strings.TrimSuffix(strings.Split(out, "\n")[0], "")
+	assert.Contains(t, line, "{ description: cache }", "leaf fields stay on the header line")
+}
+
+func TestEmitC4DNestedMultiLineIndent(t *testing.T) {
+	t.Parallel()
+
+	doc := parseDoc(t, `platform: system "Platform" {
+	description: hosts services
+	auth: container {
+		technology: Go
+	}
+}`+"\n")
+
+	out := c4d.EmitC4D(doc)
+
+	lines := strings.Split(strings.TrimSuffix(out, "\n"), "\n")
+	require.Len(t, lines, 5, "multi-line block shape:\n%s", out)
+	assert.Equal(t, `platform: system "Platform" {`, lines[0], "header at depth 0")
+	assert.Equal(t, "  description: hosts services", lines[1], "2 spaces per depth (D-33)")
+	assert.Equal(t, "  auth: container {", lines[2], "subunit header at depth 1")
+	assert.Equal(t, "    technology: Go", lines[3], "nested fields at depth 2")
+	assert.Equal(t, "}", lines[4], "closing brace at the header's depth")
+}
+
+func TestEmitC4DEdgeForms(t *testing.T) {
+	t.Parallel()
+
+	doc := parseDoc(t, `api: system {
+	-> db: "SQL | queries orders"
+	-> cache: "Redis |"
+	-> queue: publishes events
+	-> analytics: "HTTP POST | sends" { color: gray }
+}`+"\n")
+
+	out := c4d.EmitC4D(doc)
+
+	// Both parts, tech-only trailing pipe, desc-only without pipe, and the
+	// trailing option block (D-09 inverse).
+	assert.Contains(t, out, "\n  -> db: \"SQL | queries orders\"\n", "tech | desc")
+	assert.Contains(t, out, "\n  -> cache: \"Redis |\"\n", "tech-only trailing pipe")
+	assert.Contains(t, out, "\n  -> queue: publishes events\n", "description-only omits the pipe")
+	assert.Contains(t, out, "\n  -> analytics: \"HTTP POST | sends\" { color: gray }\n", "option block")
+}
+
+func TestEmitC4DTemplateUseInclude(t *testing.T) {
+	t.Parallel()
+
+	src := "template svc(name, tech) {\n\ttechnology: ${tech}\n}\nuse svc(name: auth, tech: Go)\ninclude ./shared.c4d once\n"
+
+	out := c4d.EmitC4D(parseDoc(t, src))
+
+	assert.Contains(t, out, "template svc(name, tech) {\n", "template declaration")
+	assert.Contains(t, out, "\n  technology: ${tech}\n", "${param} token rides verbatim")
+	assert.Contains(t, out, "\nuse svc(name: auth, tech: Go)\n", "use with named args")
+	assert.Contains(t, out, "\ninclude ./shared.c4d once\n", "include with once")
+}
+
+func TestEmitC4DBlankLines(t *testing.T) {
+	t.Parallel()
+
+	out := c4d.EmitC4D(parseDoc(t, "a: system { }\n\nb: system { }\n"))
+
+	assert.Equal(t, "a: system { }\n\nb: system { }\n", out, "one blank line between top-level units")
+}
+
+func TestEmitC4DComments(t *testing.T) {
+	t.Parallel()
+
+	src := "# lead comment\nwebapp: system {\n\t# field comment\n\tdescription: serves\n\t# orphan\n}\n"
+
+	out := c4d.EmitC4D(parseDoc(t, src))
+
+	assert.Equal(t,
+		"# lead comment\nwebapp: system {\n  # field comment\n  description: serves\n  # orphan\n}\n",
+		out, "comments emit on their own line immediately before their statement (D-32)")
+}
+
+func TestEmitC4DFixpointASTLevel(t *testing.T) {
+	t.Parallel()
+
+	src := `# Diagram header
+properties {
+	name: Demo
+	expanded: [webapp]
+}
+
+# Serves traffic
+webapp: system "Web App" {
+	description: serves traffic
+	-> db: "SQL | queries" { color: red }
+	db: db {
+		technology: PostgreSQL
+	}
+}
+
+pay: system external "Pay" { }
+
+template svc(name, tech) {
+	technology: ${tech}
+	-> bus: publishes ${name} events
+}
+
+use svc(name: auth, tech: Go)
+include ./shared.c4d once
+# tail comment
+`
+
+	// AST-level fixpoint (T-35-04-01): emit, re-parse through the AST entry,
+	// re-emit — byte-identical. Only *ast.Document is consumed (same-wave
+	// safe; never a Model-returning entry).
+	doc1 := parseDoc(t, src)
+	emit1 := c4d.EmitC4D(doc1)
+
+	doc2 := parseDoc(t, emit1)
+	emit2 := c4d.EmitC4D(doc2)
+
+	assert.Exactly(t, emit1, emit2, "emit(parse(emit(doc))) must equal emit(doc)")
+}
+
+func TestEmitC4DNilDocument(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, "", c4d.EmitC4D(nil), "nil document emits empty text")
+}
+
+// TestEmitC4DLeafFieldLimit pins the planner-pinned compact-leaf rule: at
+// most 3 fields stay on one line; a 4-field unit goes multi-line.
+func TestEmitC4DLeafFieldLimit(t *testing.T) {
+	t.Parallel()
+
+	three := c4d.EmitC4D(parseDoc(t, "db: db { description: a; color: red; style: solid }\n"))
+	assert.Contains(t, three, "db: db { description: a; color: red; style: solid }\n", "3 fields stay one-line")
+
+	four := c4d.EmitC4D(parseDoc(t, "db: db { description: a; color: red; style: solid; border: black }\n"))
+	assert.Contains(t, four, "db: db {\n", "4 fields force multi-line")
+	assert.Contains(t, four, "\n  border: black\n", "fields at depth 1")
+}
+
+// TestEmitC4DFieldsSortedCanonically pins D-23 at the AST level: fields emit
+// in the fixed canonical order regardless of source order.
+func TestEmitC4DFieldsSortedCanonically(t *testing.T) {
+	t.Parallel()
+
+	doc := parseDoc(t, "db: db { color: red; description: a; technology: sql }\n")
+
+	out := c4d.EmitC4D(doc)
+
+	assertOrdered(t, out, "description: a", "technology: sql", "color: red")
+}
+
+// TestEmitC4DQuotingNormalization pins the D-06 value-form rule: quoted
+// safe values stay quoted (Kind-preserving), unsafe barewords get quoted.
+func TestEmitC4DQuotingNormalization(t *testing.T) {
+	t.Parallel()
+
+	doc := &ast.Document{
+		Units: []*ast.UnitNode{{
+			ID:   "x",
+			Type: "system",
+			Fields: []*ast.FieldStmt{
+				{Key: "description", Value: ast.Literal{Kind: ast.KindQuoted, Str: "kept quoted"}},
+				{Key: "technology", Value: ast.Literal{Kind: ast.KindBareword, Str: "bare"}},
+				{Key: "color", Value: ast.Literal{Kind: ast.KindBareword, Str: "has, comma"}},
+			},
+		}},
+	}
+
+	out := c4d.EmitC4D(doc)
+
+	assert.Contains(t, out, `description: "kept quoted"`, "KindQuoted renders quoted")
+	assert.Contains(t, out, "technology: bare", "KindBareword renders verbatim")
+	assert.Contains(t, out, `color: "has, comma"`, "FromModel canonical rule quotes unsafe values")
 }
