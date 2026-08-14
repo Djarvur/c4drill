@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Label Formatting Fixes
 status: executing
-last_updated: "2026-08-14T14:59:44.190Z"
-last_activity: 2026-08-14 -- Phase 35 planning complete
+last_updated: "2026-08-14T15:47:32.299Z"
+last_activity: 2026-08-14
 progress:
   total_phases: 1
   completed_phases: 1
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-10)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** Milestone complete
+**Current focus:** Phase 35 — add-a-simple-dsl-alternative-to-the-toml-diagram-definition
 
 ## Current Position
 
-Phase: 34
-Plan: Not started
+Phase: 35 (add-a-simple-dsl-alternative-to-the-toml-diagram-definition) — EXECUTING
+Plan: 2 of 9
 Status: Ready to execute
-Last activity: 2026-08-14 -- Phase 35 planning complete
+Last activity: 2026-08-14
 
 ## Performance Metrics
 
@@ -42,6 +42,7 @@ Last activity: 2026-08-14 -- Phase 35 planning complete
 | Phase 32 | ~28 min | 2 plans | 5 tasks | 9 files (parser IncludeDirective + internal/include.Resolve + pipeline Stage 1a) |
 | Phase 34 P01 | 12 | 3 tasks | 2 files |
 | Phase 34 P02 | 20 | 3 tasks | 3 files |
+| Phase 35 P01 | 42min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -79,13 +80,15 @@ Both captured todos (`.planning/todos/pending/2026-08-10-wrap-edge-labels-like-u
 
 ## Session Continuity
 
-Last session: 2026-08-14T14:02:33.469Z
+Last session: 2026-08-14T15:47:11.958Z
 Stopped at: Phase 35 context gathered
-Resume file: .planning/phases/35-add-a-simple-dsl-alternative-to-the-toml-diagram-definition-/35-CONTEXT.md
+Resume file: None
 
 ## Decisions
 
 - [Phase 34]: v1.11 ships as a single phase — edge-label HTML-table formatting (LABEL-01) and word-boundary-only wrapping (LABEL-02) share the `internal/render` wrap machinery and must land coordinated; COMPAT-01 is enforced via the existing canonicalDOT goldens (DI-1), which the multilevel fixture satisfies (no edge labels, no over-budget words). Test re-assertions required: TestWrapText split cases + TestEdgeLabelGeneration newline assertion. See ROADMAP.md Phase 34 Notes.
+- [Phase ?]: 35-01: pigeon pinned at v1.3.0 (v1.0.0 lacks -nolint); generated parser in internal/c4d/grammar + AST in internal/c4d/ast — pigeon's emitted Parse/ParseFile collide with typed c4d.Parse signatures
+- [Phase ?]: 35-01: C4D trivia model for fmt — leading comments ride the following statement, same-line tails ride the preceding one, orphans ride the enclosing node
 
 ## Operator Next Steps
 
