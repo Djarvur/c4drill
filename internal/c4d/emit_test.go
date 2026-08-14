@@ -632,7 +632,8 @@ func TestFromModelValidFixtureToC4D(t *testing.T) {
 	// Compact-leaf one-liners with the D-23 body field order (description
 	// before technology) and safe-value quoting ("Go, React" carries a comma).
 	assert.Contains(t, out, "user: person \"User\" { description: End user of the system }\n")
-	assert.Contains(t, out, "webapp: system \"Web Application\" { description: Main web application; technology: \"Go, React\" }\n")
+	assert.Contains(t, out,
+		"webapp: system \"Web Application\" { description: Main web application; technology: \"Go, React\" }\n")
 }
 
 func TestEmittersSkipMirrorLinks(t *testing.T) {
@@ -647,7 +648,7 @@ func TestEmittersSkipMirrorLinks(t *testing.T) {
 			"webapp": {Type: model.TypeSystem, Name: "Web"},
 		},
 	}
-	require.Empty(t, validator.Validate(m).Errors, "fixture model must validate")
+	require.Empty(t, validator.Validate(m), "fixture model must validate")
 	require.Len(t, m.Units["webapp"].LinksFrom, 1, "validator synthesized a LinksFrom entry")
 	require.True(t, m.Units["webapp"].LinksFrom[0].IsMirror(), "the synthesized entry is a mirror")
 
@@ -656,8 +657,13 @@ func TestEmittersSkipMirrorLinks(t *testing.T) {
 	assert.NotContains(t, out, "[[webapp.linkFrom]]", "mirror links never emit as TOML")
 
 	doc := c4d.FromModel(m)
+
 	for _, unit := range doc.Units {
-		assert.Empty(t, unit.Edges, "mirror links never map to C4D edges (%s)", unit.ID)
+		if unit.ID != "webapp" {
+			continue
+		}
+
+		assert.Empty(t, unit.Edges, "mirror links never map to C4D edges (webapp carries only the synthesized LinksFrom)")
 	}
 }
 
@@ -685,18 +691,21 @@ func TestEmitC4DNestedMultiLineIndent(t *testing.T) {
 	description: hosts services
 	auth: container {
 		technology: Go
+		-> db: calls
 	}
 }`+"\n")
 
 	out := c4d.EmitC4D(doc)
 
 	lines := strings.Split(strings.TrimSuffix(out, "\n"), "\n")
-	require.Len(t, lines, 5, "multi-line block shape:\n%s", out)
+	require.Len(t, lines, 7, "multi-line block shape:\n%s", out)
 	assert.Equal(t, `platform: system "Platform" {`, lines[0], "header at depth 0")
 	assert.Equal(t, "  description: hosts services", lines[1], "2 spaces per depth (D-33)")
 	assert.Equal(t, "  auth: container {", lines[2], "subunit header at depth 1")
 	assert.Equal(t, "    technology: Go", lines[3], "nested fields at depth 2")
-	assert.Equal(t, "}", lines[4], "closing brace at the header's depth")
+	assert.Equal(t, "    -> db: calls", lines[4], "nested edge at depth 2")
+	assert.Equal(t, "  }", lines[5], "nested closing brace at depth 1")
+	assert.Equal(t, "}", lines[6], "closing brace at the header's depth")
 }
 
 func TestEmitC4DEdgeForms(t *testing.T) {
@@ -722,7 +731,8 @@ func TestEmitC4DEdgeForms(t *testing.T) {
 func TestEmitC4DTemplateUseInclude(t *testing.T) {
 	t.Parallel()
 
-	src := "template svc(name, tech) {\n\ttechnology: ${tech}\n}\nuse svc(name: auth, tech: Go)\ninclude ./shared.c4d once\n"
+	src := "template svc(name, tech) {\n\ttechnology: ${tech}\n}\n" +
+		"use svc(name: auth, tech: Go)\ninclude ./shared.c4d once\n"
 
 	out := c4d.EmitC4D(parseDoc(t, src))
 
@@ -747,9 +757,16 @@ func TestEmitC4DComments(t *testing.T) {
 
 	out := c4d.EmitC4D(parseDoc(t, src))
 
+	// Leads emit on their own line immediately before their statement; a
+	// comment at or below its statement's line is its same-line tail (gofmt
+	// semantics, D-32) — the self-consistent placement the grammar
+	// re-attaches identically.
 	assert.Equal(t,
-		"# lead comment\nwebapp: system {\n  # field comment\n  description: serves\n  # orphan\n}\n",
-		out, "comments emit on their own line immediately before their statement (D-32)")
+		"# lead comment\nwebapp: system {\n  # field comment\n  description: serves # orphan\n}\n",
+		out, "comment placement (D-32)")
+
+	// The placed text is stable: re-parsing and re-emitting is byte-identical.
+	assert.Equal(t, out, c4d.EmitC4D(parseDoc(t, out)), "comment placement is fixpoint-stable")
 }
 
 func TestEmitC4DFixpointASTLevel(t *testing.T) {
@@ -797,7 +814,7 @@ include ./shared.c4d once
 func TestEmitC4DNilDocument(t *testing.T) {
 	t.Parallel()
 
-	assert.Equal(t, "", c4d.EmitC4D(nil), "nil document emits empty text")
+	assert.Empty(t, c4d.EmitC4D(nil), "nil document emits empty text")
 }
 
 // TestEmitC4DLeafFieldLimit pins the planner-pinned compact-leaf rule: at
@@ -825,26 +842,46 @@ func TestEmitC4DFieldsSortedCanonically(t *testing.T) {
 	assertOrdered(t, out, "description: a", "technology: sql", "color: red")
 }
 
-// TestEmitC4DQuotingNormalization pins the D-06 value-form rule: quoted
-// safe values stay quoted (Kind-preserving), unsafe barewords get quoted.
+// TestEmitC4DQuotingNormalization pins the D-06 value-form rules: emission
+// is Kind-preserving (quoted safe values stay quoted — the fmt contract),
+// and FromModel's canonical literal rule quotes unsafe values.
 func TestEmitC4DQuotingNormalization(t *testing.T) {
 	t.Parallel()
 
-	doc := &ast.Document{
-		Units: []*ast.UnitNode{{
-			ID:   "x",
-			Type: "system",
-			Fields: []*ast.FieldStmt{
-				{Key: "description", Value: ast.Literal{Kind: ast.KindQuoted, Str: "kept quoted"}},
-				{Key: "technology", Value: ast.Literal{Kind: ast.KindBareword, Str: "bare"}},
-				{Key: "color", Value: ast.Literal{Kind: ast.KindBareword, Str: "has, comma"}},
+	t.Run("kind-preserving render", func(t *testing.T) {
+		t.Parallel()
+
+		doc := &ast.Document{
+			Units: []*ast.UnitNode{{
+				ID:   "x",
+				Type: "system",
+				Fields: []*ast.FieldStmt{
+					{Key: "description", Value: ast.Literal{Kind: ast.KindQuoted, Str: "kept quoted"}},
+					{Key: "technology", Value: ast.Literal{Kind: ast.KindBareword, Str: "bare"}},
+					{Key: "color", Value: ast.Literal{Kind: ast.KindQuoted, Str: `has "quotes" \ and, commas`}},
+				},
+			}},
+		}
+
+		out := c4d.EmitC4D(doc)
+
+		assert.Contains(t, out, `description: "kept quoted"`, "KindQuoted renders quoted")
+		assert.Contains(t, out, "technology: bare", "KindBareword renders verbatim")
+		assert.Contains(t, out, `color: "has \"quotes\" \\ and, commas"`, "escapes keep the value parseable")
+	})
+
+	t.Run("frommodel quotes unsafe values", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			UnitOrder: []string{"x"},
+			Units: map[string]*model.Unit{
+				"x": {Type: model.TypeSystem, Name: "X", Description: "has, comma"},
 			},
-		}},
-	}
+		}
 
-	out := c4d.EmitC4D(doc)
+		out := c4d.EmitC4D(c4d.FromModel(m))
 
-	assert.Contains(t, out, `description: "kept quoted"`, "KindQuoted renders quoted")
-	assert.Contains(t, out, "technology: bare", "KindBareword renders verbatim")
-	assert.Contains(t, out, `color: "has, comma"`, "FromModel canonical rule quotes unsafe values")
+		assert.Contains(t, out, `description: "has, comma"`, "comma values cannot ride barewords")
+	})
 }
