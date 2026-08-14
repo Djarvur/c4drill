@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Djarvur/c4drill/internal/c4d"
 	"github.com/Djarvur/c4drill/internal/graph"
 	"github.com/Djarvur/c4drill/internal/include"
 	"github.com/Djarvur/c4drill/internal/model"
@@ -28,12 +29,21 @@ var (
 	errValidationFailed = errors.New("validation failed")
 	errGenerateView     = errors.New("failed to generate view")
 	errBuildGraph       = errors.New("failed to build graph")
+	errUnsupportedExt   = errors.New("unsupported input extension")
 )
 
 const (
 	formatDot  = "dot"
 	formatSVG  = "svg"
 	formatHTML = "html"
+)
+
+// Accepted input extensions (D-27): dispatch is extension-based and fails
+// closed — .toml -> TOML front-end, .c4d -> C4D front-end, anything else is a
+// hard parse error naming the accepted extensions (no content sniffing).
+const (
+	extToml = ".toml"
+	extC4d  = ".c4d"
 )
 
 //nolint:gochecknoglobals // Cobra flags require package-level variables for PersistentFlags registration
@@ -49,15 +59,21 @@ var (
 // It configures flags, validation, and the main execution function.
 func NewRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "c4drill <input.toml>",
-		Short: "Generate C4 architecture diagrams from TOML",
-		Long: `Generate C4 architecture diagrams from TOML definitions.
+		Use:   "c4drill <input.toml|input.c4d>",
+		Short: "Generate C4 architecture diagrams from TOML and C4D",
+		Long: `Generate C4 architecture diagrams from TOML or C4D definitions.
+
+Input dispatch is by extension (D-27): .toml files parse through the TOML
+front-end, .c4d files through the C4D DSL front-end — both render directly
+through the full pipeline (C4D is a first-class authoring format, D-29).
+Any other extension is a hard error.
 
 Supports C1 (Context), C2 (Container), and C3 (Component) level diagrams
 with drill-down navigation between levels.
 
 Examples:
   c4drill architecture.toml
+  c4drill architecture.c4d
   c4drill architecture.toml -o ./docs/diagrams
   c4drill architecture.toml -f dot -o ./output
 
@@ -108,8 +124,11 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	// Default output directory to input file's directory
 	outDir := resolveOutDir(inputPath)
 
-	// Stage 1: Parse
-	m, err := parser.ParseFile(inputPath)
+	// Stage 1: Parse — extension dispatch (D-27): .toml -> TOML front-end,
+	// .c4d -> C4D front-end so a .c4d document renders directly through the
+	// rest of the pipeline unchanged (D-29). Unknown extensions fail closed
+	// with a hard error naming the accepted ones — no fallback parsing.
+	m, err := parseInput(inputPath)
 	if err != nil {
 		return fmt.Errorf("parse: %w", err)
 	}
@@ -176,6 +195,24 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil // Success - silent per spec
+}
+
+// parseInput parses the input file through the front-end its extension
+// selects (D-27): .toml -> TOML front-end, .c4d -> C4D front-end (D-29 — a
+// .c4d document parses straight into the Model hub the pipeline consumes).
+// Any other extension is a hard error naming the accepted ones; the caller
+// prefixes all failures with the parse stage name.
+//
+//nolint:wrapcheck // runRoot wraps the returned error with the parse: stage prefix
+func parseInput(inputPath string) (*parser.Model, error) {
+	switch ext := filepath.Ext(inputPath); ext {
+	case extToml:
+		return parser.ParseFile(inputPath)
+	case extC4d:
+		return c4d.ParseFile(inputPath)
+	default:
+		return nil, fmt.Errorf("%w %q (accepted: %s, %s)", errUnsupportedExt, ext, extToml, extC4d)
+	}
 }
 
 // resolveOutDir defaults the output directory to the input file's directory.

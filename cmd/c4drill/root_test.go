@@ -1401,8 +1401,6 @@ webapp: system "Web Application" {
 // runRenderDot renders inputPath through the real cobra root command into a
 // fresh temp output dir in DOT format and returns the C1 {basename}.dot
 // content. Asserts the output file was created inside the temp dir (D-29).
-//
-//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func runRenderDot(t *testing.T, inputPath string) string {
 	t.Helper()
 
@@ -1436,6 +1434,7 @@ func TestC4DRenderDirect(t *testing.T) {
 	require.NoError(t, err, "read 01-minimal.toml fixture")
 
 	tomlPath := filepath.Join(tmpDir, "minimal.toml")
+	//nolint:gosec // G703: src is a committed corpus fixture, written into t.TempDir()
 	require.NoError(t, os.WriteFile(tomlPath, src, 0o600), "write .toml original")
 
 	// The hand-written .c4d twin.
