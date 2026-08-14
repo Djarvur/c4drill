@@ -1,6 +1,7 @@
 package c4d_test
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -807,6 +808,206 @@ func pipelineForRender(t *testing.T, m *parser.Model) *parser.Model {
 	require.NoError(t, peer.Resolve(m), "peer.Resolve for render")
 
 	return m
+}
+
+// expectedExampleTwins is the pinned manifest of the skill/examples .c4d
+// twins (D-35): every listed .toml must have a fmt-clean .c4d twin on disk
+// that renders identically to its source. Paths are relative to
+// skill/examples/ with slash separators (OS-normalized at compare time).
+//
+//nolint:gochecknoglobals // immutable twin manifest, the examples contract
+var expectedExampleTwins = []string{
+	"02-nested.toml",
+	"03-links.toml",
+	"04-styling.toml",
+	"06-templates.toml",
+	"07-relative-peer.toml",
+	"08-include/auth.toml",
+	"08-include/billing.toml",
+	"08-include/entry.toml",
+	"09-composed/domains/auth.toml",
+	"09-composed/entry.toml",
+	"09-composed/single-file-equivalent.toml",
+	"09-composed/templates.toml",
+}
+
+// exampleTwin is one .toml/.c4d pair found under skill/examples/.
+type exampleTwin struct {
+	tomlPath string // absolute .toml source
+	c4dPath  string // absolute .c4d twin (same path, extension swapped)
+	rel      string // slash-separated path relative to skill/examples/
+}
+
+// walkExampleTwins collects every .toml under skill/examples/ whose .c4d
+// twin exists on disk, pinned against expectedExampleTwins (anti-shrinkage:
+// dropping a twin fails by name).
+func walkExampleTwins(t *testing.T) []exampleTwin {
+	t.Helper()
+
+	root := filepath.Join(repoRoot(), "skill", "examples")
+
+	var rels []string
+
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if d.IsDir() || !strings.HasSuffix(d.Name(), ".toml") {
+			return nil
+		}
+
+		twin := strings.TrimSuffix(path, ".toml") + ".c4d"
+		if _, statErr := os.Stat(twin); statErr == nil {
+			rel, relErr := filepath.Rel(root, path)
+			if relErr != nil {
+				return fmt.Errorf("example twin rel: %w", relErr)
+			}
+
+			rels = append(rels, filepath.ToSlash(rel))
+		}
+
+		// A .toml without a twin on disk (01-minimal, 05-ecommerce) is not a
+		// pair — skip it.
+		return nil
+	})
+	require.NoError(t, err, "walk skill/examples for twin pairs")
+
+	slices.Sort(rels)
+	require.Equal(t, expectedExampleTwins, rels,
+		"the shipped .c4d twin set must match the pinned manifest exactly")
+
+	twins := make([]exampleTwin, 0, len(rels))
+	for _, rel := range rels {
+		tomlPath := filepath.Join(root, filepath.FromSlash(rel))
+		twins = append(twins, exampleTwin{
+			tomlPath: tomlPath,
+			c4dPath:  strings.TrimSuffix(tomlPath, ".toml") + ".c4d",
+			rel:      rel,
+		})
+	}
+
+	return twins
+}
+
+// readExampleFile reads one example pair member.
+func readExampleFile(t *testing.T, path string) []byte {
+	t.Helper()
+
+	//nolint:gosec // G304: path from the pinned twins walker, not user input
+	data, err := os.ReadFile(path)
+	require.NoError(t, err, "read example %s", path)
+
+	return data
+}
+
+// assertTwinModelParity: the two sides parse to canonically-equal models
+// (the D-22 explicit-defaults list applied to both sides).
+func assertTwinModelParity(t *testing.T, twin exampleTwin) {
+	t.Helper()
+
+	mToml, err := parser.Parse(readExampleFile(t, twin.tomlPath))
+	require.NoError(t, err, "%s parses", twin.rel)
+
+	mC4D, err := c4d.Parse(readExampleFile(t, twin.c4dPath))
+	require.NoError(t, err, "%s twin parses", twin.rel)
+
+	require.Equal(t, canonicalModel(mToml), canonicalModel(mC4D),
+		"twin parses to the same model as its .toml source (D-22): %s", twin.rel)
+}
+
+// assertTwinRenderParity: both sides render to canonically-equal DOT through
+// the real view/graph/render composition (DI-1). For standalone files only.
+func assertTwinRenderParity(t *testing.T, twin exampleTwin) {
+	t.Helper()
+
+	mToml, err := parser.Parse(readExampleFile(t, twin.tomlPath))
+	require.NoError(t, err, "%s parses", twin.rel)
+
+	mC4D, err := c4d.Parse(readExampleFile(t, twin.c4dPath))
+	require.NoError(t, err, "%s twin parses", twin.rel)
+
+	require.Equal(t,
+		renderAllViewsDOT(t, pipelineForRender(t, mToml)),
+		renderAllViewsDOT(t, pipelineForRender(t, mC4D)),
+		"twin renders identically to its .toml source (DI-1): %s", twin.rel)
+}
+
+// assertTwinGraphParity: for include-graph entries — the twin graph must be
+// self-contained (every include path references a .c4d twin), resolve to the
+// same post-include model, validate clean, and render identically.
+func assertTwinGraphParity(t *testing.T, twin exampleTwin) {
+	t.Helper()
+
+	mC4DRaw, err := c4d.Parse(readExampleFile(t, twin.c4dPath))
+	require.NoError(t, err, "%s twin parses", twin.rel)
+
+	for _, inc := range mC4DRaw.Includes {
+		require.Equal(t, extC4D, filepath.Ext(inc.Path),
+			"twin include graph is self-contained (.c4d references only): %s", twin.rel)
+	}
+
+	original := composedPipeline(t, twin.tomlPath)
+	converted := composedPipelineC4D(t, twin.c4dPath)
+
+	require.Equal(t, canonicalModel(original), canonicalModel(converted),
+		"twin graph resolves to the same model as the .toml graph: %s", twin.rel)
+
+	require.Equal(t,
+		renderAllViewsDOT(t, original),
+		renderAllViewsDOT(t, converted),
+		"twin graph renders identically to the .toml graph (DI-1): %s", twin.rel)
+
+	require.Empty(t, validator.Validate(composedPipeline(t, twin.tomlPath)),
+		"original graph validates: %s", twin.rel)
+	require.Empty(t, validator.Validate(composedPipelineC4D(t, twin.c4dPath)),
+		"twin graph validates: %s", twin.rel)
+}
+
+// extC4D names the C4D file extension in assertions.
+const extC4D = ".c4d"
+
+// TestExampleTwins is the D-35 twins contract: every .toml/.c4d pair under
+// skill/examples/ parses to the same model; standalone files and include
+// graphs additionally render to canonically-equal DOT (DI-1). Include-graph
+// fragments (targets of some entry's include) get model parity — the entry
+// graph render covers them end to end. Rendering makes the test serial.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestExampleTwins(t *testing.T) {
+	twins := walkExampleTwins(t)
+
+	// Classify: entries declare includes; fragments are entry include targets.
+	includeTargets := make(map[string]bool)
+
+	for _, twin := range twins {
+		m, err := parser.Parse(readExampleFile(t, twin.tomlPath))
+		require.NoError(t, err, "%s parses", twin.rel)
+
+		for _, inc := range m.Includes {
+			target := filepath.Join(filepath.Dir(twin.tomlPath), inc.Path)
+			includeTargets[filepath.Clean(target)] = true
+		}
+	}
+
+	for _, twin := range twins {
+		t.Run(twin.rel, func(t *testing.T) {
+			m, err := parser.Parse(readExampleFile(t, twin.tomlPath))
+			require.NoError(t, err, "%s parses", twin.rel)
+
+			isFragment := includeTargets[filepath.Clean(twin.tomlPath)]
+
+			switch {
+			case len(m.Includes) > 0:
+				assertTwinGraphParity(t, twin)
+			case isFragment:
+				assertTwinModelParity(t, twin)
+			default:
+				assertTwinModelParity(t, twin)
+				assertTwinRenderParity(t, twin)
+			}
+		})
+	}
 }
 
 // TestRenderEquivalence proves Model-level equivalence end to end (DI-1):
