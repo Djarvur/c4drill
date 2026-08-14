@@ -357,11 +357,13 @@ func TestEmitTOMLNewlineValueSingleLine(t *testing.T) {
 	require.NoError(t, err, "EmitTOML() should not error")
 
 	descLine := ""
+
 	for _, line := range strings.Split(out, "\n") {
 		if strings.HasPrefix(line, "description = ") {
 			descLine = line
 		}
 	}
+
 	require.NotEmpty(t, descLine, "emitted output should carry a description line:\n%s", out)
 
 	// D-06 pinned rule: newline-containing values emit as a single-line basic
