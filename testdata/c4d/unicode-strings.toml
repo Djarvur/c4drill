@@ -1,0 +1,33 @@
+# Fixture: multi-byte (non-ASCII) values and a long single multi-byte word
+# (wrap-relevant) — UTF-8 passes verbatim through both emitters and both
+# parsers; unit KEYS stay ASCII (the C4D identifier grammar is
+# [A-Za-z0-9_-]+, D-07).
+[properties]
+name = "Unicode Strings Test"
+description = "Многоязычные значения — 多字节 round-trip"
+
+[customer]
+type = "person"
+name = "Kunde — 客户"
+description = "«Заказчик», 客户, actor with a multi-byte name"
+
+[[customer.link]]
+peer = "api"
+technology = "HTTPS"
+description = "測試 — многоязычная связь"
+
+[api]
+type = "system"
+name = "Ω-сервис API"
+description = "Услуги — 服务 — multibyte description"
+technology = "Достопримечательность"
+
+[[api.link]]
+peer = "data"
+technology = "SQL"
+description = "читает данные"
+
+[data]
+type = "db"
+name = "数据库"
+description = "Хранилище данных"

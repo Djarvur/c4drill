@@ -26,6 +26,8 @@ const c4dFixtureDir = "../../testdata/c4d"
 // expectedC4DFixtures is the pinned corpus manifest — every file must exist,
 // parse, and pass the full pre-render pipeline. The list doubles as the
 // walker's anti-shrinkage guard: dropping a fixture fails by name.
+//
+//nolint:gochecknoglobals // immutable fixture manifest, the test corpus contract
 var expectedC4DFixtures = []string{
 	"external-types.toml",
 	"linkfrom.toml",
@@ -40,6 +42,7 @@ var expectedC4DFixtures = []string{
 func parseFixture(t *testing.T, name string) *parser.Model {
 	t.Helper()
 
+	//nolint:gosec // G304: fixture path built from the pinned manifest, not user input
 	data, err := os.ReadFile(filepath.Join(c4dFixtureDir, name))
 	require.NoError(t, err, "read fixture %s", name)
 
@@ -101,6 +104,7 @@ func walkFixtureUnit(path string, u *model.Unit, fn func(path string, u *model.U
 // fixtureUnitTypes collects the type set of every unit in the model.
 func fixtureUnitTypes(m *parser.Model) map[model.UnitType]bool {
 	types := make(map[model.UnitType]bool)
+
 	walkFixtureUnits(m, func(_ string, u *model.Unit) { types[u.Type] = true })
 
 	return types
@@ -269,7 +273,8 @@ func TestFixtureUnicodeCoverage(t *testing.T) {
 
 	walkFixtureUnits(m, func(_ string, u *model.Unit) {
 		for _, value := range []string{u.Name, u.Description, u.Technology} {
-			if utf8.RuneCountInString(value) > len(value) {
+			// Multi-byte content: fewer runes than bytes.
+			if utf8.RuneCountInString(value) < len(value) {
 				multibyte = true
 			}
 
@@ -278,6 +283,10 @@ func TestFixtureUnicodeCoverage(t *testing.T) {
 	})
 
 	assert.True(t, multibyte, "multi-byte values present")
-	assert.Greater(t, utf8.RuneCountInString(longWord), len(longWord)/2,
-		"long single word is multi-byte: got %q", longWord)
+
+	require.NotEmpty(t, longWord, "a long word value exists")
+	assert.Less(t, utf8.RuneCountInString(longWord), len(longWord),
+		"long single word carries multi-byte runes: got %q", longWord)
+	assert.GreaterOrEqual(t, utf8.RuneCountInString(longWord), 10,
+		"long single word is long enough to stress wrapping: got %q", longWord)
 }
