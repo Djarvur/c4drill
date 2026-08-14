@@ -16,6 +16,8 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/Djarvur/c4drill/internal/c4d"
@@ -297,4 +299,215 @@ func execFMT(t *testing.T, args ...string) (*bytes.Buffer, error) {
 	cmd.SetArgs(append([]string{"fmt"}, args...))
 
 	return buf, cmd.Execute() //nolint:wrapcheck // test returns the command error verbatim
+}
+
+// --- Corpus idempotency sweep (Plan 35-08 Task 3) -------------------------
+//
+// The D-32 contract enforcer: fmt(fmt(x)) == fmt(x) proven over every real
+// fixture the repo ships, both formats. The .c4d leg runs over the two real
+// shipped .c4d fixtures AND over converted twins of every valid TOML fixture
+// (the convert emission path — FromModel+EmitC4D — gives the sweep the whole
+// corpus's semantic surface in C4D form). Fixtures never change: if any
+// fixture fails idempotency, the emitter/formatter is fixed, never the
+// fixture.
+
+// fmtCorpusRoots lists the corpus directories the sweep walks: the four
+// 35-06 parity roots plus internal/include/testdata (the 35-05 mixed-format
+// fixtures — home of the only real .c4d files in the repo).
+//
+//nolint:gochecknoglobals // immutable corpus-root set
+var fmtCorpusRoots = []string{
+	"testdata",
+	"testdata/c4d",
+	"cmd/c4drill/testdata",
+	"skill/examples",
+	"internal/include/testdata",
+}
+
+// fmtSyntaxInvalid pins the one corpus fixture whose TOML syntax is invalid:
+// fmt must refuse it (Task 1), so the sweep excludes it from formatting and
+// the corpus-copy test omits it.
+const fmtSyntaxInvalid = "cmd/c4drill/testdata/invalid.toml"
+
+//nolint:paralleltest // cobra flags bind package-level vars; serial execution only
+func TestFmtCorpusIdempotency(t *testing.T) {
+	files := fmtCorpusFiles(t)
+	assert.NotEmpty(t, files, "corpus walk found fixtures")
+
+	tomlCount, c4dCount := 0, 0
+
+	for _, p := range files {
+		//nolint:gosec // G304: path from the pinned corpus walker, not user input
+		data, err := os.ReadFile(p)
+		require.NoError(t, err, "read corpus fixture %s", p)
+
+		switch filepath.Ext(p) {
+		case extToml:
+			tomlCount++
+
+			fmtTOMLIdempotency(t, p, data)
+
+			// The converted .c4d twin of every valid TOML fixture: the
+			// sweep's C4D leg over the full corpus semantics.
+			m, parseErr := parser.Parse(data)
+			require.NoError(t, parseErr, "corpus fixture %s parses", p)
+
+			twin := c4d.EmitC4D(c4d.FromModel(m))
+			fmtC4DIdempotency(t, p+" (converted .c4d twin)", []byte(twin))
+		case extC4d:
+			c4dCount++
+
+			fmtC4DIdempotency(t, p, data)
+		}
+	}
+
+	assert.Greater(t, tomlCount, 10, "the TOML corpus leg is non-trivial")
+	assert.Positive(t, c4dCount, "the C4D corpus leg covers real fixtures")
+}
+
+//nolint:paralleltest // cobra flags bind package-level vars; serial execution only
+func TestFmtCorpusCheckClean(t *testing.T) {
+	dir := t.TempDir()
+
+	for _, p := range fmtCorpusFiles(t) {
+		//nolint:gosec // G304: path from the pinned corpus walker, not user input
+		data, err := os.ReadFile(p)
+		require.NoError(t, err, "read corpus fixture %s", p)
+
+		rel, err := filepath.Rel(fmtRepoRoot(t), p)
+		require.NoError(t, err, "corpus path under repo root")
+
+		dst := filepath.Join(dir, rel)
+		require.NoError(t, os.MkdirAll(filepath.Dir(dst), 0o750), "mkdir for %s", rel)
+		require.NoError(t, os.WriteFile(dst, data, 0o600), //nolint:gosec // G703: dst is under the test-owned t.TempDir
+			"copy %s", rel)
+
+		if filepath.Ext(p) != extToml {
+			continue
+		}
+
+		// .c4d twins land next to the copies so the command-level run
+		// covers BOTH formats over the whole corpus.
+		m, parseErr := parser.Parse(data)
+		require.NoError(t, parseErr, "corpus fixture %s parses", p)
+
+		twinDst := strings.TrimSuffix(dst, extToml) + extC4d
+		twin := []byte(c4d.EmitC4D(c4d.FromModel(m)))
+
+		//nolint:gosec // G703: twinDst is under the test-owned t.TempDir
+		require.NoError(t, os.WriteFile(twinDst, twin, 0o600),
+			"write twin for %s", rel)
+	}
+
+	_, err := execFMT(t, dir)
+	require.NoError(t, err, "fmt formats the whole corpus copy in place")
+
+	_, err = execFMT(t, "--check", dir)
+	require.NoError(t, err,
+		"fmt --check exits 0 over the freshly formatted corpus (D-31 CI gate)")
+}
+
+// fmtTOMLIdempotency asserts the TOML fixpoint and model preservation for
+// one fixture.
+func fmtTOMLIdempotency(t *testing.T, path string, data []byte) {
+	t.Helper()
+
+	once, err := tomlfmt.Format(data)
+	require.NoError(t, err, "format %s", path)
+
+	twice, err := tomlfmt.Format(once)
+	require.NoError(t, err, "re-format %s", path)
+	assert.Equal(t, string(once), string(twice),
+		"second format is a no-op: %s", path)
+
+	orig, origErr := parser.Parse(data)
+	gated, gatedErr := parser.Parse(once)
+
+	require.NoError(t, origErr, "original parses: %s", path)
+	require.NoError(t, gatedErr, "formatted parses: %s", path)
+	require.Equal(t, orig, gated,
+		"formatting never changes the model: %s", path)
+}
+
+// fmtC4DIdempotency asserts the C4D fixpoint (EmitC4D is fmt's .c4d
+// candidate) and model preservation for one fixture.
+func fmtC4DIdempotency(t *testing.T, path string, data []byte) {
+	t.Helper()
+
+	once := fmtC4DText(t, path, data)
+	twice := fmtC4DText(t, path, []byte(once))
+
+	assert.Equal(t, once, twice, "second format is a no-op: %s", path)
+
+	orig, origErr := c4d.Parse(data)
+	gated, gatedErr := c4d.Parse([]byte(once))
+
+	require.NoError(t, origErr, "original parses: %s", path)
+	require.NoError(t, gatedErr, "formatted parses: %s", path)
+
+	require.Equal(t, orig, gated,
+		"formatting never changes the model: %s", path)
+}
+
+// fmtC4DText is fmt's .c4d formatting path for one document: ParseAST then
+// EmitC4D (comments ride the AST — D-32).
+func fmtC4DText(t *testing.T, path string, data []byte) string {
+	t.Helper()
+
+	doc, err := c4d.ParseAST(data)
+	require.NoError(t, err, "parse %s", path)
+
+	return c4d.EmitC4D(doc)
+}
+
+// fmtCorpusFiles walks the corpus roots collecting every *.toml and *.c4d
+// fixture (recursive; filepath.WalkDir never follows symlinked dirs),
+// excluding the pinned syntax-invalid fixture.
+func fmtCorpusFiles(t *testing.T) []string {
+	t.Helper()
+
+	root := fmtRepoRoot(t)
+
+	var out []string
+
+	for _, corpusDir := range fmtCorpusRoots {
+		walkErr := filepath.WalkDir(filepath.Join(root, corpusDir),
+			func(path string, d os.DirEntry, err error) error {
+				switch {
+				case err != nil:
+					return err
+				case d.IsDir():
+					return nil
+				}
+
+				ext := filepath.Ext(path)
+				if ext != extToml && ext != extC4d {
+					return nil
+				}
+
+				rel, relErr := filepath.Rel(root, path)
+				if err == nil && relErr == nil && rel == fmtSyntaxInvalid {
+					return nil
+				}
+
+				out = append(out, path)
+
+				return nil
+			})
+		require.NoError(t, walkErr, "walk corpus dir %s", corpusDir)
+	}
+
+	slices.Sort(out)
+
+	return out
+}
+
+// fmtRepoRoot resolves the repository root from this package's directory.
+func fmtRepoRoot(t *testing.T) string {
+	t.Helper()
+
+	root, err := filepath.Abs(filepath.Join("..", ".."))
+	require.NoError(t, err, "resolve repo root")
+
+	return root
 }
