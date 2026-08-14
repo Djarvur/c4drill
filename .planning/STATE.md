@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Label Formatting Fixes
 status: executing
-last_updated: "2026-08-14T17:15:39.767Z"
+last_updated: "2026-08-14T17:50:37.889Z"
 last_activity: 2026-08-14
 progress:
   total_phases: 1
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-08-10)
 ## Current Position
 
 Phase: 35 (add-a-simple-dsl-alternative-to-the-toml-diagram-definition) — EXECUTING
-Plan: 5 of 9
+Plan: 6 of 9
 **Progress:** [██████████] 100%
 Status: Ready to execute
 Last activity: 2026-08-14
@@ -47,6 +47,7 @@ Last activity: 2026-08-14
 | Phase 35 P02 | 21min | 2 tasks | 4 files |
 | Phase 35 P03 | 24min | 2 tasks | 7 files |
 | Phase 35 P04 | 21min | 2 tasks | 4 files |
+| Phase 35 P05 | 30min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -84,8 +85,8 @@ Both captured todos (`.planning/todos/pending/2026-08-10-wrap-edge-labels-like-u
 
 ## Session Continuity
 
-Last session: 2026-08-14T17:15:39.744Z
-Stopped at: Completed 35-04-PLAN.md (emitters: EmitTOML/FromModel/EmitC4D); next 35-05
+Last session: 2026-08-14T17:50:37.854Z
+Stopped at: Completed 35-05-PLAN.md (ToModel parity hub + ParseAST export + mixed-format includes); next 35-06
 Resume file: None
 
 ## Decisions
@@ -102,6 +103,9 @@ Resume file: None
 - [Phase ?]: [35-03] ReservedKeyword single-sourced in grammar/reserved.go (19 words: 14 isBuiltinField + 5 statement keywords); reserved.go lives in package grammar — peg actions compile there (import-cycle forced, 35-01 layout)
 - [Phase ?]: [35-04] C4D comment placement is allocation-based: Pos-aware same-line tails + one-step migration to the untailed predecessor — the grammar's StmtEnd attaches the first comment after a statement as its tail, so all-above rendering can never be fixpoint-stable; the allocation renders the placement the parser reproduces verbatim (T-35-04-01)
 - [Phase ?]: [35-04] Emitters deterministic by construction: UnitOrder/SubunitOrder walks, sorted template names, sorted [[use]] param keys; newline values emit escaped-\n in TOML and triple-quoted in C4D (D-06 pair); parented uses land inside the parent unit's block in C4D (D-16 native form), top-level [[use]]+parent in TOML
+- [Phase ?]: [35-05] C4D glyph->Link mapping: ->/<->/-- carry their ArrowDirection in Links, <- -> LinksFrom{ArrowForward} (mirror-consistent incoming edge); the twin TOML states arrow = "forward" where the fixture omits it (D-22 explicit-defaults normalization)
+- [Phase ?]: [35-05] c4d.Parse returns *parser.Model (D-21) composing exported ParseAST+ToModel; ParseAST/ParseASTFile stay exported for fmt (35-08) and canonsrc (35-06); ToModel honors FromModel's Body.Type template-root recording — the 35-04 gap closed at Model level
+- [Phase ?]: [35-05] include.Resolve dispatches per included-file extension (.c4d -> c4d.ParseFile, .toml -> parser.ParseFile); unknown extensions hard-error naming .toml/.c4d — mixed-format graphs merge at Model level (D-26/T-35-05-01)
 
 ## Operator Next Steps
 

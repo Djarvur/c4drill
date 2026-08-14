@@ -27,3 +27,13 @@ round-trip exactly; all fixtures are pipe-free.
 
 Owner: 35-06 (round-trip normalizer) if it matters; otherwise document as a
 C4D authoring constraint.
+
+## Update (35-05, 2026-08-14): Model-level half CLOSED
+
+ToModel now honors `TemplateDecl.Body.Type/External` when set (Task 2),
+so `ToModel(FromModel(m))` preserves a non-default template root type —
+pinned by TestToModelTemplateRootTypeFromModel. The TEXT-level half
+remains: the grammar still cannot parse a template root type, so
+TOML -> C4D(text) -> TOML round-trips still lose it unless D-22's
+explicit-defaults normalization covers the fixture. Remaining owner: 35-06
+(round-trip contract) or a grammar extension in a later plan.
