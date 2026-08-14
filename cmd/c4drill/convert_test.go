@@ -18,8 +18,12 @@ import (
 	"testing"
 
 	"github.com/Djarvur/c4drill/internal/c4d"
+	"github.com/Djarvur/c4drill/internal/include"
 	"github.com/Djarvur/c4drill/internal/model"
 	"github.com/Djarvur/c4drill/internal/parser"
+	"github.com/Djarvur/c4drill/internal/peer"
+	"github.com/Djarvur/c4drill/internal/template"
+	"github.com/Djarvur/c4drill/internal/validator"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -416,4 +420,284 @@ func TestConvertHelp(t *testing.T) {
 	help := buf.String()
 	assert.Contains(t, help, "to-toml", "help must document the to-toml direction")
 	assert.Contains(t, help, "to-c4d", "help must document the to-c4d direction")
+}
+
+// --- Plan 35-07 Task 3: convert --follow-includes (D-25 graph mode) ---
+
+// copyComposedGraph copies the 09-composed include graph (entry.toml ->
+// templates.toml + domains/auth.toml, plus single-file-equivalent.toml which
+// is documentation OUTSIDE the graph) into a temp dir so graph-mode twins
+// never touch committed example files. Returns the copied entry path.
+func copyComposedGraph(t *testing.T) string {
+	t.Helper()
+
+	srcRoot := filepath.Join("..", "..", "skill", "examples", "09-composed")
+	dstRoot := t.TempDir()
+
+	for _, rel := range []string{
+		"entry.toml",
+		"templates.toml",
+		filepath.Join("domains", "auth.toml"),
+		"single-file-equivalent.toml",
+	} {
+		data, err := os.ReadFile(filepath.Join(srcRoot, rel)) //nolint:gosec // G304: committed fixture path
+		require.NoError(t, err, "read %s", rel)
+
+		dst := filepath.Join(dstRoot, rel)
+		require.NoError(t, os.MkdirAll(filepath.Dir(dst), 0o750), "mkdir for %s", rel)
+		//nolint:gosec // G703: committed fixture copied into t.TempDir()
+		require.NoError(t, os.WriteFile(dst, data, 0o600), "write %s", rel)
+	}
+
+	return filepath.Join(dstRoot, "entry.toml")
+}
+
+// runGraphPipeline runs the load-bearing pipeline stages (include.Resolve ->
+// template.Expand -> peer.Resolve -> Validate) on a graph entry and asserts
+// zero validation errors — proving a converted graph still composes.
+func runGraphPipeline(t *testing.T, entryPath string) {
+	t.Helper()
+
+	m, err := parseInput(entryPath)
+	require.NoError(t, err, "parse graph entry")
+
+	m, err = include.Resolve(m, filepath.Dir(entryPath), entryPath)
+	require.NoError(t, err, "include.Resolve on converted graph")
+
+	m, err = template.Expand(m)
+	require.NoError(t, err, "template.Expand on converted graph")
+
+	require.NoError(t, peer.Resolve(m), "peer.Resolve on converted graph")
+	assert.Empty(t, validator.Validate(m),
+		"converted include graph must validate clean end to end (D-24/D-25)")
+}
+
+//nolint:paralleltest // cobra flags bind package-level vars; serial execution only
+func TestConvertFollowIncludesGraph(t *testing.T) {
+	entry := copyComposedGraph(t)
+	root := filepath.Dir(entry)
+
+	require.NoError(t, execConvert(t, "to-c4d", entry, "--follow-includes"),
+		"whole-graph conversion must succeed")
+
+	// Exactly the 3 graph twins exist (D-25): entry, templates, domains/auth.
+	for _, twin := range []string{
+		filepath.Join(root, "entry.c4d"),
+		filepath.Join(root, "templates.c4d"),
+		filepath.Join(root, "domains", "auth.c4d"),
+	} {
+		assert.FileExists(t, twin, "graph twin must exist: %s", twin)
+	}
+
+	// single-file-equivalent.toml is NOT in the include graph — no twin.
+	_, err := os.Stat(filepath.Join(root, "single-file-equivalent.c4d"))
+	assert.True(t, os.IsNotExist(err),
+		"files outside the include graph must not get twins")
+
+	// Include paths inside entry.c4d are rewritten to the twin extension,
+	// and the `once` flag survives the rewrite (D-25).
+	m, err := c4d.ParseFile(filepath.Join(root, "entry.c4d"))
+	require.NoError(t, err, "converted entry must re-parse")
+
+	require.Len(t, m.Includes, 2, "entry keeps both include directives")
+	assert.Equal(t, parser.IncludeDirective{Path: "templates.c4d", Once: true},
+		m.Includes[0], "first include rewritten to .c4d with once preserved")
+	assert.Equal(t, parser.IncludeDirective{Path: filepath.Join("domains", "auth.c4d"), Once: false},
+		m.Includes[1], "second include rewritten to .c4d, relative form preserved")
+
+	// The converted graph still composes: full pipeline on the .c4d entry
+	// (mixed-format include dispatch, D-26) validates clean.
+	runGraphPipeline(t, filepath.Join(root, "entry.c4d"))
+}
+
+//nolint:paralleltest // cobra flags bind package-level vars; serial execution only
+func TestConvertFollowIncludesOutputDir(t *testing.T) {
+	entry := copyComposedGraph(t)
+	outDir := filepath.Join(t.TempDir(), "twins")
+
+	require.NoError(t, execConvert(t, "to-c4d", entry, "--follow-includes", "--output", outDir),
+		"graph conversion with -o must succeed")
+
+	// Twins land under -o preserving the graph's directory structure
+	// relative to the entry's dir (domains/auth.toml -> domains/auth.c4d).
+	for _, rel := range []string{
+		"entry.c4d",
+		"templates.c4d",
+		filepath.Join("domains", "auth.c4d"),
+	} {
+		assert.FileExists(t, filepath.Join(outDir, rel), "twin under -o: %s", rel)
+	}
+
+	_, err := os.Stat(filepath.Join(filepath.Dir(entry), "entry.c4d"))
+	assert.True(t, os.IsNotExist(err), "no twin next to the input when -o redirects")
+}
+
+//nolint:paralleltest // cobra flags bind package-level vars; serial execution only
+func TestConvertGraphCycle(t *testing.T) {
+	dir := t.TempDir()
+
+	for name, other := range map[string]string{
+		"a.toml": "b.toml",
+		"b.toml": "a.toml",
+	} {
+		require.NoError(t,
+			os.WriteFile(filepath.Join(dir, name), []byte(`
+[properties]
+name = "Cycle `+name+`"
+
+[user]
+type = "person"
+name = "User"
+
+[[include]]
+path = "`+other+`"
+`), 0o600), "write %s", name)
+	}
+
+	entry := filepath.Join(dir, "a.toml")
+
+	// The D-24 gate's include.Resolve detects the cycle before any walk; the
+	// traversal's own stack/visited guard (T-35-07-02) is defense-in-depth.
+	// A hang here fails the suite timeout, pinning traversal termination.
+	err := execConvert(t, "to-c4d", entry, "--follow-includes")
+	require.Error(t, err, "include cycle must be a hard error")
+	assert.Contains(t, err.Error(), "cycle", "error must name the cycle")
+
+	for _, leaked := range []string{"a.c4d", "b.c4d"} {
+		_, statErr := os.Stat(filepath.Join(dir, leaked))
+		assert.True(t, os.IsNotExist(statErr), "no partial output %s on cycle", leaked)
+	}
+}
+
+//nolint:paralleltest // cobra flags bind package-level vars; serial execution only
+func TestConvertFollowIncludesDefaultOff(t *testing.T) {
+	entry := copyComposedGraph(t)
+	root := filepath.Dir(entry)
+
+	// Without --follow-includes exactly one file converts (D-25 default).
+	require.NoError(t, execConvert(t, "to-c4d", entry), "single-file conversion must succeed")
+
+	assert.FileExists(t, filepath.Join(root, "entry.c4d"), "entry twin exists")
+
+	for _, notConverted := range []string{
+		filepath.Join(root, "templates.c4d"),
+		filepath.Join(root, "domains", "auth.c4d"),
+	} {
+		_, err := os.Stat(notConverted)
+		assert.True(t, os.IsNotExist(err), "graph files stay unconverted: %s", notConverted)
+	}
+
+	// Include directives are preserved verbatim — untouched .toml paths.
+	m, err := c4d.ParseFile(filepath.Join(root, "entry.c4d"))
+	require.NoError(t, err, "single-file twin must re-parse")
+
+	require.Len(t, m.Includes, 2, "both include directives preserved")
+	assert.Equal(t, "templates.toml", m.Includes[0].Path,
+		"include path stays verbatim without --follow-includes (D-25 default)")
+	assert.True(t, m.Includes[0].Once, "once flag preserved verbatim")
+	assert.Equal(t, filepath.Join("domains", "auth.toml"), m.Includes[1].Path,
+		"second include path stays verbatim")
+}
+
+// mixedGraphTOMLEntry is a gate-valid mixed-format graph (D-26): a .toml
+// entry including a .c4d fragment.
+const mixedGraphTOMLEntry = `[properties]
+name = "Mixed Graph"
+
+[user]
+type = "person"
+name = "User"
+
+[[user.link]]
+peer = "svc.store"
+technology = "HTTPS"
+
+[[include]]
+path = "./shared.c4d"
+`
+
+// mixedGraphSharedC4D is the .c4d fragment of the TOML-entry mixed graph.
+const mixedGraphSharedC4D = `svc: system "Service" {
+	store: containerDb "Store" {
+		-> user
+	}
+}
+`
+
+//nolint:paralleltest // cobra flags bind package-level vars; serial execution only
+func TestConvertGraphMixedTOMLEntry(t *testing.T) {
+	dir := t.TempDir()
+	entry := filepath.Join(dir, "main.toml")
+
+	require.NoError(t, os.WriteFile(entry, []byte(mixedGraphTOMLEntry), 0o600), "write entry")
+	require.NoError(t,
+		os.WriteFile(filepath.Join(dir, "shared.c4d"), []byte(mixedGraphSharedC4D), 0o600),
+		"write shared fragment")
+
+	require.NoError(t, execConvert(t, "to-c4d", entry, "--follow-includes"),
+		"mixed-graph conversion must succeed")
+
+	// The .toml entry gets its twin; shared.c4d is ALREADY in the target
+	// format, so it is left untouched (conversion is additive — originals
+	// stay, so the untouched file keeps resolving).
+	assert.FileExists(t, filepath.Join(dir, "main.c4d"), "entry twin exists")
+
+	_, err := os.Stat(filepath.Join(dir, "shared.toml"))
+	assert.True(t, os.IsNotExist(err),
+		"a file already in the target format gets no twin")
+
+	// The include path inside main.c4d stays ./shared.c4d (identity rewrite).
+	m, err := c4d.ParseFile(filepath.Join(dir, "main.c4d"))
+	require.NoError(t, err, "converted mixed entry must re-parse")
+
+	require.Len(t, m.Includes, 1, "include directive preserved")
+	assert.Equal(t, "./shared.c4d", m.Includes[0].Path,
+		"include of an already-target-format file keeps its path")
+
+	runGraphPipeline(t, filepath.Join(dir, "main.c4d"))
+}
+
+//nolint:paralleltest // cobra flags bind package-level vars; serial execution only
+func TestConvertGraphMixedC4DEntry(t *testing.T) {
+	dir := t.TempDir()
+	entry := filepath.Join(dir, "main.c4d")
+
+	require.NoError(t, os.WriteFile(entry, []byte(`properties { name: Mixed Graph C4D }
+
+user: person "User" {
+	-> svc.store: HTTPS
+}
+
+include ./frag.toml
+`), 0o600), "write entry")
+
+	require.NoError(t,
+		os.WriteFile(filepath.Join(dir, "frag.toml"), []byte(`[svc]
+type = "system"
+name = "Service"
+
+[svc.store]
+type = "containerDb"
+name = "Store"
+
+[[svc.store.link]]
+peer = "user"
+`), 0o600), "write TOML fragment")
+
+	require.NoError(t, execConvert(t, "to-toml", entry, "--follow-includes"),
+		"mixed-graph conversion to TOML must succeed")
+
+	assert.FileExists(t, filepath.Join(dir, "main.toml"), "entry twin exists")
+
+	_, err := os.Stat(filepath.Join(dir, "frag.c4d"))
+	assert.True(t, os.IsNotExist(err), "fragment already in target format gets no twin")
+
+	m, err := parser.ParseFile(filepath.Join(dir, "main.toml"))
+	require.NoError(t, err, "converted mixed entry must re-parse")
+
+	require.Len(t, m.Includes, 1, "include directive preserved")
+	assert.Equal(t, "./frag.toml", m.Includes[0].Path,
+		"include of an already-target-format file keeps its path")
+
+	runGraphPipeline(t, filepath.Join(dir, "main.toml"))
 }
