@@ -1,0 +1,14 @@
+# Composed Example - template library; C4D twin of templates.toml, included
+# once from entry.c4d so the template is visible to the entry's use statement
+# (include.Resolve runs before template.Expand).
+template microservice(name, domain, tech, upstreamBus) {
+  type: container
+  name: "${name} Service"
+  description: "${name} handles ${domain}"
+  technology: "${tech}"
+  reference: "https://wiki.example.com/${name}"
+  cache: componentDb "${name} Cache" {
+    technology: Redis
+    -> ${upstreamBus}: "Publishes ${domain} cache invalidations"
+  }
+}

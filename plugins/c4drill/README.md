@@ -1,7 +1,7 @@
 # C4Drill plugin
 
 Portable coding-agent plugin for [C4Drill](https://github.com/Djarvur/c4drill) -
-C4 architecture diagrams from TOML definitions.
+C4 architecture diagrams from TOML or C4D definitions.
 
 Version: 0.1.0 · Publisher: Djarvur
 
@@ -9,8 +9,8 @@ Version: 0.1.0 · Publisher: Djarvur
 
 | Component | Name | What it does |
 | --- | --- | --- |
-| Skill | `c4drill-toml` | Authors valid C4Drill TOML architecture definitions (17 unit types, links, templates, includes; 9 example sets) |
-| Command | `c4drill-render` | Runs the `c4drill` CLI to validate a TOML file and render SVG/HTML/DOT diagrams |
+| Skill | `c4drill-toml` | Authors valid C4Drill architecture definitions in TOML or C4D (17 unit types, links, templates, includes; 9 example sets, the key ones with `.c4d` twins); covers `convert` and `fmt` |
+| Command | `c4drill-render` | Runs the `c4drill` CLI to validate a `.toml` or `.c4d` file and render SVG/HTML/DOT diagrams |
 
 ## Prerequisite
 

@@ -1,0 +1,12 @@
+# Include Directive Example (billing domain) - C4D twin of billing.toml.
+# Included from entry.c4d with the once modifier: a later include of this
+# same file from anywhere in the graph is skipped.
+platform: system "Platform" {
+  billing: container "Billing Domain" {
+    description: "Charges and invoicing; arrived via include from billing.toml"
+    charges: componentDb "Charges Store" {
+      description: "Line-item store; subunit of the included billing domain"
+      -> messageBus: Publishes charge-captured events
+    }
+  }
+}
