@@ -35,6 +35,7 @@ var (
 	errWrongDirection = errors.New("wrong input extension for direction")
 	errConvertCycle   = errors.New("include cycle detected")
 	errConvertDepth   = errors.New("include depth exceeded")
+	errConvertGate    = errors.New("converted twin failed the model-equality safety gate")
 )
 
 // Conversion directions (D-28): the direction names the TARGET format.
@@ -139,8 +140,14 @@ func runConvert(cmd *cobra.Command, inputPath, direction, srcExt, targetExt stri
 		return fmt.Errorf("parse: %w", err)
 	}
 
-	text, err := emitConverted(m, targetExt)
+	text, err := emitConverted(inputPath, m, targetExt)
 	if err != nil {
+		return err
+	}
+
+	// F-01 write gate: the twin must re-parse to the source's model before
+	// anything is written.
+	if err := gateTwin(inputPath, m, text, targetExt); err != nil {
 		return err
 	}
 
@@ -194,8 +201,11 @@ func validateSourceForConvert(cmd *cobra.Command, inputPath string) error {
 }
 
 // emitConverted serializes the (fresh, unmutated) model into the target
-// format.
-func emitConverted(m *parser.Model, targetExt string) (string, error) {
+// format. C4D targets run the F-01 representability gate first: values the
+// C4D grammar cannot express (non-identifier unit ids/peers, '|' in link
+// labels) are LOUD hard errors naming the offending value and source file —
+// never silently corrupted twins.
+func emitConverted(srcPath string, m *parser.Model, targetExt string) (string, error) {
 	if targetExt == extToml {
 		text, err := c4d.EmitTOML(m)
 		if err != nil {
@@ -205,7 +215,42 @@ func emitConverted(m *parser.Model, targetExt string) (string, error) {
 		return text, nil
 	}
 
+	if err := c4d.CheckC4DRepresentable(m); err != nil {
+		// Attribution: the check names the offending value; the caller's
+		// path rides in Context when unset (ParseFile precedent).
+		var perr *parser.ParseError
+		if errors.As(err, &perr) && perr.Context == "" {
+			perr.Context = srcPath
+		}
+
+		return "", fmt.Errorf("emit: %w", err)
+	}
+
 	return c4d.EmitC4D(c4d.FromModel(m)), nil
+}
+
+// gateTwin runs the F-01 convert safety gate (fmt's T-35-08-01 pattern): the
+// emitted twin text must re-parse through the TARGET format's front-end into
+// a Model canonically equal to the emission model's. A twin that would not
+// re-parse, or would re-parse to a different model, aborts the conversion —
+// NOTHING is written (no silent corruption, exit non-zero).
+func gateTwin(srcPath string, src *parser.Model, text string, targetExt string) error {
+	reparse := reparseFunc(parser.Parse)
+	if targetExt == extC4d {
+		reparse = c4d.Parse
+	}
+
+	gated, err := reparse([]byte(text))
+	if err != nil {
+		return fmt.Errorf("convert: %s: %w: twin does not re-parse: %w", srcPath, errConvertGate, err)
+	}
+
+	if !c4d.CanonicalEqual(src, gated) {
+		return fmt.Errorf("convert: %s: %w: twin re-parses to a different model",
+			srcPath, errConvertGate)
+	}
+
+	return nil
 }
 
 // convertOutputPath places the twin next to the input with the extension
@@ -251,30 +296,47 @@ func convertGraph(entryPath, targetExt string) error {
 			continue // already in the target format — no twin needed
 		}
 
-		m, err := parseInput(path)
-		if err != nil {
-			return fmt.Errorf("parse: %w", err)
-		}
-
-		for i := range m.Includes {
-			m.Includes[i].Path = retargetExt(m.Includes[i].Path, targetExt)
-		}
-
-		text, err := emitConverted(m, targetExt)
-		if err != nil {
+		if err := convertGraphFile(entryDir, path, targetExt); err != nil {
 			return err
 		}
+	}
 
-		dst := graphTwinPath(entryDir, path, targetExt)
+	return nil
+}
 
-		if err := os.MkdirAll(filepath.Dir(dst), 0o750); err != nil {
-			return fmt.Errorf("write: create output directory: %w", err)
-		}
+// convertGraphFile converts ONE include-graph file: fresh parse, include
+// paths rewritten to the twin extension, the F-01 representability + write
+// gates, then the twin write.
+func convertGraphFile(entryDir, path, targetExt string) error {
+	m, err := parseInput(path)
+	if err != nil {
+		return fmt.Errorf("parse: %w", err)
+	}
 
-		//nolint:gosec // G306: 0644 is the documented convert output permission
-		if err := os.WriteFile(dst, []byte(text), 0o644); err != nil {
-			return fmt.Errorf("write: %w", err)
-		}
+	for i := range m.Includes {
+		m.Includes[i].Path = retargetExt(m.Includes[i].Path, targetExt)
+	}
+
+	text, err := emitConverted(path, m, targetExt)
+	if err != nil {
+		return err
+	}
+
+	// F-01 write gate: every graph twin must re-parse to its source's
+	// model before anything is written.
+	if err := gateTwin(path, m, text, targetExt); err != nil {
+		return err
+	}
+
+	dst := graphTwinPath(entryDir, path, targetExt)
+
+	if err := os.MkdirAll(filepath.Dir(dst), 0o750); err != nil {
+		return fmt.Errorf("write: create output directory: %w", err)
+	}
+
+	//nolint:gosec // G306: 0644 is the documented convert output permission
+	if err := os.WriteFile(dst, []byte(text), 0o644); err != nil {
+		return fmt.Errorf("write: %w", err)
 	}
 
 	return nil

@@ -108,12 +108,14 @@ func emitPropertiesTOML(b *strings.Builder, props *model.Properties) {
 // array tables, then its subunit tables recursively. Links MUST precede the
 // subunit tables: a TOML array-table header attaches to the most recent
 // table, so [[path.link]] after [path.sub] would wrongly land on the subunit.
+// Key segments render bare-or-quoted (CR-02/F-01) so ids the C4D side derives
+// from display names ("My App") round-trip as ["My App"].
 func emitUnitTOML(b *strings.Builder, name string, unit *model.Unit, prefix string) {
 	if unit == nil {
 		return
 	}
 
-	path := joinDotted(prefix, name)
+	path := joinKeyPath(prefix, name)
 	b.WriteString("[" + path + "]\n")
 
 	emitUnitFieldsTOML(b, unit)
@@ -184,13 +186,13 @@ func emitUnitFieldsTOML(b *strings.Builder, unit *model.Unit) {
 func emitLinksTOML(b *strings.Builder, path string, unit *model.Unit) {
 	for _, link := range unit.Links {
 		if !link.IsMirror() {
-			emitLinkTOML(b, joinDotted(path, "link"), link)
+			emitLinkTOML(b, joinKeyPath(path, "link"), link)
 		}
 	}
 
 	for _, link := range unit.LinksFrom {
 		if !link.IsMirror() {
-			emitLinkTOML(b, joinDotted(path, "linkFrom"), link)
+			emitLinkTOML(b, joinKeyPath(path, "linkFrom"), link)
 		}
 	}
 }
@@ -248,7 +250,7 @@ func emitTemplateTOML(b *strings.Builder, name string, tmpl *parser.TemplateDef)
 		return
 	}
 
-	header := joinDotted("template", name)
+	header := joinKeyPath("template", name)
 	b.WriteString("[" + header + "]\n")
 
 	if len(tmpl.Params) > 0 {
@@ -260,19 +262,22 @@ func emitTemplateTOML(b *strings.Builder, name string, tmpl *parser.TemplateDef)
 
 	for _, inst := range tmpl.Instantiations {
 		if inst.Parent == "" {
-			emitInstantiationTOML(b, header+".use", inst, false)
+			emitInstantiationTOML(b, joinKeyPath(header, "use"), inst, false)
 		}
 	}
 
-	emitTemplateSubunitsTOML(b, name, "", tmpl.Unit, tmpl.Instantiations)
+	emitTemplateSubunitsTOML(b, name, nil, tmpl.Unit, tmpl.Instantiations)
 }
 
 // emitTemplateSubunitsTOML walks the template's subunit subtree, writing each
 // [template.<name>.<path>] table and the [[template.<name>.<path>.use]]
-// entries whose root-relative parent matches that path.
+// entries whose root-relative parent matches that path. relSegs carries the
+// RAW subunit path segments: Parent matching compares raw names, while table
+// headers render each segment bare-or-quoted (CR-02/F-01).
 func emitTemplateSubunitsTOML(
 	b *strings.Builder,
-	tmplName, relPath string,
+	tmplName string,
+	relSegs []string,
 	unit *model.Unit,
 	insts []parser.Instantiation,
 ) {
@@ -282,8 +287,9 @@ func emitTemplateSubunitsTOML(
 			continue
 		}
 
-		subRel := joinDotted(relPath, subName)
-		header := "template." + tmplName + "." + subRel
+		subSegs := append(slices.Clone(relSegs), subName)
+		subRel := strings.Join(subSegs, ".")
+		header := keyPathTOML(append([]string{"template", tmplName}, subSegs...))
 		b.WriteString("[" + header + "]\n")
 
 		emitUnitFieldsTOML(b, sub)
@@ -291,11 +297,11 @@ func emitTemplateSubunitsTOML(
 
 		for _, inst := range insts {
 			if inst.Parent == subRel {
-				emitInstantiationTOML(b, header+".use", inst, false)
+				emitInstantiationTOML(b, joinKeyPath(header, "use"), inst, false)
 			}
 		}
 
-		emitTemplateSubunitsTOML(b, tmplName, subRel, sub, insts)
+		emitTemplateSubunitsTOML(b, tmplName, subSegs, sub, insts)
 	}
 }
 
@@ -303,7 +309,8 @@ func emitTemplateSubunitsTOML(
 // optional parent key (top-level [[use]] only — a template-body use's parent
 // is encoded in the header path itself), then the supplied params sorted by
 // key (the Model stores params as a map, so sorted keys are the only
-// deterministic order; D-23 pins field order, not arg order).
+// deterministic order; D-23 pins field order, not arg order). Param keys
+// render bare-or-quoted like every other TOML key (CR-02/F-01).
 func emitInstantiationTOML(b *strings.Builder, header string, inst parser.Instantiation, withParent bool) {
 	b.WriteString("[[" + header + "]]\n")
 	fmt.Fprintf(b, "template = %s\n", quoteTOML(inst.Template))
@@ -313,7 +320,7 @@ func emitInstantiationTOML(b *strings.Builder, header string, inst parser.Instan
 	}
 
 	for _, key := range sortedParamKeys(inst.Params) {
-		fmt.Fprintf(b, "%s = %s\n", key, quoteTOML(inst.Params[key]))
+		fmt.Fprintf(b, "%s = %s\n", tomlKeySegment(key), quoteTOML(inst.Params[key]))
 	}
 }
 
@@ -395,11 +402,64 @@ func sortedParamKeys(params map[string]string) []string {
 	return keys
 }
 
-// joinDotted joins two dotted path segments, treating "" as identity.
+// joinDotted joins two dotted path segments, treating "" as identity. Both
+// arguments must ALREADY be rendered (or raw-but-bare) — it never quotes; use
+// joinKeyPath when the second segment is a raw name that may need quoting.
 func joinDotted(base, rel string) string {
 	if base == "" {
 		return rel
 	}
 
 	return base + "." + rel
+}
+
+// joinKeyPath joins a rendered key path with one more RAW segment, rendering
+// the new segment bare-or-quoted (CR-02/F-01): table headers stay parseable
+// when a name is not a bare key.
+func joinKeyPath(base, seg string) string {
+	if base == "" {
+		return tomlKeySegment(seg)
+	}
+
+	return base + "." + tomlKeySegment(seg)
+}
+
+// keyPathTOML renders raw key segments as a dotted table-header path, quoting
+// every segment that is not a bare key: ["My App", sub] -> ["My App".sub].
+func keyPathTOML(segs []string) string {
+	parts := make([]string, len(segs))
+	for i, seg := range segs {
+		parts[i] = tomlKeySegment(seg)
+	}
+
+	return strings.Join(parts, ".")
+}
+
+// tomlKeySegment renders one key segment: TOML bare keys ([A-Za-z0-9_-]+)
+// pass through verbatim, everything else becomes a quoted basic string the
+// parser reads back as the identical segment (["My App"], CR-02/F-01).
+func tomlKeySegment(seg string) string {
+	if tomlBareKeySafe(seg) {
+		return seg
+	}
+
+	return quoteTOML(seg)
+}
+
+// tomlBareKeySafe reports whether s is a TOML bare key ([A-Za-z0-9_-]+).
+func tomlBareKeySafe(s string) bool {
+	if s == "" {
+		return false
+	}
+
+	for _, c := range s {
+		switch {
+		case c >= '0' && c <= '9', c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z':
+		case c == '_' || c == '-':
+		default:
+			return false
+		}
+	}
+
+	return true
 }

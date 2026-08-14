@@ -1,6 +1,7 @@
 package c4d
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -353,12 +354,15 @@ func findUnitByPath(units []*ast.UnitNode, path string) *ast.UnitNode {
 // literalFor picks the canonical C4D literal form for a string value (D-06):
 // newline-containing values become triple-quoted (the D-06 inverse of Task
 // 1's escaped-\n TOML rule) unless the value itself contains the triple-quote
-// delimiter, which cannot ride raw and falls back to the escaped quoted
-// form; bareword-safe values stay barewords; everything else is quoted.
+// delimiter or ENDS in a quote — a trailing quote merges with the closing
+// delimiter into an ambiguous `""""` run the grammar cannot split (CR-05) —
+// and both cases fall back to the escaped quoted form, which represents
+// newlines as \n; bareword-safe values stay barewords; everything else is
+// quoted.
 func literalFor(s string) ast.Literal {
 	switch {
 	case strings.ContainsAny(s, "\n\r"):
-		if !strings.Contains(s, `"""`) {
+		if !strings.Contains(s, `"""`) && !strings.HasSuffix(s, `"`) {
 			return ast.Literal{Kind: ast.KindTriple, Str: s}
 		}
 
@@ -368,6 +372,211 @@ func literalFor(s string) ast.Literal {
 	default:
 		return ast.Literal{Kind: ast.KindQuoted, Str: s}
 	}
+}
+
+// CheckC4DRepresentable verifies that every Model value the C4D grammar
+// expresses through a FIXED-CHARSET token survives emission and re-parse
+// with its identity intact (F-01/CR-01/CR-03): unit ids at every nesting
+// level, template names and use template names ([A-Za-z0-9_-]+ identifiers,
+// D-07), link peer path segments (identifiers or ${param} tokens), and link
+// technology/description ('|' is unrepresentable — the D-09 pipe shorthand
+// splits labels on the first pipe after unquoting). It returns a
+// *parser.ParseError naming the first offending value, nil when m converts
+// losslessly. The convert write gate (cmd/c4drill) catches anything outside
+// this pinned list; this check exists so the common corrupting classes get a
+// LOUD error naming the value instead of a generic re-parse failure.
+func CheckC4DRepresentable(m *parser.Model) error {
+	if m == nil {
+		return nil
+	}
+
+	if err := checkTopUnitsRepresentable(m); err != nil {
+		return err
+	}
+
+	if err := checkTemplatesRepresentable(m); err != nil {
+		return err
+	}
+
+	return checkUsesRepresentable(m.Instantiations)
+}
+
+// checkTopUnitsRepresentable checks every top-level unit subtree (ids, peers,
+// link labels) in UnitOrder.
+func checkTopUnitsRepresentable(m *parser.Model) error {
+	for _, name := range m.UnitOrder {
+		if unit, ok := m.Units[name]; ok {
+			if err := checkC4DIdent("unit id "+strconv.Quote(name), name); err != nil {
+				return err
+			}
+
+			if err := checkUnitRepresentable(name, unit); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// checkTemplatesRepresentable checks template names, their bodies and their
+// body-use template names, in sorted-name order (deterministic errors).
+func checkTemplatesRepresentable(m *parser.Model) error {
+	for _, name := range sortedTemplateNames(m.Templates) {
+		tmpl := m.Templates[name]
+		if tmpl == nil || tmpl.Unit == nil {
+			continue
+		}
+
+		if err := checkC4DIdent("template name "+strconv.Quote(name), name); err != nil {
+			return err
+		}
+
+		if err := checkUnitRepresentable(name, tmpl.Unit); err != nil {
+			return err
+		}
+
+		if err := checkUsesRepresentable(tmpl.Instantiations); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// checkUsesRepresentable checks the use-template names of a use list.
+func checkUsesRepresentable(insts []parser.Instantiation) error {
+	for _, inst := range insts {
+		if err := checkC4DIdent(
+			"use template name "+strconv.Quote(inst.Template), inst.Template); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// checkUnitRepresentable checks one unit subtree's edges (peer paths, pipe
+// labels) and subunit ids. path is the unit's dotted path, used for error
+// context only.
+func checkUnitRepresentable(path string, unit *model.Unit) error {
+	if unit == nil {
+		return nil
+	}
+
+	if err := checkLinksRepresentable(path, unit.Links); err != nil {
+		return err
+	}
+
+	if err := checkLinksRepresentable(path, unit.LinksFrom); err != nil {
+		return err
+	}
+
+	return checkSubunitsRepresentable(path, unit)
+}
+
+// checkSubunitsRepresentable checks every declared subunit's id and subtree.
+func checkSubunitsRepresentable(path string, unit *model.Unit) error {
+	for _, subName := range unit.SubunitOrder {
+		sub, ok := unit.Subunits[subName]
+		if !ok {
+			continue
+		}
+
+		if err := checkC4DIdent(
+			"unit id "+strconv.Quote(subName)+" (subunit of "+strconv.Quote(path)+")", subName); err != nil {
+			return err
+		}
+
+		if err := checkUnitRepresentable(joinDotted(path, subName), sub); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// checkLinksRepresentable checks every link of one list.
+func checkLinksRepresentable(path string, links []model.Link) error {
+	for _, link := range links {
+		if err := checkLinkRepresentable(path, link); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// checkLinkRepresentable checks one link: the peer path's charset and the
+// D-09 pipe-shorthand representability of the label halves.
+func checkLinkRepresentable(path string, link model.Link) error {
+	if !c4dPeerSafe(link.Peer) {
+		return &parser.ParseError{Message: fmt.Sprintf(
+			"link peer %q on unit %q is not representable in C4D: "+
+				"peer path segments must match [A-Za-z0-9_-]+ or be ${param} tokens",
+			link.Peer, path)}
+	}
+
+	for _, half := range []struct{ field, value string }{
+		{"technology", link.Technology},
+		{"description", link.Description},
+	} {
+		if strings.Contains(half.value, "|") {
+			return &parser.ParseError{Message: fmt.Sprintf(
+				"link %s %q on unit %q is not representable in C4D: "+
+					"labels must not contain '|' (the pipe shorthand splits labels on the first pipe)",
+				half.field, half.value, path)}
+		}
+	}
+
+	return nil
+}
+
+// checkC4DIdent verifies one identifier-position value against the grammar's
+// identifier charset (D-07). what names the value for the error message.
+func checkC4DIdent(what, value string) error {
+	if c4dIdentSafe(value) {
+		return nil
+	}
+
+	return &parser.ParseError{Message: what +
+		" is not representable in C4D: identifiers must match [A-Za-z0-9_-]+"}
+}
+
+// c4dIdentSafe reports whether s matches the grammar's identifier charset
+// ([A-Za-z0-9_-]+, D-07) — the charset unit ids, template names and peer path
+// segments must carry to re-parse.
+func c4dIdentSafe(s string) bool {
+	if s == "" {
+		return false
+	}
+
+	for _, c := range s {
+		switch {
+		case c >= '0' && c <= '9', c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z':
+		case c == '_' || c == '-':
+		default:
+			return false
+		}
+	}
+
+	return true
+}
+
+// c4dPeerSafe reports whether peer re-parses as a PeerRef (D-07/D-13): every
+// dotted segment matches the identifier charset or is a ${param} token
+// (template bodies parametrize link peers, so tokens ride verbatim).
+func c4dPeerSafe(peer string) bool {
+	for _, seg := range strings.Split(peer, ".") {
+		if c4dIdentSafe(seg) {
+			continue
+		}
+
+		return strings.HasPrefix(seg, "${") && strings.HasSuffix(seg, "}") &&
+			c4dIdentSafe(seg[2:len(seg)-1])
+	}
+
+	return true
 }
 
 // formatFloat renders a float64 unit field (width, height) in its shortest
