@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Label Formatting Fixes
 status: executing
-last_updated: "2026-08-14T19:06:50.841Z"
+last_updated: "2026-08-14T19:33:40.296Z"
 last_activity: 2026-08-14
 progress:
   total_phases: 1
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-08-10)
 ## Current Position
 
 Phase: 35 (add-a-simple-dsl-alternative-to-the-toml-diagram-definition) — EXECUTING
-Plan: 8 of 9
+Plan: 9 of 9
 **Progress:** [██████████] 100%
 Status: Ready to execute
 Last activity: 2026-08-14
@@ -50,6 +50,7 @@ Last activity: 2026-08-14
 | Phase 35 P05 | 30min | 3 tasks | 13 files |
 | Phase 35 P06 | 53min | 3 tasks | 19 files |
 | Phase 35 P07 | 13min | 3 tasks | 4 files |
+| Phase 35 P08 | 24min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -87,7 +88,7 @@ Both captured todos (`.planning/todos/pending/2026-08-10-wrap-edge-labels-like-u
 
 ## Session Continuity
 
-Last session: 2026-08-14T19:04:18.909Z
+Last session: 2026-08-14T19:33:31.624Z
 Stopped at: Completed 35-05-PLAN.md (ToModel parity hub + ParseAST export + mixed-format includes); next 35-06
 Resume file: None
 
@@ -114,6 +115,9 @@ Resume file: None
 - [Phase ?]: 35-07: convert emission NEVER sees the pipeline — D-24 gate (parse->include->expand->peer->validate) runs on a discarded copy; twins emit from a fresh source parse so includes/templates/use/bare peers survive verbatim (D-25/D-22 parity with 35-06)
 - [Phase ?]: 35-07: --follow-includes converts each graph file from its own fresh parse, rewriting only include-path strings (once + relative form preserved); already-target-format files are skipped — conversion is additive, so mixed .toml/.c4d graphs stay coherent (D-26)
 - [Phase ?]: 35-07: unknown input extension is a hard parse error naming .toml/.c4d (parseInput helper shared by render and convert); convert's direction gate mirrors it
+- [Phase ?]: 35-08: fmt preserves the AUTHOR's key order on .toml (contrast with convert's D-23); values render from raw source bytes verbatim — idempotent by construction
+- [Phase ?]: 35-08: fmt's T-35-08-01 gate — candidate must re-parse DeepEqual to the original Model BEFORE any write (applyFormatted seam, both failure legs tested)
+- [Phase ?]: 35-08: corpus .c4d coverage via internal/include/testdata real fixtures + converted twins of every valid TOML fixture (the plan's four roots ship zero .c4d files)
 
 ## Operator Next Steps
 
