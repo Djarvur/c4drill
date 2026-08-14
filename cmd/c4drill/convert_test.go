@@ -33,7 +33,7 @@ const convertSourceC4D = `properties {
 }
 
 user: person "User" {
-	-> api: HTTPS | drives traffic
+	-> api.cache: HTTPS | drives traffic
 }
 
 api: system "API" {
@@ -73,7 +73,7 @@ type = "person"
 name = "User"
 
 [[user.link]]
-peer = "api"
+peer = "api.cache"
 technology = "HTTPS"
 description = "drives traffic"
 
@@ -141,11 +141,9 @@ func writeConvertFixture(t *testing.T, name, entry, extraName, extra string) str
 	return entryPath
 }
 
-// runConvert executes the cobra root command with the given convert args and
-// returns the resulting error.
-//
-//nolint:paralleltest // cobra flags bind package-level vars; serial execution only
-func runConvert(t *testing.T, args ...string) error {
+// execConvert executes the cobra root command with the given convert args
+// and returns the resulting error.
+func execConvert(t *testing.T, args ...string) error {
 	t.Helper()
 
 	cmd := NewRootCmd()
@@ -279,7 +277,7 @@ func requirePreserved(t *testing.T, twin *parser.Model, src *parser.Model) {
 func TestConvertToTOMLRoundTrip(t *testing.T) {
 	entry := writeConvertFixture(t, "diagram.c4d", convertSourceC4D, "extra.c4d", convertExtraC4D)
 
-	require.NoError(t, runConvert(t, "to-toml", entry), "convert to-toml must succeed")
+	require.NoError(t, execConvert(t, "to-toml", entry), "convert to-toml must succeed")
 
 	// D-30: output lands next to the input with the extension swapped.
 	outPath := filepath.Join(filepath.Dir(entry), "diagram.toml")
@@ -306,7 +304,7 @@ func TestConvertToTOMLRoundTrip(t *testing.T) {
 func TestConvertToC4DRoundTrip(t *testing.T) {
 	entry := writeConvertFixture(t, "diagram.toml", convertSourceTOML, "extra.toml", convertExtraTOML)
 
-	require.NoError(t, runConvert(t, "to-c4d", entry), "convert to-c4d must succeed")
+	require.NoError(t, execConvert(t, "to-c4d", entry), "convert to-c4d must succeed")
 
 	outPath := filepath.Join(filepath.Dir(entry), "diagram.c4d")
 	assert.FileExists(t, outPath, "twin must be written next to the input")
@@ -331,7 +329,7 @@ func TestConvertOutputDirFlag(t *testing.T) {
 	entry := writeConvertFixture(t, "diagram.toml", convertSourceTOML, "extra.toml", convertExtraTOML)
 
 	outDir := filepath.Join(t.TempDir(), "nested", "twins")
-	require.NoError(t, runConvert(t, "to-c4d", entry, "--output", outDir),
+	require.NoError(t, execConvert(t, "to-c4d", entry, "--output", outDir),
 		"convert with -o must succeed and create the target directory")
 
 	assert.FileExists(t, filepath.Join(outDir, "diagram.c4d"),
@@ -352,9 +350,10 @@ func TestConvertInvalidInputNoOutput(t *testing.T) {
 
 	dir := t.TempDir()
 	entry := filepath.Join(dir, "invalid_links.toml")
+	//nolint:gosec // G703: committed fixture copied into t.TempDir()
 	require.NoError(t, os.WriteFile(entry, src, 0o600), "write invalid fixture copy")
 
-	err = runConvert(t, "to-c4d", entry)
+	err = execConvert(t, "to-c4d", entry)
 	require.Error(t, err, "invalid input must be a hard error (D-24)")
 	assert.Contains(t, err.Error(), "validation", "error must surface the validation gate")
 
@@ -379,7 +378,7 @@ name = "User"
 path = "ghost.toml"
 `), 0o600), "write entry with missing include")
 
-	err := runConvert(t, "to-c4d", entry)
+	err := execConvert(t, "to-c4d", entry)
 	require.Error(t, err, "missing include must be a hard error")
 
 	msg := err.Error()
@@ -396,7 +395,7 @@ func TestConvertWrongDirection(t *testing.T) {
 
 	// to-toml needs a .c4d input; feeding it a .toml must hard-error and
 	// explain the expected extension.
-	err := runConvert(t, "to-toml", entry)
+	err := execConvert(t, "to-toml", entry)
 	require.Error(t, err, "wrong-direction extension must be a hard error")
 
 	msg := err.Error()

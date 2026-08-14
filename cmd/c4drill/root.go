@@ -96,6 +96,9 @@ Output:
 	cmd.PersistentFlags().Float64Var(&labelRatio, "label-ratio", 0,
 		"Width:height ratio for unit labels (default: 1.6, credit card proportions)")
 
+	// Subcommands (Plan 35-07): convert between TOML and C4D formats.
+	cmd.AddCommand(newConvertCmd())
+
 	return cmd
 }
 
