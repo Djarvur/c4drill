@@ -1,0 +1,11 @@
+# Composed Example - auth domain; C4D twin of domains/auth.toml. Included
+# from entry.c4d; contributes the platform.auditLog cross-file subunit.
+platform: system "Platform" {
+  auditLog: container "Audit Log Domain" {
+    description: Appended via include from domains/auth.toml (D-10)
+    sink: componentQueue "Audit Sink" {
+      description: Drains audit events from the bus
+      -> messageBus: Consumes audit events from the backbone
+    }
+  }
+}
