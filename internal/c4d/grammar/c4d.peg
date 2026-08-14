@@ -1,25 +1,541 @@
-// C4D DSL grammar (pigeon PEG). The initializer below must carry the package
-// clause verbatim; keep it comment-free so it does not become a second
-// package godoc (godoclint) in the generated parser_gen.go.
+// C4D DSL grammar (pigeon PEG) — core statements per 35-01-PLAN.md:
+// brace-block units (D-01/D-02), exact TOML type keywords plus the external
+// modifier (D-03/D-04), in-block edges with the four ASCII arrows and the
+// desc/tech pipe shorthand (D-05/D-08/D-09), literals (D-06), identifiers
+// and dotted peer paths (D-07), the properties block (D-12), list values
+// (D-15), and ';' separators plus empty blocks (D-18).
+//
+// Statement keywords (use/include/template/properties) are reserved against
+// unit ids at the grammar level (D-19 groundwork; friendly Levenshtein
+// errors land in Plan 03).
+//
+// Trivia model (D-32): pigeon has no built-in comment skipping, so the
+// grammar captures comments at statement level — a comment attaches to the
+// statement that FOLLOWS it; a same-line trailing comment attaches to the
+// statement that PRECEDES it; a comment with no adjacent statement attaches
+// to the enclosing node's trailing list.
+//
+// The initializer below must carry the package clause verbatim; keep it
+// comment-free so it does not become a second package godoc (godoclint) in
+// the generated parser_gen.go.
 
 {
 package grammar
+
+import (
+	"strings"
+
+	"github.com/Djarvur/c4drill/internal/c4d/ast"
+)
+
+// stmtWithComments pairs a parsed statement with its leading comments and
+// same-line trailing comment; standalone trailing comments (no following
+// statement) use the trailing field only.
+type stmtWithComments struct {
+	comments []*ast.Comment
+	stmt     any
+	tail     *ast.Comment
+	trailing *ast.Comment
 }
 
-Document <- statements:Statement* !. {
-	return statements, nil
+// edgeLabel carries the two halves of the D-09 pipe shorthand.
+type edgeLabel struct {
+	tech, desc string
 }
 
-Statement <- _ comment:Comment {
-	return comment, nil
+// toAnySlice normalizes a pigeon sequence/iteration capture to []any.
+func toAnySlice(v any) []any {
+	if v == nil {
+		return nil
+	}
+
+	if s, ok := v.([]any); ok {
+		return s
+	}
+
+	return []any{v}
 }
 
-Comment <- '#' (!EOL .)* (EOL / !.) {
+// toComments extracts the *ast.Comment values nested in a
+// (whitespace Comment whitespace)* capture.
+func toComments(v any) []*ast.Comment {
+	var out []*ast.Comment
+
+	for _, item := range toAnySlice(v) {
+		for _, e := range toAnySlice(item) {
+			if cm, ok := e.(*ast.Comment); ok {
+				out = append(out, cm)
+			}
+		}
+	}
+
+	return out
+}
+
+// toComment extracts an optional single *ast.Comment from a capture.
+func toComment(v any) *ast.Comment {
+	for _, e := range toAnySlice(v) {
+		if cm, ok := e.(*ast.Comment); ok {
+			return cm
+		}
+	}
+
+	return nil
+}
+
+// strVal extracts a single string value from a labeled capture.
+func strVal(v any) string {
+	for _, e := range toAnySlice(v) {
+		if s, ok := e.(string); ok {
+			return s
+		}
+	}
+
+	return ""
+}
+
+// boolVal reports whether an optional modifier matched.
+func boolVal(v any) bool {
+	for _, e := range toAnySlice(v) {
+		if b, ok := e.(bool); ok {
+			return b
+		}
+	}
+
+	return false
+}
+
+// unescapeDoubleQuoted processes the escapes of a double-quoted literal
+// body: \" \\ \n \t \r map to their characters; any other escape yields the
+// escaped character itself.
+func unescapeDoubleQuoted(s string) string {
+	var b strings.Builder
+
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\\' && i+1 < len(s) {
+			i++
+
+			switch s[i] {
+			case 'n':
+				b.WriteByte('\n')
+			case 't':
+				b.WriteByte('\t')
+			case 'r':
+				b.WriteByte('\r')
+			default:
+				b.WriteByte(s[i])
+			}
+
+			continue
+		}
+
+		b.WriteByte(s[i])
+	}
+
+	return b.String()
+}
+
+// splitPipeLabel splits an edge label value on the first pipe (D-09): a
+// value without a pipe is the description alone (user's explicit override —
+// NOT tech-first).
+func splitPipeLabel(s string) (tech, desc string) {
+	if i := strings.IndexByte(s, '|'); i >= 0 {
+		return strings.TrimSpace(s[:i]), strings.TrimSpace(s[i+1:])
+	}
+
+	return "", strings.TrimSpace(s)
+}
+
+// attachStmtComments attaches lead comments and the same-line tail comment
+// to a statement node (lead first, then tail — source order).
+func attachStmtComments(stmt any, lead []*ast.Comment, tail *ast.Comment) {
+	switch n := stmt.(type) {
+	case *ast.PropertiesBlock:
+		n.Comments = append(n.Comments, lead...)
+		if tail != nil {
+			n.Comments = append(n.Comments, tail)
+		}
+	case *ast.UnitNode:
+		n.Comments = append(n.Comments, lead...)
+		if tail != nil {
+			n.Comments = append(n.Comments, tail)
+		}
+	case *ast.FieldStmt:
+		n.Comments = append(n.Comments, lead...)
+		if tail != nil {
+			n.Comments = append(n.Comments, tail)
+		}
+	case *ast.EdgeStmt:
+		n.Comments = append(n.Comments, lead...)
+		if tail != nil {
+			n.Comments = append(n.Comments, tail)
+		}
+	}
+}
+}
+
+Document <- _ parts:TopPart* _ !. {
+	doc := &ast.Document{Pos: c.pos.line}
+
+	for _, item := range toAnySlice(parts) {
+		part, ok := item.(*stmtWithComments)
+		if !ok {
+			continue
+		}
+
+		if part.stmt != nil {
+			attachStmtComments(part.stmt, part.comments, part.tail)
+		}
+
+		switch n := part.stmt.(type) {
+		case *ast.PropertiesBlock:
+			doc.Properties = n
+		case *ast.UnitNode:
+			doc.Units = append(doc.Units, n)
+		}
+
+		if part.trailing != nil {
+			doc.TrailingComments = append(doc.TrailingComments, part.trailing)
+		}
+	}
+
+	return doc, nil
+}
+
+TopPart <- lead:(_ Comment _)* _ stmt:(Properties / Unit) tail:StmtEnd {
+	return &stmtWithComments{comments: toComments(lead), stmt: stmt, tail: toComment(tail)}, nil
+} / _ cm:Comment {
+	return &stmtWithComments{trailing: cm.(*ast.Comment)}, nil
+}
+
+// BodyPart is one statement of a unit body: optional leading comments, the
+// statement, optional same-line trailing comment, then the terminator.
+BodyPart <- lead:(_ Comment _)* _ stmt:BodyStmt tail:StmtEnd {
+	return &stmtWithComments{comments: toComments(lead), stmt: stmt, tail: toComment(tail)}, nil
+} / _ cm:Comment {
+	return &stmtWithComments{trailing: cm.(*ast.Comment)}, nil
+}
+
+BodyStmt <- EdgeStmt / FieldStmt / Unit
+
+// Unit is a brace-block unit. The header action builds the UnitNode; this
+// rule fills in the body statements in match order.
+Unit <- header:UnitHeader _ '{' _ parts:BodyPart* _ '}' {
+	unit, ok := header.(*ast.UnitNode)
+	if !ok {
+		return nil, nil
+	}
+
+	for _, item := range toAnySlice(parts) {
+		part, ok := item.(*stmtWithComments)
+		if !ok {
+			continue
+		}
+
+		if part.stmt != nil {
+			attachStmtComments(part.stmt, part.comments, part.tail)
+		}
+
+		switch n := part.stmt.(type) {
+		case *ast.FieldStmt:
+			unit.Fields = append(unit.Fields, n)
+		case *ast.EdgeStmt:
+			unit.Edges = append(unit.Edges, n)
+		case *ast.UnitNode:
+			unit.Subunits = append(unit.Subunits, n)
+		}
+
+		if part.trailing != nil {
+			unit.TrailingComments = append(unit.TrailingComments, part.trailing)
+		}
+	}
+
+	return unit, nil
+}
+
+// UnitHeader — D-02 form `id: type "Name"`. The id-led form requires the
+// colon; a type keyword alone (optionally followed by external and/or a
+// quoted name) is the type-led form with the id omitted; a bare
+// non-reserved identifier is the id-only form with the type omitted.
+// Omitted slots stay empty in the AST — inference happens in the Model
+// conversion, never at parse time.
+UnitHeader <- id:UnitId _ ':' _ typ:TypeKeyword _ ext:ExternalModifier? _ name:QuotedString? {
+	return &ast.UnitNode{Pos: c.pos.line, ID: id.(string), Type: typ.(string), External: boolVal(ext), Name: strVal(name)}, nil
+} / typ:TypeKeyword _ ext:ExternalModifier? _ name:QuotedString? {
+	return &ast.UnitNode{Pos: c.pos.line, Type: typ.(string), External: boolVal(ext), Name: strVal(name)}, nil
+} / id:UnitId {
+	return &ast.UnitNode{Pos: c.pos.line, ID: id.(string)}, nil
+}
+
+// ReservedKeyword — statement keywords that cannot be unit ids (D-19
+// groundwork). Full error reporting with suggestions lands in Plan 03.
+ReservedKeyword <- ("use" / "include" / "template" / "properties") !IdentChar
+
+UnitId <- !ReservedKeyword id:Ident {
+	return id, nil
+}
+
+// TypeKeyword — the EXACT TOML type strings (D-03); the external modifier
+// is a separate word (D-04), never a keyword variant.
+TypeKeyword <- ("personExternal" / "systemExternal" / "dbExternal" / "queueExternal" /
+	"containerQueue" / "containerBox" / "containerDb" /
+	"componentQueue" / "componentBox" / "componentDb" /
+	"container" / "component" / "person" / "system" / "queue" / "box" / "db") !IdentChar {
 	return string(c.text), nil
 }
 
-_ <- (Whitespace / EOL)*
+ExternalModifier <- "external" !IdentChar {
+	return true, nil
+}
 
-Whitespace <- [ \t]
+Ident <- [A-Za-z0-9_-]+ {
+	return string(c.text), nil
+}
+
+IdentChar <- [A-Za-z0-9_-]
+
+// PeerRef — bare identifier or dotted absolute path (D-07, D-10).
+PeerRef <- [A-Za-z0-9_-]+ ('.' [A-Za-z0-9_-]+)* {
+	return string(c.text), nil
+}
+
+// EdgeStmt — D-05/D-08/D-09. The glyph is recorded verbatim; mapping to
+// model.ArrowDirection happens in the Model conversion.
+EdgeStmt <- arrow:ArrowGlyph _ peer:PeerRef label:(_ ':' _ EdgeLabel)? opts:(_ OptionBlock)? {
+	es := &ast.EdgeStmt{Pos: c.pos.line, ArrowGlyph: arrow.(string), Peer: peer.(string)}
+
+	for _, e := range toAnySlice(label) {
+		if lb, ok := e.(*edgeLabel); ok {
+			es.Technology, es.Description = lb.tech, lb.desc
+		}
+	}
+
+	for _, e := range toAnySlice(opts) {
+		if fields, ok := e.([]*ast.FieldStmt); ok {
+			es.Options = append(es.Options, fields...)
+		}
+	}
+
+	return es, nil
+}
+
+ArrowGlyph <- ("<->" / "->" / "<-" / "--") {
+	return string(c.text), nil
+}
+
+// EdgeLabel — D-09 pipe shorthand. A single un-piped value is the
+// DESCRIPTION (user's explicit override); `tech |` is tech-only; quoted
+// values split on the first pipe like unquoted ones.
+EdgeLabel <- v:(TripleQuoted / DoubleQuoted) {
+	lit, _ := v.(ast.Literal)
+	tech, desc := splitPipeLabel(lit.Str)
+	return &edgeLabel{tech: tech, desc: desc}, nil
+} / tech:Bareword _ '|' _ desc:Bareword? {
+	t, _ := tech.(ast.Literal)
+	var d string
+	if desc != nil {
+		dl, _ := desc.(ast.Literal)
+		d = dl.Str
+	}
+	return &edgeLabel{tech: t.Str, desc: d}, nil
+} / desc:Bareword {
+	d, _ := desc.(ast.Literal)
+	return &edgeLabel{desc: d.Str}, nil
+}
+
+// OptionBlock — trailing brace block of edge options (D-09).
+OptionBlock <- '{' _ parts:OptionPart* _ '}' {
+	var fields []*ast.FieldStmt
+
+	for _, item := range toAnySlice(parts) {
+		part, ok := item.(*stmtWithComments)
+		if !ok {
+			continue
+		}
+
+		if part.stmt != nil {
+			attachStmtComments(part.stmt, part.comments, part.tail)
+		}
+
+		if f, ok := part.stmt.(*ast.FieldStmt); ok {
+			fields = append(fields, f)
+		}
+
+		if part.trailing != nil {
+			_ = part.trailing // edge options have no own trailing-comment slot yet
+		}
+	}
+
+	return fields, nil
+}
+
+OptionPart <- lead:(_ Comment _)* _ f:OptionFieldCore tail:OptEnd {
+	return &stmtWithComments{comments: toComments(lead), stmt: f, tail: toComment(tail)}, nil
+} / _ cm:Comment {
+	return &stmtWithComments{trailing: cm.(*ast.Comment)}, nil
+}
+
+OptionFieldCore <- key:OptionKey _ ':' _ value:OptionValue {
+	return &ast.FieldStmt{Pos: c.pos.line, Key: key.(string), Value: value.(ast.Literal)}, nil
+}
+
+OptionKey <- ("labelPosition" / "color" / "style" / "rank" / "arrow" / "length") !IdentChar {
+	return string(c.text), nil
+}
+
+// OptionValue — single-token bareword or quoted string (colors, style
+// names, numbers, enum values).
+OptionValue <- DoubleQuoted / OptionBareword
+
+OptionBareword <- (!OptionBarewordStop .)+ {
+	return ast.Literal{Kind: ast.KindBareword, Str: strings.TrimSpace(string(c.text))}, nil
+}
+
+OptionBarewordStop <- EOL / [{};|,"#] / [ \t]
+
+// Properties — D-12 top-level block with the TOML [properties] key set.
+Properties <- "properties" !IdentChar _ '{' _ parts:PropertyPart* _ '}' {
+	props := &ast.PropertiesBlock{Pos: c.pos.line}
+
+	for _, item := range toAnySlice(parts) {
+		part, ok := item.(*stmtWithComments)
+		if !ok {
+			continue
+		}
+
+		if part.stmt != nil {
+			attachStmtComments(part.stmt, part.comments, part.tail)
+		}
+
+		if f, ok := part.stmt.(*ast.FieldStmt); ok {
+			props.Fields = append(props.Fields, f)
+		}
+
+		if part.trailing != nil {
+			props.TrailingComments = append(props.TrailingComments, part.trailing)
+		}
+	}
+
+	return props, nil
+}
+
+PropertyPart <- lead:(_ Comment _)* _ f:PropertyFieldCore tail:StmtEnd {
+	return &stmtWithComments{comments: toComments(lead), stmt: f, tail: toComment(tail)}, nil
+} / _ cm:Comment {
+	return &stmtWithComments{trailing: cm.(*ast.Comment)}, nil
+}
+
+PropertyFieldCore <- key:PropertyKey _ ':' _ value:Literal {
+	return &ast.FieldStmt{Pos: c.pos.line, Key: key.(string), Value: value.(ast.Literal)}, nil
+}
+
+PropertyKey <- ("lineLength" / "name" / "description" / "color" / "style" / "border" / "edges" / "expanded") !IdentChar {
+	return string(c.text), nil
+}
+
+FieldStmt <- key:FieldKey _ ':' _ value:Literal {
+	return &ast.FieldStmt{Pos: c.pos.line, Key: key.(string), Value: value.(ast.Literal)}, nil
+}
+
+FieldKey <- ("description" / "technology" / "reference" / "expanded" / "name" / "color" / "style" / "border" / "edges") !IdentChar {
+	return string(c.text), nil
+}
+
+// Literal — D-06/D-15 value forms.
+Literal <- TripleQuoted / DoubleQuoted / ListLiteral / Bareword
+
+Bareword <- (!BarewordStop .)+ {
+	return ast.Literal{Kind: ast.KindBareword, Str: strings.TrimSpace(string(c.text))}, nil
+}
+
+// BarewordStop — structural characters that end a bareword; ':' is NOT a
+// stop character so scheme-prefixed URLs stay valid barewords (D-06).
+BarewordStop <- EOL / [{};|,"#]
+
+// ListLiteral — D-15: inline `[a, b]` and one-per-line forms; commas
+// optional.
+ListLiteral <- '[' _ head:ListItem? tail:(_ ','? _ ListItem)* _ ','? _ ']' {
+	lit := ast.Literal{Kind: ast.KindList}
+
+	if head != nil {
+		if hl, ok := head.(ast.Literal); ok {
+			lit.List = append(lit.List, hl.Str)
+		}
+	}
+
+	for _, item := range toAnySlice(tail) {
+		for _, e := range toAnySlice(item) {
+			if il, ok := e.(ast.Literal); ok {
+				lit.List = append(lit.List, il.Str)
+			}
+		}
+	}
+
+	return lit, nil
+}
+
+ListItem <- TripleQuoted / DoubleQuoted / ListBareword
+
+// ListBareword — a single-token list item; ']' ends it (the value Bareword
+// deliberately does not stop at ']', so lists need their own variant).
+ListBareword <- (!ListBarewordStop .)+ {
+	return ast.Literal{Kind: ast.KindBareword, Str: strings.TrimSpace(string(c.text))}, nil
+}
+
+ListBarewordStop <- EOL / [{};|,"#\]]
+
+TripleQuoted <- "\"\"\"" (!"\"\"\"" .)* "\"\"\"" {
+	return ast.Literal{Kind: ast.KindTriple, Str: string(c.text[3 : len(c.text)-3])}, nil
+}
+
+// QuotedString — a double-quoted string used as a unit display name; the
+// escape-aware unquoted text is the value.
+QuotedString <- v:DoubleQuoted {
+	lit, _ := v.(ast.Literal)
+	return lit.Str, nil
+}
+
+DoubleQuoted <- '"' (EscapedChar / !'"' !EOL .)* '"' {
+	return ast.Literal{Kind: ast.KindQuoted, Str: unescapeDoubleQuoted(string(c.text[1 : len(c.text)-1]))}, nil
+}
+
+EscapedChar <- '\\' .
+
+// Comment — '#' to end of line; the EOL is NOT consumed (terminators and
+// comment leaders handle it).
+Comment <- '#' (!EOL .)* {
+	return &ast.Comment{Pos: c.pos.line, Text: strings.TrimSpace(strings.TrimPrefix(string(c.text), "#"))}, nil
+}
+
+// StmtEnd — terminator after a statement: optional same-line trailing
+// comment, then ';' / EOL / lookahead '}' / EOF.
+StmtEnd <- _ cm:Comment Term {
+	return cm, nil
+} / _ Term {
+	return nil, nil
+}
+
+Term <- ';' / EOL / &'}' / !. / &StmtStart
+
+// StmtStart — lookahead: another statement begins (implicit separator for
+// D-18 one-line nested blocks, e.g. `box { api: system { } db: db { } }`).
+StmtStart <- _ (ArrowGlyph / FieldKey / TypeKeyword / UnitId / "properties" !IdentChar)
+
+// OptEnd — like StmtEnd but also accepts a following option keyword as a
+// separator (options may be space-separated on one line).
+OptEnd <- _ cm:Comment OptTerm {
+	return cm, nil
+} / _ OptTerm {
+	return nil, nil
+}
+
+OptTerm <- ';' / EOL / &'}' / !. / &StmtStart / &OptionKey
+
+// WS — horizontal whitespace (one or more; `_` provides the zero case — a
+// zero-width success inside a star loop would not terminate).
+WS <- [ \t]+
+
+// _ — flexible whitespace including line endings.
+_ <- (WS / EOL)*
 
 EOL <- "\r\n" / "\n" / "\r"

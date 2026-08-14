@@ -63,7 +63,7 @@ func TestParseUnitTypeAndName(t *testing.T) {
 
 	unit := firstUnit(t, `system "Payment Gateway" { description: processes cards }`)
 
-	assert.Equal(t, "", unit.ID, "UnitNode.ID (omitted in type-led header)")
+	assert.Empty(t, unit.ID, "UnitNode.ID (omitted in type-led header)")
 	assert.Equal(t, "system", unit.Type, "UnitNode.Type")
 	assert.Equal(t, "Payment Gateway", unit.Name, "UnitNode.Name")
 	assert.False(t, unit.External, "UnitNode.External")
@@ -78,7 +78,7 @@ func TestParseUnitOmittedType(t *testing.T) {
 	unit := firstUnit(t, "api { }")
 
 	assert.Equal(t, "api", unit.ID, "UnitNode.ID")
-	assert.Equal(t, "", unit.Type, "UnitNode.Type (omitted — inference happens in toModel, not here)")
+	assert.Empty(t, unit.Type, "UnitNode.Type (omitted — inference happens in toModel, not here)")
 	assert.Empty(t, unit.Subunits, "UnitNode.Subunits")
 }
 
@@ -193,7 +193,10 @@ func TestParseLiteralsBareword(t *testing.T) {
 
 	unit := firstUnit(t, "a: system { description: simple value here }")
 
-	assert.Equal(t, ast.Literal{Kind: ast.KindBareword, Str: "simple value here"}, fieldByKey(t, unit, "description").Value, "bareword value (edge whitespace trimmed)")
+	assert.Equal(t,
+		ast.Literal{Kind: ast.KindBareword, Str: "simple value here"},
+		fieldByKey(t, unit, "description").Value,
+		"bareword value (edge whitespace trimmed)")
 }
 
 func TestParseLiteralsURLBareword(t *testing.T) {
@@ -201,7 +204,10 @@ func TestParseLiteralsURLBareword(t *testing.T) {
 
 	unit := firstUnit(t, "a: system { reference: https://example.com/docs }")
 
-	assert.Equal(t, ast.Literal{Kind: ast.KindBareword, Str: "https://example.com/docs"}, fieldByKey(t, unit, "reference").Value, "scheme-prefixed URL as bareword (D-06)")
+	assert.Equal(t,
+		ast.Literal{Kind: ast.KindBareword, Str: "https://example.com/docs"},
+		fieldByKey(t, unit, "reference").Value,
+		"scheme-prefixed URL as bareword (D-06)")
 }
 
 func TestParseLiteralsDoubleQuoted(t *testing.T) {
@@ -209,7 +215,10 @@ func TestParseLiteralsDoubleQuoted(t *testing.T) {
 
 	unit := firstUnit(t, `a: system { description: "has { } : |  and spaces " }`)
 
-	assert.Equal(t, ast.Literal{Kind: ast.KindQuoted, Str: "has { } : |  and spaces "}, fieldByKey(t, unit, "description").Value, "double-quoted value (structural chars + edge whitespace preserved, D-06)")
+	assert.Equal(t,
+		ast.Literal{Kind: ast.KindQuoted, Str: "has { } : |  and spaces "},
+		fieldByKey(t, unit, "description").Value,
+		"double-quoted value (structural chars + edge whitespace preserved, D-06)")
 }
 
 func TestParseLiteralsDoubleQuotedEscapes(t *testing.T) {
@@ -217,7 +226,10 @@ func TestParseLiteralsDoubleQuotedEscapes(t *testing.T) {
 
 	unit := firstUnit(t, `a: system { name: "say \"hi\"" }`)
 
-	assert.Equal(t, ast.Literal{Kind: ast.KindQuoted, Str: `say "hi"`}, fieldByKey(t, unit, "name").Value, "escaped quote inside double-quoted value")
+	assert.Equal(t,
+		ast.Literal{Kind: ast.KindQuoted, Str: `say "hi"`},
+		fieldByKey(t, unit, "name").Value,
+		"escaped quote inside double-quoted value")
 }
 
 func TestParseLiteralsTripleQuoted(t *testing.T) {
@@ -225,24 +237,28 @@ func TestParseLiteralsTripleQuoted(t *testing.T) {
 
 	unit := firstUnit(t, "a: system { description: \"\"\"\nline one\nline two\n\"\"\" }")
 
-	assert.Equal(t, ast.Literal{Kind: ast.KindTriple, Str: "\nline one\nline two\n"}, fieldByKey(t, unit, "description").Value, "triple-quoted multi-line value (D-06)")
+	assert.Equal(t,
+		ast.Literal{Kind: ast.KindTriple, Str: "\nline one\nline two\n"},
+		fieldByKey(t, unit, "description").Value,
+		"triple-quoted multi-line value (D-06)")
 }
 
 func TestParseCommentLines(t *testing.T) {
 	t.Parallel()
 
-	doc := parseDoc(t, "# top comment\na: system { } # trailing comment\n")
+	// Leading comments attach to the following statement; a same-line
+	// trailing comment attaches to the preceding statement (gofmt
+	// semantics); an orphan comment attaches to the enclosing document.
+	doc := parseDoc(t, "# top comment\na: system { } # trailing comment\n# orphan\n")
 
 	require.Len(t, doc.Units, 1, "doc.Units")
-	assert.Empty(t, doc.Units[0].Comments, "trailing same-line comment does not attach as leading")
-	require.Len(t, doc.TrailingComments, 0, "doc.TrailingComments")
-
-	doc = parseDoc(t, "# leading\na: system { }\n")
-
-	require.Len(t, doc.Units, 1, "doc.Units")
-	require.Len(t, doc.Units[0].Comments, 1, "leading comment attaches to following statement (D-32)")
-	assert.Equal(t, "leading", doc.Units[0].Comments[0].Text, "Comment.Text")
-	assert.Equal(t, 1, doc.Units[0].Comments[0].Pos, "Comment.Pos (1-indexed line)")
+	require.Len(t, doc.Units[0].Comments, 2, "unit.Comments (lead + same-line tail)")
+	assert.Equal(t, "top comment", doc.Units[0].Comments[0].Text, "lead Comment.Text")
+	assert.Equal(t, 1, doc.Units[0].Comments[0].Pos, "lead Comment.Pos")
+	assert.Equal(t, "trailing comment", doc.Units[0].Comments[1].Text, "tail Comment.Text")
+	assert.Equal(t, 2, doc.Units[0].Comments[1].Pos, "tail Comment.Pos")
+	require.Len(t, doc.TrailingComments, 1, "doc.TrailingComments (orphan)")
+	assert.Equal(t, "orphan", doc.TrailingComments[0].Text, "orphan Comment.Text")
 }
 
 func TestParseCommentAttachmentInsideBlock(t *testing.T) {
@@ -253,8 +269,8 @@ func TestParseCommentAttachmentInsideBlock(t *testing.T) {
 	f := fieldByKey(t, unit, "description")
 	require.Len(t, f.Comments, 1, "FieldStmt.Comments (attached to following statement)")
 	assert.Equal(t, "describes a", f.Comments[0].Text, "Comment.Text")
-	assert.Equal(t, 3, f.Comments[0].Pos, "Comment.Pos (comment's own line)")
-	assert.Equal(t, 4, f.Pos, "FieldStmt.Pos (statement's own line)")
+	assert.Equal(t, 2, f.Comments[0].Pos, "Comment.Pos (comment's own line)")
+	assert.Equal(t, 3, f.Pos, "FieldStmt.Pos (statement's own line)")
 }
 
 func TestParseIdentifiers(t *testing.T) {
@@ -270,7 +286,7 @@ func TestParseIdentifiers(t *testing.T) {
 func TestParseProperties(t *testing.T) {
 	t.Parallel()
 
-	doc := parseDoc(t, "properties { name: Demo description: Demo diagram color: red lineLength: 42 }")
+	doc := parseDoc(t, "properties {\n\tname: Demo\n\tdescription: Demo diagram\n\tcolor: red\n\tlineLength: 42\n}")
 
 	require.NotNil(t, doc.Properties, "Document.Properties (D-12)")
 	require.Len(t, doc.Properties.Fields, 4, "PropertiesBlock.Fields")
@@ -300,7 +316,10 @@ func TestParsePropertiesListValues(t *testing.T) {
 
 			require.NotNil(t, doc.Properties, "Document.Properties")
 			require.Len(t, doc.Properties.Fields, 1, "PropertiesBlock.Fields")
-			assert.Equal(t, ast.Literal{Kind: ast.KindList, List: []string{"a", "b"}}, doc.Properties.Fields[0].Value, "expanded list value")
+			assert.Equal(t,
+				ast.Literal{Kind: ast.KindList, List: []string{"a", "b"}},
+				doc.Properties.Fields[0].Value,
+				"expanded list value")
 		})
 	}
 }
@@ -357,7 +376,7 @@ func TestParseSyntaxErrors(t *testing.T) {
 		src  string
 	}{
 		{name: "unclosed brace", src: "a: system {"},
-		{name: "missing separator", src: "a: system { } b: db { }"},
+		{name: "missing separator", src: "a: system b: db { }"},
 		{name: "stray arrow glyph", src: "a: system { => db }"},
 		{name: "unknown field key", src: "a: system { bogus: value }"},
 		{name: "unknown edge option", src: "a: system { -> db { bogus: x } }"},
