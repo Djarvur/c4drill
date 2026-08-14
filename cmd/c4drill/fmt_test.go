@@ -58,48 +58,43 @@ type = "person"
 description = "End user"
 `
 
+//nolint:paralleltest // cobra flags bind package-level vars; serial execution only
 func TestFMTFormatsC4DInPlace(t *testing.T) {
 	path := writeTempFile(t, "messy.c4d", fmtC4DMessy)
 
-	err, _ := execFMT(t, path)
+	_, err := execFMT(t, path)
 	require.NoError(t, err, "fmt rewrites a misformatted .c4d in place")
 
 	doc, docErr := c4d.ParseAST([]byte(fmtC4DMessy))
 	require.NoError(t, docErr, "fixture parses to an AST")
 
-	want := c4d.EmitC4D(doc)
-
-	got, readErr := os.ReadFile(path)
-	require.NoError(t, readErr, "read the formatted file back")
-
-	assert.Equal(t, want, string(got),
+	assert.Equal(t, c4d.EmitC4D(doc), readFixture(t, path),
 		".c4d output equals the EmitC4D canonical text (D-33)")
-	assert.Contains(t, string(got), "# Lead comment on user.",
+	assert.Contains(t, readFixture(t, path), "# Lead comment on user.",
 		"lead comments survive .c4d formatting (D-32)")
-	assert.Contains(t, string(got), "# tail comment",
+	assert.Contains(t, readFixture(t, path), "# tail comment",
 		"same-line tail comments survive .c4d formatting (D-32)")
 }
 
+//nolint:paralleltest // cobra flags bind package-level vars; serial execution only
 func TestFMTFormatsTOMLInPlace(t *testing.T) {
 	path := writeTempFile(t, "messy.toml", fmtTOMLMessy)
 
-	err, _ := execFMT(t, path)
+	_, err := execFMT(t, path)
 	require.NoError(t, err, "fmt rewrites a misformatted .toml in place")
 
 	want, fmtErr := tomlfmt.Format([]byte(fmtTOMLMessy))
 	require.NoError(t, fmtErr, "fixture formats")
 
-	got, readErr := os.ReadFile(path)
-	require.NoError(t, readErr, "read the formatted file back")
-
-	assert.Equal(t, string(want), string(got),
+	assert.Equal(t, string(want), readFixture(t, path),
 		".toml output equals the tomlfmt canonical text")
-	assert.Contains(t, string(got), "# Header comment.",
+	assert.Contains(t, readFixture(t, path), "# Header comment.",
 		"header comments survive .toml formatting (D-32)")
-	assert.Contains(t, string(got), "# trailing on color",
+	assert.Contains(t, readFixture(t, path), "# trailing on color",
 		"trailing comments survive .toml formatting (D-32)")
 }
 
+//nolint:paralleltest // cobra flags bind package-level vars; serial execution only
 func TestFMTWalksDirectories(t *testing.T) {
 	dir := t.TempDir()
 	sub := filepath.Join(dir, "sub")
@@ -115,62 +110,53 @@ func TestFMTWalksDirectories(t *testing.T) {
 	require.NoError(t, os.WriteFile(txtPath, []byte("not a diagram\n"), 0o600), "write c.txt")
 	require.NoError(t, os.WriteFile(mdPath, []byte("not a diagram either\n"), 0o600), "write d.md")
 
-	err, _ := execFMT(t, dir)
+	_, err := execFMT(t, dir)
 	require.NoError(t, err, "fmt dir/ walks recursively formatting both formats")
 
 	doc, docErr := c4d.ParseAST([]byte(fmtC4DMessy))
 	require.NoError(t, docErr)
 
-	gotC4D, readErr := os.ReadFile(c4dPath)
-	require.NoError(t, readErr)
-	assert.Equal(t, c4d.EmitC4D(doc), string(gotC4D), "nested-dir .c4d formatted")
-
 	wantTOML, fmtErr := tomlfmt.Format([]byte(fmtTOMLMessy))
 	require.NoError(t, fmtErr)
 
-	gotTOML, readErr := os.ReadFile(tomlPath)
-	require.NoError(t, readErr)
-	assert.Equal(t, string(wantTOML), string(gotTOML), "nested .toml formatted")
-
-	gotTxt, readErr := os.ReadFile(txtPath)
-	require.NoError(t, readErr)
-	assert.Equal(t, "not a diagram\n", string(gotTxt),
+	assert.Equal(t, c4d.EmitC4D(doc), readFixture(t, c4dPath),
+		"nested-dir .c4d formatted")
+	assert.Equal(t, string(wantTOML), readFixture(t, tomlPath),
+		"nested .toml formatted")
+	assert.Equal(t, "not a diagram\n", readFixture(t, txtPath),
 		"non-matching extensions are untouched")
-
-	gotMd, readErr := os.ReadFile(mdPath)
-	require.NoError(t, readErr)
-	assert.Equal(t, "not a diagram either\n", string(gotMd),
+	assert.Equal(t, "not a diagram either\n", readFixture(t, mdPath),
 		"non-matching extensions are untouched")
 }
 
+//nolint:paralleltest // cobra flags bind package-level vars; serial execution only
 func TestFMTCheckMisformattedExitsOne(t *testing.T) {
 	path := writeTempFile(t, "messy.c4d", fmtC4DMessy)
 
-	before, err := os.ReadFile(path)
-	require.NoError(t, err, "read pre-check bytes")
+	before := readFixture(t, path)
 
-	runErr, buf := execFMT(t, "--check", path)
+	buf, runErr := execFMT(t, "--check", path)
 	require.Error(t, runErr, "--check exits 1 on a misformatted file (D-31)")
 	assert.Contains(t, buf.String(), path,
 		"--check prints the offending file path (T-35-08-04)")
 
-	after, err := os.ReadFile(path)
-	require.NoError(t, err, "read post-check bytes")
-	assert.Equal(t, string(before), string(after),
+	assert.Equal(t, before, readFixture(t, path),
 		"--check writes NOTHING (zero byte change)")
 }
 
+//nolint:paralleltest // cobra flags bind package-level vars; serial execution only
 func TestFMTCheckFormattedExitsZero(t *testing.T) {
 	path := writeTempFile(t, "clean.c4d", fmtC4DMessy)
 
-	err, _ := execFMT(t, path)
+	_, err := execFMT(t, path)
 	require.NoError(t, err, "format for real first")
 
-	runErr, buf := execFMT(t, "--check", path)
+	buf, runErr := execFMT(t, "--check", path)
 	require.NoError(t, runErr, "--check exits 0 on a formatted file")
 	assert.Empty(t, buf.String(), "--check is silent when clean")
 }
 
+//nolint:paralleltest // cobra flags bind package-level vars; serial execution only
 func TestFMTMultipleArgs(t *testing.T) {
 	dir := t.TempDir()
 	c4dPath := filepath.Join(dir, "a.c4d")
@@ -179,41 +165,35 @@ func TestFMTMultipleArgs(t *testing.T) {
 	require.NoError(t, os.WriteFile(c4dPath, []byte(fmtC4DMessy), 0o600), "write a.c4d")
 	require.NoError(t, os.WriteFile(tomlPath, []byte(fmtTOMLMessy), 0o600), "write b.toml")
 
-	err, _ := execFMT(t, c4dPath, tomlPath)
+	_, err := execFMT(t, c4dPath, tomlPath)
 	require.NoError(t, err, "multiple file args accepted in one invocation")
 
 	doc, docErr := c4d.ParseAST([]byte(fmtC4DMessy))
 	require.NoError(t, docErr)
 
-	gotC4D, readErr := os.ReadFile(c4dPath)
-	require.NoError(t, readErr)
-	assert.Equal(t, c4d.EmitC4D(doc), string(gotC4D), "first arg formatted")
-
 	wantTOML, fmtErr := tomlfmt.Format([]byte(fmtTOMLMessy))
 	require.NoError(t, fmtErr)
 
-	gotTOML, readErr := os.ReadFile(tomlPath)
-	require.NoError(t, readErr)
-	assert.Equal(t, string(wantTOML), string(gotTOML), "second arg formatted")
+	assert.Equal(t, c4d.EmitC4D(doc), readFixture(t, c4dPath), "first arg formatted")
+	assert.Equal(t, string(wantTOML), readFixture(t, tomlPath), "second arg formatted")
 }
 
+//nolint:paralleltest // cobra flags bind package-level vars; serial execution only
 func TestFMTUnknownExtensionDirectFile(t *testing.T) {
 	path := writeTempFile(t, "notes.txt", "not a diagram\n")
 
-	before, err := os.ReadFile(path)
-	require.NoError(t, err)
+	before := readFixture(t, path)
 
-	runErr, _ := execFMT(t, path)
+	_, runErr := execFMT(t, path)
 	require.Error(t, runErr,
 		"fmt cannot be pointed at arbitrary file types (T-35-08-02)")
 	assert.Contains(t, runErr.Error(), ".toml", "error names the accepted extensions")
 	assert.Contains(t, runErr.Error(), ".c4d", "error names the accepted extensions")
 
-	after, err := os.ReadFile(path)
-	require.NoError(t, err)
-	assert.Equal(t, string(before), string(after), "file untouched")
+	assert.Equal(t, before, readFixture(t, path), "file untouched")
 }
 
+//nolint:paralleltest // cobra flags bind package-level vars; serial execution only
 func TestFMTRefusesModelBrokenC4D(t *testing.T) {
 	// Grammar-valid but Model-refused (duplicate unit path): fmt's safety
 	// gate runs on the ORIGINAL parse — a file that does not survive its own
@@ -227,52 +207,49 @@ a: system "Again" {
 
 	path := writeTempFile(t, "dup.c4d", src)
 
-	before, err := os.ReadFile(path)
-	require.NoError(t, err)
+	before := readFixture(t, path)
 
-	runErr, _ := execFMT(t, path)
+	_, runErr := execFMT(t, path)
 	require.Error(t, runErr, "fmt refuses a file that fails its own Model parse")
 
-	after, err := os.ReadFile(path)
-	require.NoError(t, err)
-	assert.Equal(t, string(before), string(after), "file untouched by the refusal")
+	assert.Equal(t, before, readFixture(t, path), "file untouched by the refusal")
 }
 
+//nolint:paralleltest // cobra flags bind package-level vars; serial execution only
 func TestFMTGateBlocksBrokenRewrite(t *testing.T) {
 	path := writeTempFile(t, "gate.toml", fmtTOMLMessy)
 
-	before, err := os.ReadFile(path)
-	require.NoError(t, err)
+	before := readFixture(t, path)
 
-	orig, parseErr := parser.Parse(before)
+	orig, parseErr := parser.Parse([]byte(before))
 	require.NoError(t, parseErr, "gate baseline parses")
 
 	// A candidate output that does not re-parse: the gate must refuse the
 	// rewrite before any byte touches the file (T-35-08-01).
-	_, gateErr := applyFormatted(path, before, []byte("key = "), orig, parser.Parse)
+	_, gateErr := applyFormatted(path, []byte(before), []byte("key = "), orig, parser.Parse)
 	require.Error(t, gateErr, "gate refuses a candidate that fails to re-parse")
 
-	got, err := os.ReadFile(path)
-	require.NoError(t, err)
-	assert.Equal(t, string(before), string(got), "file untouched by the refused rewrite")
+	assert.Equal(t, before, readFixture(t, path),
+		"file untouched by the refused rewrite")
 
 	// A candidate that parses to a DIFFERENT Model: also refused — fmt can
 	// never change semantics, only layout.
 	changed := []byte("[other]\nname = \"Different\"\n")
-	_, gateErr = applyFormatted(path, before, changed, orig, parser.Parse)
+	_, gateErr = applyFormatted(path, []byte(before), changed, orig, parser.Parse)
 	require.Error(t, gateErr, "gate refuses a candidate whose Model differs")
 
-	got, err = os.ReadFile(path)
-	require.NoError(t, err)
-	assert.Equal(t, string(before), string(got), "file untouched by the refused rewrite")
+	assert.Equal(t, before, readFixture(t, path),
+		"file untouched by the refused rewrite")
 }
 
+//nolint:paralleltest // cobra flags bind package-level vars; serial execution only
 func TestFMTNoMatchingTargets(t *testing.T) {
-	err, _ := execFMT(t, t.TempDir())
+	_, err := execFMT(t, t.TempDir())
 	require.Error(t, err,
 		"fmt on a directory with no diagram files errors loudly")
 }
 
+//nolint:paralleltest // cobra flags bind package-level vars; serial execution only
 func TestFMTHelp(t *testing.T) {
 	cmd := NewRootCmd()
 	buf := &bytes.Buffer{}
@@ -297,9 +274,20 @@ func writeTempFile(t *testing.T, name, content string) string {
 	return path
 }
 
+// readFixture reads a formatted fixture back.
+func readFixture(t *testing.T, path string) string {
+	t.Helper()
+
+	//nolint:gosec // G304: test-created temp path, not user input
+	data, err := os.ReadFile(path)
+	require.NoError(t, err, "read %s", path)
+
+	return string(data)
+}
+
 // execFMT executes the cobra root command with the given fmt args, returning
-// the resulting error and the captured output buffer.
-func execFMT(t *testing.T, args ...string) (error, *bytes.Buffer) {
+// the captured output buffer and the resulting error.
+func execFMT(t *testing.T, args ...string) (*bytes.Buffer, error) {
 	t.Helper()
 
 	cmd := NewRootCmd()
@@ -308,5 +296,5 @@ func execFMT(t *testing.T, args ...string) (error, *bytes.Buffer) {
 	cmd.SetErr(buf)
 	cmd.SetArgs(append([]string{"fmt"}, args...))
 
-	return cmd.Execute(), buf //nolint:wrapcheck // test returns the command error verbatim
+	return buf, cmd.Execute() //nolint:wrapcheck // test returns the command error verbatim
 }

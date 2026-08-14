@@ -99,6 +99,9 @@ Output:
 	// Subcommands (Plan 35-07): convert between TOML and C4D formats.
 	cmd.AddCommand(newConvertCmd())
 
+	// Subcommands (Plan 35-08): format both authoring formats in place.
+	cmd.AddCommand(newFMTCmd())
+
 	return cmd
 }
 
