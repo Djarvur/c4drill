@@ -679,10 +679,10 @@ func TestExpandTemplateDepthCap(t *testing.T) {
 	sb.WriteString("[properties]\nname = \"Depth Cap Test\"\n\n")
 
 	for i := range chainLen {
-		sb.WriteString(fmt.Sprintf("[template.t%d]\nparams = [\"name\"]\nname = \"t%d\"\ntype = \"box\"\n\n", i, i))
+		fmt.Fprintf(&sb, "[template.t%d]\nparams = [\"name\"]\nname = \"t%d\"\ntype = \"box\"\n\n", i, i)
 
 		if i+1 < chainLen {
-			sb.WriteString(fmt.Sprintf("[[template.t%d.use]]\ntemplate = \"t%d\"\nname = \"n%d\"\n\n", i, i+1, i))
+			fmt.Fprintf(&sb, "[[template.t%d.use]]\ntemplate = \"t%d\"\nname = \"n%d\"\n\n", i, i+1, i)
 		}
 	}
 
@@ -846,7 +846,7 @@ name = "Message Bus"
 [template.leaf]
 params = ["name"]
 name = "${name} leaf"
-type = "db"
+type = "containerDb"
 
 [[template.leaf.link]]
 peer = "messageBus"
@@ -855,7 +855,7 @@ description = "leaf ${name} events"
 [template.mid]
 params = ["name"]
 name = "${name} mid"
-type = "box"
+type = "containerBox"
 
 [[template.mid.use]]
 template = "leaf"
@@ -926,9 +926,14 @@ name = "gamma"
 	}
 
 	assert.ElementsMatch(t,
-		[]string{"alpha-mid-leaf", "beta-mid-leaf", "gamma-mid-leaf"},
+		[]string{
+			"alpha.alpha-mid.alpha-mid-leaf",
+			"beta.beta-mid.beta-mid-leaf",
+			"gamma.gamma-mid.gamma-mid-leaf",
+		},
 		mirrorSources,
-		"messageBus.LinksFrom must carry one DISJOINT mirror per 3-level instantiation (HS-1)",
+		"messageBus.LinksFrom must carry one DISJOINT mirror per 3-level "+
+			"instantiation (HS-1; nested peers mirror by full dotted path)",
 	)
 
 	// Idempotency: re-Parse + re-Expand produces a deeply equal model.
