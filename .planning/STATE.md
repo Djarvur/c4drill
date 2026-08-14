@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Label Formatting Fixes
 status: executing
-last_updated: "2026-08-14T16:42:49.478Z"
+last_updated: "2026-08-14T17:15:39.767Z"
 last_activity: 2026-08-14
 progress:
   total_phases: 1
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-08-10)
 ## Current Position
 
 Phase: 35 (add-a-simple-dsl-alternative-to-the-toml-diagram-definition) — EXECUTING
-Plan: 4 of 9
+Plan: 5 of 9
 **Progress:** [██████████] 100%
 Status: Ready to execute
 Last activity: 2026-08-14
@@ -46,6 +46,7 @@ Last activity: 2026-08-14
 | Phase 35 P01 | 42min | 3 tasks | 11 files |
 | Phase 35 P02 | 21min | 2 tasks | 4 files |
 | Phase 35 P03 | 24min | 2 tasks | 7 files |
+| Phase 35 P04 | 21min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -83,8 +84,8 @@ Both captured todos (`.planning/todos/pending/2026-08-10-wrap-edge-labels-like-u
 
 ## Session Continuity
 
-Last session: 2026-08-14T16:42:49.456Z
-Stopped at: Completed 35-03-PLAN.md (composition grammar + reserved words); next 35-04
+Last session: 2026-08-14T17:15:39.744Z
+Stopped at: Completed 35-04-PLAN.md (emitters: EmitTOML/FromModel/EmitC4D); next 35-05
 Resume file: None
 
 ## Decisions
@@ -99,6 +100,8 @@ Resume file: None
 - [Phase ?]: [35-03] C4D use args use ONE ordered []Arg{Name, Value} representation (named keys, positional empty Name); positional values containing ':' must be quoted — the named form wins
 - [Phase ?]: [35-03] D-19 errors fire from pigeon grammar ACTIONS, not a post-parse walk: action errors record with position but do not fail the match, riding errList through wrapPigeonError; ReservedUnitId's brace lookahead is the false-positive guard (Risk 2)
 - [Phase ?]: [35-03] ReservedKeyword single-sourced in grammar/reserved.go (19 words: 14 isBuiltinField + 5 statement keywords); reserved.go lives in package grammar — peg actions compile there (import-cycle forced, 35-01 layout)
+- [Phase ?]: [35-04] C4D comment placement is allocation-based: Pos-aware same-line tails + one-step migration to the untailed predecessor — the grammar's StmtEnd attaches the first comment after a statement as its tail, so all-above rendering can never be fixpoint-stable; the allocation renders the placement the parser reproduces verbatim (T-35-04-01)
+- [Phase ?]: [35-04] Emitters deterministic by construction: UnitOrder/SubunitOrder walks, sorted template names, sorted [[use]] param keys; newline values emit escaped-\n in TOML and triple-quoted in C4D (D-06 pair); parented uses land inside the parent unit's block in C4D (D-16 native form), top-level [[use]]+parent in TOML
 
 ## Operator Next Steps
 
