@@ -299,7 +299,10 @@ include ./other.c4d once
 func TestNormalizeC4DNewlineRepresentations(t *testing.T) {
 	t.Parallel()
 
-	triple := "a: system {\n\tdescription: \"\"\"\nline one\nline two\"\"\"\n}"
+	// The C4D triple form captures its body verbatim (no leading-newline
+	// trim, unlike TOML multi-line strings), so the value starts right
+	// after the opening delimiter.
+	triple := "a: system {\n\tdescription: \"\"\"line one\nline two\"\"\"\n}"
 
 	escaped := `a: system {
 	description: "line one\nline two"

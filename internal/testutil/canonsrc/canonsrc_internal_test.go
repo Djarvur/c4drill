@@ -1,7 +1,3 @@
-// canonsrc internal tests: the error contract behind the t.Fatalf wrappers.
-// NormalizeTOML/NormalizeC4D fail the test on malformed input (the
-// canonical.Canonical contract); the underlying helpers return the error so
-// the failure path is unit-testable without a failing *testing.T.
 package canonsrc
 
 import (
@@ -11,6 +7,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestNormalizeHelpersRejectMalformedInput pins the error contract behind
+// the t.Fatalf wrappers: NormalizeTOML/NormalizeC4D fail the test on
+// malformed input (the canonical.Canonical contract); the underlying
+// helpers return the error so the failure path is unit-testable without a
+// failing *testing.T.
 func TestNormalizeHelpersRejectMalformedInput(t *testing.T) {
 	t.Parallel()
 
