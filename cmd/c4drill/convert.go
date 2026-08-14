@@ -230,12 +230,16 @@ func convertOutputPath(inputPath, targetExt string) string {
 // conversion is additive (originals are never deleted), so their untouched
 // include directives keep resolving against the original files.
 func convertGraph(entryPath, targetExt string) error {
-	entryDir := filepath.Dir(entryPath)
-
 	absEntry, err := filepath.Abs(entryPath)
 	if err != nil {
 		return fmt.Errorf("include: canonicalize entry path: %w", err)
 	}
+
+	// entryDir must derive from the ABSOLUTIZED entry: graphTwinPath
+	// relativizes each source dir against it, and a raw relative entry (e.g.
+	// "entry.toml") would make filepath.Rel error on the absolute source
+	// paths, flattening the graph's directory structure under -o.
+	entryDir := filepath.Dir(absEntry)
 
 	files, err := walkIncludeGraph(absEntry)
 	if err != nil {

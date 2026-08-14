@@ -533,6 +533,40 @@ func TestConvertFollowIncludesOutputDir(t *testing.T) {
 }
 
 //nolint:paralleltest // cobra flags bind package-level vars; serial execution only
+func TestConvertFollowIncludesOutputDirRelativeEntry(t *testing.T) {
+	entry := copyComposedGraph(t)
+	root := filepath.Dir(entry)
+	outDir := filepath.Join(t.TempDir(), "twins")
+
+	// F-03 regression: invoke convert with a RELATIVE entry path (cwd-relative
+	// name, not the absolute temp-dir path). t.Chdir makes the graph root the
+	// working directory for the duration of the test and restores it after
+	// (it also forbids parallelism, which these tests already renounce).
+	t.Chdir(root)
+
+	require.NoError(t,
+		execConvert(t, "to-c4d", "entry.toml", "--follow-includes", "--output", outDir),
+		"graph conversion with -o must succeed from a relative entry path")
+
+	// Twins land under -o preserving the graph's directory structure relative
+	// to the entry's dir — the SAME layout as the absolute-path invocation
+	// (domains/auth.toml -> domains/auth.c4d).
+	for _, rel := range []string{
+		"entry.c4d",
+		"templates.c4d",
+		filepath.Join("domains", "auth.c4d"),
+	} {
+		assert.FileExists(t, filepath.Join(outDir, rel), "twin under -o: %s", rel)
+	}
+
+	// The domains subdirectory must NOT be flattened away by the relative
+	// entry invocation.
+	_, err := os.Stat(filepath.Join(outDir, "auth.c4d"))
+	assert.True(t, os.IsNotExist(err),
+		"relative entry path must not flatten domains/ under -o")
+}
+
+//nolint:paralleltest // cobra flags bind package-level vars; serial execution only
 func TestConvertGraphCycle(t *testing.T) {
 	dir := t.TempDir()
 
