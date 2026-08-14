@@ -142,7 +142,7 @@ func TestParseTemplateBodyFullGrammar(t *testing.T) {
 	doc := parseDoc(t, `template dataService(name) {
 	description: ${name} owns a private cache
 	cache: componentDb { technology: Redis }
-	-> cache publishes ${name} cache invalidations
+	-> cache: publishes ${name} cache invalidations
 	inner: containerBox {
 		web: component { }
 	}

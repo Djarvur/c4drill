@@ -5,6 +5,11 @@
 // and dotted peer paths (D-07), the properties block (D-12), list values
 // (D-15), and ';' separators plus empty blocks (D-18).
 //
+// Composition statements per 35-03-PLAN.md: template declarations (D-13),
+// use instantiations in all three statement positions (D-13/D-16/D-17),
+// include directives with the once modifier (D-14), and ${param} tokens
+// riding literals verbatim.
+//
 // Statement keywords (use/include/template/properties) are reserved against
 // unit ids at the grammar level (D-19 groundwork; friendly Levenshtein
 // errors land in Plan 03).
@@ -155,6 +160,21 @@ func attachStmtComments(stmt any, lead []*ast.Comment, tail *ast.Comment) {
 		if tail != nil {
 			n.Comments = append(n.Comments, tail)
 		}
+	case *ast.TemplateDecl:
+		n.Comments = append(n.Comments, lead...)
+		if tail != nil {
+			n.Comments = append(n.Comments, tail)
+		}
+	case *ast.UseStmt:
+		n.Comments = append(n.Comments, lead...)
+		if tail != nil {
+			n.Comments = append(n.Comments, tail)
+		}
+	case *ast.IncludeStmt:
+		n.Comments = append(n.Comments, lead...)
+		if tail != nil {
+			n.Comments = append(n.Comments, tail)
+		}
 	case *ast.UnitNode:
 		n.Comments = append(n.Comments, lead...)
 		if tail != nil {
@@ -192,6 +212,12 @@ Document <- _ parts:TopPart* _ !. {
 			doc.Properties = n
 		case *ast.UnitNode:
 			doc.Units = append(doc.Units, n)
+		case *ast.TemplateDecl:
+			doc.Templates = append(doc.Templates, n)
+		case *ast.UseStmt:
+			doc.UseStmts = append(doc.UseStmts, n)
+		case *ast.IncludeStmt:
+			doc.Includes = append(doc.Includes, n)
 		}
 
 		if part.trailing != nil {
@@ -202,7 +228,7 @@ Document <- _ parts:TopPart* _ !. {
 	return doc, nil
 }
 
-TopPart <- lead:(_ Comment _)* _ stmt:(Properties / Unit) tail:StmtEnd {
+TopPart <- lead:(_ Comment _)* _ stmt:(Properties / TemplateDecl / UseStmt / IncludeStmt / Unit) tail:StmtEnd {
 	return &stmtWithComments{comments: toComments(lead), stmt: stmt, tail: toComment(tail)}, nil
 } / _ cm:Comment {
 	return &stmtWithComments{trailing: cm.(*ast.Comment)}, nil
@@ -216,7 +242,7 @@ BodyPart <- lead:(_ Comment _)* _ stmt:BodyStmt tail:StmtEnd {
 	return &stmtWithComments{trailing: cm.(*ast.Comment)}, nil
 }
 
-BodyStmt <- EdgeStmt / FieldStmt / Unit
+BodyStmt <- EdgeStmt / FieldStmt / UseStmt / Unit
 
 // Unit is a brace-block unit. The header action builds the UnitNode; this
 // rule fills in the body statements in match order.
@@ -243,6 +269,8 @@ Unit <- header:UnitHeader _ '{' _ parts:BodyPart* _ '}' {
 			unit.Edges = append(unit.Edges, n)
 		case *ast.UnitNode:
 			unit.Subunits = append(unit.Subunits, n)
+		case *ast.UseStmt:
+			unit.UseStmts = append(unit.UseStmts, n)
 		}
 
 		if part.trailing != nil {
@@ -393,6 +421,132 @@ OptionBareword <- (!OptionBarewordStop .)+ {
 
 OptionBarewordStop <- EOL / [{};|,"#] / [ \t]
 
+// TemplateDecl — D-13 function-like declaration. The body is the SAME
+// BodyPart machinery units use, so template bodies accept the full unit
+// grammar (fields, edges with relative peers, nesting — and use, D-17).
+// `${param}` tokens ride the literal values verbatim; substitution is the
+// TemplateDef/Expand contract, never parse's.
+TemplateDecl <- "template" !IdentChar _ name:Ident _ '(' _ params:ParamList? _ ')' _ '{' _ parts:BodyPart* _ '}' {
+	tmpl := &ast.TemplateDecl{Pos: c.pos.line, Name: name.(string), Body: &ast.UnitNode{Pos: c.pos.line}}
+
+	if params != nil {
+		tmpl.Params, _ = params.([]string)
+	}
+
+	for _, item := range toAnySlice(parts) {
+		part, ok := item.(*stmtWithComments)
+		if !ok {
+			continue
+		}
+
+		if part.stmt != nil {
+			attachStmtComments(part.stmt, part.comments, part.tail)
+		}
+
+		switch n := part.stmt.(type) {
+		case *ast.FieldStmt:
+			tmpl.Body.Fields = append(tmpl.Body.Fields, n)
+		case *ast.EdgeStmt:
+			tmpl.Body.Edges = append(tmpl.Body.Edges, n)
+		case *ast.UnitNode:
+			tmpl.Body.Subunits = append(tmpl.Body.Subunits, n)
+		case *ast.UseStmt:
+			tmpl.Body.UseStmts = append(tmpl.Body.UseStmts, n)
+		}
+
+		if part.trailing != nil {
+			tmpl.Body.TrailingComments = append(tmpl.Body.TrailingComments, part.trailing)
+		}
+	}
+
+	return tmpl, nil
+}
+
+// ParamList — declared template parameter names, comma-separated (D-13).
+ParamList <- head:Ident tail:(_ ',' _ Ident)* {
+	params := []string{head.(string)}
+
+	for _, item := range toAnySlice(tail) {
+		for _, e := range toAnySlice(item) {
+			if s, ok := e.(string); ok {
+				params = append(params, s)
+			}
+		}
+	}
+
+	return params, nil
+}
+
+// UseStmt — D-13/D-16/D-17 instantiation. Legal wherever a statement is:
+// top level, unit bodies (enclosing unit is the parent) and template bodies
+// (parent relative to the template unit root).
+UseStmt <- "use" !IdentChar _ name:Ident _ '(' _ args:ArgList? _ ')' {
+	us := &ast.UseStmt{Pos: c.pos.line, Template: name.(string)}
+
+	if args != nil {
+		us.Args, _ = args.([]ast.Arg)
+	}
+
+	return us, nil
+}
+
+// ArgList — the ordered canonical arg representation: named `key: value`
+// args first-class, positional values pair with declared params later.
+ArgList <- head:Arg tail:(_ ',' _ Arg)* {
+	args := []ast.Arg{head.(ast.Arg)}
+
+	for _, item := range toAnySlice(tail) {
+		for _, e := range toAnySlice(item) {
+			if a, ok := e.(ast.Arg); ok {
+				args = append(args, a)
+			}
+		}
+	}
+
+	return args, nil
+}
+
+// Arg — named form first (an identifier immediately followed by ':');
+// anything else is positional. A positional value containing ':' must be
+// quoted — the named form wins on a bare `key: value` shape.
+Arg <- name:Ident _ ':' _ value:ArgValue {
+	return ast.Arg{Name: name.(string), Value: value.(ast.Literal)}, nil
+} / value:ArgValue {
+	return ast.Arg{Value: value.(ast.Literal)}, nil
+}
+
+// ArgValue — any literal form, but barewords are single tokens: the argument
+// list is parenthesized, so ')' ',' and whitespace end the value. Values
+// that need spaces must be quoted.
+ArgValue <- TripleQuoted / DoubleQuoted / ListLiteral / ArgBareword
+
+ArgBareword <- (TemplateToken / !ArgBarewordStop .)+ {
+	return ast.Literal{Kind: ast.KindBareword, Str: strings.TrimSpace(string(c.text))}, nil
+}
+
+ArgBarewordStop <- EOL / [{};|,"#()] / [ \t]
+
+// IncludeStmt — D-14. The path is captured as written (bareword or quoted,
+// ./ ../ / prefixes, .c4d/.toml extensions); resolution is include.Resolve's
+// job at pipeline time. `once` requests at-most-once inclusion.
+IncludeStmt <- "include" !IdentChar _ path:IncludeValue once:(_ OnceModifier)? {
+	return &ast.IncludeStmt{Pos: c.pos.line, Path: path.(string), Once: boolVal(once)}, nil
+}
+
+IncludeValue <- v:DoubleQuoted {
+	lit, _ := v.(ast.Literal)
+	return lit.Str, nil
+} / IncludeBareword
+
+// IncludeBareword — path-shaped bareword: path segments, dots, slashes.
+IncludeBareword <- [A-Za-z0-9_./-]+ {
+	return string(c.text), nil
+}
+
+OnceModifier <- "once" !IdentChar {
+	return true, nil
+}
+
 // Properties — D-12 top-level block with the TOML [properties] key set.
 Properties <- "properties" !IdentChar _ '{' _ parts:PropertyPart* _ '}' {
 	props := &ast.PropertiesBlock{Pos: c.pos.line}
@@ -444,9 +598,16 @@ FieldKey <- ("description" / "technology" / "reference" / "expanded" / "name" / 
 // Literal — D-06/D-15 value forms.
 Literal <- TripleQuoted / DoubleQuoted / ListLiteral / Bareword
 
-Bareword <- (!BarewordStop .)+ {
+// TemplateToken — a ${param} reference inside a value; it joins the value
+// text VERBATIM (substitution is the TemplateDef/Expand contract, D-13 —
+// never parse's). Without this token rule '{' would end the bareword.
+TemplateToken <- "${" [A-Za-z0-9_-]+ "}"
+
+Bareword <- BarewordToken+ {
 	return ast.Literal{Kind: ast.KindBareword, Str: strings.TrimSpace(string(c.text))}, nil
 }
+
+BarewordToken <- TemplateToken / !BarewordStop .
 
 // BarewordStop — structural characters that end a bareword; ':' is NOT a
 // stop character so scheme-prefixed URLs stay valid barewords (D-06).
@@ -478,9 +639,12 @@ ListItem <- TripleQuoted / DoubleQuoted / ListBareword
 
 // ListBareword — a single-token list item; ']' ends it (the value Bareword
 // deliberately does not stop at ']', so lists need their own variant).
-ListBareword <- (!ListBarewordStop .)+ {
+// ${param} tokens ride along verbatim like in Bareword.
+ListBareword <- ListBarewordToken+ {
 	return ast.Literal{Kind: ast.KindBareword, Str: strings.TrimSpace(string(c.text))}, nil
 }
+
+ListBarewordToken <- TemplateToken / !ListBarewordStop .
 
 ListBarewordStop <- EOL / [{};|,"#\]]
 
@@ -518,8 +682,10 @@ StmtEnd <- _ cm:Comment Term {
 Term <- ';' / EOL / &'}' / !. / &StmtStart
 
 // StmtStart — lookahead: another statement begins (implicit separator for
-// D-18 one-line nested blocks, e.g. `box { api: system { } db: db { } }`).
-StmtStart <- _ (ArrowGlyph / FieldKey / TypeKeyword / UnitId / "properties" !IdentChar)
+// D-18 one-line nested blocks, e.g. `box { api: system { } db: db { } }).
+// ReservedKeyword covers the composition statements (use/include/template)
+// and properties.
+StmtStart <- _ (ArrowGlyph / FieldKey / TypeKeyword / ReservedKeyword / UnitId)
 
 // OptEnd — like StmtEnd but also accepts a following option keyword as a
 // separator (options may be space-separated on one line).

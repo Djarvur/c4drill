@@ -50,6 +50,16 @@ type Document struct {
 	Properties *PropertiesBlock
 	// Units holds the top-level units in statement order.
 	Units []*UnitNode
+	// Templates holds the `template name(params) { ... }` declarations in
+	// statement order (D-13).
+	Templates []*TemplateDecl
+	// UseStmts holds the top-level `use name(args)` instantiations in
+	// statement order (D-13); uses inside unit blocks and template bodies
+	// live on those nodes instead.
+	UseStmts []*UseStmt
+	// Includes holds the `include path [once]` directives in statement
+	// order (D-14); resolution is include.Resolve's job at pipeline time.
+	Includes []*IncludeStmt
 	// TrailingComments holds comments at the end of the document with no
 	// following statement.
 	TrailingComments []*Comment
@@ -90,9 +100,8 @@ type UnitNode struct {
 	Edges []*EdgeStmt
 	// Subunits holds the nested units in source order (D-01).
 	Subunits []*UnitNode
-	// UseStmts holds `use` instantiations inside the block (D-16); the
-	// grammar lands in a later plan, the slot exists so conversion and the
-	// formatter can account for it.
+	// UseStmts holds `use` instantiations inside the block (D-16) — the
+	// enclosing unit is the instantiation's parent.
 	UseStmts []*UseStmt
 	// Comments are the comments attached to this unit.
 	Comments []*Comment
@@ -135,13 +144,68 @@ type FieldStmt struct {
 	Comments []*Comment
 }
 
-// UseStmt is a placeholder for `use name(args)` instantiation statements
-// (D-13, D-16); the grammar and semantics land in later plans.
+// UseStmt is a `use name(args)` instantiation statement (D-13). It is legal
+// in three positions: top level (Document.UseStmts), inside unit blocks
+// (UnitNode.UseStmts, D-16 — the enclosing unit is the parent) and inside
+// template bodies (TemplateDecl.Body.UseStmts, D-17 — the parent is relative
+// to the template's unit root). The fields map 1:1 onto
+// parser.Instantiation: Template -> Template, the enclosing position ->
+// Parent, Args -> Params.
 type UseStmt struct {
 	// Pos is the 1-indexed line the statement starts on.
 	Pos int
 	// Template is the template name.
 	Template string
+	// Args holds the supplied arguments in source order. This single ordered
+	// representation is canonical for BOTH authoring forms (the plan's
+	// one-representation decision): named args carry their key in Name,
+	// positional args carry an empty Name and pair positionally with
+	// TemplateDecl.Params at expansion time. Positional values containing a
+	// ':' must be quoted — the named form wins on a bare `key: value` shape.
+	Args []Arg
+	// Comments are the comments attached to this statement.
+	Comments []*Comment
+}
+
+// Arg is one argument of a use statement. Named args (name: "value") carry
+// the key; positional args ("value") carry an empty Name.
+type Arg struct {
+	// Name is the argument key; empty for positional args.
+	Name string
+	// Value is the argument literal — any Literal form is accepted (D-13).
+	Value Literal
+}
+
+// TemplateDecl is a `template name(p1, p2) { ... }` declaration (D-13). The
+// body reuses *UnitNode (the plan's documented choice): the template body is
+// exactly a unit body, so Fields, Edges, Subunits and UseStmts carry the
+// body statements in source order; the Body node's own ID/Type/External and
+// Name header slots stay empty. `${param}` tokens inside values are captured
+// verbatim — substitution is the TemplateDef/Expand contract, never parse's.
+type TemplateDecl struct {
+	// Pos is the 1-indexed line the declaration starts on.
+	Pos int
+	// Name is the template identifier.
+	Name string
+	// Params holds the declared parameter names in order.
+	Params []string
+	// Body carries the body statements (full unit grammar, D-13).
+	Body *UnitNode
+	// Comments are the comments attached to this declaration.
+	Comments []*Comment
+}
+
+// IncludeStmt is an `include path [once]` directive (D-14). The path text is
+// captured as written (bareword or quoted); resolution relative to the
+// including file and once-dedup happen in include.Resolve at pipeline time,
+// never at parse time.
+type IncludeStmt struct {
+	// Pos is the 1-indexed line the statement starts on.
+	Pos int
+	// Path is the include path text as written.
+	Path string
+	// Once records the `once` modifier (at-most-once inclusion).
+	Once bool
 	// Comments are the comments attached to this statement.
 	Comments []*Comment
 }

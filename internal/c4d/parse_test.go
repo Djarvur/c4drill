@@ -358,11 +358,15 @@ func TestParseReservedKeywordsNotUnitIds(t *testing.T) {
 	t.Parallel()
 
 	// D-19 groundwork: statement keywords cannot parse as unit ids at the
-	// grammar level (full Levenshtein-suggestion errors land in Plan 03).
+	// grammar level. The statements themselves are legal since 35-03, so the
+	// pin is the id-collision form (full Levenshtein-suggestion errors land
+	// in 35-03 Task 2).
 	for _, src := range []string{
-		"use svc(api) { }",
-		"include ./shared.c4d",
-		"template base(p) { }",
+		"use: system { }",
+		"include: system { }",
+		"template: system { }",
+		"properties: system { }",
+		"use { }",
 	} {
 		parseErr(t, src)
 	}
