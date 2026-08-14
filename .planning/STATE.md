@@ -64,13 +64,14 @@ Both captured todos (`.planning/todos/pending/2026-08-10-wrap-edge-labels-like-u
 ### Roadmap Evolution
 
 - Phase 35 added: Add a simple DSL alternative to the TOML diagram definition (likec4/d2-style, less verbose syntax) with converters to and from TOML
+- Phase 35 planned (2026-08-14): 9 plans / 6 waves. C4D DSL (pigeon PEG per D-20), nested use in both formats (D-16), template-body use lifted from deferral (D-17), canonical-equivalent round-trip contract (D-22), fmt with comment preservation (D-32). Requirements source = CONTEXT.md D-01..D-35.
 
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
 | Templates | multi-output / `for_each` fan-out | Future (REQUIREMENTS.md) | v1.10 planning |
-| Templates | template nesting (template-instantiating-template) | Future (REQUIREMENTS.md) | v1.10 planning |
+| Templates | template nesting (template-instantiating-template) | PROMOTED into Phase 35 (D-17, Plan 35-02) | v1.10 planning |
 | Ergonomics | compact-link shorthand variants beyond baseline | Future (REQUIREMENTS.md) | v1.10 planning |
 | Docs | docs-drift-orphan-rule-testdata — README "Validation Rules" section (line 551) missing VAL-01 orphan rule; root `testdata/valid.toml`+`nested.toml` unused (tests use `cmd/c4drill/testdata/`) | confirmed_open, low-severity | v1.10 close (pre-existing, not a v1.10 regression) |
 | Tooling | knowledge-base.md — NOT a debug session; gsd-debugger tool reference doc the audit scanner misclassifies. No action needed. | wontfix (false positive) | v1.10 close |

@@ -1,9 +1,9 @@
 ---
 phase: 35
 slug: add-a-simple-dsl-alternative-to-the-toml-diagram-definition
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: planned
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-08-14
 ---
 
@@ -40,12 +40,15 @@ created: 2026-08-14
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 35-01-xx | 01 | 1 | D-01..D-19 (grammar/parser) | — | N/A | unit | `go test ./internal/c4d/...` | ❌ W0 | ⬜ pending |
-| 35-02-xx | 02 | 1 | D-21/D-22 (round-trip converters) | — | N/A | integration | `go test ./internal/convert/...` | ❌ W0 | ⬜ pending |
-| 35-03-xx | 03 | 1 | D-16/D-17 (nested + recursive use) | — | N/A | unit | `go test ./internal/template/...` | ✅ | ⬜ pending |
-| 35-04-xx | 04 | 2 | D-28/D-25 (convert CLI) | — | N/A | CLI | `go test ./cmd/c4drill/...` | ✅ | ⬜ pending |
-| 35-05-xx | 05 | 2 | D-31/D-32 (fmt CLI) | — | N/A | CLI | `go test ./cmd/c4drill/...` | ✅ | ⬜ pending |
-| 35-06-xx | 06 | 3 | D-35 (docs + examples) | — | N/A | fixture | `go test ./...` (fixtures render) | ✅ | ⬜ pending |
+| 35-01-1..3 | 01 | 1 | D-01..D-09, D-12, D-18, D-20 (toolchain + core grammar + errors) | T-35-01-* | MaxExpressions/DoS cap, pinned pigeon | unit (TDD) | `go test ./internal/c4d/...` | ❌ W0 | ⬜ pending |
+| 35-02-1..2 | 02 | 1 | D-16, D-17 (nested use + recursive expansion) | T-35-02-* | cycle + depth cap | unit (TDD) | `go test ./internal/template/ ./internal/parser/` | ✅ | ⬜ pending |
+| 35-03-1..2 | 03 | 2 | D-13, D-14, D-15, D-19 (composition grammar + reserved) | T-35-03-* | reserved-set pinning | unit (TDD) | `go test ./internal/c4d/...` | ✅ (35-01 creates) | ⬜ pending |
+| 35-04-1..2 | 04 | 3 | D-23, D-33 (emitters + canonical order + compact style) | T-35-04-* | determinism, escaping | unit (TDD) | `go test ./internal/c4d/ -run TestEmit` | ✅ | ⬜ pending |
+| 35-05-1..3 | 05 | 3 | D-02, D-10, D-11, D-21, D-26 (toModel + mixed includes) | T-35-05-* | ext-dispatch fail closed | unit+integration (TDD) | `go test ./internal/c4d/ ./internal/include/` | ✅ | ⬜ pending |
+| 35-06-1..3 | 06 | 4 | D-22, D-26 (round-trip + render equivalence) | T-35-06-* | corpus walk hygiene | integration (TDD) | `go test ./internal/c4d/ -run 'TestRoundTrip|TestRenderEquivalence'` | ❌ W0 | ⬜ pending |
+| 35-07-1..3 | 07 | 4 | D-24, D-25, D-27..D-30 (dispatch + convert CLI) | T-35-07-* | validate-first, cycle-safe walk | CLI (TDD) | `go test ./cmd/c4drill/ -run TestConvert` | ✅ | ⬜ pending |
+| 35-08-1..3 | 08 | 5 | D-31, D-32 (fmt + tomlfmt) | T-35-08-* | semantic safety gate, walk filter | unit+CLI (TDD) | `go test ./internal/tomlfmt/ ./cmd/c4drill/ -run TestFmt` | ❌ W0 | ⬜ pending |
+| 35-09-1..3 | 09 | 6 | D-34, D-35 (docs + twins + skill) | T-35-09-* | real flags only | fixture + grep gates | `go test ./...` + README/skill greps | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -55,9 +58,12 @@ Task IDs are indicative — the planner assigns final IDs; every task must map t
 
 ## Wave 0 Requirements
 
-- [ ] `internal/c4d/` package skeleton + `c4d.peg` stub with one passing rule (pigeon generates, build passes)
-- [ ] Round-trip normalizer package skeleton (`internal/testutil/canonsrc` or similar) — TOML + C4D normalization stubs
-- [ ] Edge-case fixture set added under testdata (external types, linkFrom, rank=equal, nested use, template-body use)
+- [x] `internal/c4d/` skeleton folded into Plan 35-01 Task 1 (toolchain + generating peg stub — first commit of the plan)
+- [x] Round-trip normalizer (`internal/testutil/canonsrc`) folded into Plan 35-06 Task 1 (TDD: normalizer tests are the first artifact)
+- [x] Edge-case fixture set folded into Plan 35-06 Task 2 (testdata/c4d/: external types, linkFrom, rank=equal, template+nested use, unicode)
+- [x] tomlfmt package skeleton folded into Plan 35-08 Task 1 (probe test decides unstable-API vs fallback strategy)
+
+Wave-0 coverage note: every plan is TDD-ordered — RED tests precede implementation within each task, satisfying the Nyquist requirement without separate scaffold commits.
 
 *Existing infrastructure (go test, testify, canonical.Canonical DI-1, fixture corpus) covers the rest.*
 

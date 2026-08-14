@@ -62,3 +62,21 @@ Full details: [milestones/v1.11-ROADMAP.md](milestones/v1.11-ROADMAP.md)
 | 32. Include directive | v1.10 | 2/2 | Complete | 2026-08-08 |
 | 33. Docs sweep + goldens | v1.10 | 4/4 | Complete | 2026-08-08 |
 | 34. Label formatting fixes | v1.11 | 2/2 | Complete    | 2026-08-10 |
+
+### Phase 35: Add a simple DSL alternative to the TOML diagram definition (likec4/d2-style, less verbose syntax) with converters to and from TOML
+
+**Goal:** Deliver the C4D format — a `.c4d` brace-block D2-inspired DSL with full TOML feature parity — parseable directly to `*parser.Model` and renderable through the unchanged pipeline, with bidirectional canonical-equivalent converters (`convert to-toml`/`to-c4d`), a gofmt-style comment-preserving formatter (`fmt`) for both formats, nested use (`[[unit.use]]` in TOML, `use` in blocks in C4D) and recursive template-instantiating-template expansion, plus full README/skill/example documentation.
+**Requirements**: D-01..D-35 (35-CONTEXT.md decisions — REQUIREMENTS.md archived with v1.11)
+**Depends on:** Phase 34
+**Plans:** 9 plans
+
+Plans:
+- [ ] 35-01-PLAN.md — Pigeon toolchain + core C4D grammar + typed AST + error contract
+- [ ] 35-02-PLAN.md — Nested use TOML sugar + template-body use + recursive Expand with cycle detection
+- [ ] 35-03-PLAN.md — Composition grammar: template/use/include + list forms + reserved keywords
+- [ ] 35-04-PLAN.md — Emitters: Model→TOML canonical order + AST→C4D compact style + frommodel inverse
+- [ ] 35-05-PLAN.md — toModel: AST→*parser.Model + inference parity + mixed include dispatch
+- [ ] 35-06-PLAN.md — Round-trip parity: canonsrc normalizer + fixture corpus + render equivalence
+- [ ] 35-07-PLAN.md — CLI: .c4d render dispatch + convert subcommand with --follow-includes
+- [ ] 35-08-PLAN.md — fmt subcommand + comment-preserving TOML formatter
+- [ ] 35-09-PLAN.md — Docs, .c4d example twins, c4drill-toml skill extension
