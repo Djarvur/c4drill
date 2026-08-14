@@ -1,7 +1,9 @@
 package template_test
 
 import (
+	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/Djarvur/c4drill/internal/model"
@@ -431,4 +433,511 @@ func TestPipelineExpandBeforeValidate(t *testing.T) {
 	// Produced unit is present and rendered-ready.
 	require.Contains(t, m.Units, "auth", "auth present after pipeline")
 	assert.Equal(t, "auth Service", m.Units["auth"].Name, "auth.Name substituted")
+}
+
+// --- Phase 35 Plan 02: recursive template-body expansion (D-17) ---
+//
+// [[template.<name>.use]] entries expand when the OUTER template is
+// instantiated: params flow outer-to-inner, cycles and depth overruns are hard
+// errors naming the chain, HS-1 deep-copy holds at every level.
+
+// TestExpandTemplateBodyUseParamFlow exercises D-17 outer-to-inner param flow:
+// template outer(p) whose body uses inner(q = ${p}) — instantiating outer with
+// p="payload" expands inner with q substituted from the outer param, the
+// produced inner unit attaching inside the outer clone's subtree.
+func TestExpandTemplateBodyUseParamFlow(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Body Use Param Flow Test"
+
+[messageBus]
+type = "queue"
+name = "Message Bus"
+
+[template.inner]
+params = ["name", "q"]
+name = "${name} Inner"
+type = "container"
+description = "q=${q}"
+
+[[template.inner.link]]
+peer = "messageBus"
+description = "from ${name} with ${q}"
+
+[template.outer]
+params = ["name", "p"]
+name = "${name} Outer"
+type = "system"
+
+[[template.outer.use]]
+template = "inner"
+name = "${name}-inner"
+q = "${p}"
+
+[[use]]
+template = "outer"
+name = "app"
+p = "payload"
+`)
+
+	m, err := parser.Parse(data)
+	require.NoError(t, err, "Parse should not error")
+
+	expanded, err := template.Expand(m)
+	require.NoError(t, err, "Expand with template-body use should not error")
+
+	// The outer instantiation produced 'app' at top level.
+	app, ok := expanded.Units["app"]
+	require.True(t, ok, "app present at top level")
+	assert.Equal(t, "app Outer", app.Name, "app.Name (outer substitution)")
+
+	// The body use produced app-inner INSIDE app's subtree (empty body-use
+	// parent = direct subunit of the outer clone root).
+	inner, ok := app.Subunits["app-inner"]
+	require.True(t, ok, "app.Subunits contains 'app-inner' (body use attached in the clone)")
+	assert.Contains(t, app.SubunitOrder, "app-inner", "app.SubunitOrder contains 'app-inner'")
+
+	// Outer-to-inner param flow: q carried ${p}, substituted with the OUTER
+	// instantiation's p="payload" BEFORE the inner expansion ran.
+	assert.Equal(t, "app-inner Inner", inner.Name, "inner.Name (nested substitution)")
+	assert.Equal(t, "q=payload", inner.Description, "inner.Description (outer param flowed inner)")
+
+	require.Len(t, inner.Links, 1, "inner has its template's link")
+	assert.Equal(t, "messageBus", inner.Links[0].Peer, "inner.Links[0].Peer")
+	assert.Equal(t, "from app-inner with payload", inner.Links[0].Description,
+		"inner.Links[0].Description (both name and q substituted)")
+
+	// No residual tokens anywhere in the nested subtree.
+	assertNotContainsSubst(t, app)
+}
+
+// TestExpandTemplateBodyUseThreeLevels exercises a 3-level chain (outer -> mid
+// -> inner): every level expands fully, produced units land at their Parent
+// paths INSIDE the outer clone's subtree — including a body use whose parent
+// targets a subunit declared in the intermediate template's body.
+func TestExpandTemplateBodyUseThreeLevels(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Three-Level Body Use Test"
+
+[template.leaf]
+params = ["name"]
+name = "${name} Leaf"
+type = "queue"
+
+[template.mid]
+params = ["name"]
+name = "${name} Mid"
+type = "box"
+
+[template.mid.storage]
+type = "db"
+name = "Storage"
+
+[[template.mid.use]]
+template = "leaf"
+name = "cache"
+parent = "storage"
+
+[template.outer]
+params = ["name"]
+name = "${name} Outer"
+type = "system"
+
+[[template.outer.use]]
+template = "mid"
+name = "svc"
+
+[[use]]
+template = "outer"
+name = "app"
+`)
+
+	m, err := parser.Parse(data)
+	require.NoError(t, err, "Parse should not error")
+
+	expanded, err := template.Expand(m)
+	require.NoError(t, err, "3-level chain should expand without error")
+
+	app := expanded.Units["app"]
+	require.NotNil(t, app, "app present")
+
+	// Level 1: outer clone at top level; level 2: mid clone inside it.
+	svc, ok := app.Subunits["svc"]
+	require.True(t, ok, "app.svc (mid clone) present")
+	assert.Equal(t, "svc Mid", svc.Name, "svc.Name (substituted)")
+	assert.Contains(t, svc.SubunitOrder, "storage", "svc.SubunitOrder keeps the declared subunit")
+
+	// mid's declared subunit survived the expansion...
+	storage, ok := svc.Subunits["storage"]
+	require.True(t, ok, "app.svc.storage (declared in mid) present")
+	assert.Equal(t, "Storage", storage.Name, "storage.Name")
+
+	// ...and mid's body use attached the leaf UNDER that declared subunit
+	// (parent relative to the mid clone root).
+	cache, ok := storage.Subunits["cache"]
+	require.True(t, ok, "app.svc.storage.cache (leaf via 3-level recursion) present")
+	assert.Equal(t, "cache Leaf", cache.Name, "cache.Name (substituted)")
+	assert.Contains(t, storage.SubunitOrder, "cache", "storage.SubunitOrder contains 'cache'")
+
+	// No residual tokens anywhere in the nested subtree.
+	assertNotContainsSubst(t, app)
+}
+
+// TestExpandTemplateCycle exercises D-17 cycle detection: template a whose
+// body uses b, and b's body uses a — Expand returns a hard error whose message
+// names the cycle chain "a -> b -> a".
+func TestExpandTemplateCycle(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Template Cycle Test"
+
+[template.a]
+params = ["name"]
+name = "${name} A"
+type = "box"
+
+[[template.a.use]]
+template = "b"
+name = "x"
+
+[template.b]
+params = ["name"]
+name = "${name} B"
+type = "box"
+
+[[template.b.use]]
+template = "a"
+name = "y"
+
+[[use]]
+template = "a"
+name = "start"
+`)
+
+	m, err := parser.Parse(data)
+	require.NoError(t, err, "Parse should not error")
+
+	_, err = template.Expand(m)
+	require.Error(t, err, "mutual template cycle must be a hard error")
+
+	msg := err.Error()
+	assert.Contains(t, msg, "cycle", "error names the cycle kind")
+	assert.Contains(t, msg, "a -> b -> a", "error names the full cycle chain")
+}
+
+// TestExpandTemplateSelfCycle exercises the direct self-loop: a template whose
+// body uses itself — the cycle error names the self-loop chain.
+func TestExpandTemplateSelfCycle(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Template Self Cycle Test"
+
+[template.loop]
+params = ["name"]
+name = "${name} Loop"
+type = "box"
+
+[[template.loop.use]]
+template = "loop"
+name = "again"
+
+[[use]]
+template = "loop"
+name = "start"
+`)
+
+	m, err := parser.Parse(data)
+	require.NoError(t, err, "Parse should not error")
+
+	_, err = template.Expand(m)
+	require.Error(t, err, "self-referencing template must be a hard error")
+
+	msg := err.Error()
+	assert.Contains(t, msg, "cycle", "error names the cycle kind")
+	assert.Contains(t, msg, "loop -> loop", "error names the self-loop chain")
+}
+
+// TestExpandTemplateDepthCap exercises the depth cap (mirrors
+// include.maxIncludeDepth = 100): an ACYCLIC chain of 150 distinct templates
+// each using the next hits the cap as a hard error — never a stack-overflow
+// panic, never a hang.
+func TestExpandTemplateDepthCap(t *testing.T) {
+	t.Parallel()
+
+	const chainLen = 150
+
+	var sb strings.Builder
+	sb.WriteString("[properties]\nname = \"Depth Cap Test\"\n\n")
+
+	for i := range chainLen {
+		sb.WriteString(fmt.Sprintf("[template.t%d]\nparams = [\"name\"]\nname = \"t%d\"\ntype = \"box\"\n\n", i, i))
+
+		if i+1 < chainLen {
+			sb.WriteString(fmt.Sprintf("[[template.t%d.use]]\ntemplate = \"t%d\"\nname = \"n%d\"\n\n", i, i+1, i))
+		}
+	}
+
+	sb.WriteString("[[use]]\ntemplate = \"t0\"\nname = \"root\"\n")
+
+	m, err := parser.Parse([]byte(sb.String()))
+	require.NoError(t, err, "generated chain should parse")
+
+	_, err = template.Expand(m)
+	require.Error(t, err, "150-deep acyclic chain must hit the depth cap")
+
+	assert.Contains(t, err.Error(), "depth", "error names the depth cap")
+}
+
+// TestExpandNestedResidualToken exercises TMPL-06 post-recursion: a ${token}
+// in a nested body that no param fills is caught by the residual scan AFTER
+// the recursion completes (exit gate).
+func TestExpandNestedResidualToken(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Nested Residual Token Test"
+
+[template.leaf]
+params = ["name"]
+name = "${name} Leaf"
+description = "needs ${unfilled}"
+type = "db"
+
+[template.outer]
+params = ["name"]
+name = "${name} Outer"
+type = "box"
+
+[[template.outer.use]]
+template = "leaf"
+name = "cache"
+
+[[use]]
+template = "outer"
+name = "app"
+`)
+
+	m, err := parser.Parse(data)
+	require.NoError(t, err, "Parse should not error")
+
+	_, err = template.Expand(m)
+	require.Error(t, err, "residual ${unfilled} in a nested body must be a hard error")
+
+	msg := err.Error()
+	assert.Contains(t, msg, "unresolved parameter", "error kind is the residual-token scan")
+	assert.Contains(t, msg, "${unfilled", "error names the unfilled token")
+}
+
+// TestExpandNestedPathCollision exercises TMPL-07 with nested uses: a
+// template-body use producing a path that collides with an authored unit is a
+// hard duplicate-path error — never a silent overwrite. "Authored" covers both
+// a subunit declared in the template body and a sibling body use's product.
+func TestExpandNestedPathCollision(t *testing.T) {
+	t.Parallel()
+
+	t.Run("body use vs template-declared subunit", func(t *testing.T) {
+		t.Parallel()
+
+		data := []byte(`
+[properties]
+name = "Nested Collision Test"
+
+[template.leaf]
+params = ["name"]
+name = "${name} Leaf"
+type = "db"
+
+[template.outer]
+params = ["name"]
+name = "${name} Outer"
+type = "box"
+
+[template.outer.api]
+type = "db"
+name = "Declared API"
+
+[[template.outer.use]]
+template = "leaf"
+name = "api"
+
+[[use]]
+template = "outer"
+name = "app"
+`)
+
+		m, err := parser.Parse(data)
+		require.NoError(t, err, "Parse should not error")
+
+		_, err = template.Expand(m)
+		require.Error(t, err, "body use colliding with a template-declared subunit must be a hard error")
+
+		msg := err.Error()
+		assert.Contains(t, msg, "duplicate unit path", "error kind is the path collision")
+		assert.Contains(t, msg, "app.api", "error names the colliding path")
+	})
+
+	t.Run("two body uses colliding", func(t *testing.T) {
+		t.Parallel()
+
+		data := []byte(`
+[properties]
+name = "Nested Collision Test 2"
+
+[template.leaf]
+params = ["name"]
+name = "${name} Leaf"
+type = "db"
+
+[template.outer]
+params = ["name"]
+name = "${name} Outer"
+type = "box"
+
+[[template.outer.use]]
+template = "leaf"
+name = "dup"
+
+[[template.outer.use]]
+template = "leaf"
+name = "dup"
+
+[[use]]
+template = "outer"
+name = "app2"
+`)
+
+		m, err := parser.Parse(data)
+		require.NoError(t, err, "Parse should not error")
+
+		_, err = template.Expand(m)
+		require.Error(t, err, "two body uses producing the same path must be a hard error")
+
+		assert.Contains(t, err.Error(), "app2.dup", "error names the colliding path")
+	})
+}
+
+// TestExpandThreeLevelNestingHS1 extends TestExpandThreeInstantiationsHS1 to
+// 3-level nesting (D-17): the outer template instantiates 3x; each expansion
+// recursively produces mid and leaf levels whose links carry per-instantiation
+// params. After validator.Validate (which mutates LinksFrom in place), the
+// messageBus mirrors must be DISJOINT — one per leaf, no shared Mirror state
+// at any recursion level (HS-1).
+func TestExpandThreeLevelNestingHS1(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "3-Level Nesting HS-1 Test"
+
+[messageBus]
+type = "queue"
+name = "Message Bus"
+
+[template.leaf]
+params = ["name"]
+name = "${name} leaf"
+type = "db"
+
+[[template.leaf.link]]
+peer = "messageBus"
+description = "leaf ${name} events"
+
+[template.mid]
+params = ["name"]
+name = "${name} mid"
+type = "box"
+
+[[template.mid.use]]
+template = "leaf"
+name = "${name}-leaf"
+
+[template.outer]
+params = ["name"]
+name = "${name} outer"
+type = "system"
+
+[[template.outer.use]]
+template = "mid"
+name = "${name}-mid"
+
+[[use]]
+template = "outer"
+name = "alpha"
+
+[[use]]
+template = "outer"
+name = "beta"
+
+[[use]]
+template = "outer"
+name = "gamma"
+`)
+
+	m, err := parser.Parse(data)
+	require.NoError(t, err, "Parse should not error")
+
+	expanded, err := template.Expand(m)
+	require.NoError(t, err, "3-level nesting x3 should expand without error")
+
+	// Each instantiation produced the full 3-level subtree with distinct
+	// substituted values at every level.
+	for _, instName := range []string{"alpha", "beta", "gamma"} {
+		root := expanded.Units[instName]
+		require.NotNil(t, root, "%s present", instName)
+		assert.Equal(t, instName+" outer", root.Name, "%s.Name", instName)
+
+		mid := root.Subunits[instName+"-mid"]
+		require.NotNil(t, mid, "%s.%s-mid present", instName, instName)
+		assert.Equal(t, instName+"-mid mid", mid.Name, "%s-mid.Name", instName)
+
+		leaf := mid.Subunits[instName+"-mid-leaf"]
+		require.NotNil(t, leaf, "%s leaf present", instName)
+		assert.Equal(t, instName+"-mid-leaf leaf", leaf.Name, "%s leaf.Name", instName)
+
+		require.Len(t, leaf.Links, 1, "%s leaf has its link", instName)
+		assert.Equal(t, "leaf "+instName+"-mid-leaf events", leaf.Links[0].Description,
+			"%s leaf link description (substituted at every level)", instName)
+	}
+
+	// The validator mutates LinksFrom in place — the 3 leaves must yield three
+	// DISTINCT mirror entries on messageBus (HS-1 at every recursion level).
+	valErrors := validator.Validate(expanded)
+	assert.Empty(t, valErrors, "expanded model should validate cleanly")
+
+	bus := expanded.Units["messageBus"]
+	require.NotNil(t, bus, "messageBus present")
+
+	var mirrorSources []string
+
+	for i := range bus.LinksFrom {
+		if bus.LinksFrom[i].IsMirror() {
+			mirrorSources = append(mirrorSources, bus.LinksFrom[i].Peer)
+		}
+	}
+
+	assert.ElementsMatch(t,
+		[]string{"alpha-mid-leaf", "beta-mid-leaf", "gamma-mid-leaf"},
+		mirrorSources,
+		"messageBus.LinksFrom must carry one DISJOINT mirror per 3-level instantiation (HS-1)",
+	)
+
+	// Idempotency: re-Parse + re-Expand produces a deeply equal model.
+	m2, err := parser.Parse(data)
+	require.NoError(t, err, "second Parse should not error")
+
+	expanded2, err := template.Expand(m2)
+	require.NoError(t, err, "second Expand should not error")
+
+	assert.ElementsMatch(t, expanded.UnitOrder, expanded2.UnitOrder, "idempotent UnitOrder")
+	assertExpandedEqual(t, expanded, expanded2)
 }
