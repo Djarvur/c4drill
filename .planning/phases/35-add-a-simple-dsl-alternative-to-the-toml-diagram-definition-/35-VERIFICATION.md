@@ -1,7 +1,7 @@
 ---
 phase: 35-add-a-simple-dsl-alternative-to-the-toml-diagram-definition-
 verified: 2026-08-14T21:27:11Z
-status: human_needed
+status: passed
 score: 24/24
 overrides_applied: 0
 re_verification:
@@ -17,16 +17,18 @@ human_verification:
   - test: "Human review of the README.adoc C4D Format section, the 12 example twins, and the dual-format skill"
     expected: "Syntax documentation correct and readable; side-by-side example clear; twins deliver the promised verbosity win (06-templates: 109 -> 43 lines claimed)"
     why_human: "35-09 Task 4 was a blocking checkpoint:human-verify gate that was AUTO-approved under AUTO-MODE — the five verification steps were executed by the agent, not reviewed by a human; doc readability and the verbosity-win judgment are subjective"
+    discharged: "2026-08-17 — UAT Test 12 (35-UAT.md) accepted by the user: README C4D Format section, 12 twins, and dual-format skill reviewed and passed"
   - test: "Optional: WR-04 skill table fix confirmation"
     expected: "After any fix pass, skill/SKILL.md type-inference table rows for systemExternal and box parents match internal/parser/parser.go DefaultTypeForParent (both fall to the default C1/system branch)"
     why_human: "Requires reading both the table and the Go switch side by side; doc-correctness judgment"
+    status: "optional — remains open; non-blocking doc-drift item (WR-04), surfaced in milestone close-out"
 ---
 
 # Phase 35: C4D DSL Alternative to TOML — Verification Report
 
 **Phase Goal:** Deliver the C4D format — a `.c4d` brace-block D2-inspired DSL with full TOML feature parity — parseable directly to `*parser.Model` and renderable through the unchanged pipeline, with bidirectional canonical-equivalent converters (`convert to-toml`/`to-c4d`), a gofmt-style comment-preserving formatter (`fmt`) for both formats, nested use and recursive template-instantiating-template expansion, plus full README/skill/example documentation.
 **Verified:** 2026-08-14T21:27:11Z (re-verification after fixes 0a17d64 / f553a9c / c59b762)
-**Status:** human_needed — all 24 truths verified; 2 human verification items remain (carried from initial verification, unaffected by the fixes)
+**Status:** passed — all 24 truths verified; human verification discharged via UAT 2026-08-17 (Test 12); one optional non-blocking doc item (WR-04) remains open
 **Re-verification:** Yes — after gap closure (initial verification 2026-08-14, 21/24, gaps_found)
 
 ## Goal Achievement
