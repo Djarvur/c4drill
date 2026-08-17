@@ -70,32 +70,43 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - ✓ LABEL-02 (word-boundary-only breaking): `wrapText` over-budget branch emits the whole word unsplit on its own line; `splitLongWord` deleted (0 references); no character-level fallback anywhere (D-05).
 - ✓ COMPAT-01 (no regression): unit labels byte-identical absent over-budget words; all canonicalDOT goldens (COMPAT-02, REF-05, DI-1) pass unchanged; `go test ./...` green (12/12 packages).
 
-## Current Milestone: v1.11 Label Formatting Fixes — COMPLETE (2026-08-10)
+## Current Milestone: v1.12 C4D DSL Alternative — COMPLETE (2026-08-17)
 
-**Goal:** Generated diagram labels render with proper word wrapping and aspect-ratio sizing.
+**Goal:** Deliver the C4D format — a `.c4d` brace-block D2-inspired DSL with full TOML feature parity — parseable directly to `*parser.Model` and renderable through the unchanged pipeline, with bidirectional canonical-equivalent converters (`convert to-toml`/`to-c4d`), a gofmt-style comment-preserving formatter (`fmt`) for both formats, nested use and recursive template-instantiating-template expansion, plus full README/skill/example documentation.
 
-**Status:** Complete (2026-08-10) — Phase 34 delivered both fixes plus two UAT gap-closure plans; `go test ./...` 12/12 green; canonicalDOT goldens re-baselined with documented label-only deltas.
+**Status:** Complete (2026-08-17) — Phase 35 delivered all 9 plans (25 tasks) plus 3 verification-gap fixes at close; re-verified 24/24 truths, UAT 12/12, security 30/30 threats closed (ASVS 1); `go test ./...` 16/16 green.
 
 **Target features (delivered):**
 
-- **Edge labels: aspect-ratio sizing** — edge labels are formatted like unit labels: wrapped text in a rectangle with the configured aspect ratio (`LabelRatio`), invisible borders. `buildEdgeLabel` (labels.go) emits the borderless HTML-table rectangle (`<table border="0">` + `[Technology]` row + wrapped Description row) via `e.SetLabelHTML`.
-- **Word-boundary-only line breaking** — lines break at word boundaries AND punctuation boundaries (UAT refinement); no mid-word splits. `wrapText` (wrap.go) tokenizes via `tokenizeWrapText`; `splitLongWord` removed; over-budget pure letter/digit runs stay unsplit on their own line.
+- **C4D DSL** — D2-inspired brace-block authoring (`a: system "Name" { ... }`) with full TOML parity: pigeon PEG grammar, typed comment/position-aware AST, `c4d.Parse` → `*parser.Model`, DSL-native error positions, reserved-word errors with Levenshtein suggestions.
+- **Composition in both formats** — `template name(params)`, `use` in all three positions, `include` with `once`, list forms, `${param}` tokens, `[[unit.X.use]]` TOML sugar, recursive template-body expansion (cycle detection + depth cap; v1.10 nesting deferral lifted).
+- **Converters** — `convert to-toml`/`to-c4d` with validate-first emission, `--follow-includes` whole-graph migration preserving relative directory structure, canonical-equivalent round-trips enforced by a 29-fixture parity corpus + re-parse write gate.
+- **Formatter** — `fmt` for both formats: comment-preserving, author key-order kept, `--check` CI gate, semantic safety gate (re-parse + model equality before any write).
+- **Docs** — README C4D Format section + CLI reference, 12 render-parity-enforced example twins (~50% line reduction), dual-format skill with all plugin copies synced.
 
 **Key context:**
-- Unit labels already use HTML `<table border="0">` labels with `maxChars` derived from `LabelRatio` — edge labels reuse this machinery.
-- Backward compatibility matters: existing diagrams must not regress (goldens via canonicalDOT, DI-1).
+- Gap-fix closure at verification: converter representability gate + write gate (c59b762), width/height parity (f553a9c), `-o` structure preservation (0a17d64) — all independently re-verified.
+- Known deferred: WR-03 duplicate `properties {}` last-win, WR-04 skill type-inference table drift, WR-05 quoted-label whitespace trim (non-blocking warnings, see 35-VERIFICATION.md).
 
-## Current State (2026-08-10)
+## Current State (2026-08-17)
 
-**Shipped:** v1.11 Label Formatting Fixes — 1 phase (34), 4 plans (TDD), 28 commits. All 3 requirements validated (LABEL-01, LABEL-02, COMPAT-01). UAT: 3 gaps found and fixed (punctuation tokenizer 34-03, ratio sizing 34-04). Security: 9/9 threats closed. Full suite 12/12 green.
+**Shipped:** v1.12 C4D DSL Alternative — 1 phase (35), 9 plans, 25 tasks. Requirements D-01..D-35 satisfied. Verification: 24/24 truths (3 gap fixes at close). UAT: 12/12. Security: 30/30 threats closed (ASVS 1). Full suite 16/16 green.
 
 ## Next Milestone Goals
 
-*Not yet defined — run `/gsd:new-milestone` to gather requirements for the next cycle.*
+*Not yet defined — run `/gsd:new-milestone` to gather requirements. Candidate scope from the deferred-items backlog:*
+- Template multi-output / `for_each` fan-out (Future, REQUIREMENTS.md)
+- Compact-link shorthand variants beyond baseline (Future, REQUIREMENTS.md)
+- C4D polish warnings: WR-03 duplicate `properties {}` last-win, WR-04 skill type-inference table drift, WR-05 quoted-label whitespace trim
+- Docs drift: README "Validation Rules" VAL-01 orphan rule + unused root testdata (pre-existing, acknowledged)
 
 ## Shipped
 
-### v1.11 Label Formatting Fixes (Shipped: 2026-08-10)
+### v1.12 C4D DSL Alternative (Shipped: 2026-08-17)
+
+**Goal:** Deliver the C4D format — a `.c4d` brace-block D2-inspired DSL with full TOML feature parity — parseable directly to `*parser.Model` and renderable through the unchanged pipeline, with bidirectional canonical-equivalent converters (`convert to-toml`/`to-c4d`), a gofmt-style comment-preserving formatter (`fmt`) for both formats, nested use and recursive template-instantiating-template expansion, plus full README/skill/example documentation.
+
+**Key accomplishments:** 1 phase (35), 9 plans, 25 tasks. Full C4D grammar (pigeon PEG, committed generated parser) + typed AST + `c4d.Parse` front-end (D-01..D-21); composition surface in both formats with recursive template expansion — v1.10 nesting deferral lifted (D-13..D-19); canonical-equivalent converters with `--follow-includes` graph migration and 29-fixture parity corpus (D-22..D-30); comment-preserving `fmt` for both formats with `--check` + semantic safety gate (D-31..D-33); README C4D section, 12 render-parity-enforced twins, dual-format skill synced to all plugin copies (D-34/D-35). Close-out: 3 verification blockers fixed (representability + write gate, width/height parity, `-o` structure preservation); 24/24 truths, 12/12 UAT, 30/30 security threats closed.
 
 **Goal:** Generated diagram labels render with proper word wrapping and aspect-ratio sizing — edge labels formatted like unit labels (wrapped rectangle with `LabelRatio` aspect ratio, invisible borders), and line breaks at word boundaries only (no mid-word splits).
 

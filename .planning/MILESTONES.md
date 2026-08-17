@@ -1,5 +1,21 @@
 ## v1.11 Label Formatting Fixes (Shipped: 2026-08-10)
 
+## v1.12 C4D DSL Alternative — Dual-Format Authoring (Shipped: 2026-08-17)
+
+**Phases completed:** 1 phase, 9 plans, 25 tasks
+
+**Key accomplishments:**
+
+- Full C4D DSL — a D2-inspired brace-block alternative to TOML with full feature parity: pigeon PEG grammar (787 lines, committed generated parser, go:generate chain), typed comment/position-aware AST, and `c4d.Parse`/`ParseFile` front-end returning `*parser.Model` with DSL-native error positions and Levenshtein-suggested reserved-word errors (D-01..D-21).
+- Composition surface completes both formats: `template name(params) { }` declarations with the full unit grammar, `use` in all three positions (top-level / unit-block / template-body), `include` with `once`, inline + one-per-line list forms, `${param}` tokens; TOML gains `[[unit.X.use]]` sugar and recursive template-body expansion with cycle detection + depth cap — the v1.10 template-nesting deferral is lifted (D-13..D-19).
+- Bidirectional canonical-equivalent converters (`convert to-toml` / `to-c4d`) with validate-first two-parse emission, `--follow-includes` whole-graph migration rewriting include paths while preserving relative directory structure under `-o`, and a 29-fixture parity corpus with render equivalence (D-22..D-30).
+- gofmt-style `fmt` subcommand for both formats: comment-preserving TOML formatting over the go-toml unstable API, author key-order preservation, `--check` CI gate, and a semantic safety gate (re-parse + model-equality before any write) (D-31..D-33).
+- Docs surface: README.adoc `== C4D Format` section with side-by-side example, convert/fmt CLI reference, 12 render-parity-enforced example twins (~50% line reduction vs TOML), and the c4drill-toml skill extended to dual-format coverage with all plugin copies synced (D-34/D-35).
+- Verification gap closure at close: 3 blockers fixed (converter representability gate + re-parse write gate, width/height parity, `-o` structure preservation for relative entry paths) — re-verified 24/24 truths, 12/12 UAT, 30/30 security threats closed (ASVS 1).
+- Known deferred items at close: 2 (pre-existing v1.10 doc-drift debug-session artifacts — see STATE.md Deferred Items)
+
+---
+
 **Phases completed:** 1 phase, 4 plans, 28 commits
 
 **Key accomplishments:**

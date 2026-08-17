@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.11
-milestone_name: Label Formatting Fixes
-status: verifying
-last_updated: "2026-08-14T19:55:07.088Z"
-last_activity: 2026-08-14
+milestone: v1.12
+milestone_name: C4D DSL Alternative
+status: complete
+last_updated: "2026-08-17T09:44:19.906Z"
+last_activity: 2026-08-17 — Milestone v1.12 completed and archived
 progress:
   total_phases: 1
   completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 9
+  completed_plans: 9
   percent: 100
 ---
 
@@ -24,11 +24,10 @@ See: .planning/PROJECT.md (updated 2026-08-10)
 
 ## Current Position
 
-Phase: 35 (add-a-simple-dsl-alternative-to-the-toml-diagram-definition) — EXECUTING
-Plan: 9 of 9
-**Progress:** [██████████] 100%
-Status: Phase complete — ready for verification
-Last activity: 2026-08-14
+Phase: Milestone v1.12 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-08-17 — Milestone v1.12 completed and archived
 
 ## Performance Metrics
 
@@ -86,6 +85,7 @@ Both captured todos (`.planning/todos/pending/2026-08-10-wrap-edge-labels-like-u
 | Docs | docs-drift-orphan-rule-testdata — README "Validation Rules" section (line 551) missing VAL-01 orphan rule; root `testdata/valid.toml`+`nested.toml` unused (tests use `cmd/c4drill/testdata/`) | confirmed_open, low-severity | v1.10 close (pre-existing, not a v1.10 regression) |
 | Tooling | knowledge-base.md — NOT a debug session; gsd-debugger tool reference doc the audit scanner misclassifies. No action needed. | wontfix (false positive) | v1.10 close |
 | Audit | Both debug-session items above re-flagged by audit-open at v1.11 close; acknowledged again (pre-existing, out of v1.11 scope) | acknowledged | v1.11 close |
+| Audit | Both debug-session items above re-flagged by audit-open at v1.12 close; acknowledged again (pre-existing, out of v1.12 scope) | acknowledged | v1.12 close |
 
 ## Session Continuity
 
@@ -124,4 +124,4 @@ Resume file: None
 
 ## Operator Next Steps
 
-- Run /gsd:plan-phase 34 to plan the Label formatting fixes phase
+- Start the next milestone with /gsd-new-milestone
