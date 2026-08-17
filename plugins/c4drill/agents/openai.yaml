@@ -2,5 +2,5 @@
 # Discovery: codex plugin marketplace add Djarvur/cc-mplace
 interface:
   displayName: "C4Drill"
-  shortDescription: "C4 architecture diagrams from TOML - authoring skill and CLI renderer"
-  default_prompt: "Use the $c4drill:c4drill-toml skill to author C4Drill TOML architecture definitions, and the c4drill CLI to render them into C4 diagrams."
+  shortDescription: "C4 architecture diagrams from TOML or C4D - authoring skill and CLI renderer"
+  default_prompt: "Use the $c4drill:c4drill-toml skill to author C4Drill architecture definitions in TOML or C4D, and the c4drill CLI to render them into C4 diagrams."

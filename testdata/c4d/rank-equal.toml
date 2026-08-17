@@ -1,0 +1,38 @@
+# Fixture: rank = "equal" (the C4D `{ rank: equal }` option twin) — same-rank
+# layout on every link so the rank emission/parsing path is exercised.
+[properties]
+name = "Rank Equal Test"
+description = "Every link ranks its peer equal"
+
+[web]
+type = "system"
+name = "Web"
+description = "Frontend"
+
+[[web.link]]
+peer = "auth"
+technology = "HTTPS"
+description = "Calls"
+rank = "equal"
+
+[[web.link]]
+peer = "data"
+technology = "SQL"
+description = "Reads"
+rank = "equal"
+
+[auth]
+type = "system"
+name = "Auth"
+description = "Identity service"
+
+[[auth.link]]
+peer = "data"
+technology = "SQL"
+description = "Reads"
+rank = "equal"
+
+[data]
+type = "db"
+name = "Data"
+description = "Shared store"

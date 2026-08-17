@@ -1,0 +1,38 @@
+# Fixture: D-08/D-10 arrow and direction forms — an AUTHORED [[...linkFrom]]
+# (incoming relationship, the C4D `<-` glyph twin), a bidirectional link
+# (`<->` twin) and a none-arrow link (`--` twin).
+[properties]
+name = "LinkFrom Test"
+description = "Authored linkFrom, bidirectional and none arrows"
+
+[audit]
+type = "system"
+name = "Audit Service"
+description = "Writes checkpoints and emits events"
+
+[[audit.link]]
+peer = "store"
+arrow = "bidirectional"
+technology = "gRPC"
+description = "Reads and writes checkpoints"
+
+[[audit.link]]
+peer = "metrics"
+arrow = "none"
+technology = "UDP"
+description = "Fire-and-forget events"
+
+[store]
+type = "db"
+name = "Audit Store"
+description = "Checkpoint storage"
+
+[[store.linkFrom]]
+peer = "metrics"
+technology = "HTTP"
+description = "Receives pushed aggregates"
+
+[metrics]
+type = "queue"
+name = "Metrics Pipeline"
+description = "Aggregation backbone"

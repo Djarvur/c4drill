@@ -8,6 +8,7 @@
 - ✅ **v1.9 C3 Boundary Node Fix** — Phase 27 (shipped 2026-08-06) → [archive](milestones/v1.9-ROADMAP.md)
 - ✅ **v1.10 Model Composition** — Phases 28-33 (shipped 2026-08-08) → [archive](milestones/v1.10-ROADMAP.md)
 - ✅ **v1.11 Label Formatting Fixes** — Phase 34 (shipped 2026-08-10) → [archive](milestones/v1.11-ROADMAP.md)
+- ✅ **v1.12 C4D DSL Alternative** — Phase 35 (shipped 2026-08-17) → [archive](milestones/v1.12-ROADMAP.md)
 
 ## Phases
 
@@ -62,3 +63,18 @@ Full details: [milestones/v1.11-ROADMAP.md](milestones/v1.11-ROADMAP.md)
 | 32. Include directive | v1.10 | 2/2 | Complete | 2026-08-08 |
 | 33. Docs sweep + goldens | v1.10 | 4/4 | Complete | 2026-08-08 |
 | 34. Label formatting fixes | v1.11 | 2/2 | Complete    | 2026-08-10 |
+| 35. C4D DSL alternative | v1.12 | 9/9 | Complete | 2026-08-14 |
+
+<details>
+<summary>✅ v1.12 C4D DSL Alternative (Phase 35) — SHIPPED 2026-08-17</summary>
+
+**Goal:** Deliver the C4D format — a `.c4d` brace-block D2-inspired DSL with full TOML feature parity — parseable directly to `*parser.Model` and renderable through the unchanged pipeline, with bidirectional canonical-equivalent converters (`convert to-toml`/`to-c4d`), a gofmt-style comment-preserving formatter (`fmt`) for both formats, nested use (`[[unit.use]]` in TOML, `use` in blocks in C4D) and recursive template-instantiating-template expansion, plus full README/skill/example documentation.
+
+- [x] Phase 35: Add a simple DSL alternative to the TOML diagram definition (9/9 plans) — completed 2026-08-14
+
+**Stats:** 1 phase, 9 plans, 25 tasks. Requirements D-01..D-35 satisfied. Verification: 24/24 truths (3 gap fixes at close). UAT: 12/12. Security: 30/30 threats closed (ASVS 1).
+
+Full details: [milestones/v1.12-ROADMAP.md](milestones/v1.12-ROADMAP.md)
+
+</details>
+

@@ -10,6 +10,10 @@
 //   - D-11: a same-file diamond (same canonical path reached via two paths) is
 //     auto-deduped silently; a cross-file unit-path collision hard-errors.
 //   - INC-10/D-12: a missing include is an unconditional hard error.
+//   - D-26 (Plan 35-05): include graphs may MIX .toml and .c4d files freely —
+//     dispatch is per included file's extension (.c4d -> C4D front-end, .toml
+//     -> TOML front-end) and merging happens at Model level; any other
+//     extension is a hard error naming the accepted ones (T-35-05-01).
 //
 // Canonical paths (filepath.Clean + filepath.Abs) are the key for BOTH the
 // cycle stack and the visited-set. filepath.Abs does NOT resolve symlinks
@@ -22,6 +26,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Djarvur/c4drill/internal/c4d"
 	"github.com/Djarvur/c4drill/internal/parser"
 )
 
@@ -132,9 +137,18 @@ func resolveOne(
 		return true, nil
 	}
 
-	// ParseFile the included model. Missing file → *ParseError naming both
-	// the referenced path and the including file (INC-10/D-12).
-	included, err := parser.ParseFile(absPath)
+	// Extension gate (T-35-05-01): dispatch is extension-based and fails
+	// closed on unknown types — no fallback parsing, no content sniffing.
+	if err := checkIncludeExtension(absPath, dir.Path, includingFile); err != nil {
+		return false, err
+	}
+
+	// Parse the included model through the front-end its extension selects
+	// (D-26: .toml -> TOML front-end, .c4d -> C4D front-end; merging happens
+	// at Model level so graphs mix formats freely). Missing file →
+	// *ParseError naming both the referenced path and the including file
+	// (INC-10/D-12).
+	included, err := parseIncludedFile(absPath)
 	if err != nil {
 		return false, &parser.ParseError{
 			Message: "include not found: " + dir.Path,
@@ -179,4 +193,46 @@ func canonicalize(path, includingDir string) (string, error) {
 	}
 
 	return filepath.Clean(abs), nil
+}
+
+// Accepted include extensions (D-26): include graphs may mix these freely —
+// dispatch is per file, merging is at Model level.
+const (
+	extToml = ".toml"
+	extC4d  = ".c4d"
+)
+
+// checkIncludeExtension enforces the extension gate (T-35-05-01): only .toml
+// and .c4d files may be included. Anything else is a hard *parser.ParseError
+// naming the accepted extensions — no fallback parsing, no content sniffing,
+// so a hostile or mistyped path cannot smuggle content through an unexpected
+// decoder.
+func checkIncludeExtension(absPath, displayPath, includingFile string) error {
+	ext := filepath.Ext(absPath)
+
+	switch ext {
+	case extToml, extC4d:
+		return nil
+	default:
+		return &parser.ParseError{
+			Message: fmt.Sprintf("unsupported include extension %q (accepted: %s, %s)",
+				ext, extToml, extC4d),
+			Context: fmt.Sprintf("%s (included from %s)", displayPath, includingFile),
+		}
+	}
+}
+
+// parseIncludedFile parses an included file through the front-end its
+// extension selects (D-26): .c4d -> the C4D front-end, .toml -> the TOML
+// front-end. The extension gate ran before this call, so the default branch
+// is defensive only.
+//
+//nolint:wrapcheck // resolveOne wraps the returned error with include-not-found attribution
+func parseIncludedFile(path string) (*parser.Model, error) {
+	switch filepath.Ext(path) {
+	case extC4d:
+		return c4d.ParseFile(path)
+	default:
+		return parser.ParseFile(path)
+	}
 }

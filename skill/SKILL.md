@@ -1,13 +1,14 @@
 ---
 name: c4drill-toml
-description: Generate valid C4Drill TOML architecture definitions
-version: 1.0.0
+description: Generate valid C4Drill architecture definitions in TOML or C4D format
+version: 2.0.0
 ---
 
-# C4Drill TOML Skill
+# C4Drill Skill (TOML and C4D)
 
-**Purpose:** Enable AI assistants to generate valid C4Drill TOML
-architecture definitions without prior training.
+**Purpose:** Enable AI assistants to generate valid C4Drill architecture
+definitions — in the TOML format or the compact C4D format — without
+prior training.
 
 **Target:** Generic LLM (model-agnostic). Works with Claude Code, Cursor,
 OpenCode, or any AI with skill support.
@@ -82,6 +83,86 @@ name = "Handlers"
 ```toml
 [properties]
 name = "Architecture Name"
+```
+
+---
+
+## C4D Format (Compact Alternative)
+
+The same model can be authored in **C4D** (`.c4d`) — a brace-block
+format that is less verbose for multi-level diagrams. `c4drill
+diagram.c4d` renders directly through the same pipeline as `.toml`.
+
+**When to prefer C4D:** deep nesting or many links (edges live inside
+the unit they belong to; one-line leaf blocks keep files compact).
+**When to prefer TOML:** machine-generated files or tooling that
+already speaks TOML.
+
+### C4D Syntax Cheat-Sheet
+
+```c4d
+properties {
+  name: My Architecture        # same keys as [properties]
+  edges: spline
+  expanded: [platform]         # or one item per line
+}
+
+# id: type "Display Name" { ... } — type optional (same inference
+# as TOML), name optional (same humanization), braces required
+user: person "User" { }
+
+platform: system "Platform" {
+  # fields: description, technology, reference, color, style,
+  # border, edges — values with { } : | or commas need double quotes
+  api: container "API Service" { technology: "Go, gRPC" }
+
+  # edges live INSIDE unit blocks; four arrows:
+  -> user: serves                        # single value = description
+  -> api.db: "SQL | queries" { color: green }  # "tech | description" + options
+  <- payment: "Webhook | callback"       # incoming (linkFrom on target)
+  <-> cache: "Redis | caches"            # bidirectional
+  -- metrics: "HTTP | posts"             # no arrowhead
+
+  # use inside a unit block attaches under that parent (nested use)
+  use microservice(name: auth, tech: Go, upstreamBus: messageBus)
+}
+
+# templates are function-like; ${param} semantics identical to TOML
+template microservice(name, tech, upstreamBus) {
+  type: container
+  name: "${name} Service"
+  technology: "${tech}"
+  -> ${upstreamBus}: "Publishes ${name} events"
+}
+
+# includes: relative paths, optional once, mixed .toml/.c4d graphs
+include templates.c4d once
+include domains/auth.c4d
+```
+
+**Rules identical to TOML:** type inference and generic `db`/`queue`/
+`box` promotion, name humanization, relative-peer walk-up (bare edge
+targets) vs absolute (dotted), the orphan rule, duplicate-edge
+rejection. `;` separates statements (one-line blocks); `"""..."""`
+multi-line strings; `#` comments (fmt preserves them). Field keywords
+(`name`, `description`, `technology`, ...) are reserved — a unit id
+colliding with one is a hard parse error.
+
+### Converting and Formatting (convert / fmt)
+
+```bash
+# TOML -> C4D and back; the source is validated first (invalid input
+# is a hard error, no output written); twin lands next to the input
+c4drill convert to-c4d architecture.toml
+c4drill convert to-toml architecture.c4d
+
+# whole include graph migration (include paths rewritten, once kept)
+c4drill convert to-c4d --follow-includes entry.toml
+
+# in-place formatter for BOTH formats, gofmt-style (comments kept,
+# author's key order kept)
+c4drill fmt architecture.c4d
+c4drill fmt --check .        # CI gate: exit 1 listing offenders
 ```
 
 ---
@@ -710,7 +791,14 @@ The following examples demonstrate increasing complexity:
 9. **[09-composed/](examples/09-composed/)** - All four features
    composed (XC-05 golden pair)
 
-All examples parse and validate successfully with `c4drill validate`.
+All examples parse and validate successfully with `c4drill <file>`
+(rendering runs the full validation pipeline).
+Every example from 02 on also ships a `.c4d` twin (e.g.
+`examples/06-templates.c4d`, including the include-graph directories
+`08-include/` and `09-composed/`) that renders identically to its
+`.toml` source — generate or refresh twins with `c4drill convert
+to-c4d` (add `--follow-includes` for include graphs) and canonicalize
+them with `c4drill fmt`.
 
 ---
 
@@ -731,8 +819,8 @@ When generating TOML:
    diagram
 8. **Use `external` suffix for external units** - `systemExternal`,
    `dbExternal`
-9. **Validate before committing** - Run `c4drill <file.toml>` to
-   check
+9. **Validate before committing** - Run `c4drill <file.toml|file.c4d>`
+   to check
 
 ---
 
@@ -821,10 +909,12 @@ name = "Replica"
 
 ## Validation Command
 
-Always validate generated TOML:
+Always validate generated definitions (both formats render directly —
+pass a `.toml` or a `.c4d` file):
 
 ```bash
 c4drill architecture.toml
+c4drill architecture.c4d
 ```
 
 Success = no output (generates SVG by default) Failure = error message
@@ -844,4 +934,4 @@ c4drill architecture.toml -f html    # Safari-compatible
 
 ---
 
-*Skill version: 1.2.0* *C4Drill version: v1.10+*
+*Skill version: 2.0.0* *C4Drill version: v1.10+ (C4D support included)*

@@ -1,0 +1,21 @@
+# Include Directive Example (entry file) - C4D twin of entry.toml. The .c4d
+# include graph is self-contained: auth.c4d and billing.c4d are the twins of
+# the two [[include]] targets, referenced by rewritten include directives.
+properties {
+  name: Include Directive Example
+  description: Entry file pulling in auth and billing domain files
+  edges: spline
+  expanded: [platform]
+}
+
+platform: system "Platform" { description: "Parent system; its auth and billing subunits live in other files" }
+
+messageBus: queue "Message Bus" { description: Event backbone for included-domain subunits }
+
+customer: person "Customer" {
+  description: End user whose requests reach the included auth domain
+  -> platform.auth.db: "HTTPS | Authenticates against the included auth domain"
+}
+
+include auth.c4d
+include billing.c4d once

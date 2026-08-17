@@ -1585,7 +1585,7 @@ func TestParseNoIncludes(t *testing.T) {
 	t.Parallel()
 
 	data, err := os.ReadFile("../../testdata/valid.toml")
-	require.NoError(t, err, "failed to read testdata/valid.toml")
+	require.NoError(t, err)
 
 	got, err := parser.Parse(data)
 	require.NoError(t, err, "Parse() should not error")
@@ -1597,4 +1597,303 @@ func TestParseNoIncludes(t *testing.T) {
 	assert.Equal(t, "Test System", got.Properties.Name, "Properties.Name unchanged")
 	assert.Equal(t, []string{"user", "webapp"}, got.UnitOrder, "UnitOrder unchanged")
 	assert.Len(t, got.Units, 2, "Units count unchanged")
+}
+
+// --- Phase 35 Plan 02: [[unit.X.use]] sugar + [[template.X.use]] body use ---
+//
+// D-16: [[unit.<name>.use]] array-of-tables nested under a unit section
+// desugars to the SAME Instantiation the top-level [[use]] + parent form
+// produces (Parent = enclosing unit dotted path). D-17: [[template.<name>.use]]
+// entries populate TemplateDef.Instantiations with Parents relative to the
+// template's unit root. Both authoring forms normalize to the single
+// Instantiation mechanism the expansion pass consumes.
+
+// TestParseUnitUseSugarEquivalentToParentField exercises D-16: a document
+// using [[mainapp.use]] parses to Model.Instantiations identical (deep-equal)
+// to the equivalent document using a top-level [[use]] with parent="mainapp".
+func TestParseUnitUseSugarEquivalentToParentField(t *testing.T) {
+	t.Parallel()
+
+	sugar := []byte(`
+[properties]
+name = "Unit Use Sugar Test"
+
+[mainapp]
+type = "system"
+name = "Main App"
+
+[template.svc]
+params = ["name", "tech"]
+name = "${name} Service"
+type = "container"
+
+[[mainapp.use]]
+template = "svc"
+name = "api"
+tech = "Go"
+`)
+
+	topLevel := []byte(`
+[properties]
+name = "Unit Use Sugar Test"
+
+[mainapp]
+type = "system"
+name = "Main App"
+
+[template.svc]
+params = ["name", "tech"]
+name = "${name} Service"
+type = "container"
+
+[[use]]
+template = "svc"
+parent = "mainapp"
+name = "api"
+tech = "Go"
+`)
+
+	gotSugar, err := parser.Parse(sugar)
+	require.NoError(t, err, "[[mainapp.use]] sugar must parse")
+
+	gotTop, err := parser.Parse(topLevel)
+	require.NoError(t, err, "top-level [[use]] parent form must parse")
+
+	// The acceptance criterion: byte-identical Model.Instantiations.
+	require.Equal(t, gotTop.Instantiations, gotSugar.Instantiations,
+		"[[unit.X.use]] must desugar to the identical Instantiation the [[use]] parent form produces")
+
+	// And the shape of the single desugared entry.
+	require.Len(t, gotSugar.Instantiations, 1, "one [[mainapp.use]] entry")
+	assert.Equal(t, "svc", gotSugar.Instantiations[0].Template, "Instantiations[0].Template")
+	assert.Equal(t, "mainapp", gotSugar.Instantiations[0].Parent, "Instantiations[0].Parent (enclosing unit path)")
+	require.NotNil(t, gotSugar.Instantiations[0].Params, "Instantiations[0].Params")
+	assert.Equal(t, "api", gotSugar.Instantiations[0].Params["name"], "name param")
+	assert.Equal(t, "Go", gotSugar.Instantiations[0].Params["tech"], "tech param")
+
+	// The sugar must not create a phantom 'use' subunit under the unit.
+	mainapp := gotSugar.Units["mainapp"]
+	require.NotNil(t, mainapp, "mainapp unit present")
+	assert.NotContains(t, mainapp.Subunits, "use", "'use' must not leak as a phantom subunit (BC-1)")
+	assert.NotContains(t, mainapp.SubunitOrder, "use", "SubunitOrder must not contain 'use'")
+
+	// UnitOrder unchanged: only the hand-authored unit.
+	assert.Equal(t, []string{"mainapp"}, gotSugar.UnitOrder, "UnitOrder excludes the use site")
+}
+
+// TestParseUnitUseNestedPath exercises D-16 at depth: [[a.b.use]] (use under a
+// nested subunit section) desugars to Parent "a.b".
+func TestParseUnitUseNestedPath(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Nested Unit Use Test"
+
+[a]
+type = "system"
+name = "A"
+
+[a.b]
+type = "container"
+name = "B"
+
+[template.svc]
+params = ["name"]
+name = "${name} Service"
+type = "component"
+
+[[a.b.use]]
+template = "svc"
+name = "handler"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "[[a.b.use]] must parse")
+
+	require.Len(t, got.Instantiations, 1, "one nested use entry")
+	assert.Equal(t, "svc", got.Instantiations[0].Template, "Template")
+	assert.Equal(t, "a.b", got.Instantiations[0].Parent, "Parent is the full dotted enclosing path")
+
+	// No phantom 'use' subunit under a.b (the fallback parse must skip it).
+	b := got.Units["a"].Subunits["b"]
+	require.NotNil(t, b, "a.b subunit present")
+	assert.NotContains(t, b.Subunits, "use", "'use' must not leak as a phantom subunit of a.b")
+}
+
+// TestParseUnitUseInterleavesDocumentOrder exercises D-16 ordering: top-level
+// [[use]] entries and [[unit.X.use]] entries interleave in Model.Instantiations
+// in AUTHORING order, not grouped by form.
+func TestParseUnitUseInterleavesDocumentOrder(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Interleave Test"
+
+[template.svc]
+params = ["name"]
+name = "${name} Service"
+type = "system"
+
+[beta]
+type = "system"
+name = "Beta"
+
+[[beta.use]]
+template = "svc"
+name = "first"
+
+[[use]]
+template = "svc"
+name = "second"
+
+[alpha]
+type = "system"
+name = "Alpha"
+
+[[alpha.use]]
+template = "svc"
+name = "third"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	require.Len(t, got.Instantiations, 3, "three use entries across both forms")
+
+	wantOrder := []struct{ name, parent string }{
+		{"first", "beta"},
+		{"second", ""},
+		{"third", "alpha"},
+	}
+
+	for i, want := range wantOrder {
+		assert.Equal(t, "svc", got.Instantiations[i].Template, "Instantiations[%d].Template", i)
+		assert.Equal(t, want.parent, got.Instantiations[i].Parent, "Instantiations[%d].Parent (document order)", i)
+		assert.Equal(t, want.name, got.Instantiations[i].Params["name"], "Instantiations[%d] name param (document order)", i)
+	}
+}
+
+// TestParseTemplateBodyUseExtracted exercises D-17 parsing: [[template.svc.use]]
+// entries land in Templates["svc"].Instantiations with Parent relative to the
+// template's unit root (empty for the root; nested [[template.svc.api.use]]
+// yields Parent "api"). Body uses do NOT leak into Model.Instantiations.
+func TestParseTemplateBodyUseExtracted(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Template Body Use Test"
+
+[template.leaf]
+params = ["name"]
+name = "${name} Leaf"
+type = "db"
+
+[template.svc]
+params = ["name"]
+name = "${name} Service"
+type = "box"
+
+[template.svc.api]
+type = "db"
+name = "API"
+
+[[template.svc.use]]
+template = "leaf"
+name = "root-cache"
+
+[[template.svc.api.use]]
+template = "leaf"
+name = "api-cache"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "[[template.svc.use]] must parse")
+
+	require.Contains(t, got.Templates, "svc", "Templates must contain 'svc'")
+	svc := got.Templates["svc"]
+	require.NotNil(t, svc, "Templates['svc'] non-nil")
+
+	// Two body uses, in document order, Parents relative to the template root.
+	require.Len(t, svc.Instantiations, 2, "svc.Instantiations has the two body uses")
+
+	assert.Equal(t, "leaf", svc.Instantiations[0].Template, "svc.Instantiations[0].Template")
+	assert.Empty(t, svc.Instantiations[0].Parent, "svc.Instantiations[0].Parent (empty = template root)")
+	assert.Equal(t, "root-cache", svc.Instantiations[0].Params["name"], "svc.Instantiations[0] name param")
+
+	assert.Equal(t, "leaf", svc.Instantiations[1].Template, "svc.Instantiations[1].Template")
+	assert.Equal(t, "api", svc.Instantiations[1].Parent, "svc.Instantiations[1].Parent (relative to template root)")
+	assert.Equal(t, "api-cache", svc.Instantiations[1].Params["name"], "svc.Instantiations[1] name param")
+
+	// Body uses never leak into Model.Instantiations.
+	assert.Empty(t, got.Instantiations, "template body uses stay out of Model.Instantiations")
+
+	// The template's own subtree parse is unaffected by the use arrays.
+	assert.Contains(t, svc.Unit.Subunits, "api", "declared subunit api still parsed")
+	assert.NotContains(t, svc.Unit.Subunits, "use", "'use' must not leak as a phantom template subunit")
+}
+
+// TestParseUnitUseNonStringValueRejected mirrors extractInstantiations'
+// strictness into the nested forms: a [[unit.X.use]] (and [[template.X.use]])
+// entry carrying a non-string value is a hard *parser.ParseError.
+func TestParseUnitUseNonStringValueRejected(t *testing.T) {
+	t.Parallel()
+
+	t.Run("unit use", func(t *testing.T) {
+		t.Parallel()
+
+		data := []byte(`
+[properties]
+name = "Bad Unit Use Test"
+
+[mainapp]
+type = "system"
+
+[template.svc]
+params = ["name"]
+name = "${name} Service"
+type = "container"
+
+[[mainapp.use]]
+template = "svc"
+name = 123
+`)
+
+		_, err := parser.Parse(data)
+		require.Error(t, err, "non-string value in [[unit.X.use]] must be a hard error")
+
+		var parseErr *parser.ParseError
+		require.ErrorAs(t, err, &parseErr, "error should be *ParseError")
+	})
+
+	t.Run("template body use", func(t *testing.T) {
+		t.Parallel()
+
+		data := []byte(`
+[properties]
+name = "Bad Template Use Test"
+
+[template.leaf]
+params = ["name"]
+name = "${name} Leaf"
+type = "db"
+
+[template.svc]
+params = ["name"]
+name = "${name} Service"
+type = "box"
+
+[[template.svc.use]]
+template = "leaf"
+name = ["not", "a", "string"]
+`)
+
+		_, err := parser.Parse(data)
+		require.Error(t, err, "non-string value in [[template.X.use]] must be a hard error")
+
+		var parseErr *parser.ParseError
+		require.ErrorAs(t, err, &parseErr, "error should be *ParseError")
+	})
 }

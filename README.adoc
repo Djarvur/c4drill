@@ -7,7 +7,8 @@ Describe your architecture once in a TOML file; C4Drill generates a
 hierarchy of cross-linked C1/C2/C3 SVG diagrams with automatic drill-down
 navigation. The model is the diagram: edit the TOML, re-run the tool,
 and every level plus all navigation links is regenerated consistently.
-No runtime, no GUI, no manual drawing.
+No runtime, no GUI, no manual drawing. Author in TOML or in the compact
+C4D brace format — the same model, the same pipeline (see <<C4D Format>>).
 
 == What It Is and What Problem It Solves
 
@@ -42,7 +43,10 @@ repository, are reviewed in pull requests, and render everywhere.
 No new DSL to learn. TOML is a configuration format most engineers
 already read, and the schema *is* the C4 model: `type = "container"` and
 `name = "API Service"` read like prose. A bespoke DSL (or HCL) would add
-syntax to learn without adding modeling power.
+syntax to learn without adding modeling power. C4Drill additionally
+ships C4D, a second authoring format with the same modeling power and
+no TOML boilerplate — a compact brace-block notation for multi-level
+diagrams (see <<C4D Format>>); pick per file, convert freely.
 
 === Is This for You?
 
@@ -80,6 +84,9 @@ c4drill architecture.toml -o ./docs/diagrams
 # Generate DOT format for customization
 c4drill architecture.toml -f dot -o ./output
 ----
+
+Both authoring formats are interchangeable throughout: pass a
+`architecture.c4d` file (see <<C4D Format>>) to any command shown here.
 
 == Examples
 
@@ -729,6 +736,269 @@ the host unit.
 See `skill/examples/07-relative-peer.toml` for a runnable example
 demonstrating all four cases.
 
+== C4D Format
+
+C4D (`.c4d`) is a second authoring format for the same model: a
+brace-block format that is less verbose than TOML for multi-level
+diagrams. Everything the TOML format expresses — units, links,
+templates, includes, styling — has a C4D equivalent. `c4drill`
+renders `.c4d` files directly through the full pipeline, `c4drill
+convert` translates between the two formats (canonical-equivalent
+round-trip), and `c4drill fmt` formats both.
+
+TIP: Prefer C4D when a diagram has deep nesting or many links: edges
+live inside the unit they belong to, and one-line leaf blocks keep
+files compact. Stay with TOML when the file is machine-generated or
+edited by tooling that already speaks TOML.
+
+=== Minimal Example
+
+[source,c4d]
+----
+properties {
+  name: My System
+}
+
+user: person "User" { }
+
+webapp: system "Web Application" {
+  -> user: Uses
+}
+----
+
+=== Units and Nesting
+
+A unit is a header plus a brace block:
+
+    id: type "Display Name" { body }
+
+* `id` — the unit identifier (letters, digits, `_`, `-`).
+* `type` — *optional*; an omitted type infers exactly as in TOML (see
+  <<_optional_type_inference>>). Type keywords are the exact TOML type
+  names (`system`, `person`, `db`, `queue`, `box`, `container`,
+  `component`, `containerDb`, `componentQueue`, ...). External units
+  take the `external` modifier after the type: `system external`,
+  `person external`, `db external`.
+* `"Display Name"` — *optional*; an omitted name humanizes from the id
+  exactly as in TOML.
+
+Nested units are brace blocks inside the parent:
+
+[source,c4d]
+----
+shop: system "E-Commerce Platform" {
+  webapp: container "Web Application" { technology: "React, TypeScript" }
+  database: containerDb "Database" { technology: PostgreSQL }
+}
+----
+
+The brace block is required even when empty (`x: system { }`). The
+generic `db`/`queue`/`box` types promote by nesting level exactly as in
+TOML — `database` above is a `containerDb` because its parent is a
+system.
+
+=== Fields
+
+Field statements inside a block mirror the TOML unit fields — one
+`field: value` per line:
+
+[source,c4d]
+----
+api: system "API Service" {
+  description: "Backend API"
+  technology: "Go"
+  reference: https://wiki.example.com/api-runbook
+  color: "#E3F2FD"
+  border: "#1565C0"
+}
+----
+
+The `properties { }` block carries the same keys as
+`++[++properties++]++` in TOML (`name`, `description`, `color`,
+`style`, `border`, `edges`, `lineLength`, `expanded`).
+
+=== Literals and Comments
+
+* Barewords are fine when unambiguous: `technology: PostgreSQL`. Quote
+  with double quotes when the value contains `{ }`, `:`, `|`, a comma
+  or edge whitespace: `technology: "React, TypeScript"`.
+* Multi-line strings use triple quotes:
+
+[source,c4d]
+----
+description: """Line one
+line two"""
+----
+
+* URLs with a scheme prefix are valid barewords (`reference:
+  https://wiki.example.com/api` above).
+* `#` starts a line comment; comments are preserved by `c4drill fmt`.
+* List values accept the inline form (`expanded: [platform, webapp]`)
+  or one item per line:
+
+[source,c4d]
+----
+expanded: [
+  platform
+  webapp
+]
+----
+
+=== Edges
+
+Edges live *inside unit blocks only* — never at the top level. Four
+ASCII arrows:
+
+[cols="1,3",options="header",]
+|===
+|Arrow |Meaning
+|`-> peer` |Outgoing link (`++[[++link++]]++` in TOML)
+|`<- peer` |Incoming link — the edge is declared on the target (`++[[++linkFrom++]]++` in TOML)
+|`<-> peer` |Bidirectional
+|`-- peer` |No arrowhead
+|===
+
+The label shorthand is `-> peer: "tech | description"`. A single
+un-piped value is the *description*:
+
+[source,c4d]
+----
+-> db: queries orders        # description only
+-> db: sql |                 # technology only
+-> db: sql | queries orders  # both
+----
+
+Link attributes ride a trailing brace block on the edge statement:
+
+[source,c4d]
+----
+-> payment: "HTTPS | Processes payments" { rank: equal color: orange style: solid }
+----
+
+Peer targets use the same relative-peer semantics as TOML: a bare name
+resolves against the enclosing parent's ancestry walking up
+nearest-first; a dotted path is absolute (see
+<<_relative_peer_resolution>>). Two edges to the same peer in one
+block are a hard error.
+
+=== Templates and use
+
+Templates are function-like declarations; `use` instantiates them.
+`${param}` substitution, the all-params-required rule and the fixed
+link set are identical to TOML templates (see <<Templates>>):
+
+[source,c4d]
+----
+template microservice(name, tech, upstreamBus) {
+  type: container
+  name: "${name} Service"
+  technology: "${tech}"
+  -> ${upstreamBus}: "Publishes ${name} domain events"
+}
+
+platform: system "Platform" {
+  use microservice(name: auth, tech: "Go, gRPC", upstreamBus: messageBus)
+}
+----
+
+A `use` inside a unit block attaches the produced unit under that
+parent (nested use); a `use` inside a template body instantiates
+another template (template nesting). Arguments are named
+(`name: auth`) or positional (`auth`); a positional value containing
+`:` must be quoted.
+
+=== Include
+
+Includes are `include <path>` statements at the top level, optionally
+with the `once` modifier:
+
+[source,c4d]
+----
+include templates.c4d once
+include domains/auth.c4d
+----
+
+Paths are relative to the including file's directory; includes are
+transitive, cycle-detected and flat-merged exactly as in TOML (see
+<<Multi-File Composition (Include)>>). An include graph may freely mix
+`.toml` and `.c4d` files — each file parses by its own extension.
+
+=== Statements, Semicolons and One-Line Blocks
+
+Statements are newline- or `;`-separated; `;` enables one-line blocks —
+the same compact style `c4drill fmt` emits for leaf units:
+
+[source,c4d]
+----
+platform: system {
+  api: container { technology: Go; db: db { technology: PostgreSQL; -> messageBus: writes } }
+}
+----
+
+=== Reserved Words
+
+Field keywords (`name`, `description`, `technology`, `reference`,
+`color`, `style`, `border`, `edges`, `expanded`, `once`, ...) are
+reserved in the unit-body namespace: a unit id colliding with one is a
+hard parse error.
+
+=== Side by Side with TOML
+
+The same model fragment from `skill/examples/03-links.toml` — an
+outgoing `++[[++link++]]++` plus an incoming
+`++[[++linkFrom++]]++`:
+
+[source,toml]
+----
+[webapp]
+type = "system"
+name = "Web Application"
+technology = "React"
+
+[[webapp.link]]
+peer = "api"
+arrow = "reverse"
+technology = "REST/JSON"
+description = "Queries API"
+color = "blue"
+
+[api]
+type = "system"
+name = "API Gateway"
+technology = "Node.js"
+
+[[api.linkFrom]]
+peer = "payment"
+labelPosition = "head"
+technology = "Webhook"
+description = "Payment callback"
+color = "purple"
+----
+
+is, in C4D (the shipped twin `skill/examples/03-links.c4d`):
+
+[source,c4d]
+----
+webapp: system "Web Application" {
+  technology: React
+  -> api: "REST/JSON | Queries API" { arrow: reverse color: blue }
+}
+
+api: system "API Gateway" {
+  technology: Node.js
+  <- payment: "Webhook | Payment callback" { color: purple labelPosition: head }
+}
+----
+
+=== Formatting and Converting
+
+`c4drill fmt` formats `.c4d` (and `.toml`) in place with comments
+preserved; `c4drill convert to-c4d` / `to-toml` translate between the
+formats after validating the source — see <<CLI Reference>>. The key
+fixtures under `skill/examples/` ship `.c4d` twins that render
+identically to their `.toml` sources; the twins are generated with
+`c4drill convert to-c4d` and enforced by a parity test suite.
+
 == Full Example
 
 [source,toml]
@@ -840,7 +1110,7 @@ description = "Caches sessions"
 
 [source,text]
 ----
-c4drill <input.toml> [flags]
+c4drill <input.toml|input.c4d> [flags]
 
 Flags:
       --expanded            Generate all-expanded diagram showing all units
@@ -860,6 +1130,65 @@ Flags:
   wider, shorter labels; lower values produce narrower, taller ones.
   The same value can be set via the `C4DRILL_LABEL_RATIO` environment
   variable; the flag takes precedence.
+* Input dispatch is by extension: `.toml` parses as TOML, `.c4d` as
+  C4D (see <<C4D Format>>); any other extension is a hard error.
+
+=== convert
+
+[source,text]
+----
+c4drill convert to-c4d <file.toml> [flags]   # TOML -> C4D, writes <file>.c4d
+c4drill convert to-toml <file.c4d> [flags]   # C4D -> TOML, writes <file>.toml
+
+Flags:
+  -o, --output string       Output directory (default: next to the input)
+      --follow-includes     Convert the whole include graph, rewriting
+                            include paths to the target extension
+----
+
+* The source is *validated first* (the same stage composition as the
+  render pipeline: parse → include.Resolve → template.Expand →
+  peer.Resolve → validate). An invalid model is a hard error and no
+  output file is written.
+* By default a single file converts alone: include directives, template
+  declarations and `use` instantiations are preserved verbatim — the
+  twin re-parses to the same model.
+* `--follow-includes` converts every file of the include graph,
+  rewriting each include path to the twin extension so the converted
+  graph stays self-contained (`once` flags preserved; files already in
+  the target format are skipped).
+* `-o` writes the twin(s) into a different directory (created when
+  missing; graph mode preserves the graph's relative directory
+  structure).
+
+Example — migrate a whole multi-file diagram to C4D:
+
+[source,bash]
+----
+c4drill convert to-c4d --follow-includes architecture.toml
+----
+
+=== fmt
+
+[source,text]
+----
+c4drill fmt [--check] <file|dir>...
+----
+
+* Formats `.c4d` and `.toml` files *in place*, gofmt-style: `.c4d`
+  re-emits through the canonical C4D printer (comments preserved,
+  compact one-line leaf blocks); `.toml` normalizes whitespace,
+  indentation and blank-line grouping with comments preserved. Key
+  order is the author's in both formats — fmt never reorders.
+* Arguments may be files or directories; directories walk recursively,
+  formatting every `*.c4d` and `*.toml` found.
+* `--check` reports misformatted files one per line and exits 1
+  without writing anything — the CI gate:
+
+[source,bash]
+----
+c4drill fmt --check .   # exits 1 listing offending files
+----
 
 === Output Format
 

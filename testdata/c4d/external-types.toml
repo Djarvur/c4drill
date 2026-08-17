@@ -1,0 +1,52 @@
+# Fixture: D-04 external variants — all four C1 external unit types
+# (personExternal, systemExternal, dbExternal, queueExternal) as authored
+# TOML `type` keywords. The C4D twin expresses each as its base keyword plus
+# the `external` modifier (person external { ... }).
+[properties]
+name = "External Types Test"
+description = "All four C1 external variants"
+
+[user]
+type = "personExternal"
+name = "External User"
+description = "Actor outside the system boundary"
+
+[[user.link]]
+peer = "api"
+technology = "HTTPS"
+description = "Browses"
+
+[partner]
+type = "systemExternal"
+name = "Partner System"
+description = "Third-party system we integrate with"
+
+[[partner.link]]
+peer = "api"
+technology = "SFTP"
+description = "Batch drop"
+
+[api]
+type = "system"
+name = "Core API"
+description = "Internal system under description"
+
+[[api.link]]
+peer = "analyticsDb"
+technology = "SQL"
+description = "Reports"
+
+[[api.link]]
+peer = "eventBus"
+technology = "AMQP"
+description = "Publishes"
+
+[analyticsDb]
+type = "dbExternal"
+name = "Analytics DB"
+description = "Warehouse owned by another team"
+
+[eventBus]
+type = "queueExternal"
+name = "Event Bus"
+description = "Managed streaming backbone"

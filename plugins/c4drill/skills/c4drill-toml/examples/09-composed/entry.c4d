@@ -1,0 +1,24 @@
+# Composed Example (entry) - C4D twin of entry.toml. The .c4d include graph
+# is self-contained: templates.c4d (template library, once) and
+# domains/auth.c4d (audit-log domain) are the twins of the include targets.
+properties {
+  name: Composed Example
+  description: include + templates + relative-peer + reference in one model
+  edges: spline
+  expanded: [platform]
+}
+
+platform: system "Platform" {
+  description: Hosts the instantiated auth service and the included audit-log domain
+  use microservice(domain: authentication, name: auth, tech: "Go, gRPC", upstreamBus: messageBus)
+}
+
+messageBus: queue "Message Bus" { description: "Top-level backbone; instantiation-site target for the template link" }
+
+customer: person "Customer" {
+  description: End user whose requests reach the instantiated auth service
+  -> platform.auth.cache: "HTTPS | Reads auth-cache entries produced by the instantiated service"
+}
+
+include templates.c4d once
+include domains/auth.c4d

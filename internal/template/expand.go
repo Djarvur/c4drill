@@ -18,6 +18,7 @@ package template
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/Djarvur/c4drill/internal/model"
@@ -29,6 +30,14 @@ import (
 // (TMPL-06 belt-and-suspenders: missing params should already have been
 // caught by the pre-check).
 const substitutionTokenPrefix = "${"
+
+// maxTemplateDepth caps the template-body use recursion depth as
+// defense-in-depth against pathological acyclic-but-deep template graphs
+// (T-35-02-01), mirroring include.maxIncludeDepth. Cycle detection already
+// bounds cyclic graphs; the cap bounds the ancestor chain length of ANY
+// expansion, so memory (depth x body size, every level cloned per HS-1) and
+// stack stay bounded on hostile input.
+const maxTemplateDepth = 100
 
 // nameParam is the special parameter name that fills the produced unit's last
 // path segment (D-04). It is always required even if the template does not
@@ -79,7 +88,10 @@ func Expand(m *parser.Model) (*parser.Model, error) {
 	for i := range m.Instantiations {
 		inst := m.Instantiations[i]
 
-		if err := expandInstantiation(m, inst, i, produced); err != nil {
+		// Document-order semantics for top-level entries are preserved: the
+		// ancestor stack and base path start empty; template-body uses recurse
+		// inside the call (D-17).
+		if err := expandInstantiation(m, inst, i, produced, nil, ""); err != nil {
 			return nil, err
 		}
 	}
@@ -94,14 +106,30 @@ func Expand(m *parser.Model) (*parser.Model, error) {
 	return m, nil
 }
 
-// expandInstantiation expands a single [[use]] entry: resolves the template,
-// checks params, clones, substitutes, and attaches the produced subtree.
+// expandInstantiation expands a single [[use]] entry (or a template-body use
+// reached through recursion): resolves the template, checks params, clones,
+// substitutes, attaches the produced subtree, then recursively expands the
+// template's own body uses (D-17).
+//
+// stack is the ancestor chain of template names for cycle detection (empty
+// for document-level [[use]] entries; the include pattern — slices.Contains
+// check plus a depth cap). basePath is the absolute unit path the entry's
+// Parent resolves against: "" for document-level entries (Parents absolute,
+// the Phase 31 semantics); the enclosing clone's full path for template-body
+// uses (their Parents are RELATIVE to the template root — produced units land
+// INSIDE the clone's subtree, never escaping it).
 func expandInstantiation(
 	m *parser.Model,
 	inst parser.Instantiation,
 	index int,
 	produced *pathTracker,
+	stack []string,
+	basePath string,
 ) error {
+	if err := checkRecursion(inst, index, stack); err != nil {
+		return err
+	}
+
 	tmpl, ok := m.Templates[inst.Template]
 	if !ok {
 		return &ExpandError{
@@ -111,23 +139,14 @@ func expandInstantiation(
 		}
 	}
 
-	// TMPL-06: every declared param must be supplied. name is always required
-	// (it is the produced unit's path segment per D-04) even if the template
-	// did not list it explicitly — enforce it here so a template without a
-	// declared 'name' param still produces a path-named unit.
-	for _, p := range tmpl.Params {
-		if _, present := inst.Params[p]; !present {
-			return &ExpandError{
-				Kind:   "missing parameter",
-				Site:   siteLabel(inst, index),
-				Detail: fmt.Sprintf("template %q requires parameter %q which is not supplied", inst.Template, p),
-			}
-		}
+	if err := checkParams(tmpl, inst, index); err != nil {
+		return err
 	}
 
 	// Deep-copy the template subtree (HS-1). The clone's LinksFrom is
 	// independent, so the validator's in-place appends stay isolated per
-	// instantiation.
+	// instantiation — and every recursion level goes through Clone, so no two
+	// instantiations ever share a subtree.
 	clone := tmpl.Unit.Clone()
 	if clone == nil {
 		return &ExpandError{
@@ -157,11 +176,110 @@ func expandInstantiation(
 		}
 	}
 
-	if err := attachProduced(m, inst.Parent, name, clone, produced, inst, index); err != nil {
+	// Resolve the Parent against the base path: absolute for document-level
+	// entries, clone-root-relative for template-body uses.
+	parent := joinPath(basePath, inst.Parent)
+
+	if err := attachProduced(m, parent, name, clone, produced, inst, index); err != nil {
 		return err
 	}
 
+	// D-17: after the clone is attached, expand the template's body uses.
+	// Params flow outer-to-inner (the body use's VALUES were authored in the
+	// outer template's namespace), produced units attach inside the clone's
+	// subtree, and the ancestor stack grows by this template's name.
+	return expandBodyUses(m, tmpl, replacer, joinPath(parent, name), index, produced,
+		append(append([]string{}, stack...), inst.Template))
+}
+
+// checkRecursion guards the template-body use recursion (D-17): cycle
+// detection via the ancestor stack (the include pattern — a template whose
+// name is already an ancestor is a hard error naming the full chain
+// "A -> B -> A") plus the depth cap (T-35-02-01) bounding any expansion's
+// ancestor chain so hostile authoring cannot grow stack or memory unboundedly.
+func checkRecursion(inst parser.Instantiation, index int, stack []string) error {
+	if slices.Contains(stack, inst.Template) {
+		chain := append(append([]string{}, stack...), inst.Template)
+
+		return &ExpandError{
+			Kind:   "cycle",
+			Site:   siteLabel(inst, index),
+			Detail: "template cycle detected: " + strings.Join(chain, " -> "),
+		}
+	}
+
+	if len(stack) > maxTemplateDepth {
+		return &ExpandError{
+			Kind:   "depth exceeded",
+			Site:   siteLabel(inst, index),
+			Detail: fmt.Sprintf(
+				"template depth exceeded %d (cycle or pathological graph)",
+				maxTemplateDepth,
+			),
+		}
+	}
+
 	return nil
+}
+
+// checkParams enforces TMPL-06 for one instantiation: every declared param
+// must be supplied. name is always required (it is the produced unit's path
+// segment per D-04) even if the template did not list it explicitly — enforced
+// by the caller so a template without a declared 'name' param still produces
+// a path-named unit.
+func checkParams(tmpl *parser.TemplateDef, inst parser.Instantiation, index int) error {
+	for _, p := range tmpl.Params {
+		if _, present := inst.Params[p]; !present {
+			return &ExpandError{
+				Kind:   "missing parameter",
+				Site:   siteLabel(inst, index),
+				Detail: fmt.Sprintf("template %q requires parameter %q which is not supplied", inst.Template, p),
+			}
+		}
+	}
+
+	return nil
+}
+
+// expandBodyUses processes a template's [[template.<name>.use]] body entries
+// (D-17) after the outer clone is attached at clonePath: each body use's
+// param values and Parent are substituted through the outer replacer
+// (outer-to-inner param flow), then expanded recursively against the template
+// registry with the ancestor stack extended by the outer template's name.
+func expandBodyUses(
+	m *parser.Model,
+	tmpl *parser.TemplateDef,
+	replacer *strings.Replacer,
+	clonePath string,
+	index int,
+	produced *pathTracker,
+	stack []string,
+) error {
+	for _, bodyInst := range tmpl.Instantiations {
+		if err := expandInstantiation(
+			m, substituteInstantiation(bodyInst, replacer), index, produced, stack, clonePath,
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// substituteInstantiation returns a copy of inst with every param value and
+// the Parent path run through replacer (outer-to-inner param flow, D-17).
+// The Template name is never substituted — it must resolve in the template
+// registry as authored.
+func substituteInstantiation(inst parser.Instantiation, replacer *strings.Replacer) parser.Instantiation {
+	out := inst
+	out.Parent = replacer.Replace(inst.Parent)
+
+	out.Params = make(map[string]string, len(inst.Params))
+	for k, v := range inst.Params {
+		out.Params[k] = replacer.Replace(v)
+	}
+
+	return out
 }
 
 // buildReplacer constructs a strings.NewReplacer from ${param} -> value pairs
@@ -237,7 +355,8 @@ func applySubstitutionLink(l *model.Link, r *strings.Replacer) {
 }
 
 // attachProduced places the produced unit under its parent (XC-03) and records
-// the full path for collision detection. parent="" means top-level.
+// the full path — and every DESCENDANT path of the produced subtree — for
+// collision detection. parent="" means top-level.
 func attachProduced(
 	m *parser.Model,
 	parent, name string,
@@ -247,10 +366,62 @@ func attachProduced(
 	index int,
 ) error {
 	if parent == "" {
-		return attachTopLevel(m, name, unit, produced, inst, index)
+		if err := attachTopLevel(m, name, unit, produced, inst, index); err != nil {
+			return err
+		}
+	} else if err := attachNested(m, parent, name, unit, produced, inst, index); err != nil {
+		return err
 	}
 
-	return attachNested(m, parent, name, unit, produced, inst, index)
+	// TMPL-07 completeness: claim every descendant path of the freshly
+	// attached subtree. Without this, a template-declared subunit (e.g.
+	// [template.X.api]) would be unclaimed and a later instantiation —
+	// including a template-body use — could silently overwrite it.
+	return claimSubtree(produced, joinPath(parent, name), unit, inst, index)
+}
+
+// claimSubtree records every descendant path of the unit at basePath in the
+// path tracker (the root path itself is claimed by attachTopLevel /
+// attachNested before this runs). Iterates SubunitOrder so claims are
+// deterministic.
+func claimSubtree(
+	produced *pathTracker,
+	basePath string,
+	u *model.Unit,
+	inst parser.Instantiation,
+	index int,
+) error {
+	for _, childName := range u.SubunitOrder {
+		child, ok := u.Subunits[childName]
+		if !ok {
+			continue
+		}
+
+		fullPath := basePath + "." + childName
+
+		if err := produced.claim(fullPath, inst, index); err != nil {
+			return err
+		}
+
+		if err := claimSubtree(produced, fullPath, child, inst, index); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// joinPath joins two dotted path segments, treating "" as identity
+// (joinPath("", "a") = "a", joinPath("a", "") = "a", joinPath("", "") = "").
+func joinPath(base, rel string) string {
+	switch {
+	case base == "":
+		return rel
+	case rel == "":
+		return base
+	default:
+		return base + "." + rel
+	}
 }
 
 // attachTopLevel places the produced unit at m.Units[name] and appends to

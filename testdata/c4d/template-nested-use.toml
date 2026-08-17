@@ -1,0 +1,65 @@
+# Fixture: D-16/D-17 nested-use forms — [template.*] declarations combined
+# with a unit-nested [[platform.use]] (parented instantiation) and a
+# template-body [[template.worker.use]] (template-instantiating-template).
+# Template root types are final/level-specific: worker is a container (C2,
+# instantiated under the platform system) with a componentDb sidecar (C3)
+# produced inside every worker clone; standalone is a top-level system.
+# The unit-nested [[use]] site is authored BEFORE the top-level [[use]] so
+# document order matches the converters' canonical instantiation order
+# (unit-nested uses first, then top-level).
+[properties]
+name = "Nested Use Test"
+description = "Unit-nested and template-body use forms"
+
+[template.worker]
+params = ["name", "tech"]
+type = "container"
+name = "${name} Worker"
+technology = "${tech}"
+
+[template.sidecar]
+params = ["name"]
+type = "componentDb"
+name = "${name} Sidecar"
+description = "Per-worker audit sidecar"
+
+[[template.sidecar.link]]
+peer = "metrics"
+technology = "HTTP"
+description = "Reports"
+
+# D-17: a use inside worker's body — every worker instantiation also
+# produces an audit sidecar under its root (parent is root-relative).
+[[template.worker.use]]
+template = "sidecar"
+name = "audit"
+
+[template.standalone]
+params = ["name"]
+type = "system"
+name = "${name} Edge"
+
+[[template.standalone.link]]
+peer = "metrics"
+technology = "HTTPS"
+description = "Publishes"
+
+[platform]
+type = "system"
+name = "Platform"
+description = "Hosts the ingest worker"
+
+[metrics]
+type = "queue"
+name = "Metrics"
+description = "Sidecar reports land here"
+
+# D-16: a use nested in platform's table — the produced unit is a subunit.
+[[platform.use]]
+template = "worker"
+name = "ingest"
+tech = "Go"
+
+[[use]]
+template = "standalone"
+name = "edge"

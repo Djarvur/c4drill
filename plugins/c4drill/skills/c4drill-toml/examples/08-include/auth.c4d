@@ -1,0 +1,12 @@
+# Include Directive Example (auth domain) - C4D twin of auth.toml. Included
+# from entry.c4d; re-declares platform so auth and auth.db attach onto the
+# entry's existing platform as cross-file subunits.
+platform: system "Platform" {
+  auth: container "Auth Domain" {
+    description: "Authentication boundary; arrived via include from auth.toml"
+    db: componentDb "Auth Database" {
+      description: "Credential store; subunit of the included auth domain"
+      -> messageBus: Publishes credential-change events
+    }
+  }
+}

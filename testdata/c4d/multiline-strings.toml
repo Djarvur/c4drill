@@ -1,0 +1,27 @@
+# Fixture: D-06/D-22 newline representations — values with embedded
+# newlines authored as a TOML multi-line basic string (properties
+# description) AND as escaped-\n single-line strings (unit + link
+# descriptions), plus a long single word (wrap-relevant). Round-trips must
+# carry the values byte-for-byte at Model level and canonically at text
+# level regardless of the authored spelling.
+[properties]
+name = "Multiline Strings Test"
+description = """
+Values with embedded newlines survive round-trips byte-for-byte at Model
+level and canonically at text level (D-06/D-22)."""
+
+[api]
+type = "system"
+name = "API"
+description = "Line one of the escaped form.\nLine two after the escape."
+technology = "Antidisestablishmentarianism-Pneumonoultramicroscopicsilicovolcanoconiosis"
+
+[[api.link]]
+peer = "store"
+technology = "HTTP"
+description = "First line of the link description.\nSecond line of the link description."
+
+[store]
+type = "db"
+name = "Store"
+description = "Keeps the multiline payload"
