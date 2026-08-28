@@ -905,6 +905,7 @@ var expectedExampleTwins = []string{
 	"09-composed/entry.toml",
 	"09-composed/single-file-equivalent.toml",
 	"09-composed/templates.toml",
+	"10-edge-kinds.toml",
 }
 
 // exampleTwin is one .toml/.c4d pair found under skill/examples/.

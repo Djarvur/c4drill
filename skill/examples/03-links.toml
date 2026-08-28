@@ -16,6 +16,9 @@ arrow = "forward"
 technology = "HTTPS"
 description = "Browses"
 
+# Edge kinds (v1.13): kind = read/write/read-write colours the edge green,
+# red, or purple — no explicit color needed. An explicit color still wins.
+
 [webapp]
 type = "system"
 name = "Web Application"
@@ -34,6 +37,10 @@ peer = "cache"
 labelPosition = "tail"
 technology = "Redis"
 description = "Session cache"
+kind = "read"
+
+# rank = "reverse" (v1.13): one option flips the layout ranking while the
+# arrow still points at the target — replaces the old "<-" + arrow=reverse dance.
 
 [api]
 type = "system"

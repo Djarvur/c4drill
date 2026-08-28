@@ -8,6 +8,14 @@ edges = "spline" # Use curved edges globally
 color = "#FAFAFA" # Light gray background
 border = "#BDBDBD" # Gray borders
 
+# Custom legend lines (v1.13): appended under the default colour explanations
+# in the upper-right legend. The legend is on by default; legend = false
+# disables it model-wide.
+[[properties.legendLine]]
+label = "Nightly batch"
+color = "#E65100"
+style = "dashed"
+
 # Person with custom styling
 [admin]
 type = "person"

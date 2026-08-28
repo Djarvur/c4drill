@@ -1,0 +1,111 @@
+# Edge Kinds & Legend Example (v1.13)
+# kind = "read" | "write" | "read-write" colours edges green / red / purple.
+# rank = "reverse" flips layout ranking with one option. The legend renders
+# in the upper-right by default; [[properties.legendLine]] appends custom rows.
+
+[properties]
+name = "Edge Kinds & Legend"
+description = "Kind-coloured edges, rank reversal, and the legend"
+
+# Disable the legend model-wide by uncommenting:
+# legend = false
+
+[reader]
+type = "person"
+name = "Reader"
+description = "Consumes content"
+
+[[reader.link]]
+peer = "app.reader"
+technology = "HTTPS"
+description = "Browses"
+kind = "read"
+
+[app]
+type = "system"
+name = "Application"
+technology = "Go"
+
+# The reader and writer subunits both link to the store. In the collapsed C1
+# view both links resolve to the app->store ancestor pair and collapse into
+# ONE edge: mixed kinds colour it read-write (purple), and "any solid wins"
+# keeps it solid.
+
+[app.reader]
+type = "container"
+name = "Reader API"
+technology = "Go"
+
+[[app.reader.link]]
+peer = "ext.store"
+technology = "SQL"
+description = "Reads rows"
+kind = "read"
+
+[app.writer]
+type = "container"
+name = "Writer API"
+technology = "Go"
+
+[[app.writer.link]]
+peer = "ext.store"
+technology = "SQL"
+description = "Writes rows"
+kind = "write"
+
+# rank = "reverse": the publisher ranks BELOW the queue instead of above,
+# while the arrow still points at the queue.
+[app.publisher]
+type = "container"
+name = "Publisher"
+technology = "Go"
+
+[[app.publisher.link]]
+peer = "queue"
+rank = "reverse"
+technology = "AMQP"
+description = "Publishes"
+kind = "write"
+
+# Explicit color wins over kind (the kind still documents the data flow).
+[[app.publisher.link]]
+peer = "search"
+technology = "HTTP"
+description = "Index updates"
+kind = "write"
+color = "#E65100"
+
+[ext]
+type = "box"
+name = "External Storage"
+
+[ext.store]
+type = "dbExternal"
+name = "Document Store"
+technology = "PostgreSQL"
+
+[[ext.store.linkFrom]]
+peer = "app.reader"
+description = "Reads rows"
+
+[[ext.store.linkFrom]]
+peer = "app.writer"
+description = "Writes rows"
+
+[search]
+type = "systemExternal"
+name = "Search Index"
+description = "Full-text search platform"
+
+[[search.linkFrom]]
+peer = "app.publisher"
+description = "Index updates"
+
+[queue]
+type = "queue"
+name = "Event Queue"
+technology = "RabbitMQ"
+
+[[queue.linkFrom]]
+peer = "app.publisher"
+description = "Publishes"
