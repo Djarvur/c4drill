@@ -113,19 +113,24 @@ func plainNavTD(content string) string {
 // The double-underscore prefix cannot collide with unit paths in practice.
 const legendNodeName = "__c4drill_legend"
 
-// BuildLegendLabel renders the legend as a single-column HTML table where
-// every row IS the sample: the entry text is set in the colour it documents
-// (an element level colour or a link-kind colour), so no swatch cell or
-// stroke glyph is needed. Rows carry an explicit <FONT POINT-SIZE> — rows
-// mixing font sizes are silently dropped by GraphViz (see
-// configureGraphSettings quirk 2). Label text is HTML-escaped (threat
-// T-36-04-01).
+// BuildLegendLabel renders the legend as a framed, titled single-column HTML
+// table. Every data row IS the sample: the entry text is set in the colour it
+// documents (an element colour or a link-kind colour), so no swatch cell or
+// stroke glyph is needed. The frame and the bold "legend" caption are drawn
+// in the muted secondary grey so the block reads as furniture, not content.
+// Every cell carries an explicit <FONT POINT-SIZE> — rows mixing font sizes
+// are silently dropped by GraphViz (see configureGraphSettings quirk 2).
+// Label text is HTML-escaped (threat T-36-04-01).
 func BuildLegendLabel(legend *graph.Legend) string {
 	if legend == nil || len(legend.Entries) == 0 {
 		return ""
 	}
 
-	rows := make([]string, 0, len(legend.Entries))
+	rows := make([]string, 0, len(legend.Entries)+1)
+	rows = append(rows, fmt.Sprintf(
+		`<TR><TD ALIGN="LEFT"><FONT POINT-SIZE="%s" COLOR="%s"><B>legend</B></FONT></TD></TR>`,
+		navFontPoint, navFontColor))
+
 	for _, entry := range legend.Entries {
 		colour := entry.Color
 		if colour == "" {
@@ -137,6 +142,8 @@ func BuildLegendLabel(legend *graph.Legend) string {
 			navFontPoint, html.EscapeString(colour), html.EscapeString(entry.Label)))
 	}
 
-	return "<TABLE BORDER=\"0\" CELLBORDER=\"0\" CELLSPACING=\"0\" CELLPADDING=\"1\">" +
+	return fmt.Sprintf(
+		`<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" COLOR="%s">`,
+		navFontColor) +
 		strings.Join(rows, "") + "</TABLE>"
 }

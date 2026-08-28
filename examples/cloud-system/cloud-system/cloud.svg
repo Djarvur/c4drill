@@ -8,7 +8,7 @@
  viewBox="0.00 0.00 330.00 556.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 552.4)">
 <polygon fill="white" stroke="none" points="-4,4 -4,-552.4 326.05,-552.4 326.05,4 -4,4"/>
-<g id="a_graph0_7"><a xlink:href="../cloud-system.svg" xlink:title="&lt;TABLE&gt;">
+<g id="a_graph0_0"><a xlink:href="../cloud-system.svg" xlink:title="&lt;TABLE&gt;">
 <text xml:space="preserve" text-anchor="start" x="83.12" y="-536.4" font-family="Helvetica,sans-Serif" text-decoration="underline" font-size="10.00" fill="#666666">Cloud System</text>
 </a>
 </g>
@@ -104,8 +104,11 @@
 <!-- __c4drill_legend -->
 <g id="node6" class="node">
 <title>__c4drill_legend</title>
-<text xml:space="preserve" text-anchor="start" x="194.71" y="-471.4" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">person / system</text>
-<text xml:space="preserve" text-anchor="start" x="194.71" y="-457.4" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#3c7fc0">container</text>
+<polygon fill="none" stroke="#666666" points="194.43,-435.4 194.43,-501.4 241.57,-501.4 241.57,-435.4 194.43,-435.4"/>
+<text xml:space="preserve" text-anchor="start" x="197.43" y="-490.4" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="10.00" fill="#666666">legend</text>
+<text xml:space="preserve" text-anchor="start" x="197.43" y="-472.4" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">person</text>
+<text xml:space="preserve" text-anchor="start" x="197.43" y="-456.4" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">system</text>
+<text xml:space="preserve" text-anchor="start" x="197.43" y="-440.4" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#3c7fc0">container</text>
 </g>
 </g>
 </svg>

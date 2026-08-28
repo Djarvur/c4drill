@@ -1,11 +1,11 @@
 digraph "" {
-	graph [bb="0,0,2038.1,2711.5",
+	graph [bb="0,0,2038.1,2785.5",
 		fontname=Helvetica,
 		fontsize=14,
 		label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0" ALIGN="CENTER"><TR><TD COLSPAN="1" ALIGN="CENTER"><FONT POINT-SIZE="14">Multilevel Test System</FONT></TD></TR></TABLE>>,
 		labelloc=t,
 		lheight=0.23,
-		lp="1019.1,2699.1",
+		lp="1019.1,2773.1",
 		lwidth=1.94,
 		rankdir=TB
 	];
@@ -976,7 +976,7 @@ digraph "" {
 		fontcolor="#8A8A8A",
 		height=0.64444,
 		label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td rowspan="1" valign="middle"><font POINT-SIZE="32">&#x1F464;</font></td><td valign="bottom"><b>Actor B</b></td></tr></table>>,
-		pos="667.06,2654.7",
+		pos="667.06,2691.7",
 		shape=box,
 		style=rounded,
 		width=1.4183];
@@ -986,7 +986,7 @@ digraph "" {
 		fontsize=10,
 		label="",
 		penwidth=2,
-		pos="e,667.06,2499.2 667.06,2631.2 667.06,2601.6 667.06,2549 667.06,2512",
+		pos="e,667.06,2499.1 667.06,2668.4 667.06,2631.8 667.06,2558.4 667.06,2512",
 		style=solid];
 	actorC	[color="#8A8A8A",
 		fontcolor="#8A8A8A",
@@ -1038,9 +1038,9 @@ digraph "" {
 		penwidth=2,
 		pos="e,393.06,58.458 393.06,325.48 393.06,255.46 393.06,134.58 393.06,71.393",
 		style=solid];
-	__c4drill_legend	[height=0.88889,
-		label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1"><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#073B6F">person / system</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#3C7FC0">container</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#78A8D8">component</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#8A8A8A">external</FONT></TD></TR></TABLE>>,
-		pos="780.06,2654.7",
+	__c4drill_legend	[height=1.9167,
+		label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" COLOR="#666666"><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#666666"><B>legend</B></FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#073B6F">system</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#3C7FC0">db</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#78A8D8">db</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#3C7FC0">container</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#78A8D8">component</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#8A8A8A">external person</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#8A8A8A">external system</FONT></TD></TR></TABLE>>,
+		pos="782.06,2691.7",
 		shape=plaintext,
-		width=1.2303];
+		width=1.2781];
 }

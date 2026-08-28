@@ -119,8 +119,12 @@
 <!-- __c4drill_legend -->
 <g id="node6" class="node">
 <title>__c4drill_legend</title>
-<text xml:space="preserve" text-anchor="start" x="190.71" y="-446.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">person / system</text>
-<text xml:space="preserve" text-anchor="start" x="190.71" y="-432.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#3c7fc0">container</text>
+<polygon fill="none" stroke="#666666" points="190.43,-402.6 190.43,-484.6 237.57,-484.6 237.57,-402.6 190.43,-402.6"/>
+<text xml:space="preserve" text-anchor="start" x="193.43" y="-473.6" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="10.00" fill="#666666">legend</text>
+<text xml:space="preserve" text-anchor="start" x="193.43" y="-455.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">person</text>
+<text xml:space="preserve" text-anchor="start" x="193.43" y="-439.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">system</text>
+<text xml:space="preserve" text-anchor="start" x="193.43" y="-423.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">queue</text>
+<text xml:space="preserve" text-anchor="start" x="193.43" y="-407.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#3c7fc0">container</text>
 </g>
 </g>
 </svg>

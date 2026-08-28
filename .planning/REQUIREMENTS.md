@@ -45,8 +45,8 @@ Source: user request 2026-08-28 + codebase scan (root causes pre-confirmed):
 
 ### LEG — Legend
 
-- [ ] **LEG-01**: Every generated diagram includes a legend in the upper-right corner (a borderless floating node dot packs beside the main component), controlled by a single global setting (properties-level) that defaults to **enabled**; authors can disable it for the whole model.
-- [ ] **LEG-02**: The legend explains only the colour conventions the diagram actually uses — element level colours (person/system, container, component, external) and edge kind colours (read/write/read-write) — as coloured text samples; a convention absent from the view is not listed.
+- [ ] **LEG-01**: Every generated diagram includes a legend in the upper-right corner — a framed, titled ("legend") floating node that dot packs beside the main component — controlled by a single global setting (properties-level) that defaults to **enabled**; authors can disable it for the whole model.
+- [ ] **LEG-02**: The legend explains only the colour conventions the diagram actually uses — one row per entity kind present (person, system, db, queue, container, component) plus one per external entity kind — as coloured text samples; a convention absent from the view is not listed.
 - [ ] **LEG-03**: Authors can add custom legend lines (label + colour) in both formats; custom lines render after the defaults.
 
 ### BC — Backward compatibility

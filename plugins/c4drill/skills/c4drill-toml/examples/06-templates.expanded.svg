@@ -117,9 +117,13 @@
 <!-- __c4drill_legend -->
 <g id="node6" class="node">
 <title>__c4drill_legend</title>
-<text xml:space="preserve" text-anchor="start" x="190.71" y="-519.4" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">person / system</text>
-<text xml:space="preserve" text-anchor="start" x="190.71" y="-505.4" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#3c7fc0">container</text>
-<text xml:space="preserve" text-anchor="start" x="190.71" y="-491.4" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#78a8d8">component</text>
+<polygon fill="none" stroke="#666666" points="190.43,-460.4 190.43,-558.4 237.57,-558.4 237.57,-460.4 190.43,-460.4"/>
+<text xml:space="preserve" text-anchor="start" x="193.43" y="-547.4" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="10.00" fill="#666666">legend</text>
+<text xml:space="preserve" text-anchor="start" x="193.43" y="-529.4" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">person</text>
+<text xml:space="preserve" text-anchor="start" x="193.43" y="-513.4" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">system</text>
+<text xml:space="preserve" text-anchor="start" x="193.43" y="-497.4" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#78a8d8">db</text>
+<text xml:space="preserve" text-anchor="start" x="193.43" y="-481.4" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">queue</text>
+<text xml:space="preserve" text-anchor="start" x="193.43" y="-465.4" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#3c7fc0">container</text>
 </g>
 </g>
 </svg>

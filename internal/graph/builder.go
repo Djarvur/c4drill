@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"maps"
 	"slices"
 	"strconv"
 	"strings"
@@ -341,8 +342,9 @@ func applyUnitOverrides(style *NodeStyle, unit *model.Unit) {
 // a convention the view actually uses — nothing is explained that the diagram
 // does not show:
 //
-//  1. element level colours (person/system C1, container C2, component C3,
-//     external) — only for levels present among the visible units;
+//  1. element rows, one per entity kind present (person, system, db, queue,
+//     container, component) plus one per external entity kind ("external
+//     system", …) — in the exact colours the renderer puts on those units;
 //  2. link-kind colours (read/write/read-write) — only for kinds whose
 //     colour survived into a drawn edge (explicit author colours win over
 //     kind colours, so unresolved colours would be a lie);
@@ -368,50 +370,144 @@ func buildLegend(v *view.View, edges []*Edge) *Legend {
 	return &Legend{Entries: entries}
 }
 
-// legendElementEntries emits one row per C4 level present in the view, using
-// the level's border colour — the same colour the renderer puts on element
-// borders AND label text (GetStyleForType), so the legend's coloured text
-// matches the diagram directly.
+// legendElementEntries emits one row per entity kind present in the view —
+// person, system, db, queue, container, component — in that entity's colour,
+// then one row per external entity kind ("external system", "external db",
+// …) in the external grey. Row colour always mirrors the renderer: internal
+// entities take their level border colour, external entries the level's
+// external grey. Grouping boxes fold into their level's entity row
+// (containerBox → container) — they are layout, not a colour of their own.
+// The expanded unit is scanned too: its boundary cluster carries the same
+// level colour as the entity it represents.
 func legendElementEntries(v *view.View) []LegendEntry {
-	var c1, c2, c3, external bool
+	// Canonical row order: internal entities first, then external ones.
+	// Presence keys keep label+colour together — the same entity can
+	// legitimately appear twice when it exists at two levels ("db" dark blue
+	// on C1, blue on C2).
+	order := make(map[string]int, len(legendRowOrder))
+	for i, label := range legendRowOrder {
+		order[label] = i
+	}
+
+	present := make(map[legendKey]bool)
+
+	add := func(t model.UnitType, external bool) {
+		label, ok := legendEntityLabel(t)
+		if !ok {
+			return
+		}
+
+		colour := levelBorderColour(LevelForType(t))
+		if external {
+			colour = levelExternalColour(LevelForType(t))
+		}
+
+		present[legendKey{label: label, colour: colour}] = true
+	}
 
 	for _, entry := range v.Units {
 		if entry == nil || entry.Unit == nil {
 			continue
 		}
 
-		if entry.IsExternal {
-			external = true
+		add(entry.Unit.Type, entry.IsExternal)
+	}
+
+	// The boundary cluster of a C2/C3 view is styled as its unit — without
+	// this the diagram's largest coloured frame goes unexplained.
+	if v.ExpandedUnitModel != nil {
+		add(v.ExpandedUnitModel.Type, false)
+	}
+
+	keys := slices.Collect(maps.Keys(present))
+	slices.SortFunc(keys, func(a, b legendKey) int {
+		if order[a.label] != order[b.label] {
+			return order[a.label] - order[b.label]
 		}
 
-		switch LevelForType(entry.Unit.Type) {
-		case levelC1:
-			c1 = true
-		case levelC2:
-			c2 = true
-		case levelC3:
-			c3 = true
-		}
-	}
+		return strings.Compare(a.colour, b.colour)
+	})
 
-	entries := make([]LegendEntry, 0, 4)
-	if c1 {
-		entries = append(entries, LegendEntry{Label: "person / system", Color: model.PersonBorder})
-	}
-
-	if c2 {
-		entries = append(entries, LegendEntry{Label: "container", Color: model.ContainerBorder})
-	}
-
-	if c3 {
-		entries = append(entries, LegendEntry{Label: "component", Color: model.ComponentBorder})
-	}
-
-	if external {
-		entries = append(entries, LegendEntry{Label: "external", Color: model.PersonExternalBorder})
+	entries := make([]LegendEntry, 0, len(keys))
+	for _, key := range keys {
+		entries = append(entries, LegendEntry{Label: key.label, Color: key.colour})
 	}
 
 	return entries
+}
+
+// legendKey identifies one legend row: the entity name plus the exact colour
+// it is shown in.
+type legendKey struct {
+	label  string
+	colour string
+}
+
+// legendRowOrder is the canonical display order of element rows: internal
+// entities by level, then external ones.
+//
+//nolint:gochecknoglobals // fixed vocabulary, not mutable state
+var legendRowOrder = []string{
+	"person", "system", "db", "queue", "box", "container", "component",
+	"external person", "external system", "external db", "external queue",
+}
+
+// legendEntityLabel names the entity a unit type contributes to the legend;
+// ok=false for types the legend does not name. Grouping boxes fold into
+// their level's entity row — they are layout, not a colour of their own.
+func legendEntityLabel(t model.UnitType) (string, bool) {
+	switch t {
+	case model.TypePerson:
+		return "person", true
+	case model.TypeSystem:
+		return "system", true
+	case model.TypeDb, model.TypeContainerDb, model.TypeComponentDb:
+		return "db", true
+	case model.TypeQueue, model.TypeContainerQueue, model.TypeComponentQueue:
+		return "queue", true
+	case model.TypeBox:
+		return "box", true
+	case model.TypeContainer, model.TypeContainerBox:
+		return "container", true
+	case model.TypeComponent, model.TypeComponentBox:
+		return "component", true
+	case model.TypePersonExternal:
+		return "external person", true
+	case model.TypeSystemExternal:
+		return "external system", true
+	case model.TypeDbExternal:
+		return "external db", true
+	case model.TypeQueueExternal:
+		return "external queue", true
+	default:
+		return "", false
+	}
+}
+
+// levelBorderColour returns the border colour the renderer uses for internal
+// units of a C4 level (GetStyleForType).
+func levelBorderColour(level int) string {
+	switch level {
+	case levelC1:
+		return model.PersonBorder
+	case levelC2:
+		return model.ContainerBorder
+	default:
+		return model.ComponentBorder
+	}
+}
+
+// levelExternalColour returns the border colour the renderer uses for
+// external units of a C4 level (getExternalStyle).
+func levelExternalColour(level int) string {
+	switch level {
+	case levelC1:
+		return model.PersonExternalBorder
+	case levelC2:
+		return model.ContainerExternalBorder
+	default:
+		return model.ComponentExternalBorder
+	}
 }
 
 // legendKindEntries emits a row for each link-kind colour that actually

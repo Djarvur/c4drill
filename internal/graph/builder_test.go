@@ -2797,40 +2797,84 @@ func TestBuildLegend(t *testing.T) {
 		g := graph.BuildGraph(view.GenerateC1View(m))
 		require.NotNil(t, g.Legend, "legend default-on")
 
-		// C1 elements (internal + external) present; no links carry kind
-		// colours, so no kind rows — the legend explains nothing the diagram
-		// does not show.
+		// One row per entity kind: system (internal, C1 blue) + external
+		// system (grey). No links carry kind colours, so no kind rows — the
+		// legend explains nothing the diagram does not show.
 		require.Len(t, g.Legend.Entries, 2)
-		assert.Equal(t, "person / system", g.Legend.Entries[0].Label)
+		assert.Equal(t, "system", g.Legend.Entries[0].Label)
 		assert.Equal(t, model.PersonBorder, g.Legend.Entries[0].Color)
-		assert.Equal(t, "external", g.Legend.Entries[1].Label)
+		assert.Equal(t, "external system", g.Legend.Entries[1].Label)
 		assert.Equal(t, model.PersonExternalBorder, g.Legend.Entries[1].Color)
 	})
 
-	t.Run("element rows cover every level present", func(t *testing.T) {
+	t.Run("element rows one per entity kind present", func(t *testing.T) {
 		t.Parallel()
 
 		v := &view.View{
 			ShowLegend: true,
 			Units: map[string]*view.Entry{
 				"p": {Unit: &model.Unit{Type: model.TypePerson}},
-				"c": {Unit: &model.Unit{Type: model.TypeContainer}},
+				"c": {Unit: &model.Unit{Type: model.TypeContainerBox}},
 				"k": {Unit: &model.Unit{Type: model.TypeComponent}},
-				"e": {Unit: &model.Unit{Type: model.TypeSystemExternal}, IsExternal: true},
+				"d": {Unit: &model.Unit{Type: model.TypeComponentDb}},
 			},
 		}
 
 		g := graph.BuildGraph(v)
 		require.NotNil(t, g.Legend)
 		require.Len(t, g.Legend.Entries, 4)
-		assert.Equal(t, "person / system", g.Legend.Entries[0].Label)
+		assert.Equal(t, "person", g.Legend.Entries[0].Label)
 		assert.Equal(t, model.PersonBorder, g.Legend.Entries[0].Color)
+		assert.Equal(t, "db", g.Legend.Entries[1].Label)
+		assert.Equal(t, model.ComponentBorder, g.Legend.Entries[1].Color, "db colour follows its level")
+		assert.Equal(t, "container", g.Legend.Entries[2].Label)
+		assert.Equal(t, model.ContainerBorder, g.Legend.Entries[2].Color, "containerBox folds into container")
+		assert.Equal(t, "component", g.Legend.Entries[3].Label)
+		assert.Equal(t, model.ComponentBorder, g.Legend.Entries[3].Color)
+	})
+
+	t.Run("external rows one per entity kind", func(t *testing.T) {
+		t.Parallel()
+
+		v := &view.View{
+			ShowLegend: true,
+			Units: map[string]*view.Entry{
+				"pe": {Unit: &model.Unit{Type: model.TypePersonExternal}, IsExternal: true},
+				"de": {Unit: &model.Unit{Type: model.TypeDbExternal}, IsExternal: true},
+				"se": {Unit: &model.Unit{Type: model.TypeSystemExternal}, IsExternal: true},
+			},
+		}
+
+		g := graph.BuildGraph(v)
+		require.NotNil(t, g.Legend)
+		require.Len(t, g.Legend.Entries, 3)
+
+		labels := make([]string, 0, 3)
+		for _, entry := range g.Legend.Entries {
+			labels = append(labels, entry.Label)
+			assert.Equal(t, model.PersonExternalBorder, entry.Color, "all C1 externals share the grey")
+		}
+
+		assert.Equal(t, []string{"external person", "external system", "external db"}, labels)
+	})
+
+	t.Run("expanded unit contributes its boundary cluster row", func(t *testing.T) {
+		t.Parallel()
+
+		v := &view.View{
+			ShowLegend:        true,
+			ExpandedUnit:      "app",
+			ExpandedUnitModel: &model.Unit{Type: model.TypeSystem, Name: "App"},
+			Units: map[string]*view.Entry{
+				"app.api": {Unit: &model.Unit{Type: model.TypeContainer}},
+			},
+		}
+
+		g := graph.BuildGraph(v)
+		require.NotNil(t, g.Legend)
+		require.Len(t, g.Legend.Entries, 2)
+		assert.Equal(t, "system", g.Legend.Entries[0].Label, "boundary cluster colour explained")
 		assert.Equal(t, "container", g.Legend.Entries[1].Label)
-		assert.Equal(t, model.ContainerBorder, g.Legend.Entries[1].Color)
-		assert.Equal(t, "component", g.Legend.Entries[2].Label)
-		assert.Equal(t, model.ComponentBorder, g.Legend.Entries[2].Color)
-		assert.Equal(t, "external", g.Legend.Entries[3].Label)
-		assert.Equal(t, model.PersonExternalBorder, g.Legend.Entries[3].Color)
 	})
 
 	t.Run("kind rows only for colours drawn on edges", func(t *testing.T) {
@@ -2855,13 +2899,15 @@ func TestBuildLegend(t *testing.T) {
 		g := graph.BuildGraph(view.GenerateC1View(m))
 		require.NotNil(t, g.Legend)
 
-		// Element row + the two kinds actually used. read-write is not on any
-		// edge, so it must not be advertised.
-		require.Len(t, g.Legend.Entries, 3)
-		assert.Equal(t, "read", g.Legend.Entries[1].Label)
-		assert.Equal(t, model.LinkReadColour, g.Legend.Entries[1].Color)
-		assert.Equal(t, "write", g.Legend.Entries[2].Label)
-		assert.Equal(t, model.LinkWriteColour, g.Legend.Entries[2].Color)
+		// Elements (system, db) + the two kinds actually used. read-write is
+		// not on any edge, so it must not be advertised.
+		require.Len(t, g.Legend.Entries, 4)
+		assert.Equal(t, "system", g.Legend.Entries[0].Label)
+		assert.Equal(t, "db", g.Legend.Entries[1].Label)
+		assert.Equal(t, "read", g.Legend.Entries[2].Label)
+		assert.Equal(t, model.LinkReadColour, g.Legend.Entries[2].Color)
+		assert.Equal(t, "write", g.Legend.Entries[3].Label)
+		assert.Equal(t, model.LinkWriteColour, g.Legend.Entries[3].Color)
 	})
 
 	t.Run("explicit colour wins over kind, row dropped", func(t *testing.T) {
@@ -2883,8 +2929,9 @@ func TestBuildLegend(t *testing.T) {
 		require.NotNil(t, g.Legend)
 
 		// The edge draws red, not the kind green — a "read" row would lie.
-		require.Len(t, g.Legend.Entries, 1)
-		assert.Equal(t, "person / system", g.Legend.Entries[0].Label)
+		require.Len(t, g.Legend.Entries, 2)
+		assert.Equal(t, "system", g.Legend.Entries[0].Label)
+		assert.Equal(t, "db", g.Legend.Entries[1].Label)
 	})
 
 	t.Run("custom lines after defaults, colourless falls back to grey", func(t *testing.T) {
@@ -2907,7 +2954,7 @@ func TestBuildLegend(t *testing.T) {
 		require.NotNil(t, g.Legend)
 		require.Len(t, g.Legend.Entries, 3)
 
-		assert.Equal(t, "person / system", g.Legend.Entries[0].Label)
+		assert.Equal(t, "system", g.Legend.Entries[0].Label)
 
 		// Custom line after defaults, verbatim; the Style hint is a leftover
 		// of the swatch legend and no longer renders.

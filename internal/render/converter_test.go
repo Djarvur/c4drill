@@ -687,13 +687,15 @@ func TestLegendRendering(t *testing.T) {
 		}
 	}
 
-	t.Run("legend renders as a floating plaintext node", func(t *testing.T) {
+	t.Run("legend renders as a framed floating plaintext node", func(t *testing.T) {
 		g := baseGraph()
 		g.Legend = legend
 
 		out := renderWith(g)
 		assert.Contains(t, out, `__c4drill_legend`, "legend node exists")
 		assert.Contains(t, out, "shape=plaintext", "legend node is borderless plaintext")
+		assert.Contains(t, out, `<TABLE BORDER="1"`, "legend table is framed")
+		assert.Contains(t, out, `<B>legend</B>`, "legend carries a caption")
 		assert.Contains(t, out, `COLOR="#2E7D32">read`, "entry text is the sample, in its colour")
 	})
 

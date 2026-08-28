@@ -157,8 +157,11 @@
 <!-- __c4drill_legend -->
 <g id="node9" class="node">
 <title>__c4drill_legend</title>
-<text xml:space="preserve" text-anchor="start" x="206.71" y="-737.8" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">person / system</text>
-<text xml:space="preserve" text-anchor="start" x="206.71" y="-723.8" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#3c7fc0">container</text>
+<polygon fill="none" stroke="#666666" points="206.43,-701.8 206.43,-767.8 253.57,-767.8 253.57,-701.8 206.43,-701.8"/>
+<text xml:space="preserve" text-anchor="start" x="209.43" y="-756.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="10.00" fill="#666666">legend</text>
+<text xml:space="preserve" text-anchor="start" x="209.43" y="-738.8" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">person</text>
+<text xml:space="preserve" text-anchor="start" x="209.43" y="-722.8" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">system</text>
+<text xml:space="preserve" text-anchor="start" x="209.43" y="-706.8" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#3c7fc0">container</text>
 </g>
 </g>
 </svg>
