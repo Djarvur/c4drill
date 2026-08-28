@@ -371,7 +371,8 @@ func buildLegend(v *view.View, edges []*Edge) *Legend {
 }
 
 // legendElementEntries emits one row per entity kind present in the view —
-// person, system, db, queue, container, component — in that entity's colour,
+// person, system, container, component and level-qualified db/queue variants
+// ("system db", "container db", "component db", …) — in that entity's colour,
 // then one row per external entity kind ("external system", "external db",
 // …) in the external grey. Row colour always mirrors the renderer: internal
 // entities take their level border colour, external entries the level's
@@ -380,10 +381,11 @@ func buildLegend(v *view.View, edges []*Edge) *Legend {
 // The expanded unit is scanned too: its boundary cluster carries the same
 // level colour as the entity it represents.
 func legendElementEntries(v *view.View) []LegendEntry {
-	// Canonical row order: internal entities first, then external ones.
-	// Presence keys keep label+colour together — the same entity can
-	// legitimately appear twice when it exists at two levels ("db" dark blue
-	// on C1, blue on C2).
+	// Canonical row order: internal entities first (by level), then external
+	// ones. db/queue carry their level in the label ("system db", "container
+	// db", …) because the same entity kind exists at several levels — the
+	// label is what disambiguates two same-kind rows rendered in different
+	// level colours.
 	order := make(map[string]int, len(legendRowOrder))
 	for i, label := range legendRowOrder {
 		order[label] = i
@@ -448,29 +450,43 @@ type legendKey struct {
 //
 //nolint:gochecknoglobals // fixed vocabulary, not mutable state
 var legendRowOrder = []string{
-	"person", "system", "db", "queue", "box", "container", "component",
+	"person", "system", "system db", "system queue", "box",
+	"container", "container db", "container queue",
+	"component", "component db", "component queue",
 	"external person", "external system", "external db", "external queue",
 }
 
 // legendEntityLabel names the entity a unit type contributes to the legend;
-// ok=false for types the legend does not name. Grouping boxes fold into
-// their level's entity row — they are layout, not a colour of their own.
+// ok=false for types the legend does not name. db/queue exist at every level,
+// so their labels carry the level ("system db", "container db", "component
+// db") — matching the model's own type vocabulary; the label is what
+// disambiguates two same-kind rows rendered in different level colours.
+// Grouping boxes fold into their level's entity row — they are layout, not a
+// colour of their own.
 func legendEntityLabel(t model.UnitType) (string, bool) {
 	switch t {
 	case model.TypePerson:
 		return "person", true
 	case model.TypeSystem:
 		return "system", true
-	case model.TypeDb, model.TypeContainerDb, model.TypeComponentDb:
-		return "db", true
-	case model.TypeQueue, model.TypeContainerQueue, model.TypeComponentQueue:
-		return "queue", true
+	case model.TypeDb:
+		return "system db", true
+	case model.TypeQueue:
+		return "system queue", true
 	case model.TypeBox:
 		return "box", true
 	case model.TypeContainer, model.TypeContainerBox:
 		return "container", true
+	case model.TypeContainerDb:
+		return "container db", true
+	case model.TypeContainerQueue:
+		return "container queue", true
 	case model.TypeComponent, model.TypeComponentBox:
 		return "component", true
+	case model.TypeComponentDb:
+		return "component db", true
+	case model.TypeComponentQueue:
+		return "component queue", true
 	case model.TypePersonExternal:
 		return "external person", true
 	case model.TypeSystemExternal:

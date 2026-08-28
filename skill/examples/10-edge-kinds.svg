@@ -92,7 +92,7 @@
 <text xml:space="preserve" text-anchor="start" x="296.34" y="-327" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="10.00" fill="#666666">legend</text>
 <text xml:space="preserve" text-anchor="start" x="296.34" y="-309" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">person</text>
 <text xml:space="preserve" text-anchor="start" x="296.34" y="-293" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">system</text>
-<text xml:space="preserve" text-anchor="start" x="296.34" y="-277" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">queue</text>
+<text xml:space="preserve" text-anchor="start" x="296.34" y="-277" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">system queue</text>
 <text xml:space="preserve" text-anchor="start" x="296.34" y="-261" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">box</text>
 <text xml:space="preserve" text-anchor="start" x="296.34" y="-245" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#8a8a8a">external system</text>
 <text xml:space="preserve" text-anchor="start" x="296.34" y="-229" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#2e7d32">read</text>

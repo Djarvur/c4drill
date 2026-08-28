@@ -2825,11 +2825,11 @@ func TestBuildLegend(t *testing.T) {
 		require.Len(t, g.Legend.Entries, 4)
 		assert.Equal(t, "person", g.Legend.Entries[0].Label)
 		assert.Equal(t, model.PersonBorder, g.Legend.Entries[0].Color)
-		assert.Equal(t, "db", g.Legend.Entries[1].Label)
-		assert.Equal(t, model.ComponentBorder, g.Legend.Entries[1].Color, "db colour follows its level")
-		assert.Equal(t, "container", g.Legend.Entries[2].Label)
-		assert.Equal(t, model.ContainerBorder, g.Legend.Entries[2].Color, "containerBox folds into container")
-		assert.Equal(t, "component", g.Legend.Entries[3].Label)
+		assert.Equal(t, "container", g.Legend.Entries[1].Label)
+		assert.Equal(t, model.ContainerBorder, g.Legend.Entries[1].Color, "containerBox folds into container")
+		assert.Equal(t, "component", g.Legend.Entries[2].Label)
+		assert.Equal(t, model.ComponentBorder, g.Legend.Entries[2].Color)
+		assert.Equal(t, "component db", g.Legend.Entries[3].Label, "db labels carry their level")
 		assert.Equal(t, model.ComponentBorder, g.Legend.Entries[3].Color)
 	})
 
@@ -2899,11 +2899,11 @@ func TestBuildLegend(t *testing.T) {
 		g := graph.BuildGraph(view.GenerateC1View(m))
 		require.NotNil(t, g.Legend)
 
-		// Elements (system, db) + the two kinds actually used. read-write is
-		// not on any edge, so it must not be advertised.
+		// Elements (system, system db) + the two kinds actually used.
+		// read-write is not on any edge, so it must not be advertised.
 		require.Len(t, g.Legend.Entries, 4)
 		assert.Equal(t, "system", g.Legend.Entries[0].Label)
-		assert.Equal(t, "db", g.Legend.Entries[1].Label)
+		assert.Equal(t, "system db", g.Legend.Entries[1].Label)
 		assert.Equal(t, "read", g.Legend.Entries[2].Label)
 		assert.Equal(t, model.LinkReadColour, g.Legend.Entries[2].Color)
 		assert.Equal(t, "write", g.Legend.Entries[3].Label)
@@ -2931,7 +2931,7 @@ func TestBuildLegend(t *testing.T) {
 		// The edge draws red, not the kind green — a "read" row would lie.
 		require.Len(t, g.Legend.Entries, 2)
 		assert.Equal(t, "system", g.Legend.Entries[0].Label)
-		assert.Equal(t, "db", g.Legend.Entries[1].Label)
+		assert.Equal(t, "system db", g.Legend.Entries[1].Label)
 	})
 
 	t.Run("custom lines after defaults, colourless falls back to grey", func(t *testing.T) {

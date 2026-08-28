@@ -8,7 +8,7 @@
  viewBox="0.00 0.00 439.00 458.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 454.4)">
 <polygon fill="white" stroke="none" points="-4,4 -4,-454.4 435.01,-454.4 435.01,4 -4,4"/>
-<g id="a_graph0_1"><a xlink:href="../10-edge-kinds.svg" xlink:title="&lt;TABLE&gt;">
+<g id="a_graph0_0"><a xlink:href="../10-edge-kinds.svg" xlink:title="&lt;TABLE&gt;">
 <text xml:space="preserve" text-anchor="start" x="138.51" y="-438.4" font-family="Helvetica,sans-Serif" text-decoration="underline" font-size="10.00" fill="#666666">Edge Kinds &amp; Legend</text>
 </a>
 </g>
@@ -123,7 +123,7 @@
 <text xml:space="preserve" text-anchor="start" x="349.99" y="-398.6" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="10.00" fill="#666666">legend</text>
 <text xml:space="preserve" text-anchor="start" x="349.99" y="-380.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">person</text>
 <text xml:space="preserve" text-anchor="start" x="349.99" y="-364.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">system</text>
-<text xml:space="preserve" text-anchor="start" x="349.99" y="-348.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">queue</text>
+<text xml:space="preserve" text-anchor="start" x="349.99" y="-348.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">system queue</text>
 <text xml:space="preserve" text-anchor="start" x="349.99" y="-332.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">box</text>
 <text xml:space="preserve" text-anchor="start" x="349.99" y="-316.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#3c7fc0">container</text>
 <text xml:space="preserve" text-anchor="start" x="349.99" y="-300.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#8a8a8a">external system</text>
