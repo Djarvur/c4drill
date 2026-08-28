@@ -71,6 +71,7 @@ func populateIncomingLinks(index map[string]*UnitInfo) {
 				Peer:          sourcePath,
 				Arrow:         link.Arrow,
 				Rank:          link.Rank,
+				Kind:          link.Kind,
 				Color:         link.Color,
 				Style:         link.Style,
 				Technology:    link.Technology,

@@ -565,9 +565,27 @@ func isTargetInView(units map[string]*view.Entry, target string) bool {
 	return exists
 }
 
+// kindColour maps a link kind to its edge colour (KIND-01). Unknown kinds
+// return "" and fall through to the source-border default. The constants live
+// in model/colors.go — shared with the legend so the two can never drift.
+func kindColour(kind model.LinkKind) string {
+	switch kind {
+	case model.KindRead:
+		return model.LinkReadColour
+	case model.KindWrite:
+		return model.LinkWriteColour
+	case model.KindReadWrite:
+		return model.LinkReadWriteColour
+	default:
+		return ""
+	}
+}
+
 // createEdge creates an edge from a link with defaults applied.
 // Per D-01: Edge color comes from source unit's border color.
 // Per D-03: If link.Color is set, it overrides the source border color.
+// Per KIND-01/02: kind colour applies when no explicit color is set;
+// explicit Color always wins.
 // Per D-04: penWidth carries the binary multiplicity thickness (0 = default,
 // 2.0 = collapsed pair).
 func createEdge(source, target string, link model.Link, sourceEntry *view.Entry, penWidth float64) *Edge {
@@ -593,9 +611,12 @@ func createEdge(source, target string, link model.Link, sourceEntry *view.Entry,
 		edge.Label.Position = "middle"
 	}
 
-	// Determine color: explicit override -> source border color (D-01, D-03)
+	// Determine color: explicit override -> kind colour -> source border color
+	// (D-01, D-03, KIND-01, KIND-02)
 	if link.Color != "" {
 		edge.Color = link.Color
+	} else if colour := kindColour(link.Kind); colour != "" {
+		edge.Color = colour
 	} else if sourceEntry != nil {
 		style := GetStyleForType(sourceEntry.Unit.Type, sourceEntry.IsExternal)
 		edge.Color = style.BorderColor
