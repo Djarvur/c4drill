@@ -937,7 +937,7 @@ func TestBuildGraphEdgeColor(t *testing.T) {
 						"api": {
 							Type:  model.TypeContainer, // C2 -> ContainerBorder = "#3C7FC0"
 							Name:  "API",
-							Links: []model.Link{{Peer: "app.db"}},
+							Links: []model.Link{{Peer: "ext"}},
 						},
 						"db": {
 							Type: model.TypeContainerDb,
@@ -2619,5 +2619,169 @@ func TestUnitStyleOverrides(t *testing.T) {
 		g := graph.BuildGraph(view.GenerateC1View(m))
 		require.Len(t, g.Clusters, 1)
 		assert.Equal(t, "#123456", g.Clusters[0].Style.FillColor)
+	})
+}
+
+// TestPairAggregation pins AGG-01..03: collapsed pairs derive colour from the
+// constituents' kinds (all-same → kind colour, mixed → read-write), line style
+// follows precedence (all-same → it; any solid → solid; else any dashed →
+// dashed; else dotted), and any explicit colour suppresses kind colouring
+// (source-border default). Single-link pairs and AllExpanded mode are
+// unaffected.
+func TestPairAggregation(t *testing.T) {
+	t.Parallel()
+
+	// Two subunits of one system both link to the same external unit — in the
+	// collapsed C1 view both links resolve to the app→ext ancestor pair, which
+	// collapses to ONE edge. The pair's logical source is app (system), so the
+	// D-01 default colour is PersonBorder #073B6F.
+	buildModel := func(links ...model.Link) *parser.Model {
+		return &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type: model.TypeSystem,
+					Name: "App",
+					Subunits: map[string]*model.Unit{
+						"api": {Type: model.TypeContainer, Name: "API", Links: []model.Link{links[0]}},
+						"etl": {Type: model.TypeContainer, Name: "ETL", Links: []model.Link{links[1]}},
+					},
+					SubunitOrder: []string{"api", "etl"},
+				},
+				"ext": {Type: model.TypeSystemExternal, Name: "Ext"},
+			},
+		}
+	}
+
+	edgeOf := func(t *testing.T, m *parser.Model) *graph.Edge {
+		t.Helper()
+
+		g := graph.BuildGraph(view.GenerateC1View(m))
+		require.Len(t, g.Edges, 1, "pair collapses to one edge")
+
+		return g.Edges[0]
+	}
+
+	tests := []struct {
+		name       string
+		a, b       model.Link
+		wantColour string
+		wantStyle  string
+	}{
+		{
+			name:       "all read",
+			a:          model.Link{Peer: "ext", Kind: model.KindRead},
+			b:          model.Link{Peer: "ext", Kind: model.KindRead},
+			wantColour: model.LinkReadColour,
+			wantStyle:  "solid",
+		},
+		{
+			name:       "all write",
+			a:          model.Link{Peer: "ext", Kind: model.KindWrite},
+			b:          model.Link{Peer: "ext", Kind: model.KindWrite},
+			wantColour: model.LinkWriteColour,
+			wantStyle:  "solid",
+		},
+		{
+			name:       "mixed read+write",
+			a:          model.Link{Peer: "ext", Kind: model.KindRead},
+			b:          model.Link{Peer: "ext", Kind: model.KindWrite},
+			wantColour: model.LinkReadWriteColour,
+			wantStyle:  "solid",
+		},
+		{
+			name:       "one kind unset suppresses kind colour",
+			a:          model.Link{Peer: "ext", Kind: model.KindRead},
+			b:          model.Link{Peer: "ext"},
+			wantColour: "#073B6F", // ContainerBorder default (BC-safe)
+			wantStyle:  "solid",
+		},
+		{
+			name:       "explicit colour on one constituent suppresses kind colour",
+			a:          model.Link{Peer: "ext", Kind: model.KindRead},
+			b:          model.Link{Peer: "ext", Kind: model.KindRead, Color: "#FF00FF"},
+			wantColour: "#073B6F", // AGG-03: default edge colour
+			wantStyle:  "solid",
+		},
+		{
+			name:       "all dashed",
+			a:          model.Link{Peer: "ext", Style: "dashed"},
+			b:          model.Link{Peer: "ext", Style: "dashed"},
+			wantColour: "#073B6F",
+			wantStyle:  "dashed",
+		},
+		{
+			name:       "solid + dashed",
+			a:          model.Link{Peer: "ext", Style: "solid"},
+			b:          model.Link{Peer: "ext", Style: "dashed"},
+			wantColour: "#073B6F",
+			wantStyle:  "solid",
+		},
+		{
+			name:       "unset (solid default) + dashed",
+			a:          model.Link{Peer: "ext"},
+			b:          model.Link{Peer: "ext", Style: "dashed"},
+			wantColour: "#073B6F",
+			wantStyle:  "solid",
+		},
+		{
+			name:       "dashed + dotted",
+			a:          model.Link{Peer: "ext", Style: "dashed"},
+			b:          model.Link{Peer: "ext", Style: "dotted"},
+			wantColour: "#073B6F",
+			wantStyle:  "dashed",
+		},
+		{
+			name:       "all dotted",
+			a:          model.Link{Peer: "ext", Style: "dotted"},
+			b:          model.Link{Peer: "ext", Style: "dotted"},
+			wantColour: "#073B6F",
+			wantStyle:  "dotted",
+		},
+		{
+			name:       "kind colour with mixed styles keeps style precedence",
+			a:          model.Link{Peer: "ext", Kind: model.KindWrite, Style: "dotted"},
+			b:          model.Link{Peer: "ext", Kind: model.KindWrite, Style: "dotted"},
+			wantColour: model.LinkWriteColour,
+			wantStyle:  "dotted",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			edge := edgeOf(t, buildModel(tt.a, tt.b))
+			assert.Equal(t, tt.wantColour, edge.Color)
+			assert.Equal(t, tt.wantStyle, edge.Style)
+		})
+	}
+
+	t.Run("single link pair keeps per-edge semantics", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type: model.TypeSystem,
+					Name: "App",
+					Subunits: map[string]*model.Unit{
+						"api": {
+							Type:  model.TypeContainer,
+							Name:  "API",
+							Links: []model.Link{{Peer: "ext", Kind: model.KindRead, Style: "dashed"}},
+						},
+					},
+					SubunitOrder: []string{"api"},
+				},
+				"ext": {Type: model.TypeSystemExternal, Name: "Ext"},
+			},
+		}
+
+		g := graph.BuildGraph(view.GenerateC1View(m))
+		require.Len(t, g.Edges, 1)
+		assert.Equal(t, model.LinkReadColour, g.Edges[0].Color, "single-link pair uses kind colour directly")
+		assert.Equal(t, "dashed", g.Edges[0].Style)
 	})
 }

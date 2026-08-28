@@ -436,6 +436,10 @@ func buildEdges(v *view.View) []*Edge {
 	// collapsed pairs (2+) can be thickened (D-04).
 	pairCounts := countPairMultiplicity(v)
 
+	// Collect per-pair kind/style aggregates (AGG-01..03) beside the
+	// multiplicity scan so collapsed pairs keep their kind identity.
+	pairAggs := collectPairAggregates(v)
+
 	// Process edges in definition order
 	for _, path := range v.UnitOrder {
 		entry := v.Units[path]
@@ -453,11 +457,11 @@ func buildEdges(v *view.View) []*Edge {
 		}
 
 		// Process outgoing links
-		outEdges := processOutgoingLinks(v, path, outLinks, seen, pairCounts)
+		outEdges := processOutgoingLinks(v, path, outLinks, seen, pairCounts, pairAggs)
 		edges = append(edges, outEdges...)
 
 		// Process incoming links (linkFrom)
-		inEdges := processIncomingLinks(v, path, inLinks, seen, pairCounts)
+		inEdges := processIncomingLinks(v, path, inLinks, seen, pairCounts, pairAggs)
 		edges = append(edges, inEdges...)
 	}
 
@@ -530,6 +534,160 @@ func countIncomingPairs(v *view.View, pairCounts map[string]int) {
 	}
 }
 
+// pairAggregate collects the per-link kind/style/colour inputs of one
+// (source, target) pair so collapsed edges can derive a shared identity
+// (AGG-01..03).
+type pairAggregate struct {
+	kinds          []model.LinkKind
+	styles         []string // effective styles (unstyled links default to solid)
+	anyExplicitClr bool     // any constituent sets an explicit link.Color
+	anyKindUnset   bool     // any constituent carries no kind (BC-safe fallback)
+}
+
+// add records one constituent link.
+func (a *pairAggregate) add(link model.Link) {
+	a.kinds = append(a.kinds, link.Kind)
+
+	if link.Kind == "" {
+		a.anyKindUnset = true
+	}
+
+	style := link.Style
+	if style == "" {
+		style = "solid"
+	}
+
+	a.styles = append(a.styles, style)
+
+	if link.Color != "" {
+		a.anyExplicitClr = true
+	}
+}
+
+// kindColourFor returns the kind-derived colour for a collapsed pair and
+// whether kind colouring applies at all. It does not apply when: the pair has
+// a single constituent (per-edge semantics), any constituent sets an explicit
+// colour (AGG-03 — the caller falls back to the D-01 source-border default),
+// or any constituent lacks a kind (BC-safe, AGG-01). All-same kinds colour
+// with their kind; mixed kinds colour read-write.
+func (a *pairAggregate) kindColourFor() (string, bool) {
+	if a == nil || a.anyExplicitClr || len(a.kinds) < 2 {
+		return "", false
+	}
+
+	for _, kind := range a.kinds {
+		if kind == "" {
+			return "", false
+		}
+	}
+
+	allSame := true
+
+	for _, kind := range a.kinds {
+		if kind != a.kinds[0] {
+			allSame = false
+		}
+	}
+
+	if allSame {
+		return kindColour(a.kinds[0]), true
+	}
+
+	return model.LinkReadWriteColour, true
+}
+
+// sourceBorderColour returns the D-01 default edge colour for a drawn source.
+func sourceBorderColour(sourceEntry *view.Entry) string {
+	if sourceEntry == nil {
+		return ""
+	}
+
+	return GetStyleForType(sourceEntry.Unit.Type, sourceEntry.IsExternal).BorderColor
+}
+
+// styleFor returns the collapsed pair's line style: all constituents agree →
+// that style; otherwise any solid → solid; else any dashed → dashed; else
+// dotted (AGG-02).
+func (a *pairAggregate) styleFor(survivorStyle string) string {
+	if a == nil || len(a.styles) < 2 {
+		return survivorStyle
+	}
+
+	allSame := true
+
+	for _, style := range a.styles {
+		if style != a.styles[0] {
+			allSame = false
+		}
+	}
+
+	if allSame {
+		return a.styles[0]
+	}
+
+	if slices.Contains(a.styles, "solid") {
+		return "solid"
+	}
+
+	if slices.Contains(a.styles, "dashed") {
+		return "dashed"
+	}
+
+	return "dotted"
+}
+
+// collectPairAggregates walks the same pre-dedup link lists as
+// countPairMultiplicity and records kind/style/colour per pair. Skipped in
+// expanded mode (every parallel link renders separately, COMPAT-02).
+func collectPairAggregates(v *view.View) map[string]*pairAggregate {
+	aggs := make(map[string]*pairAggregate)
+
+	if v.AllExpanded {
+		return aggs
+	}
+
+	record := func(key string, link model.Link) {
+		agg := aggs[key]
+		if agg == nil {
+			agg = &pairAggregate{}
+			aggs[key] = agg
+		}
+
+		agg.add(link)
+	}
+
+	for _, path := range v.UnitOrder {
+		entry := v.Units[path]
+		if entry == nil {
+			continue
+		}
+
+		outLinks := entry.Unit.Links
+		if entry.ResolvedLinks != nil {
+			outLinks = entry.ResolvedLinks
+		}
+
+		for _, link := range outLinks {
+			record(path+"->"+link.Peer, link)
+		}
+
+		inLinks := entry.Unit.LinksFrom
+		if entry.ResolvedLinksFrom != nil {
+			inLinks = entry.ResolvedLinksFrom
+		}
+
+		for _, link := range inLinks {
+			if link.Mirror {
+				continue
+			}
+
+			record(link.Peer+"->"+path, link)
+		}
+	}
+
+	return aggs
+}
+
 // processOutgoingLinks processes outgoing links from a unit.
 func processOutgoingLinks(
 	v *view.View,
@@ -537,6 +695,7 @@ func processOutgoingLinks(
 	links []model.Link,
 	seen map[string]bool,
 	pairCounts map[string]int,
+	pairAggs map[string]*pairAggregate,
 ) []*Edge {
 	edges := make([]*Edge, 0)
 	sourceEntry := v.Units[path] // Get source entry for color lookup
@@ -563,6 +722,21 @@ func processOutgoingLinks(
 		edge := createEdge(path, link.Peer, link, sourceEntry, penWidth)
 
 		if markSeen(seen, edgeKey) {
+			// AGG-01..03: collapsed pairs (2+ constituents) override the
+			// surviving edge's colour/style from the pair aggregate. Explicit
+			// custom colours suppress kind colouring (AGG-03) and force the
+			// D-01 source-border default of the drawn edge.
+			if !v.AllExpanded && pairCounts[edgeKey] >= 2 {
+				if colour, ok := pairAggs[edgeKey].kindColourFor(); ok {
+					edge.Color = colour
+				} else if pairAggs[edgeKey].anyExplicitClr || pairAggs[edgeKey].anyKindUnset {
+					// AGG-03 / partial-kind pairs: the default edge colour
+					edge.Color = sourceBorderColour(sourceEntry)
+				}
+
+				edge.Style = pairAggs[edgeKey].styleFor(edge.Style)
+			}
+
 			edges = append(edges, edge)
 		}
 	}
@@ -577,6 +751,7 @@ func processIncomingLinks(
 	linksFrom []model.Link,
 	seen map[string]bool,
 	pairCounts map[string]int,
+	pairAggs map[string]*pairAggregate,
 ) []*Edge {
 	edges := make([]*Edge, 0)
 
@@ -603,6 +778,17 @@ func processIncomingLinks(
 		edge := createEdge(link.Peer, path, link, sourceEntry, penWidth)
 
 		if markSeen(seen, edgeKey) {
+			if !v.AllExpanded && pairCounts[edgeKey] >= 2 {
+				if colour, ok := pairAggs[edgeKey].kindColourFor(); ok {
+					edge.Color = colour
+				} else if pairAggs[edgeKey].anyExplicitClr || pairAggs[edgeKey].anyKindUnset {
+					// AGG-03 / partial-kind pairs: the default edge colour
+					edge.Color = sourceBorderColour(sourceEntry)
+				}
+
+				edge.Style = pairAggs[edgeKey].styleFor(edge.Style)
+			}
+
 			edges = append(edges, edge)
 		}
 	}
