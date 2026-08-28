@@ -1,3 +1,19 @@
+## v1.13 Edge Semantics and Legend (Shipped: 2026-08-28)
+
+**Phases completed:** 1 phase (36), 6 plans
+
+**Key accomplishments:**
+
+- Unit `color`/`style`/`border` now actually render (nodes + clusters, luminance font rule, dotted borders) — the fields were parsed since v1.0 but silently dropped at render.
+- `properties.edges` falls back into C2/C3 views so the global edge style (e.g. splines off) applies to every generated diagram; `square` = ortho alias implemented.
+- `rank = "reverse"` — single-knob layout-rank reversal, canonical-DOT-equivalent to the old `<-` + `arrow="reverse"` dance; full arrow×rank matrix pinned.
+- Link `kind` (read/write/read-write) colours edges #2E7D32/#C62828/#6A1B9A with explicit-color precedence; full dual-format surface (TOML + C4D grammar/emitters/canonsrc), corpus round-trips, template survival (not ${param}-substituted — documented).
+- Collapsed edges keep kind identity: kind-derived colour (mixed → purple), style precedence solid>dashed>dotted, explicit-colour suppression to the default.
+- Default-on upper-right legend (kind colours + style samples + custom lines in both formats, HTML-escaped), disable-able via `legend = false`; nil==true normalization keeps convert round-trips stable.
+- BC-01: no-feature models source-stable; only golden re-baselined = multilevel.expanded.dot (legend label block). Release: v1.18.0.
+
+---
+
 ## v1.11 Label Formatting Fixes (Shipped: 2026-08-10)
 
 ## v1.12 C4D DSL Alternative — Dual-Format Authoring (Shipped: 2026-08-17)

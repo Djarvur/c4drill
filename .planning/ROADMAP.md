@@ -115,4 +115,4 @@ Full details: [milestones/v1.12-ROADMAP.md](milestones/v1.12-ROADMAP.md)
 | 33. Docs sweep + goldens | v1.10 | 4/4 | Complete | 2026-08-08 |
 | 34. Label formatting fixes | v1.11 | 4/4 | Complete | 2026-08-10 |
 | 35. C4D DSL alternative | v1.12 | 9/9 | Complete | 2026-08-14 |
-| 36. Edge Semantics and Legend | v1.13 | 0/TBD | Not started | - |
+| 36. Edge Semantics and Legend | v1.13 | 6/6 | Complete | 2026-08-28 |

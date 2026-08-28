@@ -70,7 +70,7 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - ✓ LABEL-02 (word-boundary-only breaking): `wrapText` over-budget branch emits the whole word unsplit on its own line; `splitLongWord` deleted (0 references); no character-level fallback anywhere (D-05).
 - ✓ COMPAT-01 (no regression): unit labels byte-identical absent over-budget words; all canonicalDOT goldens (COMPAT-02, REF-05, DI-1) pass unchanged; `go test ./...` green (12/12 packages).
 
-## Current Milestone: v1.13 Edge Semantics and Legend
+## Current Milestone: v1.13 Edge Semantics and Legend — COMPLETE (2026-08-28)
 
 **Goal:** Make edge/colour semantics trustworthy and expressive — fix silently-dropped custom unit colours, make the global edge style apply to every generated diagram, give edge direction/ranking a single clear knob (`rank = "reverse"`), introduce edge kinds (`read`/`write`/`read-write`) with kind-derived colours that survive collapse aggregation, and add a default-on upper-right legend showing the colour semantics plus author-defined lines.
 
@@ -83,6 +83,8 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - **Collapsed-edge kind semantics** — when edges collapse to a visible ancestor, colour derives from the constituent kinds; line style follows precedence (any solid → solid, else any dashed → dashed, else dotted); explicit custom colours suppress kind colouring (default edge colour).
 - **Legend** — global setting (default enabled) rendering a legend in the upper-right of every diagram: default colour explanations + author-defined custom lines.
 
+**Status:** Complete (2026-08-28) — Phase 36 delivered all 6 plans; 20/20 requirements; full suite green at close; release v1.18.0 tagged.
+
 **Key context:**
 - Root cause confirmed by codebase scan: `buildNode`/`buildCluster` style exclusively via `GetStyleForType` palettes; `Unit.Color/Style/Border` and `Properties.Color/Style/Border` have zero render-side reads. Fix point: `internal/graph/builder.go` + `internal/graph/shapes.go`, emission via `internal/render/converter.go` (`applyNodeStyle`/`applyClusterStyle`).
 - `rank = "forward"/"reverse"` already parse and round-trip but are consumed nowhere — only `rank = "equal"` → `constraint=false` works.
@@ -93,7 +95,7 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 ## Current State (2026-08-28)
 
-**Shipped:** v1.12 C4D DSL Alternative — 1 phase (35), 9 plans, 25 tasks. Requirements D-01..D-35 satisfied. Verification: 24/24 truths (3 gap fixes at close). UAT: 12/12. Security: 30/30 threats closed (ASVS 1). Full suite 16/16 green. Product releases since: v1.15.0 (box type inference), v1.16.0 (v1.12 DSL), v1.17.0 (deps).
+**Shipped:** v1.13 Edge Semantics and Legend — 1 phase (36), 6 plans, release v1.18.0. Unit styling renders, global edge style everywhere, `rank = "reverse"`, kind-coloured edges with collapse aggregation, default-on upper-right legend. Product release tag: v1.18.0.
 
 ## Next Milestone Goals
 
@@ -288,4 +290,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-28 — milestone v1.13 Edge Semantics and Legend started*
+*Last updated: 2026-08-28 — v1.13 Edge Semantics and Legend shipped as v1.18.0*
