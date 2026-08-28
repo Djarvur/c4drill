@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Edge Semantics and Legend
-status: ready_to_plan
+status: complete
 last_updated: "2026-08-28T12:00:00.000Z"
 last_activity: 2026-08-28
 progress:
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-08-28)
 
 ## Current Position
 
-Phase: 36 of 36 (Edge Semantics and Legend — the milestone's only phase)
+Phase: Milestone v1.13 complete
 Plan: — of — in current phase (not yet planned)
 Status: Ready to plan (`/gsd:plan-phase 36`)
-Last activity: 2026-08-28 — ROADMAP created (20/20 requirements mapped to Phase 36)
+Last activity: 2026-08-28 — Milestone v1.13 completed; release v1.18.0 tagged
 
 Progress: [░░░░░░░░░░] 0%
 
