@@ -1,6 +1,7 @@
 package view
 
 import (
+	"cmp"
 	"slices"
 	"sort"
 	"strings"
@@ -375,7 +376,7 @@ func GenerateC2View(m *parser.Model, systemPath string) *View {
 		Level:             LevelC2,
 		Title:             systemUnit.Name + " - Containers",
 		RootTitle:         m.Properties.Name,
-		Edges:             systemUnit.Edges,
+		Edges:             cmp.Or(systemUnit.Edges, m.Properties.Edges),
 		Parent:            systemPath,
 		ExpandedUnit:      systemPath,
 		ExpandedUnitModel: systemUnit,
@@ -468,7 +469,7 @@ func GenerateC3View(m *parser.Model, containerPath string) *View {
 		Level:             LevelC3,
 		Title:             title,
 		RootTitle:         m.Properties.Name,
-		Edges:             containerUnit.Edges,
+		Edges:             cmp.Or(containerUnit.Edges, m.Properties.Edges),
 		Parent:            parentPath,
 		ExpandedUnit:      containerPath,
 		ExpandedUnitModel: containerUnit,

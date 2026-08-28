@@ -1474,3 +1474,46 @@ func TestRootInputUnknownExtension(t *testing.T) {
 	assert.Contains(t, msg, ".toml", "error must name the .toml extension")
 	assert.Contains(t, msg, ".c4d", "error must name the .c4d extension")
 }
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestGlobalEdgesE2E(t *testing.T) {
+	// GEDGE-01: properties.edges = "straight" must reach the generated C2
+	// diagram as splines=false even when the expanded unit sets no own edges.
+	tmpDir := t.TempDir()
+	srcPath := filepath.Join(tmpDir, "edges.toml")
+	content := `
+[properties]
+name = "Global Edges"
+edges = "straight"
+
+[app]
+type = "system"
+name = "App"
+
+[app.api]
+type = "container"
+name = "API"
+
+[[app.api.link]]
+peer = "app.db"
+technology = "SQL"
+
+[app.db]
+type = "containerDb"
+name = "DB"
+`
+	require.NoError(t, os.WriteFile(srcPath, []byte(content), 0o600))
+
+	outputDir := filepath.Join(tmpDir, "output")
+	cmd := NewRootCmd()
+	require.NoError(t, cmd.PersistentFlags().Set("output", outputDir))
+	require.NoError(t, cmd.PersistentFlags().Set("format", "dot"))
+	cmd.SetArgs([]string{srcPath})
+	require.NoError(t, cmd.Execute())
+
+	// The C2 diagram for app/ is auto-generated with the global edge style.
+	c2, err := os.ReadFile(filepath.Join(outputDir, "edges", "app.dot"))
+	require.NoError(t, err, "C2 dot generated")
+	assert.Contains(t, string(c2), "splines=false",
+		"global edges=straight disables splines on the C2 diagram")
+}

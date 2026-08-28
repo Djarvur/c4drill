@@ -1434,3 +1434,101 @@ func TestGenerateC1View_BoxResolutionParity(t *testing.T) {
 	assert.Equal(t, webAPIPath, sshAuth.ResolvedLinks[1].Peer)
 	assert.Nil(t, v.Units[linuxSystemPath].ResolvedLinks)
 }
+
+// TestGenerateC2C3View_EdgesFallback verifies GEDGE-01: a unit without its
+// own edges falls back to the global properties.edges so disabling splines
+// affects every generated diagram; a unit-local edges still wins.
+func TestGenerateC2C3View_EdgesFallback(t *testing.T) {
+	t.Parallel()
+
+	baseModel := func(unitEdges, globalEdges string) *parser.Model {
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test", Edges: globalEdges},
+			Units: map[string]*model.Unit{
+				"system": {
+					Type:  model.TypeSystem,
+					Name:  "System",
+					Edges: unitEdges,
+					Subunits: map[string]*model.Unit{
+						"api": {Type: model.TypeContainer, Name: "API"},
+					},
+				},
+				"store": {
+					Type: model.TypeSystem,
+					Name: "Store",
+					Subunits: map[string]*model.Unit{
+						"db": {Type: model.TypeContainerDb, Name: "DB"},
+					},
+				},
+			},
+		}
+
+		return m
+	}
+
+	t.Run("C2 falls back to global when unit has none", func(t *testing.T) {
+		t.Parallel()
+
+		v := view.GenerateC2View(baseModel("", "straight"), "system")
+		require.NotNil(t, v)
+		assert.Equal(t, "straight", v.Edges)
+	})
+
+	t.Run("C2 unit edges win over global", func(t *testing.T) {
+		t.Parallel()
+
+		v := view.GenerateC2View(baseModel("ortho", "straight"), "system")
+		require.NotNil(t, v)
+		assert.Equal(t, "ortho", v.Edges)
+	})
+
+	t.Run("C3 falls back to global when unit has none", func(t *testing.T) {
+		t.Parallel()
+
+		m := baseModel("", "spline")
+		v := view.GenerateC3View(m, "store.db")
+		require.NotNil(t, v)
+		assert.Equal(t, "spline", v.Edges)
+	})
+
+	t.Run("both empty yields empty", func(t *testing.T) {
+		t.Parallel()
+
+		v := view.GenerateC2View(baseModel("", ""), "system")
+		require.NotNil(t, v)
+		assert.Empty(t, v.Edges)
+	})
+}
+
+// TestGenerateC2C3View_KindSurvivesResolution pins the RANK-02/KIND survival
+// contract at view level: resolved links carry Kind (and Rank) through
+// boundary resolution.
+func TestGenerateC2C3View_KindSurvivesResolution(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"app": {
+				Type:  model.TypeSystem,
+				Name:  "App",
+				Links: []model.Link{{Peer: "ext", Kind: model.KindRead, Rank: model.RankReverse}},
+			},
+			"ext": {Type: model.TypeSystemExternal, Name: "Ext"},
+		},
+	}
+
+	v := view.GenerateC1View(m)
+	require.NotNil(t, v)
+
+	found := false
+	for _, entry := range v.Units {
+		for _, link := range entry.ResolvedLinks {
+			if link.Kind == model.KindRead {
+				found = true
+				assert.Equal(t, model.RankReverse, link.Rank)
+			}
+		}
+	}
+	assert.True(t, found, "resolved link carries Kind and Rank")
+}
