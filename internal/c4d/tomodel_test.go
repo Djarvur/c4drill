@@ -748,3 +748,48 @@ func TestToModelEdgeKindOption(t *testing.T) {
 		require.Error(t, err, "unknown edge option must error")
 	})
 }
+
+func TestToModelLegendProperties(t *testing.T) {
+	t.Parallel()
+
+	t.Run("legend true/false barewords parse", func(t *testing.T) {
+		t.Parallel()
+
+		truly := toModel(t, "properties {\n\tlegend: true\n}\n")
+		assert.True(t, *truly.Properties.Legend)
+
+		falsy := toModel(t, "properties {\n\tlegend: false\n}\n")
+		require.NotNil(t, falsy.Properties.Legend)
+		assert.False(t, *falsy.Properties.Legend)
+	})
+
+	t.Run("legend garbage is a hard error naming the allowed values", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := c4d.Parse([]byte("properties {\n\tlegend: sometimes\n}\n"))
+		require.Error(t, err, "legend must be true or false")
+		assert.Contains(t, err.Error(), "true or false")
+	})
+
+	t.Run("legendLine pipe-split rows parse", func(t *testing.T) {
+		t.Parallel()
+
+		m := toModel(t, "properties {\n\tlegendLine: [\"Batch|red|dashed\", \"Plain|#C0392B\"]\n}\n")
+		require.Len(t, m.Properties.LegendLines, 2)
+
+		assert.Equal(t, "Batch", m.Properties.LegendLines[0].Label)
+		assert.Equal(t, "red", m.Properties.LegendLines[0].Color)
+		assert.Equal(t, "dashed", m.Properties.LegendLines[0].Style)
+		assert.Equal(t, "Plain", m.Properties.LegendLines[1].Label)
+		assert.Equal(t, "#C0392B", m.Properties.LegendLines[1].Color)
+		assert.Empty(t, m.Properties.LegendLines[1].Style)
+	})
+
+	t.Run("legendLine row without color is a hard error", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := c4d.Parse([]byte("properties {\n\tlegendLine: [\"OnlyLabel\"]\n}\n"))
+		require.Error(t, err, "label|color required")
+		assert.Contains(t, err.Error(), "label|color")
+	})
+}

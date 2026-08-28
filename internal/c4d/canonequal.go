@@ -33,8 +33,17 @@ func CanonicalEqual(a, b *parser.Model) bool {
 // filled in on every link, so reflect.DeepEqual compares fairly. The clone
 // never mutates the source (the fill runs on Clone'd units only).
 func canonicalModelForCompare(m *parser.Model) *parser.Model {
+	// LEG-01: legend nil == true (default-on). Normalize on the clone so a
+	// model stating legend = true compares equal to one omitting it.
+	props := m.Properties
+	if props.Legend == nil {
+		truly := true
+
+		props.Legend = &truly
+	}
+
 	clone := &parser.Model{
-		Properties:     m.Properties,
+		Properties:     props,
 		UnitOrder:      slices.Clone(m.UnitOrder),
 		Units:          make(map[string]*model.Unit, len(m.Units)),
 		Templates:      make(map[string]*parser.TemplateDef, len(m.Templates)),

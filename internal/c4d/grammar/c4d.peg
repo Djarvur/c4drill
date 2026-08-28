@@ -663,7 +663,7 @@ PropertyFieldCore <- key:PropertyKey _ ':' _ value:Literal {
 	return &ast.FieldStmt{Pos: c.pos.line, Key: key.(string), Value: value.(ast.Literal)}, nil
 }
 
-PropertyKey <- ("lineLength" / "name" / "description" / "color" / "style" / "border" / "edges" / "expanded") !IdentChar {
+PropertyKey <- ("lineLength" / "name" / "description" / "color" / "style" / "border" / "edges" / "expanded" / "legendLine" / "legend") !IdentChar {
 	return string(c.text), nil
 }
 

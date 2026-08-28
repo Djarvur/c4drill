@@ -298,6 +298,51 @@ func applyPropertyField(props *model.Properties, f *ast.FieldStmt) error {
 		}
 
 		props.Expanded = list
+	case "legend":
+		// C4D has no boolean literals: legend rides a bareword true/false.
+		switch f.Value.Str {
+		case "true":
+			truly := true
+
+			props.Legend = &truly
+		case "false":
+			falsy := false
+
+			props.Legend = &falsy
+		default:
+			return &parser.ParseError{
+				Message: fmt.Sprintf("property %q must be true or false, got %q", f.Key, f.Value.Str),
+				Line:    f.Pos,
+			}
+		}
+	case "legendLine":
+		list, err := listValue(f)
+		if err != nil {
+			return err
+		}
+
+		lines := make([]model.LegendLine, 0, len(list))
+
+		for _, raw := range list {
+			parts := strings.SplitN(raw, "|", 3)
+			if len(parts) < 2 {
+				return &parser.ParseError{
+					Message: fmt.Sprintf(
+						"property %q entries need \"label|color\" or \"label|color|style\", got %q",
+						f.Key, raw),
+					Line: f.Pos,
+				}
+			}
+
+			line := model.LegendLine{Label: parts[0], Color: parts[1]}
+			if len(parts) == 3 {
+				line.Style = parts[2]
+			}
+
+			lines = append(lines, line)
+		}
+
+		props.LegendLines = lines
 	default:
 		if dst := propertyStringField(props, f.Key); dst != nil {
 			if f.Value.Kind == ast.KindList {

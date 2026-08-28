@@ -39,6 +39,8 @@ var propertyFieldRank = map[string]int{
 	"edges":       5,
 	"lineLength":  6,
 	"expanded":    7,
+	"legend":      8,
+	"legendLine":  9,
 }
 
 // edgeOptionRank is the canonical order of edge option-block keys.

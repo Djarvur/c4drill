@@ -140,6 +140,27 @@ func writePropertiesCanonTOML(b *strings.Builder, props model.Properties) {
 		fields["expanded"] = canonicalTOMLArray(props.Expanded)
 	}
 
+	// LEG-01: legend nil == true — emit only when explicitly false, so the
+	// canonical forms of a defaulting model and an explicit-true model match.
+	if props.Legend != nil && !*props.Legend {
+		fields["legend"] = "false"
+	}
+
+	if len(props.LegendLines) > 0 {
+		items := make([]string, 0, len(props.LegendLines))
+
+		for _, line := range props.LegendLines {
+			item := line.Label + "|" + line.Color
+			if line.Style != "" {
+				item += "|" + line.Style
+			}
+
+			items = append(items, item)
+		}
+
+		fields["legendLine"] = canonicalTOMLArray(items)
+	}
+
 	if len(fields) == 0 {
 		return
 	}

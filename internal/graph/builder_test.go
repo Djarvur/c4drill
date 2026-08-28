@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Djarvur/c4drill/internal/c4d"
 	"github.com/Djarvur/c4drill/internal/graph"
 	"github.com/Djarvur/c4drill/internal/model"
 	"github.com/Djarvur/c4drill/internal/parser"
@@ -2584,9 +2585,9 @@ func TestUnitStyleOverrides(t *testing.T) {
 			Properties: model.Properties{Name: "Test"},
 			Units: map[string]*model.Unit{
 				"grp": {
-					Type:  model.TypeBox,
-					Name:  "Group",
-					Color: "#00AA00",
+					Type:     model.TypeBox,
+					Name:     "Group",
+					Color:    "#00AA00",
 					Expanded: []string{"grp"},
 					Subunits: map[string]*model.Unit{
 						"inner": {Type: model.TypeSystem, Name: "Inner"},
@@ -2606,9 +2607,9 @@ func TestUnitStyleOverrides(t *testing.T) {
 		t.Parallel()
 
 		m := baseModel(&model.Unit{
-			Type:  model.TypeSystem,
-			Name:  "App",
-			Color: "#123456",
+			Type:     model.TypeSystem,
+			Name:     "App",
+			Color:    "#123456",
 			Expanded: []string{"app"},
 			Subunits: map[string]*model.Unit{
 				"api": {Type: model.TypeContainer, Name: "API"},
@@ -2842,4 +2843,26 @@ func TestBuildLegend(t *testing.T) {
 		g := graph.BuildGraph(view.GenerateC1View(m))
 		assert.Nil(t, g.Legend, "legend=false yields no legend")
 	})
+}
+
+// TestNoFeatureModelStability pins BC-01 at the source level: a model using
+// none of the v1.13 features round-trips through the canonical TOML writer
+// with NO legend/kind keys emitted, and canonical-equal after the round trip.
+// Source-level byte stability for no-feature models is what keeps convert
+// output stable across the upgrade.
+func TestNoFeatureModelStability(t *testing.T) {
+	t.Parallel()
+
+	m, err := parser.ParseFile("../../cmd/c4drill/testdata/multilevel.toml")
+	require.NoError(t, err, "fixture parses")
+
+	out, err := c4d.EmitTOML(m)
+	require.NoError(t, err, "EmitTOML")
+
+	assert.NotContains(t, out, "legend", "no legend keys on a no-feature model")
+	assert.NotContains(t, out, "\nkind = ", "no kind keys on a no-feature model")
+
+	reparsed, err := parser.Parse([]byte(out))
+	require.NoError(t, err, "round-trip parses")
+	assert.True(t, c4d.CanonicalEqual(m, reparsed), "round-trip is canonically equal")
 }

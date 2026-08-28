@@ -96,6 +96,36 @@ func emitPropertiesTOML(b *strings.Builder, props *model.Properties) {
 		fmt.Fprintf(&body, "expanded = %s\n", quoteTOMLArray(props.Expanded))
 	}
 
+	if props.Legend != nil && !*props.Legend {
+		// Emit legend ONLY when explicitly false (nil/true omitted — LEG-01
+		// default-on keeps source-level byte stability for models not using
+		// the feature).
+		body.WriteString("legend = false\n")
+	}
+
+	// [[properties.legendLine]] blocks come after the scalar keys. NOTE: the
+	// array-table headers cannot go inside the [properties] body block — they
+	// are separate top-level array tables written after it.
+	if len(props.LegendLines) > 0 {
+		if body.Len() > 0 {
+			b.WriteString("[properties]\n")
+			b.WriteString(body.String())
+			body.Reset()
+		}
+
+		for _, line := range props.LegendLines {
+			fmt.Fprintf(b, "[[properties.legendLine]]\n")
+			fmt.Fprintf(b, "label = %s\n", quoteTOML(line.Label))
+			fmt.Fprintf(b, "color = %s\n", quoteTOML(line.Color))
+
+			if line.Style != "" {
+				fmt.Fprintf(b, "style = %s\n", quoteTOML(line.Style))
+			}
+		}
+
+		return
+	}
+
 	if body.Len() == 0 {
 		return
 	}

@@ -981,3 +981,80 @@ func TestEmitCanonicalKindOrdering(t *testing.T) {
 		assert.NotContains(t, out, "kind")
 	})
 }
+
+func TestEmitLegendRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	truly := true
+	falsy := false
+
+	withLegend := func(legend *bool, lines []model.LegendLine) *parser.Model {
+		return &parser.Model{
+			Properties: model.Properties{
+				Name:        "T",
+				Legend:      legend,
+				LegendLines: lines,
+			},
+			UnitOrder: []string{"app"},
+			Units: map[string]*model.Unit{
+				"app": {Type: model.TypeSystem, Name: "App"},
+			},
+		}
+	}
+
+	t.Run("TOML omits legend when nil (byte stability)", func(t *testing.T) {
+		t.Parallel()
+
+		out, err := c4d.EmitTOML(withLegend(nil, nil))
+		require.NoError(t, err)
+		assert.NotContains(t, out, "legend")
+	})
+
+	t.Run("TOML emits legend only when explicitly false", func(t *testing.T) {
+		t.Parallel()
+
+		out, err := c4d.EmitTOML(withLegend(&truly, nil))
+		require.NoError(t, err)
+		assert.NotContains(t, out, "legend =")
+
+		out, err = c4d.EmitTOML(withLegend(&falsy, nil))
+		require.NoError(t, err)
+		assert.Contains(t, out, "legend = false")
+	})
+
+	t.Run("TOML emits legendLine array tables", func(t *testing.T) {
+		t.Parallel()
+
+		out, err := c4d.EmitTOML(withLegend(nil, []model.LegendLine{
+			{Label: "Batch", Color: "#C0392B", Style: "dashed"},
+		}))
+		require.NoError(t, err)
+		assert.Contains(t, out, "[[properties.legendLine]]")
+		assert.Contains(t, out, `label = "Batch"`)
+		assert.Contains(t, out, `color = "#C0392B"`)
+		assert.Contains(t, out, `style = "dashed"`)
+	})
+
+	t.Run("C4D emits legend only when false and composes legendLine", func(t *testing.T) {
+		t.Parallel()
+
+		out := c4d.EmitC4D(c4d.FromModel(withLegend(&truly, nil)))
+		assert.NotContains(t, out, "legend")
+
+		out = c4d.EmitC4D(c4d.FromModel(withLegend(&falsy, []model.LegendLine{
+			{Label: "Batch", Color: "#C0392B", Style: "dashed"},
+		})))
+		assert.Contains(t, out, "legend: false")
+		assert.Contains(t, out, `legendLine: ["Batch|#C0392B|dashed"]`)
+	})
+
+	t.Run("nil legend equals explicit true (canonical equality)", func(t *testing.T) {
+		t.Parallel()
+
+		nilModel := withLegend(nil, nil)
+		trueModel := withLegend(&truly, nil)
+
+		assert.True(t, c4d.CanonicalEqual(nilModel, trueModel),
+			"legend omitted and legend=true are the same model (LEG-01)")
+	})
+}

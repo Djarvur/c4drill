@@ -91,6 +91,33 @@ func propertiesBlockFromModel(props *model.Properties) *ast.PropertiesBlock {
 		})
 	}
 
+	// legend emits ONLY when explicitly false (LEG-01 nil-defaults-true);
+	// stating the default explicitly would break byte-stable round-trips.
+	if props.Legend != nil && !*props.Legend {
+		block.Fields = append(block.Fields, &ast.FieldStmt{
+			Key:   "legend",
+			Value: ast.Literal{Kind: ast.KindBareword, Str: "false"},
+		})
+	}
+
+	if len(props.LegendLines) > 0 {
+		items := make([]string, 0, len(props.LegendLines))
+
+		for _, line := range props.LegendLines {
+			item := line.Label + "|" + line.Color
+			if line.Style != "" {
+				item += "|" + line.Style
+			}
+
+			items = append(items, item)
+		}
+
+		block.Fields = append(block.Fields, &ast.FieldStmt{
+			Key:   "legendLine",
+			Value: ast.Literal{Kind: ast.KindList, List: items},
+		})
+	}
+
 	if len(block.Fields) == 0 {
 		return nil
 	}
