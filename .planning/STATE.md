@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-08-28)
 Phase: Milestone v1.13 complete; post-milestone quick tasks done
 Plan: — of — in current phase (nothing planned)
 Status: Ready to plan the next milestone (`/gsd:new-milestone`)
-Last activity: 2026-08-28 — post-milestone releases v1.19.0–v1.20.0 (legend rework + queue pipes; see MILESTONES.md)
+Last activity: 2026-08-28 — quick task 260828-tgf: pipe end-cap renders a full ellipse (ship v1.20.1)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -68,6 +68,7 @@ None pending — v1.13 requirements sourced directly from user request 2026-08-2
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260828-qbx | Render queue units as horizontal pipe shapes via SVG post-processing | 2026-08-28 | c880c7a + bed782d | [260828-qbx-render-queue-units-as-horizontal-pipe-sh](./quick/260828-qbx-render-queue-units-as-horizontal-pipe-sh/) |
+| 260828-tgf | Fix pipe end cap: right side renders a full ellipse (coincident-endpoint SVG arc was silently omitted) | 2026-08-28 | afdcbfb | [260828-tgf-fix-pipe-end-cap-right-side-must-render-](./quick/260828-tgf-fix-pipe-end-cap-right-side-must-render-/) |
 
 ### Roadmap Evolution
 
