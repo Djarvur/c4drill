@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Edge Semantics and Legend
 status: complete
-last_updated: "2026-08-28T12:00:00.000Z"
+last_updated: "2026-08-28T16:45:00.000Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 1
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-28)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** Phase 36 — Edge Semantics and Legend (v1.13; product release v1.18.0)
+**Current focus:** Between milestones — milestone v1.13 shipped (v1.18.0); post-milestone design-review work shipped as v1.19.0–v1.20.0 (legend rework, queue pipes)
 
 ## Current Position
 
-Phase: Milestone v1.13 complete
-Plan: — of — in current phase (not yet planned)
-Status: Ready to plan (`/gsd:plan-phase 36`)
-Last activity: 2026-08-28 — Milestone v1.13 completed; release v1.18.0 tagged
+Phase: Milestone v1.13 complete; post-milestone quick tasks done
+Plan: — of — in current phase (nothing planned)
+Status: Ready to plan the next milestone (`/gsd:new-milestone`)
+Last activity: 2026-08-28 — post-milestone releases v1.19.0–v1.20.0 (legend rework + queue pipes; see MILESTONES.md)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -50,8 +50,8 @@ Progress: [░░░░░░░░░░] 0%
 - **DI-1 / canonicalDOT:** golden comparisons must be ORDER-INSENSITIVE (sort-normalize, strip layout geometry bb/pos/lp/lheight/lwidth/height/width). All v1.13 goldens use `internal/testutil/canonical`, never byte-exact `require.Equal`.
 - **v1.13 is ONE phase (36):** all features live in the same render/view/graph/c4d packages and share goldens; splitting would force cross-phase golden churn. Precedent: v1.11 (1 phase/4 plans), v1.12 (1 phase/9 plans). Granularity: standard.
 - **BC-01 accepted delta:** default-on legend means models using no new feature do NOT render byte-identical — the legend block is the single user-mandated re-baseline delta. Everything else must be golden-clean.
-- **Fix points (pre-confirmed scan):** COLOR → builder.go buildNode/buildCluster + shapes.go, emit via converter.go applyNodeStyle/applyClusterStyle. GEDGE → view/scope.go:377 (C2) + :470 (C3) need Properties.Edges fallback; "square" unimplemented in configureGraphSettings (converter.go:161-169). RANK → createEdge (builder.go:573-611) + converter.go:483-495, swap endpoints + dir=back; 4 view copiers already carry Rank. AGG → first-wins pair merge in processOutgoingLinks/processIncomingLinks. LEGEND → graph.Graph.Legend placeholder (graph.go:151-155) rendered via top graph-label HTML table (SetLabelLocation(TopLocation)); GraphViz cannot position clusters — legend joins the top label, right-aligned.
-- **KIND is the widest-touch requirement:** new model.Link.Kind → 4 view copiers, validator/index.go mirror, c4d.peg:458 OptionKey + go:generate regen, tomodel applyEdgeOption, frommodel edgeStmtFromLink, emit_toml canonical order, grammar/reserved.go fieldKeywords, testutil/canonsrc.
+- **Fix points (pre-confirmed scan):** COLOR → builder.go buildNode/buildCluster + shapes.go, emit via converter.go applyNodeStyle/applyClusterStyle. GEDGE → view/scope.go:377 (C2) + :470 (C3) need Properties.Edges fallback; "square" unimplemented in configureGraphSettings (converter.go:161-169). RANK → createEdge (builder.go:573-611) + converter.go:483-495, swap endpoints + dir=back; 4 view copiers already carry Rank. AGG → first-wins pair merge in processOutgoingLinks/processIncomingLinks. KIND is the widest-touch requirement: new model.Link.Kind → 4 view copiers, validator/index.go mirror, c4d.peg:458 OptionKey + go:generate regen, tomodel applyEdgeOption, frommodel edgeStmtFromLink, emit_toml canonical order, grammar/reserved.go fieldKeywords, testutil/canonsrc.
+- **LEGEND fix point SUPERSEDED post-milestone:** the v1.13 approach (legend rows in the top graph-label HTML table) was replaced in v1.19.x by a floating legend node (`__c4drill_legend`, plaintext, framed HTML table) outside an invisible `cluster___content` wrapper; REQUIREMENTS.md LEG-01..03 now describe the current design.
 - **TDD mode on** (config workflow.tdd_mode); docs + skill sync land inside the phase (v1.12 precedent); REL-01 tag v1.18.0 is the phase's final task.
 
 ### Pending Todos
@@ -60,8 +60,14 @@ None pending — v1.13 requirements sourced directly from user request 2026-08-2
 
 ### Blockers/Concerns
 
-- **Legend-in-top-label constraint:** GraphViz cannot position clusters; the legend renders as a right-aligned column of the top graph-label HTML table. Expect multi-line HTML table golden churn on EVERY fixture golden (legend default-on).
+- ~~**Legend-in-top-label constraint:** GraphViz cannot position clusters; the legend renders as a right-aligned column of the top graph-label HTML table.~~ **Resolved post-milestone (v1.19.x):** the legend is now a floating node outside an invisible content cluster — see Quick Tasks and REQUIREMENTS.md LEG-01.
 - **Docs-drift item (pre-existing, deferred):** README "Validation Rules" missing VAL-01 orphan rule; root testdata/valid.toml+nested.toml unused. Not v1.13 scope.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260828-qbx | Render queue units as horizontal pipe shapes via SVG post-processing | 2026-08-28 | c880c7a + bed782d | [260828-qbx-render-queue-units-as-horizontal-pipe-sh](./quick/260828-qbx-render-queue-units-as-horizontal-pipe-sh/) |
 
 ### Roadmap Evolution
 

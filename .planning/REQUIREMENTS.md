@@ -65,12 +65,22 @@ Source: user request 2026-08-28 + codebase scan (root causes pre-confirmed):
 
 ---
 
+## Post-Milestone Requirements (2026-08-28 design review)
+
+User-directed review of the freshly shipped legend, plus a queue shape request. Shipped outside any GSD phase — direct fixes (v1.19.0–v1.19.2) and quick task 260828-qbx (v1.20.0). LEG-01..03 above were re-specified in place to describe the shipped result.
+
+### SHAPE — Queue pipe
+
+- [ ] **SHAPE-01**: Queue-type units render as a horizontal cylinder ("pipe") in SVG and HTML output — a post-processed outline inscribed in the node's box bbox (edge anchors unchanged), with fill/stroke/dasharray preserved from the replaced box outline. The ╟╢ icon and the `═╦╩═╦═══` label art are removed. DOT keeps plain boxes: GraphViz cannot rotate `shape=cylinder` (`orientation` affects only polygon-based shapes) and `shape=tape` is unavailable in the pinned build, so the pipe is drawn by SVG post-processing (`internal/render/pipe.go`); DOT is a secondary format.
+
+---
+
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
 | Per-edge custom kind palettes / themeable kind colours | One default palette keeps the legend honest; custom `color` already covers one-off needs |
-| Legend positioning controls (corner choice, floating) | User asked for upper-right, global, default-on — no configurability beyond on/off |
+| Legend positioning controls (corner choice, manual placement) | The legend auto-packs upper-right beside the invisible content cluster (post-milestone rework); no configurability beyond on/off |
 | Manual positioning / rank=same subgraph authoring | Violates the auto-layout design decision (PROJECT.md) |
 | `rank = "forward"` doing anything beyond the default | Forward is the natural direction; the option exists for symmetry/explicitness only |
 | Custom unit iconography/fonts | Not requested |
@@ -78,29 +88,30 @@ Source: user request 2026-08-28 + codebase scan (root causes pre-confirmed):
 
 ## Traceability
 
-All 20 v1.13 requirements map to Phase 36 (single-phase milestone, v1.11/v1.12 precedent — shared packages and goldens).
+All 20 v1.13 requirements mapped to Phase 36 (single-phase milestone, v1.11/v1.12 precedent — shared packages and goldens); Phase 36 shipped 2026-08-28 as release v1.18.0. Post-milestone SHAPE-01 shipped via quick task 260828-qbx (v1.20.0).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| COLOR-01 | Phase 36 | Pending |
-| COLOR-02 | Phase 36 | Pending |
-| GEDGE-01 | Phase 36 | Pending |
-| GEDGE-02 | Phase 36 | Pending |
-| RANK-01 | Phase 36 | Pending |
-| RANK-02 | Phase 36 | Pending |
-| KIND-01 | Phase 36 | Pending |
-| KIND-02 | Phase 36 | Pending |
-| KIND-03 | Phase 36 | Pending |
-| AGG-01 | Phase 36 | Pending |
-| AGG-02 | Phase 36 | Pending |
-| AGG-03 | Phase 36 | Pending |
-| LEG-01 | Phase 36 | Pending |
-| LEG-02 | Phase 36 | Pending |
-| LEG-03 | Phase 36 | Pending |
-| BC-01 | Phase 36 | Pending |
-| DOC-01 | Phase 36 | Pending |
-| DOC-02 | Phase 36 | Pending |
-| DOC-03 | Phase 36 | Pending |
-| REL-01 | Phase 36 | Pending |
+| COLOR-01 | Phase 36 | Shipped |
+| COLOR-02 | Phase 36 | Shipped |
+| GEDGE-01 | Phase 36 | Shipped |
+| GEDGE-02 | Phase 36 | Shipped |
+| RANK-01 | Phase 36 | Shipped |
+| RANK-02 | Phase 36 | Shipped |
+| KIND-01 | Phase 36 | Shipped |
+| KIND-02 | Phase 36 | Shipped |
+| KIND-03 | Phase 36 | Shipped |
+| AGG-01 | Phase 36 | Shipped |
+| AGG-02 | Phase 36 | Shipped |
+| AGG-03 | Phase 36 | Shipped |
+| LEG-01 | Phase 36 + post-milestone rework | Shipped |
+| LEG-02 | Phase 36 + post-milestone rework | Shipped |
+| LEG-03 | Phase 36 + post-milestone rework | Shipped |
+| BC-01 | Phase 36 | Shipped |
+| DOC-01 | Phase 36 | Shipped |
+| DOC-02 | Phase 36 | Shipped |
+| DOC-03 | Phase 36 | Shipped |
+| REL-01 | Phase 36 | Shipped |
+| SHAPE-01 | Quick 260828-qbx | Shipped |
 
-**Coverage:** 20/20 ✓ (no orphans, no duplicates)
+**Coverage:** 20/20 v1.13 ✓ + 1 post-milestone (no orphans, no duplicates)

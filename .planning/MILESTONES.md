@@ -1,3 +1,15 @@
+## Post-Milestone Design Review (Shipped: 2026-08-28, v1.19.0–v1.20.0)
+
+**No GSD phase** — user-directed review of the freshly shipped v1.13 legend, plus one quick task (260828-qbx, TDD per workflow defaults).
+
+**Key accomplishments:**
+
+- Legend rebuilt (v1.19.0–v1.19.2): a framed, titled ("legend") floating node (`__c4drill_legend`, plaintext) that dot packs OUTSIDE an invisible `cluster___content` wrapper holding all content — the legend can never be mistaken for a diagram element, and the nav/title is no longer pushed down. Legend rows are text-in-the-colour-it-documents (swatch cells and stroke glyphs gone); only conventions actually present in the view are listed; db/queue labels carry their level ("system db" / "container db" / "component db", same for queue); no line-style rows; "box" rows take the content-derived border colour. GraphViz quirks pinned experimentally: clusters inherit the root graph label (explicit empty-label fix), `orientation` does not rotate `shape=cylinder`, `shape=tape` unavailable in the pinned build.
+- Queue pipes (v1.20.0, quick task 260828-qbx): queue units render as horizontal cylinders via SVG post-processing (`internal/render/pipe.go`) inscribed in the node's box bbox so edge anchors hold; fill/stroke/dasharray preserved from the replaced outline; ╟╢ icon and `═╦╩═╦═══` label art removed; DOT keeps plain boxes (secondary format). Full TDD RED→GREEN; golden DOT byte-identical for non-queue fixtures.
+- Plugin skill copies and all tracked example SVGs re-synced at every step (CI `diff -r` parity held throughout).
+
+---
+
 ## v1.13 Edge Semantics and Legend (Shipped: 2026-08-28)
 
 **Phases completed:** 1 phase (36), 6 plans
