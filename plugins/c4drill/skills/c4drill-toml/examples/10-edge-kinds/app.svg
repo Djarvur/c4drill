@@ -68,7 +68,7 @@
 <!-- queue -->
 <g id="node4" class="node">
 <title>queue</title>
-<path d="M199.48,-373.40 A7.28,20.80 0 0,0 199.48,-331.80 L314.52,-331.80 A7.28,20.80 0 0,0 314.52,-373.40 A7.28,20.80 0 1,1 314.52,-373.40 Z" fill="none" stroke="#073b6f"/>
+<path d="M199.48,-373.40 L314.52,-373.40 A7.28,20.80 0 0,1 314.52,-331.80 L199.48,-331.80 A7.28,20.80 0 0,1 199.48,-373.40 Z M314.52,-373.40 A7.28,20.80 0 0,0 314.52,-331.80" fill="none" stroke="#073b6f"/>
 <text xml:space="preserve" text-anchor="start" x="214.21" y="-357.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00" fill="#073b6f">Event Queue</text>
 <text xml:space="preserve" text-anchor="start" x="221.6" y="-341" font-family="Helvetica,sans-Serif" font-style="italic" font-size="14.00" fill="#073b6f">[RabbitMQ]</text>
 </g>

@@ -141,7 +141,7 @@
 <!-- amazon.sqs.queue1 -->
 <g id="node7" class="node">
 <title>amazon.sqs.queue1</title>
-<path d="M363.08,-98.80 A7.28,20.80 0 0,0 363.08,-57.20 L492.92,-57.20 A7.28,20.80 0 0,0 492.92,-98.80 A7.28,20.80 0 1,1 492.92,-98.80 Z" fill="none" stroke="#78a8d8"/>
+<path d="M363.08,-98.80 L492.92,-98.80 A7.28,20.80 0 0,1 492.92,-57.20 L363.08,-57.20 A7.28,20.80 0 0,1 363.08,-98.80 Z M492.92,-98.80 A7.28,20.80 0 0,0 492.92,-57.20" fill="none" stroke="#78a8d8"/>
 <text xml:space="preserve" text-anchor="start" x="396.49" y="-83.2" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00" fill="#78a8d8">Raw Data</text>
 <text xml:space="preserve" text-anchor="start" x="363.8" y="-64" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#78a8d8">Queue with raw data</text>
 </g>
@@ -155,7 +155,7 @@
 <!-- amazon.sqs.queue2 -->
 <g id="node8" class="node">
 <title>amazon.sqs.queue2</title>
-<path d="M218.17,-124.00 A16.10,46.00 0 0,0 218.17,-32.00 L321.83,-32.00 A16.10,46.00 0 0,0 321.83,-124.00 A16.10,46.00 0 1,1 321.83,-124.00 Z" fill="none" stroke="#78a8d8"/>
+<path d="M218.17,-124.00 L321.83,-124.00 A16.10,46.00 0 0,1 321.83,-32.00 L218.17,-32.00 A16.10,46.00 0 0,1 218.17,-124.00 Z M321.83,-124.00 A16.10,46.00 0 0,0 321.83,-32.00" fill="none" stroke="#78a8d8"/>
 <text xml:space="preserve" text-anchor="start" x="222.93" y="-108.4" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00" fill="#78a8d8">Enriched Data</text>
 <text xml:space="preserve" text-anchor="start" x="233.03" y="-89.2" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#78a8d8">Filtered and</text>
 <text xml:space="preserve" text-anchor="start" x="210.07" y="-72.4" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#78a8d8">preprocessed data.</text>

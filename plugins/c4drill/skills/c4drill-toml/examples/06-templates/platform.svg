@@ -30,7 +30,7 @@
 <!-- messageBus -->
 <g id="node1" class="node">
 <title>messageBus</title>
-<path d="M194.07,-74.40 A10.22,29.20 0 0,0 194.07,-16.00 L321.93,-16.00 A10.22,29.20 0 0,0 321.93,-74.40 A10.22,29.20 0 1,1 321.93,-74.40 Z" fill="none" stroke="#073b6f"/>
+<path d="M194.07,-74.40 L321.93,-74.40 A10.22,29.20 0 0,1 321.93,-16.00 L194.07,-16.00 A10.22,29.20 0 0,1 194.07,-74.40 Z M321.93,-74.40 A10.22,29.20 0 0,0 321.93,-16.00" fill="none" stroke="#073b6f"/>
 <text xml:space="preserve" text-anchor="start" x="213.26" y="-58.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00" fill="#073b6f">Message Bus</text>
 <text xml:space="preserve" text-anchor="start" x="191.85" y="-39.6" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#073b6f">Backbone for domain</text>
 <text xml:space="preserve" text-anchor="start" x="205.46" y="-22.8" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#073b6f">event publication</text>
