@@ -118,10 +118,21 @@ const (
 	legendDottedGlyph = "· · ·"
 )
 
-var legendStyleGlyphs = map[string]string{
-	"solid":  legendSolidGlyph,
-	"dashed": legendDashedGlyph,
-	"dotted": legendDottedGlyph,
+// legendStyleGlyph returns the text glyph for a line-style sample row.
+// GraphViz HTML labels cannot draw dashed/dotted strokes, so line-style
+// samples are text glyphs in the muted default edge colour; swatch cells
+// carry BGCOLOR instead.
+func legendStyleGlyph(style string) (string, bool) {
+	switch style {
+	case "solid":
+		return legendSolidGlyph, true
+	case "dashed":
+		return legendDashedGlyph, true
+	case "dotted":
+		return legendDottedGlyph, true
+	default:
+		return "", false
+	}
 }
 
 // legendTDs renders the legend rows as right-aligned table rows appended
@@ -145,22 +156,8 @@ func legendTDs(legend *graph.Legend, colspan int) []string {
 
 	for _, entry := range legend.Entries {
 		label := html.EscapeString(entry.Label)
-		sample := ""
 
-		if glyph, isStyle := legendStyleGlyphs[entry.Style]; isStyle {
-			// Line-style sample row: glyph in the muted default edge colour.
-			sample = fmt.Sprintf(`<TD><FONT POINT-SIZE="%s" COLOR="%s">%s</FONT></TD>`,
-				navFontPoint, navFontColor, glyph)
-		} else if entry.Color != "" {
-			// Colour swatch row: fixed-size BGCOLOR cell (the reliable
-			// GraphViz swatch mechanism).
-			sample = fmt.Sprintf(`<TD BGCOLOR="%s" WIDTH="12" HEIGHT="8"> </TD>`,
-				html.EscapeString(entry.Color))
-		} else {
-			// Text-only custom line.
-			sample = fmt.Sprintf(`<TD><FONT POINT-SIZE="%s" COLOR="%s">&#9644;</FONT></TD>`,
-				navFontPoint, navFontColor)
-		}
+		sample := legendSampleCell(entry)
 
 		nested := `<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">` +
 			`<TR>` + sample +
@@ -172,4 +169,23 @@ func legendTDs(legend *graph.Legend, colspan int) []string {
 	}
 
 	return rows
+}
+
+// legendSampleCell renders the sample cell for one legend row: a line-style
+// glyph, a colour swatch, or a plain text marker for text-only custom lines.
+func legendSampleCell(entry graph.LegendEntry) string {
+	if glyph, isStyle := legendStyleGlyph(entry.Style); isStyle {
+		return fmt.Sprintf(`<TD><FONT POINT-SIZE="%s" COLOR="%s">%s</FONT></TD>`,
+			navFontPoint, navFontColor, glyph)
+	}
+
+	if entry.Color != "" {
+		// Fixed-size BGCOLOR cell — the reliable GraphViz swatch mechanism.
+		return fmt.Sprintf(`<TD BGCOLOR="%s" WIDTH="12" HEIGHT="8"> </TD>`,
+			html.EscapeString(entry.Color))
+	}
+
+	// Text-only custom line.
+	return fmt.Sprintf(`<TD><FONT POINT-SIZE="%s" COLOR="%s">&#9644;</FONT></TD>`,
+		navFontPoint, navFontColor)
 }

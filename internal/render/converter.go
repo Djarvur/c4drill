@@ -505,10 +505,19 @@ func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge)
 		e.SetStyle(cgraph.SolidEdgeStyle)
 	}
 
-	// Arrow direction. Under rank="reverse" the endpoints are swapped (above),
-	// so the dir attribute inverts to keep the arrowhead pointing at the
-	// logical target. SetDir(ForwardDir) emits nothing (value equals the
-	// declared default) — do not introduce a per-edge dir=forward emission.
+	setEdgeDir(e, edge)
+
+	applyEdgeAttributes(e, edge)
+
+	return nil
+}
+
+// setEdgeDir emits the per-edge dir attribute. Under rank="reverse" the
+// endpoints are swapped (see createEdge), so the dir attribute inverts to
+// keep the arrowhead pointing at the logical target. SetDir(ForwardDir)
+// emits nothing (value equals the declared default) — do not introduce a
+// per-edge dir=forward emission.
+func setEdgeDir(e *cgraph.Edge, edge *graph.Edge) {
 	if edge.RankReverse {
 		switch edge.ArrowHead {
 		case graph.ArrowReverse:
@@ -518,25 +527,25 @@ func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge)
 			e.SetDir(cgraph.BothDir)
 		case graph.ArrowNone:
 			e.SetDir(cgraph.NoneDir)
+		case graph.ArrowForward:
+			e.SetDir(cgraph.BackDir)
 		default:
 			e.SetDir(cgraph.BackDir)
 		}
-	} else {
-		switch edge.ArrowHead {
-		case graph.ArrowForward:
-			e.SetDir(cgraph.ForwardDir)
-		case graph.ArrowReverse:
-			e.SetDir(cgraph.BackDir)
-		case graph.ArrowBoth:
-			e.SetDir(cgraph.BothDir)
-		case graph.ArrowNone:
-			e.SetDir(cgraph.NoneDir)
-		}
+
+		return
 	}
 
-	applyEdgeAttributes(e, edge)
-
-	return nil
+	switch edge.ArrowHead {
+	case graph.ArrowForward:
+		e.SetDir(cgraph.ForwardDir)
+	case graph.ArrowReverse:
+		e.SetDir(cgraph.BackDir)
+	case graph.ArrowBoth:
+		e.SetDir(cgraph.BothDir)
+	case graph.ArrowNone:
+		e.SetDir(cgraph.NoneDir)
+	}
 }
 
 // applyEdgeAttributes sets the scalar cgraph attributes (color, minlen,

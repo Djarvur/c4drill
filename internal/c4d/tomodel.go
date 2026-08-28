@@ -299,47 +299,16 @@ func applyPropertyField(props *model.Properties, f *ast.FieldStmt) error {
 
 		props.Expanded = list
 	case "legend":
-		// C4D has no boolean literals: legend rides a bareword true/false.
-		switch f.Value.Str {
-		case "true":
-			truly := true
-
-			props.Legend = &truly
-		case "false":
-			falsy := false
-
-			props.Legend = &falsy
-		default:
-			return &parser.ParseError{
-				Message: fmt.Sprintf("property %q must be true or false, got %q", f.Key, f.Value.Str),
-				Line:    f.Pos,
-			}
-		}
-	case "legendLine":
-		list, err := listValue(f)
+		legend, err := legendValue(f)
 		if err != nil {
 			return err
 		}
 
-		lines := make([]model.LegendLine, 0, len(list))
-
-		for _, raw := range list {
-			parts := strings.SplitN(raw, "|", 3)
-			if len(parts) < 2 {
-				return &parser.ParseError{
-					Message: fmt.Sprintf(
-						"property %q entries need \"label|color\" or \"label|color|style\", got %q",
-						f.Key, raw),
-					Line: f.Pos,
-				}
-			}
-
-			line := model.LegendLine{Label: parts[0], Color: parts[1]}
-			if len(parts) == 3 {
-				line.Style = parts[2]
-			}
-
-			lines = append(lines, line)
+		props.Legend = legend
+	case "legendLine":
+		lines, err := legendLinesFromList(f)
+		if err != nil {
+			return err
 		}
 
 		props.LegendLines = lines
@@ -354,6 +323,58 @@ func applyPropertyField(props *model.Properties, f *ast.FieldStmt) error {
 	}
 
 	return nil
+}
+
+// legendValue parses the C4D legend property. C4D has no boolean literals:
+// legend rides a bareword true/false.
+func legendValue(f *ast.FieldStmt) (*bool, error) {
+	switch f.Value.Str {
+	case "true":
+		truly := true
+
+		return &truly, nil
+	case "false":
+		falsy := false
+
+		return &falsy, nil
+	default:
+		return nil, &parser.ParseError{
+			Message: fmt.Sprintf("property %q must be true or false, got %q", f.Key, f.Value.Str),
+			Line:    f.Pos,
+		}
+	}
+}
+
+// legendLinesFromList parses the pipe-split legendLine rows
+// ("label|color" or "label|color|style").
+func legendLinesFromList(f *ast.FieldStmt) ([]model.LegendLine, error) {
+	list, err := listValue(f)
+	if err != nil {
+		return nil, err
+	}
+
+	lines := make([]model.LegendLine, 0, len(list))
+
+	for _, raw := range list {
+		parts := strings.SplitN(raw, "|", 3)
+		if len(parts) < 2 {
+			return nil, &parser.ParseError{
+				Message: fmt.Sprintf(
+					"property %q entries need \"label|color\" or \"label|color|style\", got %q",
+					f.Key, raw),
+				Line: f.Pos,
+			}
+		}
+
+		line := model.LegendLine{Label: parts[0], Color: parts[1]}
+		if len(parts) == 3 {
+			line.Style = parts[2]
+		}
+
+		lines = append(lines, line)
+	}
+
+	return lines, nil
 }
 
 // propertyStringField returns the string field pointer for a scalar

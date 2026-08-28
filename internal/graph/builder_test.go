@@ -2473,6 +2473,23 @@ func TestBuildGraphEdgeKindColour(t *testing.T) {
 	}
 }
 
+// nodeByID finds one node by ID, failing the test when absent.
+//
+//nolint:unparam // id is "app" today; the helper stays generic for future callers
+func nodeByID(t *testing.T, g *graph.Graph, id string) *graph.Node {
+	t.Helper()
+
+	for _, n := range g.Nodes {
+		if n.ID == id {
+			return n
+		}
+	}
+
+	t.Fatalf("node %q not found", id)
+
+	return nil
+}
+
 func TestUnitStyleOverrides(t *testing.T) {
 	t.Parallel()
 
@@ -2502,13 +2519,7 @@ func TestUnitStyleOverrides(t *testing.T) {
 		g := graph.BuildGraph(view.GenerateC1View(m))
 		require.Len(t, g.Nodes, 2)
 
-		var app *graph.Node
-		for _, n := range g.Nodes {
-			if n.ID == "app" {
-				app = n
-			}
-		}
-		require.NotNil(t, app)
+		app := nodeByID(t, g, "app")
 		assert.Equal(t, "#08427B", app.Style.FillColor)
 		assert.Equal(t, "#FFFFFF", app.Style.FontColor, "dark fill forces white font (luminance rule)")
 	})
@@ -2524,13 +2535,7 @@ func TestUnitStyleOverrides(t *testing.T) {
 
 		g := graph.BuildGraph(view.GenerateC1View(m))
 
-		var app *graph.Node
-		for _, n := range g.Nodes {
-			if n.ID == "app" {
-				app = n
-			}
-		}
-		require.NotNil(t, app)
+		app := nodeByID(t, g, "app")
 		assert.Equal(t, "#4A90D9", app.Style.FillColor)
 		assert.Equal(t, model.PersonBorder, app.Style.FontColor, "light fill keeps level font default")
 	})
@@ -2547,13 +2552,7 @@ func TestUnitStyleOverrides(t *testing.T) {
 
 		g := graph.BuildGraph(view.GenerateC1View(m))
 
-		var app *graph.Node
-		for _, n := range g.Nodes {
-			if n.ID == "app" {
-				app = n
-			}
-		}
-		require.NotNil(t, app)
+		app := nodeByID(t, g, "app")
 		assert.Equal(t, "#AA0000", app.Style.BorderColor)
 		assert.Equal(t, "dotted", app.Style.BorderStyle)
 	})
@@ -2565,13 +2564,7 @@ func TestUnitStyleOverrides(t *testing.T) {
 
 		g := graph.BuildGraph(view.GenerateC1View(m))
 
-		var app *graph.Node
-		for _, n := range g.Nodes {
-			if n.ID == "app" {
-				app = n
-			}
-		}
-		require.NotNil(t, app)
+		app := nodeByID(t, g, "app")
 		assert.Empty(t, app.Style.FillColor)
 		assert.Equal(t, model.PersonBorder, app.Style.BorderColor)
 		assert.Equal(t, model.PersonBorder, app.Style.FontColor)

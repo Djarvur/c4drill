@@ -486,7 +486,6 @@ func TestRankReverseEmission(t *testing.T) {
 	// | reverse        | a -> b [dir=back] | b -> a (no dir)    |
 	// | bidirectional  | a -> b [dir=both] | b -> a [dir=both]  |
 	// | none           | a -> b [dir=none] | b -> a [dir=none]  |
-
 	renderGraph := func(edge *graph.Edge) string {
 		g := &graph.Graph{
 			Title:     "T",
@@ -536,8 +535,15 @@ func TestRankReverseEmission(t *testing.T) {
 
 			// Per-edge dir attribute: check the edge statement block only
 			// (the graph-level `edge [dir=forward]` default is pre-existing).
-			edgeBlock := output[strings.Index(output, tt.wantEdgeStmt):]
-			edgeBlock = edgeBlock[:strings.Index(edgeBlock, ";")]
+			start := strings.Index(output, tt.wantEdgeStmt)
+			require.NotEqual(t, -1, start, "edge statement start")
+
+			edgeBlock := output[start:]
+
+			end := strings.Index(edgeBlock, ";")
+			require.NotEqual(t, -1, end, "edge statement terminator")
+
+			edgeBlock = edgeBlock[:end]
 			if tt.wantDirAttr == "" {
 				assert.NotContains(t, edgeBlock, "dir=", "no per-edge dir attribute expected")
 			} else {
@@ -547,7 +553,11 @@ func TestRankReverseEmission(t *testing.T) {
 	}
 
 	t.Run("no per-edge dir=forward is ever emitted", func(t *testing.T) {
-		for _, arrow := range []graph.ArrowDirection{"", graph.ArrowForward, graph.ArrowReverse, graph.ArrowBoth, graph.ArrowNone} {
+		arrows := []graph.ArrowDirection{
+			"", graph.ArrowForward, graph.ArrowReverse, graph.ArrowBoth, graph.ArrowNone,
+		}
+
+		for _, arrow := range arrows {
 			for _, rev := range []bool{false, true} {
 				output := renderGraph(&graph.Edge{
 					Source:      "a",
@@ -556,9 +566,15 @@ func TestRankReverseEmission(t *testing.T) {
 					RankReverse: rev,
 				})
 
-				edgeBlock := output[strings.Index(output, "->"):]
-				edgeBlock = edgeBlock[:strings.Index(edgeBlock, ";")]
-				assert.NotContains(t, edgeBlock, "dir=forward")
+				start := strings.Index(output, "->")
+				require.NotEqual(t, -1, start, "edge statement start")
+
+				edgeBlock := output[start:]
+
+				end := strings.Index(edgeBlock, ";")
+				require.NotEqual(t, -1, end, "edge statement terminator")
+
+				assert.NotContains(t, edgeBlock[:end], "dir=forward")
 			}
 		}
 	})
@@ -611,6 +627,7 @@ func TestUnitOverridesEmission(t *testing.T) {
 
 		output, err := render.RenderDOT(g)
 		require.NoError(t, err)
+
 		out := string(output)
 
 		assert.Contains(t, out, `fillcolor="#123456"`)

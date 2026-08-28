@@ -948,11 +948,10 @@ func TestEmitCanonicalKindOrdering(t *testing.T) {
 		rankIdx := strings.Index(out, "rank: equal")
 		kindIdx := strings.Index(out, "kind: read-write")
 		colorIdx := strings.Index(out, "color: green")
-		require.NotEqual(t, -1, rankIdx)
-		require.NotEqual(t, -1, kindIdx)
-		require.NotEqual(t, -1, colorIdx)
-		assert.Less(t, rankIdx, kindIdx, "kind must come after rank")
-		assert.Less(t, kindIdx, colorIdx, "kind must come before color")
+
+		require.True(t, rankIdx >= 0 && rankIdx < kindIdx && kindIdx < colorIdx,
+			"kind must be emitted between rank and color (rank=%d kind=%d color=%d)",
+			rankIdx, kindIdx, colorIdx)
 	})
 
 	t.Run("TOML emits kind after rank", func(t *testing.T) {
@@ -962,10 +961,12 @@ func TestEmitCanonicalKindOrdering(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Contains(t, out, `kind = "read-write"`)
+
 		rankIdx := strings.Index(out, `rank = "equal"`)
 		kindIdx := strings.Index(out, `kind = "read-write"`)
-		require.NotEqual(t, -1, rankIdx)
-		assert.Less(t, rankIdx, kindIdx, "kind must come after rank")
+
+		require.True(t, rankIdx >= 0 && rankIdx < kindIdx,
+			"kind must come after rank (rank=%d kind=%d)", rankIdx, kindIdx)
 	})
 
 	t.Run("absent kind emits nothing (byte stability)", func(t *testing.T) {

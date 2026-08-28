@@ -1522,13 +1522,16 @@ func TestGenerateC2C3View_KindSurvivesResolution(t *testing.T) {
 	require.NotNil(t, v)
 
 	found := false
+
 	for _, entry := range v.Units {
 		for _, link := range entry.ResolvedLinks {
 			if link.Kind == model.KindRead {
 				found = true
+
 				assert.Equal(t, model.RankReverse, link.Rank)
 			}
 		}
 	}
+
 	assert.True(t, found, "resolved link carries Kind and Rank")
 }

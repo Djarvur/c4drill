@@ -1512,6 +1512,7 @@ name = "DB"
 	require.NoError(t, cmd.Execute())
 
 	// The C2 diagram for app/ is auto-generated with the global edge style.
+	//nolint:gosec // G304: Test reads from temp directory created by t.TempDir()
 	c2, err := os.ReadFile(filepath.Join(outputDir, "edges", "app.dot"))
 	require.NoError(t, err, "C2 dot generated")
 	assert.Contains(t, string(c2), "splines=false",

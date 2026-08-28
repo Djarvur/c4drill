@@ -214,6 +214,7 @@ func buildNestedCluster(entry *view.Entry, path string, v *view.View) *Cluster {
 	} else {
 		style = GetStyleForType(entry.Unit.Type, entry.IsExternal)
 	}
+
 	applyUnitOverrides(style, entry.Unit)
 
 	cluster := &Cluster{
@@ -294,6 +295,7 @@ func buildNode(entry *view.Entry) *Node {
 	} else {
 		style = GetStyleForType(entry.Unit.Type, entry.IsExternal)
 	}
+
 	applyUnitOverrides(style, entry.Unit)
 
 	return &Node{
@@ -394,6 +396,7 @@ func buildCluster(entry *view.Entry) *Cluster {
 	} else {
 		style = GetStyleForType(entry.Unit.Type, entry.IsExternal)
 	}
+
 	applyUnitOverrides(style, entry.Unit)
 
 	cluster := &Cluster{
@@ -679,16 +682,6 @@ func collectPairAggregates(v *view.View) map[string]*pairAggregate {
 		return aggs
 	}
 
-	record := func(key string, link model.Link) {
-		agg := aggs[key]
-		if agg == nil {
-			agg = &pairAggregate{}
-			aggs[key] = agg
-		}
-
-		agg.add(link)
-	}
-
 	for _, path := range v.UnitOrder {
 		entry := v.Units[path]
 		if entry == nil {
@@ -701,24 +694,43 @@ func collectPairAggregates(v *view.View) map[string]*pairAggregate {
 		}
 
 		for _, link := range outLinks {
-			record(path+"->"+link.Peer, link)
+			recordPairAggregate(aggs, path+"->"+link.Peer, link)
 		}
 
-		inLinks := entry.Unit.LinksFrom
-		if entry.ResolvedLinksFrom != nil {
-			inLinks = entry.ResolvedLinksFrom
-		}
-
-		for _, link := range inLinks {
-			if link.Mirror {
-				continue
-			}
-
-			record(link.Peer+"->"+path, link)
-		}
+		collectIncomingPairAggregates(v, path, aggs)
 	}
 
 	return aggs
+}
+
+// collectIncomingPairAggregates records the authored incoming links of one
+// unit (mirrors excluded — synthetic duplicates of outgoing links).
+func collectIncomingPairAggregates(v *view.View, path string, aggs map[string]*pairAggregate) {
+	entry := v.Units[path]
+
+	inLinks := entry.Unit.LinksFrom
+	if entry.ResolvedLinksFrom != nil {
+		inLinks = entry.ResolvedLinksFrom
+	}
+
+	for _, link := range inLinks {
+		if link.Mirror {
+			continue
+		}
+
+		recordPairAggregate(aggs, link.Peer+"->"+path, link)
+	}
+}
+
+// recordPairAggregate appends one constituent link to the pair's aggregate.
+func recordPairAggregate(aggs map[string]*pairAggregate, key string, link model.Link) {
+	agg := aggs[key]
+	if agg == nil {
+		agg = &pairAggregate{}
+		aggs[key] = agg
+	}
+
+	agg.add(link)
 }
 
 // processOutgoingLinks processes outgoing links from a unit.
@@ -755,19 +767,10 @@ func processOutgoingLinks(
 		edge := createEdge(path, link.Peer, link, sourceEntry, penWidth)
 
 		if markSeen(seen, edgeKey) {
-			// AGG-01..03: collapsed pairs (2+ constituents) override the
-			// surviving edge's colour/style from the pair aggregate. Explicit
-			// custom colours suppress kind colouring (AGG-03) and force the
-			// D-01 source-border default of the drawn edge.
+			// AGG-01..03: collapsed pairs override the surviving edge's
+			// colour/style from the pair aggregate.
 			if !v.AllExpanded && pairCounts[edgeKey] >= 2 {
-				if colour, ok := pairAggs[edgeKey].kindColourFor(); ok {
-					edge.Color = colour
-				} else if pairAggs[edgeKey].anyExplicitClr || pairAggs[edgeKey].anyKindUnset {
-					// AGG-03 / partial-kind pairs: the default edge colour
-					edge.Color = sourceBorderColour(sourceEntry)
-				}
-
-				edge.Style = pairAggs[edgeKey].styleFor(edge.Style)
+				applyCollapsedPairStyle(edge, pairAggs[edgeKey], sourceEntry)
 			}
 
 			edges = append(edges, edge)
@@ -812,14 +815,7 @@ func processIncomingLinks(
 
 		if markSeen(seen, edgeKey) {
 			if !v.AllExpanded && pairCounts[edgeKey] >= 2 {
-				if colour, ok := pairAggs[edgeKey].kindColourFor(); ok {
-					edge.Color = colour
-				} else if pairAggs[edgeKey].anyExplicitClr || pairAggs[edgeKey].anyKindUnset {
-					// AGG-03 / partial-kind pairs: the default edge colour
-					edge.Color = sourceBorderColour(sourceEntry)
-				}
-
-				edge.Style = pairAggs[edgeKey].styleFor(edge.Style)
+				applyCollapsedPairStyle(edge, pairAggs[edgeKey], sourceEntry)
 			}
 
 			edges = append(edges, edge)
@@ -827,6 +823,26 @@ func processIncomingLinks(
 	}
 
 	return edges
+}
+
+// applyCollapsedPairStyle overrides a surviving edge's colour/style from its
+// pair aggregate (AGG-01..03) — called on collapsed pairs (2+ constituents)
+// in resolved views only. Kind-derived colour wins (all-same kinds colour
+// with the kind, mixed colour read-write); an explicit colour on any
+// constituent or an unset kind falls back to the D-01 source-border default
+// of the drawn edge.
+func applyCollapsedPairStyle(
+	edge *Edge,
+	agg *pairAggregate,
+	sourceEntry *view.Entry,
+) {
+	if colour, ok := agg.kindColourFor(); ok {
+		edge.Color = colour
+	} else if agg.anyExplicitClr || agg.anyKindUnset {
+		edge.Color = sourceBorderColour(sourceEntry)
+	}
+
+	edge.Style = agg.styleFor(edge.Style)
 }
 
 // isTargetInView checks if a unit exists in the view.

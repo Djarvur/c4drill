@@ -96,35 +96,7 @@ func emitPropertiesTOML(b *strings.Builder, props *model.Properties) {
 		fmt.Fprintf(&body, "expanded = %s\n", quoteTOMLArray(props.Expanded))
 	}
 
-	if props.Legend != nil && !*props.Legend {
-		// Emit legend ONLY when explicitly false (nil/true omitted — LEG-01
-		// default-on keeps source-level byte stability for models not using
-		// the feature).
-		body.WriteString("legend = false\n")
-	}
-
-	// [[properties.legendLine]] blocks come after the scalar keys. NOTE: the
-	// array-table headers cannot go inside the [properties] body block — they
-	// are separate top-level array tables written after it.
-	if len(props.LegendLines) > 0 {
-		if body.Len() > 0 {
-			b.WriteString("[properties]\n")
-			b.WriteString(body.String())
-			body.Reset()
-		}
-
-		for _, line := range props.LegendLines {
-			fmt.Fprintf(b, "[[properties.legendLine]]\n")
-			fmt.Fprintf(b, "label = %s\n", quoteTOML(line.Label))
-			fmt.Fprintf(b, "color = %s\n", quoteTOML(line.Color))
-
-			if line.Style != "" {
-				fmt.Fprintf(b, "style = %s\n", quoteTOML(line.Style))
-			}
-		}
-
-		return
-	}
+	emitLegendPropertiesTOML(b, &body, props)
 
 	if body.Len() == 0 {
 		return
@@ -132,6 +104,38 @@ func emitPropertiesTOML(b *strings.Builder, props *model.Properties) {
 
 	b.WriteString("[properties]\n")
 	b.WriteString(body.String())
+}
+
+// emitLegendPropertiesTOML writes the legend surface: `legend = false` inside
+// the scalar block (emitted ONLY when explicitly false — nil/true omitted, so
+// LEG-01 default-on keeps source-level byte stability for models not using
+// the feature) and one [[properties.legendLine]] array table per custom row
+// after it. Array-table headers cannot live inside the [properties] body —
+// they are separate top-level tables.
+func emitLegendPropertiesTOML(b *strings.Builder, body *strings.Builder, props *model.Properties) {
+	if props.Legend != nil && !*props.Legend {
+		body.WriteString("legend = false\n")
+	}
+
+	if len(props.LegendLines) == 0 {
+		return
+	}
+
+	if body.Len() > 0 {
+		b.WriteString("[properties]\n")
+		b.WriteString(body.String())
+		body.Reset()
+	}
+
+	for _, line := range props.LegendLines {
+		fmt.Fprintf(b, "[[properties.legendLine]]\n")
+		fmt.Fprintf(b, "label = %s\n", quoteTOML(line.Label))
+		fmt.Fprintf(b, "color = %s\n", quoteTOML(line.Color))
+
+		if line.Style != "" {
+			fmt.Fprintf(b, "style = %s\n", quoteTOML(line.Style))
+		}
+	}
 }
 
 // emitUnitTOML writes the [path] table for one unit, then its link/linkFrom
