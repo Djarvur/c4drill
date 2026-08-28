@@ -2471,3 +2471,153 @@ func TestBuildGraphEdgeKindColour(t *testing.T) {
 		})
 	}
 }
+
+func TestUnitStyleOverrides(t *testing.T) {
+	t.Parallel()
+
+	// COLOR-01/COLOR-02: author color/style/border fields override the type
+	// palette on plain nodes AND clusters; unset fields keep the palette.
+
+	baseModel := func(unit *model.Unit) *parser.Model {
+		return &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": unit,
+				"db":  {Type: model.TypeDb, Name: "Database"},
+			},
+		}
+	}
+
+	t.Run("explicit dark color fills node and forces white font", func(t *testing.T) {
+		t.Parallel()
+
+		m := baseModel(&model.Unit{
+			Type:  model.TypeSystem,
+			Name:  "App",
+			Color: "#08427B",
+			Links: []model.Link{{Peer: "db"}},
+		})
+
+		g := graph.BuildGraph(view.GenerateC1View(m))
+		require.Len(t, g.Nodes, 2)
+
+		var app *graph.Node
+		for _, n := range g.Nodes {
+			if n.ID == "app" {
+				app = n
+			}
+		}
+		require.NotNil(t, app)
+		assert.Equal(t, "#08427B", app.Style.FillColor)
+		assert.Equal(t, "#FFFFFF", app.Style.FontColor, "dark fill forces white font (luminance rule)")
+	})
+
+	t.Run("light explicit color keeps the level font color", func(t *testing.T) {
+		t.Parallel()
+
+		m := baseModel(&model.Unit{
+			Type:  model.TypeSystem,
+			Name:  "App",
+			Color: "#4A90D9",
+		})
+
+		g := graph.BuildGraph(view.GenerateC1View(m))
+
+		var app *graph.Node
+		for _, n := range g.Nodes {
+			if n.ID == "app" {
+				app = n
+			}
+		}
+		require.NotNil(t, app)
+		assert.Equal(t, "#4A90D9", app.Style.FillColor)
+		assert.Equal(t, model.PersonBorder, app.Style.FontColor, "light fill keeps level font default")
+	})
+
+	t.Run("explicit border and dotted style override", func(t *testing.T) {
+		t.Parallel()
+
+		m := baseModel(&model.Unit{
+			Type:   model.TypeSystem,
+			Name:   "App",
+			Border: "#AA0000",
+			Style:  "dotted",
+		})
+
+		g := graph.BuildGraph(view.GenerateC1View(m))
+
+		var app *graph.Node
+		for _, n := range g.Nodes {
+			if n.ID == "app" {
+				app = n
+			}
+		}
+		require.NotNil(t, app)
+		assert.Equal(t, "#AA0000", app.Style.BorderColor)
+		assert.Equal(t, "dotted", app.Style.BorderStyle)
+	})
+
+	t.Run("unset fields keep the type palette", func(t *testing.T) {
+		t.Parallel()
+
+		m := baseModel(&model.Unit{Type: model.TypeSystem, Name: "App"})
+
+		g := graph.BuildGraph(view.GenerateC1View(m))
+
+		var app *graph.Node
+		for _, n := range g.Nodes {
+			if n.ID == "app" {
+				app = n
+			}
+		}
+		require.NotNil(t, app)
+		assert.Empty(t, app.Style.FillColor)
+		assert.Equal(t, model.PersonBorder, app.Style.BorderColor)
+		assert.Equal(t, model.PersonBorder, app.Style.FontColor)
+		assert.Equal(t, "solid", app.Style.BorderStyle)
+	})
+
+	t.Run("box unit explicit color beats content-derived style", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"grp": {
+					Type:  model.TypeBox,
+					Name:  "Group",
+					Color: "#00AA00",
+					Expanded: []string{"grp"},
+					Subunits: map[string]*model.Unit{
+						"inner": {Type: model.TypeSystem, Name: "Inner"},
+					},
+					SubunitOrder: []string{"inner"},
+				},
+			},
+		}
+
+		g := graph.BuildGraph(view.GenerateC1View(m))
+		require.Len(t, g.Clusters, 1)
+		assert.Equal(t, "#00AA00", g.Clusters[0].Style.FillColor,
+			"author color wins over box-content styling")
+	})
+
+	t.Run("expanded unit cluster renders explicit color", func(t *testing.T) {
+		t.Parallel()
+
+		m := baseModel(&model.Unit{
+			Type:  model.TypeSystem,
+			Name:  "App",
+			Color: "#123456",
+			Expanded: []string{"app"},
+			Subunits: map[string]*model.Unit{
+				"api": {Type: model.TypeContainer, Name: "API"},
+			},
+			SubunitOrder: []string{"api"},
+		})
+
+		g := graph.BuildGraph(view.GenerateC1View(m))
+		require.Len(t, g.Clusters, 1)
+		assert.Equal(t, "#123456", g.Clusters[0].Style.FillColor)
+	})
+}
