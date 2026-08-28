@@ -68,10 +68,10 @@
 <!-- queue -->
 <g id="node4" class="node">
 <title>queue</title>
-<path fill="none" stroke="#073b6f" d="M309.68,-381.8C309.68,-381.8 224.32,-381.8 224.32,-381.8 218.32,-381.8 212.32,-375.8 212.32,-369.8 212.32,-369.8 212.32,-335.4 212.32,-335.4 212.32,-329.4 218.32,-323.4 224.32,-323.4 224.32,-323.4 309.68,-323.4 309.68,-323.4 315.68,-323.4 321.68,-329.4 321.68,-335.4 321.68,-335.4 321.68,-369.8 321.68,-369.8 321.68,-375.8 315.68,-381.8 309.68,-381.8"/>
-<text xml:space="preserve" text-anchor="start" x="220.32" y="-363.8" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#073b6f">═╦╩═╦═══</text>
-<text xml:space="preserve" text-anchor="start" x="224.21" y="-349.4" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00" fill="#073b6f">Event Queue</text>
-<text xml:space="preserve" text-anchor="start" x="231.6" y="-332.6" font-family="Helvetica,sans-Serif" font-style="italic" font-size="14.00" fill="#073b6f">[RabbitMQ]</text>
+<path d="M202.42,-381.80 A10.22,29.20 0 0,0 202.42,-323.40 L311.58,-323.40 A10.22,29.20 0 0,0 311.58,-381.80 A10.22,29.20 0 1,1 311.58,-381.80 Z" fill="none" stroke="#073b6f"/>
+<text xml:space="preserve" text-anchor="start" x="210.32" y="-363.8" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#073b6f">═╦╩═╦═══</text>
+<text xml:space="preserve" text-anchor="start" x="214.21" y="-349.4" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00" fill="#073b6f">Event Queue</text>
+<text xml:space="preserve" text-anchor="start" x="221.6" y="-332.6" font-family="Helvetica,sans-Serif" font-style="italic" font-size="14.00" fill="#073b6f">[RabbitMQ]</text>
 </g>
 <!-- app.publisher -->
 <g id="node7" class="node">
@@ -83,10 +83,10 @@
 <!-- queue&#45;&gt;app.publisher -->
 <g id="edge4" class="edge">
 <title>queue&#45;&gt;app.publisher</title>
-<path fill="none" stroke="#3c7fc0" stroke-width="2" d="M268.48,-310.35C269.95,-269.21 272.15,-207.75 273.28,-176.31"/>
-<polygon fill="#3c7fc0" stroke="#3c7fc0" stroke-width="2" points="264.99,-310.04 268.13,-320.16 271.98,-310.29 264.99,-310.04"/>
-<text xml:space="preserve" text-anchor="start" x="275.3" y="-249.6" font-family="Helvetica,sans-Serif" font-style="italic" font-size="10.00" fill="#3c7fc0">[AMQP]</text>
-<text xml:space="preserve" text-anchor="start" x="271.13" y="-235.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#3c7fc0">Publishes</text>
+<path fill="none" stroke="#3c7fc0" stroke-width="2" d="M260.59,-310.35C264.17,-269.21 269.52,-207.75 272.25,-176.31"/>
+<polygon fill="#3c7fc0" stroke="#3c7fc0" stroke-width="2" points="257.11,-309.91 259.73,-320.17 264.09,-310.51 257.11,-309.91"/>
+<text xml:space="preserve" text-anchor="start" x="271.2" y="-249.6" font-family="Helvetica,sans-Serif" font-style="italic" font-size="10.00" fill="#3c7fc0">[AMQP]</text>
+<text xml:space="preserve" text-anchor="start" x="267.02" y="-235.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#3c7fc0">Publishes</text>
 </g>
 <!-- app.reader&#45;&gt;ext -->
 <g id="edge1" class="edge">

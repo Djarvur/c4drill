@@ -24,7 +24,7 @@
 <!-- messageBus -->
 <g id="node1" class="node">
 <title>messageBus</title>
-<path fill="none" stroke="#073b6f" d="M320.15,-91.2C320.15,-91.2 195.85,-91.2 195.85,-91.2 189.85,-91.2 183.85,-85.2 183.85,-79.2 183.85,-79.2 183.85,-28 183.85,-28 183.85,-22 189.85,-16 195.85,-16 195.85,-16 320.15,-16 320.15,-16 326.15,-16 332.15,-22 332.15,-28 332.15,-28 332.15,-79.2 332.15,-79.2 332.15,-85.2 326.15,-91.2 320.15,-91.2"/>
+<path d="M197.01,-91.20 A13.16,37.60 0 0,0 197.01,-16.00 L318.99,-16.00 A13.16,37.60 0 0,0 318.99,-91.20 A13.16,37.60 0 1,1 318.99,-91.20 Z" fill="none" stroke="#073b6f"/>
 <text xml:space="preserve" text-anchor="start" x="211.32" y="-73.2" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#073b6f">═╦╩═╦═══</text>
 <text xml:space="preserve" text-anchor="start" x="213.26" y="-58.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00" fill="#073b6f">Message Bus</text>
 <text xml:space="preserve" text-anchor="start" x="191.85" y="-39.6" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#073b6f">Backbone for domain</text>

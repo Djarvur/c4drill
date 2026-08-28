@@ -141,7 +141,7 @@
 <!-- amazon.sqs.queue1 -->
 <g id="node7" class="node">
 <title>amazon.sqs.queue1</title>
-<path fill="none" stroke="#78a8d8" d="M488.2,-115.6C488.2,-115.6 367.8,-115.6 367.8,-115.6 361.8,-115.6 355.8,-109.6 355.8,-103.6 355.8,-103.6 355.8,-69.2 355.8,-69.2 355.8,-63.2 361.8,-57.2 367.8,-57.2 367.8,-57.2 488.2,-57.2 488.2,-57.2 494.2,-57.2 500.2,-63.2 500.2,-69.2 500.2,-69.2 500.2,-103.6 500.2,-103.6 500.2,-109.6 494.2,-115.6 488.2,-115.6"/>
+<path d="M366.02,-115.60 A10.22,29.20 0 0,0 366.02,-57.20 L489.98,-57.20 A10.22,29.20 0 0,0 489.98,-115.60 A10.22,29.20 0 1,1 489.98,-115.60 Z" fill="none" stroke="#78a8d8"/>
 <text xml:space="preserve" text-anchor="start" x="381.32" y="-97.6" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#78a8d8">═╦╩═╦═══</text>
 <text xml:space="preserve" text-anchor="start" x="396.49" y="-83.2" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00" fill="#78a8d8">Raw Data</text>
 <text xml:space="preserve" text-anchor="start" x="363.8" y="-64" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#78a8d8">Queue with raw data</text>
@@ -156,7 +156,7 @@
 <!-- amazon.sqs.queue2 -->
 <g id="node8" class="node">
 <title>amazon.sqs.queue2</title>
-<path fill="none" stroke="#78a8d8" d="M325.93,-140.8C325.93,-140.8 214.07,-140.8 214.07,-140.8 208.07,-140.8 202.07,-134.8 202.07,-128.8 202.07,-128.8 202.07,-44 202.07,-44 202.07,-38 208.07,-32 214.07,-32 214.07,-32 325.93,-32 325.93,-32 331.93,-32 337.93,-38 337.93,-44 337.93,-44 337.93,-128.8 337.93,-128.8 337.93,-134.8 331.93,-140.8 325.93,-140.8"/>
+<path d="M221.11,-140.80 A19.04,54.40 0 0,0 221.11,-32.00 L318.89,-32.00 A19.04,54.40 0 0,0 318.89,-140.80 A19.04,54.40 0 1,1 318.89,-140.80 Z" fill="none" stroke="#78a8d8"/>
 <text xml:space="preserve" text-anchor="start" x="223.32" y="-122.8" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#78a8d8">═╦╩═╦═══</text>
 <text xml:space="preserve" text-anchor="start" x="222.93" y="-108.4" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00" fill="#78a8d8">Enriched Data</text>
 <text xml:space="preserve" text-anchor="start" x="233.03" y="-89.2" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#78a8d8">Filtered and</text>

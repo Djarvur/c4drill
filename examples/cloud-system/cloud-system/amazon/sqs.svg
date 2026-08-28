@@ -8,12 +8,12 @@
  viewBox="0.00 0.00 456.00 339.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 335.2)">
 <polygon fill="white" stroke="none" points="-4,4 -4,-335.2 452.03,-335.2 452.03,4 -4,4"/>
-<g id="a_graph0_4"><a xlink:href="../../cloud-system.svg" xlink:title="&lt;TABLE&gt;">
+<g id="a_graph0_3"><a xlink:href="../../cloud-system.svg" xlink:title="&lt;TABLE&gt;">
 <text xml:space="preserve" text-anchor="start" x="155.66" y="-319.2" font-family="Helvetica,sans-Serif" text-decoration="underline" font-size="10.00" fill="#666666">Cloud System</text>
 </a>
 </g>
 <text xml:space="preserve" text-anchor="start" x="217.9" y="-317.2" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#666666">→</text>
-<g id="a_graph0_5"><a xlink:href="../amazon.svg" xlink:title="&lt;TABLE&gt;">
+<g id="a_graph0_4"><a xlink:href="../amazon.svg" xlink:title="&lt;TABLE&gt;">
 <text xml:space="preserve" text-anchor="start" x="226.24" y="-319.2" font-family="Helvetica,sans-Serif" text-decoration="underline" font-size="10.00" fill="#666666">Amazon</text>
 </a>
 </g>
@@ -41,7 +41,7 @@
 <!-- amazon.sqs.queue1 -->
 <g id="node3" class="node">
 <title>amazon.sqs.queue1</title>
-<path fill="none" stroke="#78a8d8" d="M156.2,-107.6C156.2,-107.6 35.8,-107.6 35.8,-107.6 29.8,-107.6 23.8,-101.6 23.8,-95.6 23.8,-95.6 23.8,-61.2 23.8,-61.2 23.8,-55.2 29.8,-49.2 35.8,-49.2 35.8,-49.2 156.2,-49.2 156.2,-49.2 162.2,-49.2 168.2,-55.2 168.2,-61.2 168.2,-61.2 168.2,-95.6 168.2,-95.6 168.2,-101.6 162.2,-107.6 156.2,-107.6"/>
+<path d="M34.02,-107.60 A10.22,29.20 0 0,0 34.02,-49.20 L157.98,-49.20 A10.22,29.20 0 0,0 157.98,-107.60 A10.22,29.20 0 1,1 157.98,-107.60 Z" fill="none" stroke="#78a8d8"/>
 <text xml:space="preserve" text-anchor="start" x="49.32" y="-89.6" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#78a8d8">═╦╩═╦═══</text>
 <text xml:space="preserve" text-anchor="start" x="64.49" y="-75.2" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00" fill="#78a8d8">Raw Data</text>
 <text xml:space="preserve" text-anchor="start" x="31.8" y="-56" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#78a8d8">Queue with raw data</text>
@@ -73,7 +73,7 @@
 <!-- amazon.sqs.queue2 -->
 <g id="node4" class="node">
 <title>amazon.sqs.queue2</title>
-<path fill="none" stroke="#78a8d8" d="M309.93,-132.8C309.93,-132.8 198.07,-132.8 198.07,-132.8 192.07,-132.8 186.07,-126.8 186.07,-120.8 186.07,-120.8 186.07,-36 186.07,-36 186.07,-30 192.07,-24 198.07,-24 198.07,-24 309.93,-24 309.93,-24 315.93,-24 321.93,-30 321.93,-36 321.93,-36 321.93,-120.8 321.93,-120.8 321.93,-126.8 315.93,-132.8 309.93,-132.8"/>
+<path d="M205.11,-132.80 A19.04,54.40 0 0,0 205.11,-24.00 L302.89,-24.00 A19.04,54.40 0 0,0 302.89,-132.80 A19.04,54.40 0 1,1 302.89,-132.80 Z" fill="none" stroke="#78a8d8"/>
 <text xml:space="preserve" text-anchor="start" x="207.32" y="-114.8" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#78a8d8">═╦╩═╦═══</text>
 <text xml:space="preserve" text-anchor="start" x="206.93" y="-100.4" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00" fill="#78a8d8">Enriched Data</text>
 <text xml:space="preserve" text-anchor="start" x="217.03" y="-81.2" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#78a8d8">Filtered and</text>
