@@ -393,18 +393,13 @@ func legendElementEntries(v *view.View) []LegendEntry {
 
 	present := make(map[legendKey]bool)
 
-	add := func(t model.UnitType, external bool) {
+	add := func(t model.UnitType, unit *model.Unit, external bool) {
 		label, ok := legendEntityLabel(t)
 		if !ok {
 			return
 		}
 
-		colour := levelBorderColour(LevelForType(t))
-		if external {
-			colour = levelExternalColour(LevelForType(t))
-		}
-
-		present[legendKey{label: label, colour: colour}] = true
+		present[legendKey{label: label, colour: legendRowColour(t, unit, external)}] = true
 	}
 
 	for _, entry := range v.Units {
@@ -412,13 +407,13 @@ func legendElementEntries(v *view.View) []LegendEntry {
 			continue
 		}
 
-		add(entry.Unit.Type, entry.IsExternal)
+		add(entry.Unit.Type, entry.Unit, entry.IsExternal)
 	}
 
 	// The boundary cluster of a C2/C3 view is styled as its unit — without
 	// this the diagram's largest coloured frame goes unexplained.
 	if v.ExpandedUnitModel != nil {
-		add(v.ExpandedUnitModel.Type, false)
+		add(v.ExpandedUnitModel.Type, v.ExpandedUnitModel, false)
 	}
 
 	keys := slices.Collect(maps.Keys(present))
@@ -498,6 +493,23 @@ func legendEntityLabel(t model.UnitType) (string, bool) {
 	default:
 		return "", false
 	}
+}
+
+// legendRowColour returns the colour a unit's legend row is shown in: the
+// level border colour, the level's external grey for external entries, or —
+// for grouping boxes — the content-derived border colour GetBoxStyleByContents
+// gives the box (a box with external subunits renders grey regardless of its
+// own level).
+func legendRowColour(t model.UnitType, unit *model.Unit, external bool) string {
+	if IsBoxType(t) && HasExternalSubunits(unit) {
+		return model.PersonExternalBorder
+	}
+
+	if external {
+		return levelExternalColour(LevelForType(t))
+	}
+
+	return levelBorderColour(LevelForType(t))
 }
 
 // levelBorderColour returns the border colour the renderer uses for internal

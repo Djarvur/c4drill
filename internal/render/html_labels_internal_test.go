@@ -91,9 +91,10 @@ func TestHTMLQueueLabel(t *testing.T) {
 		t.Error("Queue label should NOT contain rowspan (single-column layout)")
 	}
 
-	// Queue-specific: should contain ASCII art graphic as first row
-	if !strings.Contains(result, "═╦╩═╦═══") {
-		t.Error("Queue label should contain ASCII art graphic")
+	// The pipe shape (pipe.go) carries the queue identity — no text-bar
+	// graphic inside the label (double graphics).
+	if strings.Contains(result, "═╦╩═╦═══") {
+		t.Error("Queue label should NOT contain ASCII art graphic")
 	}
 
 	// Verify name, technology, description are present
@@ -107,11 +108,6 @@ func TestHTMLQueueLabel(t *testing.T) {
 
 	if !strings.Contains(result, "Test description") {
 		t.Error("Queue label should contain description")
-	}
-
-	// Graphic row should contain ASCII art
-	if !strings.Contains(result, "═╦╩═╦═══") {
-		t.Error("Queue label should contain ASCII graphic")
 	}
 }
 

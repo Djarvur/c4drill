@@ -68,10 +68,9 @@
 <!-- queue -->
 <g id="node4" class="node">
 <title>queue</title>
-<path d="M202.42,-381.80 A10.22,29.20 0 0,0 202.42,-323.40 L311.58,-323.40 A10.22,29.20 0 0,0 311.58,-381.80 A10.22,29.20 0 1,1 311.58,-381.80 Z" fill="none" stroke="#073b6f"/>
-<text xml:space="preserve" text-anchor="start" x="210.32" y="-363.8" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#073b6f">═╦╩═╦═══</text>
-<text xml:space="preserve" text-anchor="start" x="214.21" y="-349.4" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00" fill="#073b6f">Event Queue</text>
-<text xml:space="preserve" text-anchor="start" x="221.6" y="-332.6" font-family="Helvetica,sans-Serif" font-style="italic" font-size="14.00" fill="#073b6f">[RabbitMQ]</text>
+<path d="M199.48,-373.40 A7.28,20.80 0 0,0 199.48,-331.80 L314.52,-331.80 A7.28,20.80 0 0,0 314.52,-373.40 A7.28,20.80 0 1,1 314.52,-373.40 Z" fill="none" stroke="#073b6f"/>
+<text xml:space="preserve" text-anchor="start" x="214.21" y="-357.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00" fill="#073b6f">Event Queue</text>
+<text xml:space="preserve" text-anchor="start" x="221.6" y="-341" font-family="Helvetica,sans-Serif" font-style="italic" font-size="14.00" fill="#073b6f">[RabbitMQ]</text>
 </g>
 <!-- app.publisher -->
 <g id="node7" class="node">
@@ -83,8 +82,8 @@
 <!-- queue&#45;&gt;app.publisher -->
 <g id="edge4" class="edge">
 <title>queue&#45;&gt;app.publisher</title>
-<path fill="none" stroke="#3c7fc0" stroke-width="2" d="M260.59,-310.35C264.17,-269.21 269.52,-207.75 272.25,-176.31"/>
-<polygon fill="#3c7fc0" stroke="#3c7fc0" stroke-width="2" points="257.11,-309.91 259.73,-320.17 264.09,-310.51 257.11,-309.91"/>
+<path fill="none" stroke="#3c7fc0" stroke-width="2" d="M259.88,-318.49C263.43,-277.75 269.33,-209.85 272.25,-176.27"/>
+<polygon fill="#3c7fc0" stroke="#3c7fc0" stroke-width="2" points="256.4,-318.14 259.02,-328.41 263.37,-318.75 256.4,-318.14"/>
 <text xml:space="preserve" text-anchor="start" x="271.2" y="-249.6" font-family="Helvetica,sans-Serif" font-style="italic" font-size="10.00" fill="#3c7fc0">[AMQP]</text>
 <text xml:space="preserve" text-anchor="start" x="267.02" y="-235.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#3c7fc0">Publishes</text>
 </g>
@@ -127,7 +126,7 @@
 <text xml:space="preserve" text-anchor="start" x="350.99" y="-396.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">person</text>
 <text xml:space="preserve" text-anchor="start" x="350.99" y="-380.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">system</text>
 <text xml:space="preserve" text-anchor="start" x="350.99" y="-364.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">system queue</text>
-<text xml:space="preserve" text-anchor="start" x="350.99" y="-348.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">box</text>
+<text xml:space="preserve" text-anchor="start" x="350.99" y="-348.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#8a8a8a">box</text>
 <text xml:space="preserve" text-anchor="start" x="350.99" y="-332.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#3c7fc0">container</text>
 <text xml:space="preserve" text-anchor="start" x="350.99" y="-316.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#8a8a8a">external system</text>
 <text xml:space="preserve" text-anchor="start" x="350.99" y="-300.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#2e7d32">read</text>

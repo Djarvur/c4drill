@@ -144,16 +144,15 @@ func buildDbHTMLLabel(label *graph.Label) string {
 }
 
 // buildQueueHTMLLabel generates an HTML table label for Queue-type nodes.
-// Format: ASCII graphic / name (bold) / [technology] italic / description
-// 4-row table with ASCII art graphic as first row.
+// Format: name (bold) / [technology] italic / description. No icon row — the
+// queue identity is carried by the pipe shape drawn around the node
+// (internal/render/pipe.go); a text-bar graphic inside a pipe would be
+// double graphics.
 func buildQueueHTMLLabel(label *graph.Label) string {
 	if label == nil {
 		return ""
 	}
 
-	// The ASCII graphic row doesn't wrap but counts for proportion; the name,
-	// technology and description all wrap, so their total length drives the
-	// width via labelMaxCharsForText.
 	textLen := utf8.RuneCountInString(label.Name) +
 		utf8.RuneCountInString(label.Technology) +
 		utf8.RuneCountInString(label.Description)
@@ -162,9 +161,6 @@ func buildQueueHTMLLabel(label *graph.Label) string {
 
 	var sb strings.Builder
 	writeLabelTableStart(&sb)
-	sb.WriteString(`<tr align="center"><td valign="middle">`)
-	sb.WriteString("═╦╩═╦═══")
-	sb.WriteString(`</td></tr>`)
 	writeNameRow(&sb, label.Name, maxChars)
 	writeTechnologyRow(&sb, label.Technology, maxChars)
 	writeDescriptionRow(&sb, label.Description, maxChars)
