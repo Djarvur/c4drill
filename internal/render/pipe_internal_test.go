@@ -87,8 +87,6 @@ type pipePoint struct {
 // pipeSegmentRe splits a machine-generated pipe d string into its command
 // segments. The emitter only produces absolute M/L/A/Z commands with numeric
 // data between them, so scanning for the command letters is a faithful parse.
-//
-//nolint:gochecknoglobals // immutable regex; package-level avoids realloc per test (pipeAttrs precedent)
 var pipeSegmentRe = regexp.MustCompile(`[MLAZ][^MLAZ]*`)
 
 // arcRecord captures one arc command: the point the pen was at when the arc
@@ -151,14 +149,29 @@ func pipeArcs(t *testing.T, d string) []arcRecord {
 	return arcs
 }
 
-// pipeSubpaths splits a pipe d string into its trimmed subpath segments.
+// pipeSubpaths splits a pipe d string into its trimmed subpath strings. The
+// emitter only produces absolute commands, so every M command starts a new
+// subpath; segments concatenated back to back reproduce the original d.
 func pipeSubpaths(d string) []string {
-	segs := pipeSegmentRe.FindAllString(d, -1)
-	for i, seg := range segs {
-		segs[i] = strings.TrimSpace(seg)
+	var (
+		subpaths []string
+		current  strings.Builder
+	)
+
+	for _, seg := range pipeSegmentRe.FindAllString(d, -1) {
+		if seg[0] == 'M' && current.Len() > 0 {
+			subpaths = append(subpaths, strings.TrimSpace(current.String()))
+			current.Reset()
+		}
+
+		current.WriteString(seg)
 	}
 
-	return segs
+	if current.Len() > 0 {
+		subpaths = append(subpaths, strings.TrimSpace(current.String()))
+	}
+
+	return subpaths
 }
 
 // TestPipePathFromPoints verifies the bbox-to-path geometry: the pipe is
