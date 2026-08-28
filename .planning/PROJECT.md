@@ -70,31 +70,34 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - ✓ LABEL-02 (word-boundary-only breaking): `wrapText` over-budget branch emits the whole word unsplit on its own line; `splitLongWord` deleted (0 references); no character-level fallback anywhere (D-05).
 - ✓ COMPAT-01 (no regression): unit labels byte-identical absent over-budget words; all canonicalDOT goldens (COMPAT-02, REF-05, DI-1) pass unchanged; `go test ./...` green (12/12 packages).
 
-## Current Milestone: v1.12 C4D DSL Alternative — COMPLETE (2026-08-17)
+## Current Milestone: v1.13 Edge Semantics and Legend
 
-**Goal:** Deliver the C4D format — a `.c4d` brace-block D2-inspired DSL with full TOML feature parity — parseable directly to `*parser.Model` and renderable through the unchanged pipeline, with bidirectional canonical-equivalent converters (`convert to-toml`/`to-c4d`), a gofmt-style comment-preserving formatter (`fmt`) for both formats, nested use and recursive template-instantiating-template expansion, plus full README/skill/example documentation.
+**Goal:** Make edge/colour semantics trustworthy and expressive — fix silently-dropped custom unit colours, make the global edge style apply to every generated diagram, give edge direction/ranking a single clear knob (`rank = "reverse"`), introduce edge kinds (`read`/`write`/`read-write`) with kind-derived colours that survive collapse aggregation, and add a default-on upper-right legend showing the colour semantics plus author-defined lines.
 
-**Status:** Complete (2026-08-17) — Phase 35 delivered all 9 plans (25 tasks) plus 3 verification-gap fixes at close; re-verified 24/24 truths, UAT 12/12, security 30/30 threats closed (ASVS 1); `go test ./...` 16/16 green.
+**Target features:**
 
-**Target features (delivered):**
-
-- **C4D DSL** — D2-inspired brace-block authoring (`a: system "Name" { ... }`) with full TOML parity: pigeon PEG grammar, typed comment/position-aware AST, `c4d.Parse` → `*parser.Model`, DSL-native error positions, reserved-word errors with Levenshtein suggestions.
-- **Composition in both formats** — `template name(params)`, `use` in all three positions, `include` with `once`, list forms, `${param}` tokens, `[[unit.X.use]]` TOML sugar, recursive template-body expansion (cycle detection + depth cap; v1.10 nesting deferral lifted).
-- **Converters** — `convert to-toml`/`to-c4d` with validate-first emission, `--follow-includes` whole-graph migration preserving relative directory structure, canonical-equivalent round-trips enforced by a 29-fixture parity corpus + re-parse write gate.
-- **Formatter** — `fmt` for both formats: comment-preserving, author key-order kept, `--check` CI gate, semantic safety gate (re-parse + model equality before any write).
-- **Docs** — README C4D Format section + CLI reference, 12 render-parity-enforced example twins (~50% line reduction), dual-format skill with all plugin copies synced.
+- **Unit colour fix** — `Unit.Color`/`Style`/`Border` (parsed since v1.0) are dead at render; units must actually render with author-specified styling (nodes and clusters), falling back to the type palette when unset.
+- **Global edge style everywhere** — `properties.edges` must be respected by ALL diagram generations (C1, C2, C3, expanded); C2/C3 currently read only the drilled-into unit's own `edges` field and silently ignore the global setting.
+- **Convenient rank reversal** — a single `rank = "reverse"` link option replaces today's unclear `"<-"` + `arrow = "reverse"` dance; `rank = "forward"` (default) and `"equal"` (existing constraint=false) complete the set.
+- **Edge kinds** — `kind = "read" | "write" | "read-write"` on links with kind-derived colours (read=green, write=red, read-write=a blend), overridable by explicit `color`.
+- **Collapsed-edge kind semantics** — when edges collapse to a visible ancestor, colour derives from the constituent kinds; line style follows precedence (any solid → solid, else any dashed → dashed, else dotted); explicit custom colours suppress kind colouring (default edge colour).
+- **Legend** — global setting (default enabled) rendering a legend in the upper-right of every diagram: default colour explanations + author-defined custom lines.
 
 **Key context:**
-- Gap-fix closure at verification: converter representability gate + write gate (c59b762), width/height parity (f553a9c), `-o` structure preservation (0a17d64) — all independently re-verified.
-- Known deferred: WR-03 duplicate `properties {}` last-win, WR-04 skill type-inference table drift, WR-05 quoted-label whitespace trim (non-blocking warnings, see 35-VERIFICATION.md).
+- Root cause confirmed by codebase scan: `buildNode`/`buildCluster` style exclusively via `GetStyleForType` palettes; `Unit.Color/Style/Border` and `Properties.Color/Style/Border` have zero render-side reads. Fix point: `internal/graph/builder.go` + `internal/graph/shapes.go`, emission via `internal/render/converter.go` (`applyNodeStyle`/`applyClusterStyle`).
+- `rank = "forward"/"reverse"` already parse and round-trip but are consumed nowhere — only `rank = "equal"` → `constraint=false` works.
+- `properties.edges` reaches C1/expanded via `view.View.Edges`; C2 (`scope.go:377`) / C3 (`scope.go:470`) copy only `unit.Edges` — no global fallback. `"square"` is documented but unimplemented in `configureGraphSettings` (spline/straight/ortho only).
+- `model.Link` gains `Kind`; touches the 4 view copiers, validator mirror, C4D grammar (`OptionKey` rule + regen), `applyEdgeOption`, emitters (TOML + C4D), `canonsrc`.
+- Legend: `graph.Graph.Legend` placeholder struct exists; render via the top graph-label HTML table (right-aligned legend column) — GraphViz has no cluster positioning.
+- Release tag for this milestone: **v1.18.0** (product tags v1.13.0–v1.17.0 already exist; GSD milestone numbering is internal).
 
-## Current State (2026-08-17)
+## Current State (2026-08-28)
 
-**Shipped:** v1.12 C4D DSL Alternative — 1 phase (35), 9 plans, 25 tasks. Requirements D-01..D-35 satisfied. Verification: 24/24 truths (3 gap fixes at close). UAT: 12/12. Security: 30/30 threats closed (ASVS 1). Full suite 16/16 green.
+**Shipped:** v1.12 C4D DSL Alternative — 1 phase (35), 9 plans, 25 tasks. Requirements D-01..D-35 satisfied. Verification: 24/24 truths (3 gap fixes at close). UAT: 12/12. Security: 30/30 threats closed (ASVS 1). Full suite 16/16 green. Product releases since: v1.15.0 (box type inference), v1.16.0 (v1.12 DSL), v1.17.0 (deps).
 
 ## Next Milestone Goals
 
-*Not yet defined — run `/gsd:new-milestone` to gather requirements. Candidate scope from the deferred-items backlog:*
+*Current: v1.13 Edge Semantics and Legend (this milestone — see Current Milestone above). Candidate backlog for later:*
 - Template multi-output / `for_each` fan-out (Future, REQUIREMENTS.md)
 - Compact-link shorthand variants beyond baseline (Future, REQUIREMENTS.md)
 - C4D polish warnings: WR-03 duplicate `properties {}` last-win, WR-04 skill type-inference table drift, WR-05 quoted-label whitespace trim
@@ -285,4 +288,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-10 — v1.11 milestone archived; ready for next milestone*
+*Last updated: 2026-08-28 — milestone v1.13 Edge Semantics and Legend started*
