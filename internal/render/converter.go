@@ -76,6 +76,33 @@ func buildStyleString(style *styleInfo) []string {
 	return styles
 }
 
+// contentCluster wraps all diagram content in the invisible root cluster the
+// legend floats outside of. Graphs without content skip the wrapper — a
+// legend-only diagram needs nothing to separate from.
+func contentCluster(cg *cgraph.Graph, g *graph.Graph) (*cgraph.Graph, error) {
+	if len(g.Nodes) == 0 && len(g.Clusters) == 0 {
+		return cg, nil
+	}
+
+	wrapper, err := cg.CreateSubGraphByName(contentClusterName)
+	if err != nil {
+		return nil, fmt.Errorf("create content cluster: %w", err)
+	}
+
+	if err := wrapper.SafeSet("style", "invis", ""); err != nil {
+		return nil, fmt.Errorf("hide content cluster: %w", err)
+	}
+
+	// Clusters inherit the root graph's label (nav + title) and would render
+	// it a second time above the cluster; an explicit empty label stops the
+	// inheritance.
+	if err := wrapper.SafeSet("label", "", ""); err != nil {
+		return nil, fmt.Errorf("clear content cluster label: %w", err)
+	}
+
+	return wrapper, nil
+}
+
 // buildCgraph converts a graph.Graph to a cgraph.Graph for rendering.
 func buildCgraph(
 	gv *graphviz.Graphviz,
@@ -94,14 +121,25 @@ func buildCgraph(
 	// Build node lookup map
 	nodeMap := make(map[string]*cgraph.Node)
 
+	// All diagram content goes inside an invisible root cluster; the legend
+	// node stays outside it. Dot packs cluster-external nodes beside the
+	// cluster's bounding box, never inside it, so the legend is geometrically
+	// separated from the content and can never be mistaken for a diagram
+	// element (user-reported tangle). No content → no wrapper, a legend-only
+	// graph needs nothing to separate from.
+	content, err := contentCluster(cg, g)
+	if err != nil {
+		return nil, err
+	}
+
 	// Create top-level nodes (not in clusters)
-	if err := createTopLevelNodes(cg, g.Nodes, nodeMap); err != nil {
+	if err := createTopLevelNodes(content, g.Nodes, nodeMap); err != nil {
 		return nil, err
 	}
 
 	// Create clusters with their nodes
 	for _, cluster := range g.Clusters {
-		if err := createCluster(cg, cluster, nodeMap); err != nil {
+		if err := createCluster(content, cluster, nodeMap); err != nil {
 			return nil, fmt.Errorf("create cluster %s: %w", cluster.ID, err)
 		}
 	}
@@ -122,10 +160,10 @@ func buildCgraph(
 }
 
 // createLegendNode emits the legend as an isolated floating node rather than
-// rows in the graph label. With no edges it forms its own connected
-// component, which dot packs to the right of the main component on the top
-// rank — the upper-right corner (LEG-01) — without pushing the nav/title
-// label or the diagram content around. shape=plaintext keeps the node
+// rows in the graph label. All content lives inside the invisible content
+// cluster, so dot packs the legend beside the cluster's bounding box — the
+// upper-right of the diagram (LEG-01) — never inside the content, and
+// without pushing the nav/title label around. shape=plaintext keeps the node
 // borderless so only the legend table itself is drawn.
 func createLegendNode(cg *cgraph.Graph, legend *graph.Legend) error {
 	cn, err := cg.CreateNodeByName(legendNodeName)

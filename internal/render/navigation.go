@@ -113,6 +113,10 @@ func plainNavTD(content string) string {
 // The double-underscore prefix cannot collide with unit paths in practice.
 const legendNodeName = "__c4drill_legend"
 
+// contentClusterName is the invisible root cluster that wraps all diagram
+// content so the legend node stays geometrically outside it (LEG-01).
+const contentClusterName = "cluster___content"
+
 // BuildLegendLabel renders the legend as a framed, titled single-column HTML
 // table. Every data row IS the sample: the entry text is set in the colour it
 // documents (an element colour or a link-kind colour), so no swatch cell or

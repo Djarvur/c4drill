@@ -647,7 +647,13 @@ func TestCompat01_ValidTomlAllCollapsed(t *testing.T) {
 	assert.Contains(t, dot, "user\t[", "user node present in C1")
 	assert.Contains(t, dot, "app\t[", "app node present in C1")
 	assert.Contains(t, dot, "Application 🔍", "app has subunits and no expansion hint -> collapsed with 🔍 in C1")
-	assert.NotContains(t, dot, "subgraph cluster_", "no clusters when everything is collapsed (COMPAT-01)")
+	// The invisible cluster___content wrapper is layout-only (legend
+	// separation, LEG-01) and draws nothing; any other cluster in a fully
+	// collapsed view would be a unit rendered as a group box — a COMPAT-01
+	// regression.
+	assert.Equal(t, 1, strings.Count(dot, "subgraph cluster_"),
+		"only the invisible content cluster may exist when everything is collapsed (COMPAT-01)")
+	assert.Contains(t, dot, "subgraph cluster___content", "content wrapper present")
 	assert.NotContains(t, dot, "app.api", "subunits must not appear in C1 when collapsed")
 }
 
