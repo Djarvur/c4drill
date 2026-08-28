@@ -1,6 +1,7 @@
 package render_test
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
@@ -563,17 +564,24 @@ func TestRankReverseEmission(t *testing.T) {
 	})
 
 	t.Run("rank=reverse equals the linkFrom + arrow=reverse idiom (canonical)", func(t *testing.T) {
-		reverseRank := canonical.Canonical(t, renderGraph(&graph.Edge{
+		stripKey := func(c string) string {
+			// The edge key is internal bookkeeping: rank=reverse keeps the
+			// logical name (a_to_b) while the idiom's name follows its swapped
+			// endpoints (b_to_a). Layout-irrelevant — normalize it away.
+			return regexp.MustCompile(`key=[^\x00]+\x00`).ReplaceAllString(c, "")
+		}
+
+		reverseRank := stripKey(canonical.Canonical(t, renderGraph(&graph.Edge{
 			Source:      "a",
 			Target:      "b",
 			RankReverse: true,
-		}))
+		})))
 
-		idiom := canonical.Canonical(t, renderGraph(&graph.Edge{
+		idiom := stripKey(canonical.Canonical(t, renderGraph(&graph.Edge{
 			Source:    "b",
 			Target:    "a",
 			ArrowHead: graph.ArrowReverse,
-		}))
+		})))
 
 		assert.Equal(t, idiom, reverseRank,
 			"rank=reverse must produce the same canonical DOT as the <- + arrow=reverse idiom")

@@ -447,7 +447,16 @@ func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge)
 		edgeName += "_" + sanitizeForName(edge.Label.Description)
 	}
 
-	e, err := cg.CreateEdgeByName(edgeName, source, target)
+	// rank="reverse" (RANK-01): flip layout ranking by swapping the endpoints
+	// at emission while keeping the visual arrow pointed at the logical target.
+	// The edge name stays logical (names are layout-irrelevant and this keeps
+	// tests readable).
+	tail, head := source, target
+	if edge.RankReverse {
+		tail, head = target, source
+	}
+
+	e, err := cg.CreateEdgeByName(edgeName, tail, head)
 	if err != nil {
 		return fmt.Errorf("create edge by name: %w", err)
 	}
@@ -480,16 +489,33 @@ func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge)
 		e.SetStyle(cgraph.SolidEdgeStyle)
 	}
 
-	// Arrow direction
-	switch edge.ArrowHead {
-	case graph.ArrowForward:
-		e.SetDir(cgraph.ForwardDir)
-	case graph.ArrowReverse:
-		e.SetDir(cgraph.BackDir)
-	case graph.ArrowBoth:
-		e.SetDir(cgraph.BothDir)
-	case graph.ArrowNone:
-		e.SetDir(cgraph.NoneDir)
+	// Arrow direction. Under rank="reverse" the endpoints are swapped (above),
+	// so the dir attribute inverts to keep the arrowhead pointing at the
+	// logical target. SetDir(ForwardDir) emits nothing (value equals the
+	// declared default) — do not introduce a per-edge dir=forward emission.
+	if edge.RankReverse {
+		switch edge.ArrowHead {
+		case graph.ArrowReverse:
+			// arrowhead at the head end — which after the swap is the original
+			// source; the default (no dir attr) already draws it there.
+		case graph.ArrowBoth:
+			e.SetDir(cgraph.BothDir)
+		case graph.ArrowNone:
+			e.SetDir(cgraph.NoneDir)
+		default:
+			e.SetDir(cgraph.BackDir)
+		}
+	} else {
+		switch edge.ArrowHead {
+		case graph.ArrowForward:
+			e.SetDir(cgraph.ForwardDir)
+		case graph.ArrowReverse:
+			e.SetDir(cgraph.BackDir)
+		case graph.ArrowBoth:
+			e.SetDir(cgraph.BothDir)
+		case graph.ArrowNone:
+			e.SetDir(cgraph.NoneDir)
+		}
 	}
 
 	applyEdgeAttributes(e, edge)
