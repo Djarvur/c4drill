@@ -2402,3 +2402,72 @@ func TestReference_BackwardCompat(t *testing.T) {
 	require.Equal(t, canonical.Canonical(t, string(expected)), canonical.Canonical(t, string(dotData)),
 		"REF-05: a no-reference model must render identical to the v1.9 golden baseline")
 }
+
+func TestBuildGraphEdgeKindColour(t *testing.T) {
+	t.Parallel()
+
+	// KIND-01/KIND-02 precedence: explicit link.Color > kind colour > source border (D-01).
+	tests := []struct {
+		name string
+		link model.Link
+		want string
+	}{
+		{
+			name: "kind read colours the edge green",
+			link: model.Link{Peer: "db", Kind: model.KindRead},
+			want: model.LinkReadColour,
+		},
+		{
+			name: "kind write colours the edge red",
+			link: model.Link{Peer: "db", Kind: model.KindWrite},
+			want: model.LinkWriteColour,
+		},
+		{
+			name: "kind read-write colours the edge purple",
+			link: model.Link{Peer: "db", Kind: model.KindReadWrite},
+			want: model.LinkReadWriteColour,
+		},
+		{
+			name: "explicit color wins over kind",
+			link: model.Link{Peer: "db", Kind: model.KindRead, Color: "#FF0000"},
+			want: "#FF0000",
+		},
+		{
+			name: "unknown kind falls back to source border",
+			link: model.Link{Peer: "db", Kind: model.LinkKind("query")},
+			want: "#073B6F", // PersonBorder for C1 system source
+		},
+		{
+			name: "no kind keeps source border default",
+			link: model.Link{Peer: "db"},
+			want: "#073B6F", // PersonBorder for C1 system source
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			m := &parser.Model{
+				Properties: model.Properties{Name: "Test"},
+				Units: map[string]*model.Unit{
+					"app": {
+						Type:  model.TypeSystem,
+						Name:  "App",
+						Links: []model.Link{tt.link},
+					},
+					"db": {
+						Type: model.TypeDb,
+						Name: "Database",
+					},
+				},
+			}
+
+			v := view.GenerateC1View(m)
+			g := graph.BuildGraph(v)
+
+			require.Len(t, g.Edges, 1)
+			assert.Equal(t, tt.want, g.Edges[0].Color)
+		})
+	}
+}
