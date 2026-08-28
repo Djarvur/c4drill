@@ -435,7 +435,9 @@ func TestQueueNodePlainStyle(t *testing.T) {
 	t.Run("queue node style has no rounded", func(t *testing.T) {
 		block := queueGraph("solid")
 
-		assert.Contains(t, block, "style=", "queue node must carry a style attribute")
+		// With no fill and a solid border the whole style attribute is
+		// omitted (graphviz default style IS plain) — either way "rounded"
+		// must be gone so SVG emits a parseable plain rect polygon.
 		assert.NotContains(t, block, "rounded", "queue style must drop rounded so SVG emits a polygon")
 	})
 
