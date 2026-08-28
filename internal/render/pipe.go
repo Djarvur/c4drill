@@ -14,6 +14,15 @@ import (
 // rounded cap without wasting the node's width budget.
 const pipeEndRatio = 0.35
 
+// pipeMaxCap is the absolute ceiling for the end-cap ellipse's horizontal
+// radius (SVG points). Tall narrow queue nodes would otherwise grow rx with
+// their height until the ellipse cuts through the centred label text
+// (user-reported on a 4-line description). A flat point ceiling — not a
+// fraction of the width — keeps the cap bounded even for content-wider nodes:
+// 2*rx = 32pt fits the side clearance that queue nodes' narrow text column
+// (queueMaxChars) leaves inside the 2.6in minimum width.
+const pipeMaxCap = 16.0
+
 // polygonElement matches a GraphViz-emitted <polygon ...> element. GraphViz
 // attribute values (points, colours) never contain '>', so matching to the
 // first '>' yields the whole element.
@@ -274,16 +283,17 @@ func parsePointsBBox(points string) (bbox, bool) {
 
 // pipePathFromBBox draws the horizontal pipe inscribed in the bbox
 // (x0,y0)-(x1,y1): the mid line cy=(y0+y1)/2 is implicit in the arc endpoints,
-// ry the pipe radius, rx = 0.35*ry the end-cap extent. The left cap bulges to
-// exactly x0 and the right outer arc reaches exactly x1, so the pipe fills the
-// former polygon's footprint and edge anchors (computed on the box bbox) stay
-// valid.
+// ry the pipe radius, rx = 0.35*ry capped at pipeMaxCap points so tall narrow
+// nodes cannot grow the end ellipse into the label text. The left cap bulges
+// to exactly x0 and the right outer arc reaches exactly x1, so the pipe fills
+// the former polygon's footprint and edge anchors (computed on the box bbox)
+// stay valid.
 //
-// Invariant: bodyR-2rx >= x0 holds for queue nodes (min node width 1.8in), so
-// the inner cap-face arc never crosses the left cap.
+// Invariant: bodyR-2rx >= x0 holds for queue nodes (min node width 2.6in and
+// rx <= pipeMaxCap), so the inner cap-face arc never crosses the left cap.
 func pipePathFromBBox(x0, y0, x1, y1 float64) string {
 	ry := (y1 - y0) / 2
-	rx := ry * pipeEndRatio
+	rx := min(ry*pipeEndRatio, pipeMaxCap)
 
 	bodyL := x0 + rx
 	bodyR := x1 - rx

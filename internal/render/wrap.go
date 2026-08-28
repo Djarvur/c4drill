@@ -320,12 +320,18 @@ func labelMaxCharsForCylinder(fixedRows, textLen int) int {
 	return labelMaxCharsForText(fixedRows, textLen, LabelRatio*2.2)
 }
 
-// labelMaxCharsForQueue calculates the maximum characters per line for Queue labels.
-// Queue nodes have an ASCII graphic row that adds height but limited width.
-// Uses a higher effective ratio to fill the wider space.
+// queueMaxChars is the fixed wrap budget for queue labels. Queue pipes carry
+// a wide minimum width (2.6in) whose side clearance must stay clear of the
+// end-cap ellipses, so the text column is deliberately narrow and independent
+// of the aspect-ratio solve.
+const queueMaxChars = 14
+
+// labelMaxCharsForQueue calculates the maximum characters per line for Queue
+// labels. The budget is capped at queueMaxChars so the text column stays
+// narrow and the pipe's end-cap ellipses (pipe.go) never cut into it; short
+// labels keep the aspect-ratio solve so they are not wrapped needlessly.
 func labelMaxCharsForQueue(fixedRows, textLen int) int {
-	// Use higher ratio to compensate for ASCII graphic row overhead
-	return labelMaxCharsForText(fixedRows, textLen, LabelRatio*1.6)
+	return min(labelMaxCharsForText(fixedRows, textLen, LabelRatio*1.2), queueMaxChars)
 }
 
 // personRatioFactor compensates the person label's icon column (36pt of

@@ -451,7 +451,7 @@ func TestQueueNodePlainStyle(t *testing.T) {
 	t.Run("queue node carries wider minimum width", func(t *testing.T) {
 		block := queueGraph("solid")
 
-		assert.Contains(t, block, "width=1.8", "queue nodes need a wider minimum width to read as pipes")
+		assert.Contains(t, block, "width=2.6", "queue nodes need a wider minimum width to read as pipes")
 	})
 
 	t.Run("non-queue nodes still emit rounded", func(t *testing.T) {

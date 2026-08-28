@@ -63,7 +63,7 @@
 </g>
 </g>
 <!-- cloud&#45;&gt;amazon.sqs -->
-<g id="edge2" class="edge">
+<g id="edge3" class="edge">
 <title>cloud&#45;&gt;amazon.sqs</title>
 <path fill="none" stroke="#073b6f" d="M275.93,-286.93C297.44,-276.4 320.71,-260.64 333,-238.4 359.83,-189.85 357.35,-163.44 333,-113.6 324.79,-96.79 310.17,-82.93 295.23,-72.22"/>
 <polygon fill="#073b6f" stroke="#073b6f" points="297.45,-69.5 287.2,-66.81 293.53,-75.3 297.45,-69.5"/>
@@ -80,7 +80,7 @@
 </g>
 </g>
 <!-- amazon.lambdas&#45;&gt;amazon.sqs -->
-<g id="edge3" class="edge">
+<g id="edge2" class="edge">
 <title>amazon.lambdas&#45;&gt;amazon.sqs</title>
 <path fill="none" stroke="#3c7fc0" stroke-width="2" d="M213.89,-121.62C204.32,-114.75 195.33,-106.1 189.96,-95.6 186.02,-87.89 187.91,-80.83 192.86,-74.59"/>
 <polygon fill="#3c7fc0" stroke="#3c7fc0" stroke-width="2" points="194.86,-77.52 199.79,-68.14 190.08,-72.4 194.86,-77.52"/>

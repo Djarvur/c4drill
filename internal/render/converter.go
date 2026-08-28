@@ -348,9 +348,12 @@ func createNode(
 
 	// Queue nodes read as pipes only when wider than the default minimum
 	// (graphviz width = minimum width in inches; it may still grow the node
-	// for long labels).
+	// for long labels). The generous width budget keeps the pipe's end-cap
+	// ellipses clear of the centred label text: buildQueueHTMLLabel wraps
+	// text into a narrow column (queueMaxChars) and pipe.go caps the cap
+	// radius at pipeMaxCap.
 	if graph.IsQueueType(node.Type) {
-		if err := cn.SafeSet("width", "1.8", ""); err != nil {
+		if err := cn.SafeSet("width", "2.6", ""); err != nil {
 			return nil, fmt.Errorf("set queue node width %s: %w", node.ID, err)
 		}
 	}

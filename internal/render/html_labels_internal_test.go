@@ -106,8 +106,10 @@ func TestHTMLQueueLabel(t *testing.T) {
 		t.Error("Queue label should contain technology")
 	}
 
-	if !strings.Contains(result, "Test description") {
-		t.Error("Queue label should contain description")
+	// The queue wrap budget (queueMaxChars=14) splits the 16-char
+	// description across lines — assert the words survive the wrap.
+	if !strings.Contains(result, "Test") || !strings.Contains(result, "description") {
+		t.Error("Queue label should contain the description words")
 	}
 }
 

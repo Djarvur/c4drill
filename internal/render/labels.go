@@ -157,7 +157,10 @@ func buildQueueHTMLLabel(label *graph.Label) string {
 		utf8.RuneCountInString(label.Technology) +
 		utf8.RuneCountInString(label.Description)
 
-	maxChars := max(labelMaxCharsForQueue(1, textLen), minCharsPerLine)
+	// No minCharsPerLine floor here — the queueMaxChars cap must win, the
+	// text column has to stay narrow enough for the pipe's end-cap ellipses.
+	// A 2.6in node keeps short labels from looking sparse anyway.
+	maxChars := labelMaxCharsForQueue(1, textLen)
 
 	var sb strings.Builder
 	writeLabelTableStart(&sb)
