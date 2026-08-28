@@ -39,6 +39,19 @@ const (
 	LabelHead LabelPosition = "head"
 )
 
+// LinkKind classifies a link by data-flow direction so edges can be
+// distinguished by colour without authoring explicit colors.
+type LinkKind string
+
+const (
+	// KindRead marks a link that reads data from its target.
+	KindRead LinkKind = "read"
+	// KindWrite marks a link that writes data to its target.
+	KindWrite LinkKind = "write"
+	// KindReadWrite marks a link that both reads and writes.
+	KindReadWrite LinkKind = "read-write"
+)
+
 // Link represents a relationship between two units.
 type Link struct {
 	// Peer is the name of the linked unit (explicitly set via TOML peer field).
@@ -47,6 +60,9 @@ type Link struct {
 	Arrow ArrowDirection `toml:"arrow"`
 	// Rank indicates the ranking direction for layout.
 	Rank RankDirection `toml:"rank"`
+	// Kind classifies the link's data flow (read, write, read-write) for
+	// kind-derived edge colouring. Explicit Color wins over Kind.
+	Kind LinkKind `toml:"kind"`
 	// Color is the color of the link line.
 	Color string `toml:"color"`
 	// Style is the line style (solid, dashed, dotted).

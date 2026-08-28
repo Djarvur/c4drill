@@ -1,6 +1,7 @@
 package parser_test
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -485,6 +486,7 @@ name = "A"
 peer = "b"
 arrow = "bidirectional"
 rank = "equal"
+kind = "read"
 color = "red"
 style = "dashed"
 technology = "gRPC"
@@ -504,8 +506,76 @@ labelPosition = "head"
 	assert.Equal(t, "b", link.Peer, "link.Peer")
 	assert.Equal(t, model.ArrowBidirectional, link.Arrow, "link.Arrow")
 	assert.Equal(t, model.RankEqual, link.Rank, "link.Rank")
+	assert.Equal(t, model.KindRead, link.Kind, "link.Kind")
 	assert.Equal(t, "red", link.Color, "link.Color")
 	assert.Equal(t, "dashed", link.Style, "link.Style")
+}
+
+func TestParseLinkKind(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		kind string
+		want model.LinkKind
+	}{
+		{"read", "read", model.KindRead},
+		{"write", "write", model.KindWrite},
+		{"read-write", "read-write", model.KindReadWrite},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			data := fmt.Sprintf(`
+[properties]
+name = "Kind Test"
+
+[a]
+type = "system"
+
+[[a.link]]
+peer = "b"
+kind = "%s"
+`, tt.kind)
+
+			got, err := parser.Parse([]byte(data))
+			require.NoError(t, err, "Parse() should not error")
+
+			unitA, ok := got.Units["a"]
+			require.True(t, ok, "missing 'a' unit")
+
+			link, ok := model.FindLinkByPeer(unitA.Links, "b")
+			require.True(t, ok, "missing 'b' link in a")
+			assert.Equal(t, tt.want, link.Kind, "link.Kind")
+		})
+	}
+}
+
+func TestParseLinkKindAbsent(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[properties]
+name = "Kind Absent Test"
+
+[a]
+type = "system"
+
+[[a.link]]
+peer = "b"
+`)
+
+	got, err := parser.Parse(data)
+	require.NoError(t, err, "Parse() should not error")
+
+	unitA, ok := got.Units["a"]
+	require.True(t, ok, "missing 'a' unit")
+
+	link, ok := model.FindLinkByPeer(unitA.Links, "b")
+	require.True(t, ok, "missing 'b' link in a")
+	assert.Equal(t, model.LinkKind(""), link.Kind, "absent kind should be the zero value")
 }
 
 func TestParseLinkAllFieldsMetadata(t *testing.T) {
