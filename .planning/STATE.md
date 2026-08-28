@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-08-28)
 Phase: Milestone v1.13 complete; post-milestone quick tasks done
 Plan: — of — in current phase (nothing planned)
 Status: Ready to plan the next milestone (`/gsd:new-milestone`)
-Last activity: 2026-08-28 — quick task 260828-tgf: pipe end-cap renders a full ellipse (ship v1.20.1)
+Last activity: 2026-08-28 — pipe follow-up polish shipped as v1.20.2 (wider 2.6in blank, rx capped at 16pt, narrow queue text column — end ellipses stay clear of labels)
 
 Progress: [░░░░░░░░░░] 0%
 
