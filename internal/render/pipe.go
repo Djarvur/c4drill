@@ -33,18 +33,32 @@ var svgAttribute = regexp.MustCompile(`([a-zA-Z-]+)="([^"]*)"`)
 //nolint:gochecknoglobals // immutable spec list; package-level avoids realloc per render (wasmMutex precedent)
 var pipeAttrs = []string{"fill", "stroke", "stroke-width", "stroke-dasharray"}
 
-// pipePathFmt is the pipe outline inscribed in a polygon bbox:
-// moveto the body's top-left, half-ellipse arc bulging LEFT (left end),
-// straight bottom edge, half-ellipse arc bulging RIGHT (right silhouette),
-// full-ellipse arc (right cap face, drawn in place), then close along the
-// straight top edge. Large-arc+sweep flags assume the y-down SVG coordinate
-// system GraphViz emits (the translate transform never mirrors).
+// pipePathFmt is the pipe inscribed in a polygon bbox, emitted as TWO
+// subpaths sharing one d attribute (a single <path>, so the paint attributes
+// copied from the replaced polygon apply to both):
+//
+//  1. The closed body outline, clockwise in the y-down SVG coordinate system
+//     GraphViz emits: moveto the body's top-left, straight top edge, right
+//     outer arc (sweep 1, bulging right through (x1,cy)), straight bottom
+//     edge, left cap arc (sweep 1, bulging left through (x0,cy)), close.
+//
+//  2. The right cap face: moveto the body's top-right corner, then a sweep-0
+//     half-ellipse down to (bodyR,y1), bulging left through (bodyR-rx,cy).
+//     Together with the right outer arc it forms the visible full ellipse of
+//     the right end.
+//
+// Every arc has distinct start and end points — the earlier single-subpath
+// form ended with a coincident-endpoint "full ellipse" arc, which SVG
+// renderers omit, so the cap face drew nothing. Sweep flags assume y-down
+// (the translate transform never mirrors).
 const pipePathFmt = "M%.2f,%.2f" +
-	" A%.2f,%.2f 0 0,0 %.2f,%.2f" + // left end: half-ellipse bulging left
-	" L%.2f,%.2f" + // straight bottom edge
-	" A%.2f,%.2f 0 0,0 %.2f,%.2f" + // right silhouette side
-	" A%.2f,%.2f 0 1,1 %.2f,%.2f" + // right end: full ellipse cap
-	" Z"
+	" L%.2f,%.2f" + // straight top edge
+	" A%.2f,%.2f 0 0,1 %.2f,%.2f" + // right outer arc bulging right through (x1, cy)
+	" L%.2f,%.2f" + // straight bottom edge (right → left)
+	" A%.2f,%.2f 0 0,1 %.2f,%.2f" + // left cap arc bulging left through (x0, cy)
+	" Z" +
+	" M%.2f,%.2f" + // cap face subpath starts at the body's top-right corner
+	" A%.2f,%.2f 0 0,0 %.2f,%.2f" // cap face: inner half-ellipse bulging left through (bodyR-rx, cy)
 
 // applyPipeRendering post-processes GraphViz SVG bytes so queue-type nodes
 // render as horizontal pipes: each queue node's plain rect <polygon> is
@@ -261,9 +275,12 @@ func parsePointsBBox(points string) (bbox, bool) {
 // pipePathFromBBox draws the horizontal pipe inscribed in the bbox
 // (x0,y0)-(x1,y1): the mid line cy=(y0+y1)/2 is implicit in the arc endpoints,
 // ry the pipe radius, rx = 0.35*ry the end-cap extent. The left cap bulges to
-// exactly x0 and the right cap face reaches exactly x1, so the pipe fills the
+// exactly x0 and the right outer arc reaches exactly x1, so the pipe fills the
 // former polygon's footprint and edge anchors (computed on the box bbox) stay
 // valid.
+//
+// Invariant: bodyR-2rx >= x0 holds for queue nodes (min node width 1.8in), so
+// the inner cap-face arc never crosses the left cap.
 func pipePathFromBBox(x0, y0, x1, y1 float64) string {
 	ry := (y1 - y0) / 2
 	rx := ry * pipeEndRatio
@@ -273,9 +290,11 @@ func pipePathFromBBox(x0, y0, x1, y1 float64) string {
 
 	return fmt.Sprintf(pipePathFmt,
 		bodyL, y0, // moveto: body top-left
-		rx, ry, bodyL, y1, // left end: bulge left through (x0, cy)
-		bodyR, y1, // straight bottom edge
-		rx, ry, bodyR, y0, // right silhouette side through (x1, cy)
-		rx, ry, bodyR, y0, // right end: full ellipse cap (same start/end point)
+		bodyR, y0, // straight top edge
+		rx, ry, bodyR, y1, // right outer arc through (x1, cy)
+		bodyL, y1, // straight bottom edge
+		rx, ry, bodyL, y0, // left cap arc through (x0, cy)
+		bodyR, y0, // cap face subpath start
+		rx, ry, bodyR, y1, // cap face arc: inner half-ellipse, sweep 0
 	)
 }
