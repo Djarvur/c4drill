@@ -212,9 +212,17 @@ func configureGraphSettings(cg *cgraph.Graph, g *graph.Graph) error {
 	//     for nav, 14 for title) makes both render.
 	navTDs := navigationTDs(g.Navigation)
 	hasTitle := g.Title != ""
+	hasLegend := g.Legend != nil && len(g.Legend.Entries) > 0
 
-	if len(navTDs) == 0 && !hasTitle {
+	// The legend alone justifies a label: nameless C1/expanded views carry no
+	// nav and no title, yet the legend must still render (LEG-01).
+	if len(navTDs) == 0 && !hasTitle && !hasLegend {
 		return nil
+	}
+
+	colspan := len(navTDs)
+	if colspan < 1 {
+		colspan = 1
 	}
 
 	var rows []string
@@ -225,14 +233,16 @@ func configureGraphSettings(cg *cgraph.Graph, g *graph.Graph) error {
 	if hasTitle {
 		// COLSPAN merges the title cell across all nav columns. The title is
 		// wrapped in <FONT POINT-SIZE="14"> so GraphViz renders it (quirk 2).
-		colspan := len(navTDs)
-		if colspan < 1 {
-			colspan = 1
-		}
-
 		titleTD := fmt.Sprintf(`<TD COLSPAN="%d" ALIGN="CENTER"><FONT POINT-SIZE="14">%s</FONT></TD>`,
 			colspan, html.EscapeString(g.Title))
 		rows = append(rows, "<TR>"+titleTD+"</TR>")
+	}
+
+	if hasLegend {
+		// Legend rows hang right-aligned beneath the nav/title block (LEG-01):
+		// the upper-right of the diagram within the constraints of the top
+		// label area (GraphViz cannot absolutely position labels).
+		rows = append(rows, legendTDs(g.Legend, colspan)...)
 	}
 
 	combinedHTML := "<TABLE BORDER=\"0\" CELLBORDER=\"0\" CELLSPACING=\"0\" CELLPADDING=\"0\" ALIGN=\"CENTER\">" +

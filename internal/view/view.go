@@ -51,6 +51,13 @@ type View struct {
 	// (plus the ExpandedUnit itself). Used by the graph builder to render
 	// breadcrumb items with human-readable names instead of raw path segments.
 	AncestorNames map[string]string
+	// ShowLegend reports whether the diagram carries the upper-right legend
+	// (LEG-01): properties.legend absent or true. All four generators set it
+	// from m.Properties so the legend reaches every diagram generation.
+	ShowLegend bool
+	// LegendLines lists the author-defined legend rows (LEG-03) rendered
+	// after the default colour explanations.
+	LegendLines []model.LegendLine
 }
 
 // Entry represents a unit entry within a view.

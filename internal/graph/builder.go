@@ -22,6 +22,7 @@ func BuildGraph(v *view.View) *Graph {
 		Title:     v.Title,
 		Direction: "TB",
 		EdgeStyle: v.Edges,
+		Legend:    buildLegend(v),
 		Nodes:     make([]*Node, 0),
 		Edges:     make([]*Edge, 0),
 		Clusters:  make([]*Cluster, 0),
@@ -166,6 +167,7 @@ func BuildExpandedGraph(v *view.View) *Graph {
 		Title:     v.Title,
 		Direction: "TB",
 		EdgeStyle: v.Edges,
+		Legend:    buildLegend(v),
 		Nodes:     make([]*Node, 0),
 		Edges:     make([]*Edge, 0),
 		Clusters:  make([]*Cluster, 0),
@@ -329,6 +331,37 @@ func applyUnitOverrides(style *NodeStyle, unit *model.Unit) {
 	if unit.Style != "" {
 		style.BorderStyle = unit.Style
 	}
+}
+
+// buildLegend assembles the diagram legend (LEG-01..03) from the view: the
+// fixed default block (kind colours + line styles, LEG-02) first, then the
+// author-defined custom lines. Colors come from the model constants so the
+// legend can never drift from the renderer.
+func buildLegend(v *view.View) *Legend {
+	if v == nil || !v.ShowLegend {
+		return nil
+	}
+
+	legend := &Legend{
+		Entries: []LegendEntry{
+			{Label: "read", Color: model.LinkReadColour},
+			{Label: "write", Color: model.LinkWriteColour},
+			{Label: "read-write", Color: model.LinkReadWriteColour},
+			{Label: "solid", Style: "solid"},
+			{Label: "dashed", Style: "dashed"},
+			{Label: "dotted", Style: "dotted"},
+		},
+	}
+
+	for _, line := range v.LegendLines {
+		legend.Entries = append(legend.Entries, LegendEntry{
+			Label: line.Label,
+			Color: line.Color,
+			Style: line.Style,
+		})
+	}
+
+	return legend
 }
 
 // luminance estimates the relative luminance of a #RRGGBB colour (0 = dark,

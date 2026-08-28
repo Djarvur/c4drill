@@ -1967,3 +1967,83 @@ name = ["not", "a", "string"]
 		require.ErrorAs(t, err, &parseErr, "error should be *ParseError")
 	})
 }
+
+func TestParseLegendProperties(t *testing.T) {
+	t.Parallel()
+
+	t.Run("legend absent defaults to nil (enabled)", func(t *testing.T) {
+		t.Parallel()
+
+		got, err := parser.Parse([]byte("[properties]\nname = \"T\"\n"))
+		require.NoError(t, err)
+		assert.Nil(t, got.Properties.Legend, "absent legend is nil — default-on semantics")
+	})
+
+	t.Run("legend false parses to false", func(t *testing.T) {
+		t.Parallel()
+
+		got, err := parser.Parse([]byte("[properties]\nname = \"T\"\nlegend = false\n"))
+		require.NoError(t, err)
+		require.NotNil(t, got.Properties.Legend)
+		assert.False(t, *got.Properties.Legend)
+	})
+
+	t.Run("legend true parses to true", func(t *testing.T) {
+		t.Parallel()
+
+		got, err := parser.Parse([]byte("[properties]\nname = \"T\"\nlegend = true\n"))
+		require.NoError(t, err)
+		require.NotNil(t, got.Properties.Legend)
+		assert.True(t, *got.Properties.Legend)
+	})
+
+	t.Run("legendLine rows parse all fields", func(t *testing.T) {
+		t.Parallel()
+
+		data := []byte(`
+[properties]
+name = "T"
+
+[[properties.legendLine]]
+label = "Batch import"
+color = "#C0392B"
+style = "dashed"
+
+[[properties.legendLine]]
+label = "Custom flow"
+color = "blue"
+`)
+
+		got, err := parser.Parse(data)
+		require.NoError(t, err)
+		require.Len(t, got.Properties.LegendLines, 2)
+
+		first := got.Properties.LegendLines[0]
+		assert.Equal(t, "Batch import", first.Label)
+		assert.Equal(t, "#C0392B", first.Color)
+		assert.Equal(t, "dashed", first.Style)
+
+		assert.Equal(t, "Custom flow", got.Properties.LegendLines[1].Label)
+	})
+
+	t.Run("legendLine does not register a phantom properties unit", func(t *testing.T) {
+		t.Parallel()
+
+		data := []byte(`
+[properties]
+name = "T"
+
+[[properties.legendLine]]
+label = "X"
+color = "red"
+
+[app]
+type = "system"
+name = "App"
+`)
+
+		got, err := parser.Parse(data)
+		require.NoError(t, err)
+		assert.Len(t, got.Units, 1, "only the app unit exists")
+	})
+}

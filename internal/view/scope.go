@@ -18,6 +18,8 @@ func GenerateExpandedView(m *parser.Model) *View {
 	}
 
 	v := &View{
+		ShowLegend:  m.Properties.Legend == nil || *m.Properties.Legend,
+		LegendLines: m.Properties.LegendLines,
 		Level:       LevelC1,
 		Title:       m.Properties.Name,
 		Edges:       m.Properties.Edges,
@@ -124,6 +126,8 @@ func GenerateC1View(m *parser.Model) *View {
 	}
 
 	v := &View{
+		ShowLegend:   m.Properties.Legend == nil || *m.Properties.Legend,
+		LegendLines:  m.Properties.LegendLines,
 		Level:        LevelC1,
 		Title:        m.Properties.Name,
 		Edges:        m.Properties.Edges,
@@ -373,6 +377,8 @@ func GenerateC2View(m *parser.Model, systemPath string) *View {
 	}
 
 	v := &View{
+		ShowLegend:        m.Properties.Legend == nil || *m.Properties.Legend,
+		LegendLines:       m.Properties.LegendLines,
 		Level:             LevelC2,
 		Title:             systemUnit.Name + " - Containers",
 		RootTitle:         m.Properties.Name,
@@ -466,6 +472,8 @@ func GenerateC3View(m *parser.Model, containerPath string) *View {
 	parentPath, title := c3ViewTitle(m, containerPath, containerUnit)
 
 	v := &View{
+		ShowLegend:        m.Properties.Legend == nil || *m.Properties.Legend,
+		LegendLines:       m.Properties.LegendLines,
 		Level:             LevelC3,
 		Title:             title,
 		RootTitle:         m.Properties.Name,

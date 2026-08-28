@@ -108,3 +108,68 @@ func breadcrumbItemTD(item graph.BreadcrumbItem) string {
 func plainNavTD(content string) string {
 	return "<TD>" + navFontOpen + content + "</FONT></TD>"
 }
+
+// Legend style glyphs. GraphViz HTML labels cannot draw dashed/dotted
+// strokes, so line-style samples are text glyphs in the muted default edge
+// colour; swatch cells carry BGCOLOR instead.
+const (
+	legendSolidGlyph  = "───"
+	legendDashedGlyph = "- - -"
+	legendDottedGlyph = "· · ·"
+)
+
+var legendStyleGlyphs = map[string]string{
+	"solid":  legendSolidGlyph,
+	"dashed": legendDashedGlyph,
+	"dotted": legendDottedGlyph,
+}
+
+// legendTDs renders the legend rows as right-aligned table rows appended
+// under the nav/title rows. Each row is a nested borderless 2-column table
+// (sample cell + label cell) inside a COLSPAN'd right-aligned cell so the
+// block hugs the upper-right of the label area (GraphViz cannot absolutely
+// position labels; labeljust only affects plain labels). Every cell wraps its
+// content in an explicit <FONT POINT-SIZE> — rows mixing font sizes are
+// silently dropped by GraphViz (see configureGraphSettings quirk 2).
+// Label text and colour values are HTML-escaped (threat T-36-04-01).
+func legendTDs(legend *graph.Legend, colspan int) []string {
+	if legend == nil || len(legend.Entries) == 0 {
+		return nil
+	}
+
+	if colspan < 1 {
+		colspan = 1
+	}
+
+	rows := make([]string, 0, len(legend.Entries))
+
+	for _, entry := range legend.Entries {
+		label := html.EscapeString(entry.Label)
+		sample := ""
+
+		if glyph, isStyle := legendStyleGlyphs[entry.Style]; isStyle {
+			// Line-style sample row: glyph in the muted default edge colour.
+			sample = fmt.Sprintf(`<TD><FONT POINT-SIZE="%s" COLOR="%s">%s</FONT></TD>`,
+				navFontPoint, navFontColor, glyph)
+		} else if entry.Color != "" {
+			// Colour swatch row: fixed-size BGCOLOR cell (the reliable
+			// GraphViz swatch mechanism).
+			sample = fmt.Sprintf(`<TD BGCOLOR="%s" WIDTH="12" HEIGHT="8"> </TD>`,
+				html.EscapeString(entry.Color))
+		} else {
+			// Text-only custom line.
+			sample = fmt.Sprintf(`<TD><FONT POINT-SIZE="%s" COLOR="%s">&#9644;</FONT></TD>`,
+				navFontPoint, navFontColor)
+		}
+
+		nested := `<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">` +
+			`<TR>` + sample +
+			fmt.Sprintf(`<TD ALIGN="LEFT"><FONT POINT-SIZE="%s" COLOR="%s">%s</FONT></TD>`,
+				navFontPoint, navFontColor, label) +
+			`</TR></TABLE>`
+
+		rows = append(rows, fmt.Sprintf(`<TR><TD COLSPAN="%d" ALIGN="RIGHT">%s</TD></TR>`, colspan, nested))
+	}
+
+	return rows
+}

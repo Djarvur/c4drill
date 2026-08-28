@@ -152,8 +152,20 @@ type NodeStyle struct {
 	BorderStyle string
 }
 
-// Legend contains legend information for the diagram.
-// The exact content will be defined in Phase 4 (Rendering).
+// Legend contains the entries rendered in the diagram's upper-right legend.
+// Default rows (kind colours + line styles) come first, then author lines.
 type Legend struct {
-	// Placeholder for legend content to be implemented in Phase 4.
+	Entries []LegendEntry
+}
+
+// LegendEntry is one legend row: a colour swatch (Color) and/or a line-style
+// sample (Style) plus its explanation text.
+type LegendEntry struct {
+	// Label explains the row.
+	Label string
+	// Color is the swatch colour (empty for pure line-style rows).
+	Color string
+	// Style is the line-style sample (solid, dashed, dotted); empty for
+	// colour-swatch rows.
+	Style string
 }

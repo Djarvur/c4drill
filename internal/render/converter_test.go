@@ -642,3 +642,76 @@ func TestUnitOverridesEmission(t *testing.T) {
 		}
 	})
 }
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestLegendRendering(t *testing.T) {
+	legend := &graph.Legend{
+		Entries: []graph.LegendEntry{
+			{Label: "read", Color: "#2E7D32"},
+			{Label: "solid", Style: "solid"},
+			{Label: "a<b & \"evil\"", Color: "#C0392B"},
+		},
+	}
+
+	renderWith := func(g *graph.Graph) string {
+		output, err := render.RenderDOT(g)
+		require.NoError(t, err)
+
+		return string(output)
+	}
+
+	baseGraph := func() *graph.Graph {
+		return &graph.Graph{
+			Title:     "T",
+			Direction: "TB",
+			Nodes: []*graph.Node{
+				{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeRecord},
+			},
+		}
+	}
+
+	t.Run("legend rows render right-aligned with swatches", func(t *testing.T) {
+		g := baseGraph()
+		g.Legend = legend
+
+		out := renderWith(g)
+		assert.Contains(t, out, `BGCOLOR="#2E7D32"`, "kind colour swatch")
+		assert.Contains(t, out, "ALIGN=\"RIGHT\"", "legend block hugs the right")
+		assert.Contains(t, out, "solid", "style sample label")
+	})
+
+	t.Run("style rows render glyphs in the muted edge colour", func(t *testing.T) {
+		g := baseGraph()
+		g.Legend = &graph.Legend{Entries: []graph.LegendEntry{{Label: "dashed", Style: "dashed"}}}
+
+		out := renderWith(g)
+		assert.Contains(t, out, "- - -", "dashed glyph")
+		assert.Contains(t, out, "#666666", "muted sample colour")
+	})
+
+	t.Run("custom lines are HTML-escaped", func(t *testing.T) {
+		g := baseGraph()
+		g.Legend = legend
+
+		out := renderWith(g)
+		assert.Contains(t, out, "a&lt;b &amp; &#34;evil&#34;", "label escaped into the label table")
+		assert.NotContains(t, out, `>a<b`, "no raw markup injected")
+	})
+
+	t.Run("nameless graph with legend still emits a label", func(t *testing.T) {
+		g := baseGraph()
+		g.Title = ""
+		g.Legend = legend
+
+		out := renderWith(g)
+		assert.Contains(t, out, "BGCOLOR=", "legend present on nameless view (LEG-01)")
+	})
+
+	t.Run("nameless graph without legend emits no label (shape preserved)", func(t *testing.T) {
+		g := baseGraph()
+		g.Title = ""
+
+		out := renderWith(g)
+		assert.NotContains(t, out, "label=<<TABLE", "no label table without nav/title/legend")
+	})
+}

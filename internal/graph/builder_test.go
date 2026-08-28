@@ -2785,3 +2785,61 @@ func TestPairAggregation(t *testing.T) {
 		assert.Equal(t, "dashed", g.Edges[0].Style)
 	})
 }
+
+func TestBuildLegend(t *testing.T) {
+	t.Parallel()
+
+	t.Run("default-on assembles kind colours + style rows then custom lines", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{
+				Name: "Test",
+				LegendLines: []model.LegendLine{
+					{Label: "Batch", Color: "#C0392B", Style: "dashed"},
+				},
+			},
+			Units: map[string]*model.Unit{
+				"app": {Type: model.TypeSystem, Name: "App"},
+			},
+		}
+
+		g := graph.BuildGraph(view.GenerateC1View(m))
+		require.NotNil(t, g.Legend, "legend default-on")
+
+		require.Len(t, g.Legend.Entries, 7)
+
+		// Default block: kind colours from the shared model constants (cannot
+		// drift from the renderer), then line-style rows.
+		assert.Equal(t, "read", g.Legend.Entries[0].Label)
+		assert.Equal(t, model.LinkReadColour, g.Legend.Entries[0].Color)
+		assert.Equal(t, "write", g.Legend.Entries[1].Label)
+		assert.Equal(t, model.LinkWriteColour, g.Legend.Entries[1].Color)
+		assert.Equal(t, "read-write", g.Legend.Entries[2].Label)
+		assert.Equal(t, model.LinkReadWriteColour, g.Legend.Entries[2].Color)
+		assert.Equal(t, "solid", g.Legend.Entries[3].Style)
+		assert.Equal(t, "dashed", g.Legend.Entries[4].Style)
+		assert.Equal(t, "dotted", g.Legend.Entries[5].Style)
+
+		// Custom line after defaults, verbatim.
+		assert.Equal(t, "Batch", g.Legend.Entries[6].Label)
+		assert.Equal(t, "#C0392B", g.Legend.Entries[6].Color)
+		assert.Equal(t, "dashed", g.Legend.Entries[6].Style)
+	})
+
+	t.Run("legend=false disables", func(t *testing.T) {
+		t.Parallel()
+
+		falsy := false
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test", Legend: &falsy},
+			Units: map[string]*model.Unit{
+				"app": {Type: model.TypeSystem, Name: "App"},
+			},
+		}
+
+		g := graph.BuildGraph(view.GenerateC1View(m))
+		assert.Nil(t, g.Legend, "legend=false yields no legend")
+	})
+}
