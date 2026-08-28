@@ -9,6 +9,7 @@
 - ✅ **v1.10 Model Composition** — Phases 28-33 (shipped 2026-08-08) → [archive](milestones/v1.10-ROADMAP.md)
 - ✅ **v1.11 Label Formatting Fixes** — Phase 34 (shipped 2026-08-10) → [archive](milestones/v1.11-ROADMAP.md)
 - ✅ **v1.12 C4D DSL Alternative** — Phase 35 (shipped 2026-08-17) → [archive](milestones/v1.12-ROADMAP.md)
+- 🚧 **v1.13 Edge Semantics and Legend** — Phase 36 (in progress) — product release tag: v1.18.0
 
 ## Phases
 
@@ -52,19 +53,6 @@ Full details: [milestones/v1.11-ROADMAP.md](milestones/v1.11-ROADMAP.md)
 
 </details>
 
-## Progress
-
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|----------------|--------|-----------|
-| 28. Reference field | v1.10 | 1/1 | Complete | 2026-08-08 |
-| 29. Optional name humanization | v1.10 | 2/2 | Complete | 2026-08-08 |
-| 30. Relative-peer resolution | v1.10 | 2/2 | Complete | 2026-08-08 |
-| 31. Template expansion | v1.10 | 2/2 | Complete | 2026-08-08 |
-| 32. Include directive | v1.10 | 2/2 | Complete | 2026-08-08 |
-| 33. Docs sweep + goldens | v1.10 | 4/4 | Complete | 2026-08-08 |
-| 34. Label formatting fixes | v1.11 | 2/2 | Complete    | 2026-08-10 |
-| 35. C4D DSL alternative | v1.12 | 9/9 | Complete | 2026-08-14 |
-
 <details>
 <summary>✅ v1.12 C4D DSL Alternative (Phase 35) — SHIPPED 2026-08-17</summary>
 
@@ -78,3 +66,53 @@ Full details: [milestones/v1.12-ROADMAP.md](milestones/v1.12-ROADMAP.md)
 
 </details>
 
+### 🚧 v1.13 Edge Semantics and Legend (In Progress)
+
+**Milestone Goal:** Make edge/colour semantics trustworthy and expressive — fix silently-dropped custom unit colours, make the global edge style apply to every generated diagram, give edge direction/ranking a single clear knob (`rank = "reverse"`), introduce edge kinds (`read`/`write`/`read-write`) with kind-derived colours that survive collapse aggregation, and add a default-on upper-right legend showing the colour semantics plus author-defined lines. Ships as product release **v1.18.0**.
+
+- [ ] **Phase 36: Edge Semantics and Legend** - Unit styling renders, global edge style everywhere, `rank = "reverse"`, edge kinds with collapse aggregation, default-on legend, docs + release v1.18.0
+
+## Phase Details
+
+### Phase 36: Edge Semantics and Legend
+
+**Goal**: Edge/colour semantics are trustworthy and expressive: author-specified unit styling actually renders (nodes and clusters), the global edge style reaches every generated diagram, edge direction gets one clear knob (`rank = "reverse"`), edges can be coloured by data-flow kind (`read`/`write`/`read-write`) with kind identity surviving collapse aggregation, and every diagram carries a default-on upper-right legend explaining the colour conventions plus author-defined lines.
+
+**Depends on**: Phase 35 (v1.12 — C4D DSL; `kind` must be added to both formats' grammar/emitters)
+
+**Requirements**: COLOR-01, COLOR-02, GEDGE-01, GEDGE-02, RANK-01, RANK-02, KIND-01, KIND-02, KIND-03, AGG-01, AGG-02, AGG-03, LEG-01, LEG-02, LEG-03, BC-01, DOC-01, DOC-02, DOC-03, REL-01
+
+**Success Criteria** (what must be TRUE):
+  1. Custom unit styling renders: a unit with explicit `color`/`style`/`border` shows those overrides in the rendered diagram — as a plain node AND as an expanded-unit cluster — while units without them keep the type-palette defaults. *(COLOR-01, COLOR-02)*
+  2. The global edge style applies to every diagram: setting `properties.edges` (e.g. disabling splines) visibly changes edge routing in C1, C2, C3, and expanded views alike; per-unit `edges` still wins where set; every documented value maps to real behavior (no silent no-op). *(GEDGE-01, GEDGE-02)*
+  3. Edge direction and colour have single clear knobs: `rank = "reverse"` alone flips vertical ordering while keeping the arrow direction (works in collapsed and expanded views); `kind = "read" | "write" | "read-write"` colours edges (green / red / distinct blend), an explicit `color` overrides the kind colour, and `kind` works and round-trips canonically in both TOML and C4D (convert/fmt/templates, `${param}` substitution). *(RANK-01, RANK-02, KIND-01, KIND-02, KIND-03)*
+  4. Collapsed edges keep kind identity: a collapsed edge's colour derives from constituent kinds (all read → read, all write → write, mixed → read-write), line style follows precedence (any solid → solid, else any dashed → dashed, else dotted), and explicit custom colours suppress kind colouring to the default edge colour. *(AGG-01, AGG-02, AGG-03)*
+  5. Diagrams explain themselves, and nothing else changed: every diagram renders a legend in the upper-right (default kind colours + default line styles, then custom author lines), on by default and disable-able via one properties-level setting; models using none of the new features render identically except for the legend block (canonicalDOT goldens re-baselined for the legend only, full suite green); README/skill/example fixtures document the whole surface in both formats; the milestone tags product release **v1.18.0**. *(LEG-01, LEG-02, LEG-03, BC-01, DOC-01, DOC-02, DOC-03, REL-01)*
+
+**Plans**: TBD (plan-phase determines; precedent: v1.11 = 4 plans, v1.12 = 9 plans — expect mid single digits)
+
+**Notes** (from pre-confirmed codebase scan):
+- **COLOR fix point:** `buildNode`/`buildCluster` (internal/graph/builder.go) + type palettes (internal/graph/shapes.go); emission via `applyNodeStyle`/`applyClusterStyle` (internal/render/converter.go). `Unit.Color/Style/Border` and `Properties.Color/Style/Border` currently have zero render-side reads.
+- **GEDGE fix point:** C2 (`view/scope.go:377`) and C3 (`scope.go:470`) copy only `unit.Edges` — add `Properties.Edges` fallback. `"square"` documented but unimplemented in `configureGraphSettings` (converter.go:161-169) — implement as `ortho` or remove from docs.
+- **RANK:** `model.Link.Rank` already parses `RankForward`/`RankReverse` (dead today; only `"equal"` → `constraint=false` works). Implement at `createEdge` (builder.go:573-611) + render (converter.go:483-495) by swapping endpoints + `dir=back`; must survive the 4 view copiers in `view/scope.go` (they already copy Rank).
+- **KIND:** new `model.Link.Kind` field — touches the 4 view copiers, `validator/index.go` mirror, C4D grammar (`c4d.peg:458` OptionKey + `go:generate` regen), `c4d/tomodel.go` applyEdgeOption, `c4d/frommodel.go` edgeStmtFromLink, `emit_toml.go` canonical field order, `grammar/reserved.go` fieldKeywords, `testutil/canonsrc`.
+- **AGG:** view copiers carry style/colour; merge first-wins per pair in `processOutgoingLinks`/`processIncomingLinks` (builder.go) — kind colour + style precedence computed there.
+- **LEGEND:** `graph.Graph.Legend` placeholder exists (internal/graph/graph.go:151-155); render via the top graph-label HTML table (`SetLabelHTML` + `SetLabelLocation(TopLocation)`, converter.go:183-240), legend as a right-aligned column — GraphViz cannot position clusters. Default enabled = new properties field (default true) + custom lines array.
+- **BC-01 golden discipline:** canonicalDOT (DI-1) order-insensitive comparisons; legend-on-by-default is the one accepted, user-mandated re-baseline delta.
+- **TDD mode on** (config workflow.tdd_mode); docs + skill sync land inside the phase (v1.12 precedent); REL-01 (tag v1.18.0) is the final small item of this phase, not a separate phase.
+
+## Progress
+
+**Execution Order:** Phase 36 (single phase; plans sequenced by plan-phase)
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 28. Reference field | v1.10 | 1/1 | Complete | 2026-08-08 |
+| 29. Optional name humanization | v1.10 | 2/2 | Complete | 2026-08-08 |
+| 30. Relative-peer resolution | v1.10 | 2/2 | Complete | 2026-08-08 |
+| 31. Template expansion | v1.10 | 2/2 | Complete | 2026-08-08 |
+| 32. Include directive | v1.10 | 2/2 | Complete | 2026-08-08 |
+| 33. Docs sweep + goldens | v1.10 | 4/4 | Complete | 2026-08-08 |
+| 34. Label formatting fixes | v1.11 | 4/4 | Complete | 2026-08-10 |
+| 35. C4D DSL alternative | v1.12 | 9/9 | Complete | 2026-08-14 |
+| 36. Edge Semantics and Legend | v1.13 | 0/TBD | Not started | - |

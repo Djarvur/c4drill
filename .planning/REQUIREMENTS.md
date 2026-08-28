@@ -78,4 +78,29 @@ Source: user request 2026-08-28 + codebase scan (root causes pre-confirmed):
 
 ## Traceability
 
-*Filled by roadmap (phase ↔ requirement mapping).*
+All 20 v1.13 requirements map to Phase 36 (single-phase milestone, v1.11/v1.12 precedent — shared packages and goldens).
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| COLOR-01 | Phase 36 | Pending |
+| COLOR-02 | Phase 36 | Pending |
+| GEDGE-01 | Phase 36 | Pending |
+| GEDGE-02 | Phase 36 | Pending |
+| RANK-01 | Phase 36 | Pending |
+| RANK-02 | Phase 36 | Pending |
+| KIND-01 | Phase 36 | Pending |
+| KIND-02 | Phase 36 | Pending |
+| KIND-03 | Phase 36 | Pending |
+| AGG-01 | Phase 36 | Pending |
+| AGG-02 | Phase 36 | Pending |
+| AGG-03 | Phase 36 | Pending |
+| LEG-01 | Phase 36 | Pending |
+| LEG-02 | Phase 36 | Pending |
+| LEG-03 | Phase 36 | Pending |
+| BC-01 | Phase 36 | Pending |
+| DOC-01 | Phase 36 | Pending |
+| DOC-02 | Phase 36 | Pending |
+| DOC-03 | Phase 36 | Pending |
+| REL-01 | Phase 36 | Pending |
+
+**Coverage:** 20/20 ✓ (no orphans, no duplicates)
