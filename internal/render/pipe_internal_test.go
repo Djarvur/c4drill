@@ -1,6 +1,8 @@
 package render
 
 import (
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -77,9 +79,92 @@ func TestCollectQueueNodeIDs_None(t *testing.T) {
 	assert.Empty(t, collectQueueNodeIDs(g), "non-queue graphs must collect no IDs")
 }
 
+// pipePoint is an (x, y) coordinate pair from a pipe d string.
+type pipePoint struct {
+	x, y float64
+}
+
+// pipeSegmentRe splits a machine-generated pipe d string into its command
+// segments. The emitter only produces absolute M/L/A/Z commands with numeric
+// data between them, so scanning for the command letters is a faithful parse.
+//
+//nolint:gochecknoglobals // immutable regex; package-level avoids realloc per test (pipeAttrs precedent)
+var pipeSegmentRe = regexp.MustCompile(`[MLAZ][^MLAZ]*`)
+
+// arcRecord captures one arc command: the point the pen was at when the arc
+// started, the arc's endpoint, and its sweep flag.
+type arcRecord struct {
+	start, end pipePoint
+	sweep      int
+}
+
+// pipePointAt parses the first "x,y" pair of a pipe command segment body.
+func pipePointAt(t *testing.T, body string) pipePoint {
+	t.Helper()
+
+	field := strings.Fields(body)[0]
+
+	comma := strings.Index(field, ",")
+	require.Positive(t, comma, "coordinate pair must be comma-separated: %q", field)
+
+	x, errX := strconv.ParseFloat(field[:comma], 64)
+	require.NoError(t, errX, "x coordinate must parse in %q", field)
+
+	y, errY := strconv.ParseFloat(field[comma+1:], 64)
+	require.NoError(t, errY, "y coordinate must parse in %q", field)
+
+	return pipePoint{x: x, y: y}
+}
+
+// pipeArcs parses a machine-generated pipe d string (absolute M/L/A/Z
+// commands only) and returns its arcs in emission order, tracking the pen
+// point through M/L/A commands. Arc segment format: "Arx,ry rotation
+// large,sweep x,y".
+func pipeArcs(t *testing.T, d string) []arcRecord {
+	t.Helper()
+
+	var (
+		arcs []arcRecord
+		pen  pipePoint
+	)
+
+	for _, seg := range pipeSegmentRe.FindAllString(d, -1) {
+		switch seg[0] {
+		case 'M', 'L':
+			pen = pipePointAt(t, seg[1:])
+		case 'A':
+			fields := strings.Fields(seg[1:])
+			require.Len(t, fields, 4, "arc must carry rx,ry, rotation, flags and endpoint: %q", seg)
+
+			sweep, err := strconv.Atoi(strings.Split(fields[2], ",")[1])
+			require.NoError(t, err, "arc sweep flag must parse in %q", seg)
+
+			end := pipePointAt(t, fields[3])
+			arcs = append(arcs, arcRecord{start: pen, end: end, sweep: sweep})
+			pen = end
+		case 'Z':
+			// closepath returns the pen to the subpath start; the next
+			// subpath's M repositions the pen explicitly.
+		}
+	}
+
+	return arcs
+}
+
+// pipeSubpaths splits a pipe d string into its trimmed subpath segments.
+func pipeSubpaths(d string) []string {
+	segs := pipeSegmentRe.FindAllString(d, -1)
+	for i, seg := range segs {
+		segs[i] = strings.TrimSpace(seg)
+	}
+
+	return segs
+}
+
 // TestPipePathFromPoints verifies the bbox-to-path geometry: the pipe is
-// inscribed in the polygon bbox with end-cap ellipses of rx = 0.35*ry, the
-// path STARTS with the left bulge arc and ENDS with the right cap arc.
+// inscribed in the polygon bbox with end-cap ellipses of rx = 0.35*ry. The
+// full d is pinned byte-for-byte — deterministic geometry makes full-string
+// equality the strongest guard.
 func TestPipePathFromPoints(t *testing.T) {
 	t.Parallel()
 
@@ -87,23 +172,83 @@ func TestPipePathFromPoints(t *testing.T) {
 	require.True(t, ok, "a rect polygon must convert")
 
 	// Bbox (10,20)-(90,60): cy=40, ry=20, rx=7. Body spans x=17..83; the
-	// left bulge reaches x0=10 and the right cap reaches x1=90.
-	assert.True(t, strings.HasPrefix(d, "M17.00,20.00"), "path anchored at top-left of inscribed body, got %q", d)
-	assert.Contains(t, d, "A7.00,20.00", "end-cap ellipses use rx=7 (0.35*ry), ry=20")
-	assert.Contains(t, d, "L83.00,60.00", "straight bottom edge spans to x1-rx")
-	assert.True(t, strings.HasSuffix(d, "Z"), "path is closed")
+	// left cap reaches x0=10 and the right outer arc reaches x1=90.
+	const want = "M17.00,20.00 L83.00,20.00 A7.00,20.00 0 0,1 83.00,60.00" +
+		" L17.00,60.00 A7.00,20.00 0 0,1 17.00,20.00 Z" +
+		" M83.00,20.00 A7.00,20.00 0 0,0 83.00,60.00"
+	assert.Equal(t, want, d, "closed body outline + cap face subpath, in one d")
 
-	// Starts with an arc command (left bulge) after the initial moveto.
-	afterM := strings.TrimPrefix(d, "M")
-	afterM = strings.TrimLeft(strings.TrimLeft(afterM, "0123456789.,-"), " ")
-	assert.True(t, strings.HasPrefix(afterM, "A"), "path must start with the left-bulge arc, got %q", afterM)
-
-	// Ends with an arc command (right cap) before the closing Z.
-	beforeZ := strings.TrimSpace(strings.TrimSuffix(d, "Z"))
-	assert.True(t, strings.HasSuffix(beforeZ, "83.00,20.00"),
-		"path must end on the right cap arc endpoint, got %q", beforeZ)
+	assert.True(t, strings.HasPrefix(d, "M17.00,20.00 L83.00,20.00"),
+		"path starts with moveto + straight top edge, not an arc, got %q", d)
+	assert.Contains(t, d, "L17.00,60.00", "bottom edge runs right → left to x0+rx")
 	assert.Equal(t, 3, strings.Count(d, "A7.00,20.00"),
-		"three arcs: left bulge, right silhouette, right full-ellipse cap")
+		"three arcs: right outer, left cap, cap face")
+}
+
+// TestPipePathFromPoints_NoCoincidentArc is the regression test for the
+// capsule bug: an SVG arc whose start and end points coincide is OMITTED by
+// renderers, so the old trailing "full ellipse" arc drew nothing and the
+// right end rendered as a plain capsule side. No arc command may ever have
+// coincident endpoints.
+func TestPipePathFromPoints_NoCoincidentArc(t *testing.T) {
+	t.Parallel()
+
+	d, ok := pipePathFromPoints("10,20 90,20 90,60 10,60")
+	require.True(t, ok, "a rect polygon must convert")
+
+	arcs := pipeArcs(t, d)
+	require.Len(t, arcs, 3, "right outer, left cap, cap face")
+
+	for i, arc := range arcs {
+		assert.NotEqual(t, arc.start, arc.end,
+			"arc %d runs from %v back to %v — SVG omits coincident-endpoint arcs, so it draws nothing",
+			i+1, arc.start, arc.end)
+	}
+}
+
+// TestPipePathFromPoints_CapFaceSubpath verifies the right cap face exists as
+// a SECOND subpath in the same d attribute — an M command after the body
+// outline's Z — whose arc runs sweep 0 (inner, bulging left into the body)
+// from (bodyR,y0) down to (bodyR,y1). The outer silhouette arc and the inner
+// face arc together form the visible full ellipse of the right end.
+func TestPipePathFromPoints_CapFaceSubpath(t *testing.T) {
+	t.Parallel()
+
+	d, ok := pipePathFromPoints("10,20 90,20 90,60 10,60")
+	require.True(t, ok, "a rect polygon must convert")
+
+	subpaths := pipeSubpaths(d)
+	require.Len(t, subpaths, 2, "body outline + cap face share one d attribute")
+
+	assert.True(t, strings.HasPrefix(subpaths[0], "M17.00,20.00"),
+		"first subpath is the body outline, got %q", subpaths[0])
+	assert.True(t, strings.HasSuffix(subpaths[0], "Z"), "body outline subpath is closed")
+
+	assert.Equal(t, "M83.00,20.00 A7.00,20.00 0 0,0 83.00,60.00", subpaths[1],
+		"cap face: new subpath starting at (bodyR,y0), sweep-0 arc to (bodyR,y1)")
+}
+
+// TestPipePathFromPoints_ArcsBulgeOutward verifies the arc directions in the
+// y-down SVG coordinates GraphViz emits: the right outer arc from (bodyR,y0)
+// to (bodyR,y1) must use sweep 1 (bulging right through (x1,cy)), the left
+// cap arc from (bodyL,y1) back to (bodyL,y0) must use sweep 1 (bulging left
+// through (x0,cy)), and the cap face arc must use sweep 0 (bulging left
+// through (bodyR-rx,cy)) — so the silhouette fills the exact polygon bbox.
+func TestPipePathFromPoints_ArcsBulgeOutward(t *testing.T) {
+	t.Parallel()
+
+	d, ok := pipePathFromPoints("10,20 90,20 90,60 10,60")
+	require.True(t, ok, "a rect polygon must convert")
+
+	arcs := pipeArcs(t, d)
+	require.Len(t, arcs, 3, "right outer, left cap, cap face")
+
+	assert.Equal(t, arcRecord{start: pipePoint{x: 83, y: 20}, end: pipePoint{x: 83, y: 60}, sweep: 1}, arcs[0],
+		"right outer arc: sweep 1 through (x1,cy)=(90,40)")
+	assert.Equal(t, arcRecord{start: pipePoint{x: 17, y: 60}, end: pipePoint{x: 17, y: 20}, sweep: 1}, arcs[1],
+		"left cap arc: sweep 1 through (x0,cy)=(10,40)")
+	assert.Equal(t, arcRecord{start: pipePoint{x: 83, y: 20}, end: pipePoint{x: 83, y: 60}, sweep: 0}, arcs[2],
+		"cap face arc: sweep 0 through (bodyR-rx,cy)=(76,40)")
 }
 
 // TestPipePathFromPoints_Degenerate verifies malformed or degenerate polygons
@@ -140,9 +285,12 @@ func TestReplaceQueuePolygons(t *testing.T) {
 		"fill, stroke, stroke-width and stroke-dasharray must be copied verbatim")
 
 	// Inscribed geometry: bbox (0,-57.6)-(129.6,-16) → cy=-36.8, ry=20.8,
-	// rx=7.28; body spans 7.28..122.32.
-	assert.Contains(t, out, `d="M7.28,-57.60 A7.28,20.80 0 0,0 7.28,-16.00`,
-		"pipe anchored at the polygon bbox")
+	// rx=7.28; body spans 7.28..122.32. The closed body outline comes first,
+	// then the right cap-face subpath in the same d attribute.
+	assert.Contains(t, out, `d="M7.28,-57.60 L122.32,-57.60 A7.28,20.80 0 0,1`,
+		"pipe body outline starts at the polygon bbox top-left")
+	assert.Contains(t, out, "M122.32,-57.60 A7.28,20.80 0 0,0 122.32,-16.00",
+		"right cap face subpath present (sweep 0, inner half-ellipse)")
 
 	// Title and text siblings preserved.
 	assert.Contains(t, out, "<title>platform.queue</title>", "group title preserved")
