@@ -444,8 +444,8 @@ func TestIntegrationGraphWithAllUnitTypes(t *testing.T) {
 	assert.Empty(t, nodeMap["systemExt"].Label.Icon)                  // No icon
 	assert.Equal(t, "\u26C1", nodeMap["db"].Label.Icon)               // DB icon
 	assert.Equal(t, "\u26C1", nodeMap["dbExt"].Label.Icon)            // DB icon
-	assert.Equal(t, "\u255F\n\u2562", nodeMap["queue"].Label.Icon)    // Queue bars
-	assert.Equal(t, "\u255F\n\u2562", nodeMap["queueExt"].Label.Icon) // Queue bars
+	assert.Empty(t, nodeMap["queue"].Label.Icon)    // No icon: pipe drawn by SVG post-processor
+	assert.Empty(t, nodeMap["queueExt"].Label.Icon) // No icon: pipe drawn by SVG post-processor
 
 	// Verify external nodes have solid border and external colors
 	for _, id := range []string{"personExt", "systemExt", "dbExt", "queueExt"} {

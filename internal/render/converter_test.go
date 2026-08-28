@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/Djarvur/c4drill/internal/graph"
+	"github.com/Djarvur/c4drill/internal/model"
 	"github.com/Djarvur/c4drill/internal/render"
 	"github.com/Djarvur/c4drill/internal/testutil/canonical"
 	"github.com/stretchr/testify/assert"
@@ -392,6 +393,78 @@ func TestNodeRoundedStyle(t *testing.T) {
 		// Check for style=rounded attribute (not just the word "rounded")
 		assert.True(t, strings.Contains(dotStr, "style=rounded") || strings.Contains(dotStr, `style="rounded"`),
 			"DOT output should contain style=rounded attribute")
+	})
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestQueueNodePlainStyle(t *testing.T) {
+	// Queue nodes must NOT carry the "rounded" style: GraphViz then emits a
+	// plain rect <polygon> for them, which the SVG pipe post-processor
+	// (pipe.go) replaces with a horizontal-pipe <path>. Non-queue styling is
+	// unchanged, and dashed/dotted borders survive the rounded drop.
+	queueGraph := func(borderStyle string) string {
+		g := &graph.Graph{
+			Title:     "T",
+			Direction: "TB",
+			Nodes: []*graph.Node{
+				{
+					ID:    "q",
+					Label: &graph.Label{Name: "Queue"},
+					Shape: graph.ShapeRecord,
+					Type:  model.TypeQueue,
+					Style: &graph.NodeStyle{BorderStyle: borderStyle},
+				},
+			},
+		}
+
+		output, err := render.RenderDOT(g)
+		require.NoError(t, err)
+
+		// Extract the queue node's statement block (from its name to the ";").
+		// GraphViz emits the node name followed by a tab and its attribute list.
+		dotStr := string(output)
+		start := strings.Index(dotStr, "q\t[")
+		require.NotEqual(t, -1, start, "queue node statement must exist")
+
+		end := strings.Index(dotStr[start:], ";")
+		require.NotEqual(t, -1, end, "queue node statement terminator")
+
+		return dotStr[start : start+end]
+	}
+
+	t.Run("queue node style has no rounded", func(t *testing.T) {
+		block := queueGraph("solid")
+
+		assert.Contains(t, block, "style=", "queue node must carry a style attribute")
+		assert.NotContains(t, block, "rounded", "queue style must drop rounded so SVG emits a polygon")
+	})
+
+	t.Run("dashed queue node keeps dashed without rounded", func(t *testing.T) {
+		block := queueGraph("dashed")
+
+		assert.Contains(t, block, "dashed", "queue dashed border must survive")
+		assert.NotContains(t, block, "rounded", "queue style must drop rounded even when dashed")
+	})
+
+	t.Run("queue node carries wider minimum width", func(t *testing.T) {
+		block := queueGraph("solid")
+
+		assert.Contains(t, block, "width=1.8", "queue nodes need a wider minimum width to read as pipes")
+	})
+
+	t.Run("non-queue nodes still emit rounded", func(t *testing.T) {
+		g := &graph.Graph{
+			Title:     "T",
+			Direction: "TB",
+			Nodes: []*graph.Node{
+				{ID: "s", Label: &graph.Label{Name: "System"}, Shape: graph.ShapeRecord, Style: &graph.NodeStyle{}},
+			},
+		}
+
+		output, err := render.RenderDOT(g)
+		require.NoError(t, err)
+
+		assert.Contains(t, string(output), "style=rounded", "non-queue styling must stay byte-identical")
 	})
 }
 

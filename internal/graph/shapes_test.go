@@ -40,11 +40,13 @@ func TestIconForType(t *testing.T) {
 	assert.Equal(t, "\u26C1", graph.IconForType(model.TypeContainerDb))
 	assert.Equal(t, "\u26C1", graph.IconForType(model.TypeComponentDb))
 
-	// Test 4: IconForType returns correct emoji for queue types
-	assert.Equal(t, "\u255F\n\u2562", graph.IconForType(model.TypeQueue))
-	assert.Equal(t, "\u255F\n\u2562", graph.IconForType(model.TypeQueueExternal))
-	assert.Equal(t, "\u255F\n\u2562", graph.IconForType(model.TypeContainerQueue))
-	assert.Equal(t, "\u255F\n\u2562", graph.IconForType(model.TypeComponentQueue))
+	// Test 4: IconForType returns no icon for queue types — queues are drawn
+	// as a horizontal pipe by the SVG post-processor (internal/render/pipe.go),
+	// so the old ╟/╢ text-bar cue is gone.
+	assert.Empty(t, graph.IconForType(model.TypeQueue))
+	assert.Empty(t, graph.IconForType(model.TypeQueueExternal))
+	assert.Empty(t, graph.IconForType(model.TypeContainerQueue))
+	assert.Empty(t, graph.IconForType(model.TypeComponentQueue))
 
 	// Test 5: IconForType returns empty string for system/container/component/box types
 	assert.Empty(t, graph.IconForType(model.TypeSystem))
