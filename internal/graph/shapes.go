@@ -22,7 +22,8 @@ func ShapeForType(_ model.UnitType) Shape {
 // Per CONTEXT.md design:
 // - Person: U+1F464 (person emoji)
 // - DB: U+26C1 (flag in hole, used as cylinder proxy)
-// - Queue: U+255F/U+2562 (box drawing characters for bars).
+// - Queue: no icon — queues are drawn as a horizontal pipe by the SVG
+//   post-processor (internal/render/pipe.go), so no text-bar cue is emitted.
 func IconForType(t model.UnitType) string {
 	switch t {
 	case model.TypePerson, model.TypePersonExternal:
@@ -32,7 +33,7 @@ func IconForType(t model.UnitType) string {
 		return "\u26C1" // db cylinder icon (using golf flag as proxy)
 	case model.TypeQueue, model.TypeQueueExternal,
 		model.TypeContainerQueue, model.TypeComponentQueue:
-		return "\u255F\n\u2562" // queue bars
+		return "" // pipe shape drawn by the SVG post-processor (internal/render/pipe.go)
 	case model.TypeSystem, model.TypeSystemExternal,
 		model.TypeContainer, model.TypeContainerBox,
 		model.TypeComponent, model.TypeComponentBox,

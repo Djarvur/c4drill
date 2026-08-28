@@ -57,9 +57,15 @@ type styleInfo struct {
 	borderStyle string
 }
 
-// buildStyleString builds a comma-separated style string.
-func buildStyleString(style *styleInfo) []string {
-	styles := []string{"rounded"}
+// buildStyleString builds a comma-separated style string. The "rounded"
+// prefix is conditional: queue-type nodes omit it so GraphViz emits a plain
+// rect <polygon> the SVG pipe post-processor (pipe.go) can parse and replace.
+func buildStyleString(style *styleInfo, rounded bool) []string {
+	var styles []string
+
+	if rounded {
+		styles = append(styles, "rounded")
+	}
 
 	if style != nil && style.fillColor != "" {
 		styles = append(styles, "filled")
@@ -325,7 +331,9 @@ func createNode(
 	}
 
 	// Set shape based on unit type
-	// DB uses cylinder shape, all others use box
+	// DB uses cylinder shape, all others use box. Queues keep shape=box: edge
+	// anchors are computed on the box bbox and the pipe drawn by the SVG
+	// post-processor (pipe.go) is inscribed in that same bbox.
 	if graph.IsDbType(node.Type) {
 		cn.SetShape(cgraph.CylinderShape)
 	} else {
@@ -335,8 +343,17 @@ func createNode(
 	// Build and set HTML label
 	setNodeLabel(cn, node)
 
-	// Apply style
-	applyNodeStyle(cn, node.Style)
+	// Apply style (queue nodes drop "rounded", see applyNodeStyle)
+	applyNodeStyle(cn, node)
+
+	// Queue nodes read as pipes only when wider than the default minimum
+	// (graphviz width = minimum width in inches; it may still grow the node
+	// for long labels).
+	if graph.IsQueueType(node.Type) {
+		if err := cn.SafeSet("width", "1.8", ""); err != nil {
+			return nil, fmt.Errorf("set queue node width %s: %w", node.ID, err)
+		}
+	}
 
 	// Set URL for clickable nodes. A GraphViz node has a SINGLE URL attribute,
 	// so when an external reference (📖) and an internal drill-down explore URL
@@ -367,22 +384,25 @@ func setNodeLabel(cn *cgraph.Node, node *graph.Node) {
 	cn.SetLabelHTML(htmlLabel)
 }
 
-// applyNodeStyle applies visual styles to a node.
-func applyNodeStyle(cn *cgraph.Node, style *graph.NodeStyle) {
-	info := nodeStyleToInfo(style)
-	styles := buildStyleString(info)
+// applyNodeStyle applies visual styles to a node. Queue-type nodes omit the
+// "rounded" style so GraphViz emits a parseable plain rect <polygon> that the
+// SVG pipe post-processor (pipe.go) replaces with a horizontal-pipe <path>;
+// fill/border colours and dashed/dotted borders are unchanged.
+func applyNodeStyle(cn *cgraph.Node, node *graph.Node) {
+	info := nodeStyleToInfo(node.Style)
+	styles := buildStyleString(info, !graph.IsQueueType(node.Type))
 
-	if style != nil {
-		if style.FillColor != "" {
-			cn.SetFillColor(style.FillColor)
+	if node.Style != nil {
+		if node.Style.FillColor != "" {
+			cn.SetFillColor(node.Style.FillColor)
 		}
 
-		if style.FontColor != "" {
-			cn.SetFontColor(style.FontColor)
+		if node.Style.FontColor != "" {
+			cn.SetFontColor(node.Style.FontColor)
 		}
 
-		if style.BorderColor != "" {
-			cn.SetColor(style.BorderColor)
+		if node.Style.BorderColor != "" {
+			cn.SetColor(node.Style.BorderColor)
 		}
 	}
 
@@ -487,9 +507,9 @@ func applyClusterStyle(subgraph *cgraph.Graph, style *graph.NodeStyle) error {
 		return err
 	}
 
-	// Set combined style string
+	// Set combined style string (clusters always stay rounded)
 	info := nodeStyleToInfo(style)
-	styles := buildStyleString(info)
+	styles := buildStyleString(info, true)
 
 	if err := subgraph.SafeSet("style", strings.Join(styles, ","), ""); err != nil {
 		return fmt.Errorf("set cluster style: %w", err)
