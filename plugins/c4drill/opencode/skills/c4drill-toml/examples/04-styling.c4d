@@ -1,11 +1,14 @@
 # Styling Example - C4D twin of 04-styling.toml (renders identically)
 # Colors, borders and edge styles are plain fields inside the unit block.
+# Custom legend lines (v1.13): appended under the default colour explanations
+# in the upper-right legend. legend: false disables the legend model-wide.
 properties {
   name: Styling Demo
   description: Visual customization examples
   color: "#FAFAFA"
   border: "#BDBDBD"
   edges: spline
+  legendLine: ["Nightly batch|#E65100|dashed"]
 }
 
 admin: person "Administrator" {

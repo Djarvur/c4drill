@@ -5,8 +5,11 @@
 properties {
   name: Link Examples
   description: Various link configurations
-}
+} # Edge kinds (v1.13): kind = read/write/read-write colours the edge green,
 
+# red, or purple — no explicit color needed. An explicit color still wins.
+# rank = "reverse" flips the layout ranking while the arrow still points at
+# the target — the single-knob replacement for "<-" + arrow: reverse.
 customer: person "Customer" {
   -> webapp: "HTTPS | Browses" { arrow: forward }
 }
@@ -14,7 +17,7 @@ customer: person "Customer" {
 webapp: system "Web Application" {
   technology: React
   -> api: "REST/JSON | Queries API" { arrow: reverse color: blue }
-  -> cache: "Redis | Session cache" { labelPosition: tail }
+  -> cache: "Redis | Session cache" { kind: read labelPosition: tail }
 }
 
 api: system "API Gateway" {

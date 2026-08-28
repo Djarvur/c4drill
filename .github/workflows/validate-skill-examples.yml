@@ -39,6 +39,18 @@ jobs:
             ./c4drill "$file" -f dot > /dev/null
           done
 
+      - name: Validate skill C4D examples
+        run: |
+          for file in skill/examples/*.c4d; do
+            echo "Validating $file..."
+            ./c4drill "$file" -f dot > /dev/null
+          done
+
+      - name: Validate plugin skill copies are in sync
+        run: |
+          diff -r skill plugins/c4drill/skills/c4drill-toml
+          diff -r skill plugins/c4drill/opencode/skills/c4drill-toml
+
       - name: Validate ported likec4 examples
         run: |
           for file in examples/*/*.toml; do

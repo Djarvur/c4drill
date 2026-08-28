@@ -180,10 +180,20 @@ description = "Description"     # Optional: Project description
 color = "#E3F2FD"               # Optional: Default background color
 style = "filled"                # Optional: Default visual style
 border = "#1565C0"              # Optional: Default border color
-edges = "spline"                # Optional: Edge routing (straight|spline|square)
+edges = "spline"                # Optional: Edge routing (straight|spline|square|ortho)
 lineLength = 40                 # Optional: Max line length before wrap (0=auto)
 expanded = ["payments"]         # Optional: Units expanded by default
+legend = true                   # Optional: Upper-right legend (default: on; false disables)
+
+[[properties.legendLine]]       # Optional: Custom legend row (after the defaults)
+label = "Nightly batch"
+color = "#E65100"
+style = "dashed"
 ```
+
+`edges` applies to EVERY generated diagram (C1/C2/C3/expanded); a
+unit-level `edges` overrides it for that unit's own diagram. `square` is
+an alias for ortho routing.
 
 ### Unit Definition
 
@@ -195,8 +205,8 @@ type = "system"                 # Optional: Unit type (defaults based on nesting
 name = "Display Name"           # Optional: defaults to humanized last path segment
 description = "What it does"    # Optional: Brief description
 technology = "Go, PostgreSQL"   # Optional: Tech stack (not for person types)
-color = "#E3F2FD"               # Optional: Background color override
-style = "filled"                # Optional: Visual style override
+color = "#E3F2FD"               # Optional: Background fill (renders on node + cluster; dark fill -> white label)
+style = "filled"                # Optional: Border style override (solid|dashed|dotted)
 border = "#1565C0"              # Optional: Border color override
 edges = "spline"                # Optional: Edge style (cascades to subunits)
 width = 300                     # Optional: Explicit width (0=auto)
@@ -467,8 +477,9 @@ description = "Real-time updates"
 |---|---|---|
 | `peer` | `"unit_name"` | **Required:** Target unit identifier |
 | `arrow` | `forward` (default), `reverse`, `bidirectional`, `none` | Arrow direction |
-| `rank` | `forward`, `reverse`, `equal` | Layout ranking hint |
-| `color` | `"blue"`, `"#FF5733"` | Edge color |
+| `rank` | `forward` (default), `reverse`, `equal` | Ranking: `reverse` flips vertical order keeping the arrow direction (v1.13) |
+| `kind` | `read`, `write`, `read-write` | Kind colouring (v1.13): green `#2E7D32` / red `#C62828` / purple `#6A1B9A`; explicit `color` wins. NOT substituted by template params |
+| `color` | `"blue"`, `"#FF5733"` | Edge color (overrides kind) |
 | `style` | `"solid"`, `"dashed"`, `"dotted"` | Line style |
 | `technology` | `"HTTPS"`, `"gRPC"`, `"TCP"` | Protocol/technology label |
 | `description` | `"Sends events to"` | Relationship description |
@@ -819,7 +830,10 @@ When generating TOML:
    diagram
 8. **Use `external` suffix for external units** - `systemExternal`,
    `dbExternal`
-9. **Validate before committing** - Run `c4drill <file.toml|file.c4d>`
+9. **Use `kind` for data-flow colouring** - `read`/`write`/`read-write`
+   colour edges green/red/purple with no color authoring; the legend
+   (default-on, upper-right) explains the colours automatically
+10. **Validate before committing** - Run `c4drill <file.toml|file.c4d>`
    to check
 
 ---
