@@ -75,15 +75,15 @@
 <!-- queue -->
 <g id="node5" class="node">
 <title>queue</title>
-<path d="M159.68,-317.80 L332.32,-317.80 A7.28,20.80 0 0,1 332.32,-276.20 L159.68,-276.20 A7.28,20.80 0 0,1 159.68,-317.80 Z M332.32,-317.80 A7.28,20.80 0 0,0 332.32,-276.20" fill="none" stroke="#073b6f"/>
+<path d="M159.79,-318.12 L332.21,-318.12 A7.39,21.12 0 0,1 332.21,-275.88 L159.79,-275.88 A7.39,21.12 0 0,1 159.79,-318.12 Z M332.21,-318.12 A7.39,21.12 0 0,0 332.21,-275.88" fill="none" stroke="#073b6f"/>
 <text xml:space="preserve" text-anchor="start" x="203.21" y="-302.2" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00" fill="#073b6f">Event Queue</text>
 <text xml:space="preserve" text-anchor="start" x="210.6" y="-285.4" font-family="Helvetica,sans-Serif" font-style="italic" font-size="14.00" fill="#073b6f">[RabbitMQ]</text>
 </g>
 <!-- queue&#45;&gt;app -->
 <g id="edge3" class="edge">
 <title>queue&#45;&gt;app</title>
-<path fill="none" stroke="#073b6f" stroke-width="2" d="M228.8,-264.78C213.89,-237.7 192.75,-199.33 180.01,-176.19"/>
-<polygon fill="#073b6f" stroke="#073b6f" stroke-width="2" points="225.62,-266.25 233.51,-273.32 231.75,-262.87 225.62,-266.25"/>
+<path fill="none" stroke="#073b6f" stroke-width="2" d="M228.63,-264.46C213.71,-237.37 192.65,-199.13 179.96,-176.1"/>
+<polygon fill="#073b6f" stroke="#073b6f" stroke-width="2" points="225.45,-265.95 233.34,-273.02 231.58,-262.57 225.45,-265.95"/>
 <text xml:space="preserve" text-anchor="start" x="207.07" y="-210" font-family="Helvetica,sans-Serif" font-style="italic" font-size="10.00" fill="#073b6f">[AMQP]</text>
 <text xml:space="preserve" text-anchor="start" x="202.89" y="-196" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">Publishes</text>
 </g>

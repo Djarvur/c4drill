@@ -320,18 +320,14 @@ func labelMaxCharsForCylinder(fixedRows, textLen int) int {
 	return labelMaxCharsForText(fixedRows, textLen, LabelRatio*2.2)
 }
 
-// queueMaxChars is the fixed wrap budget for queue labels. Queue pipes carry
-// a wide minimum width (2.6in) whose side clearance must stay clear of the
-// end-cap ellipses, so the text column is deliberately narrow and independent
-// of the aspect-ratio solve.
-const queueMaxChars = 14
-
 // labelMaxCharsForQueue calculates the maximum characters per line for Queue
-// labels. The budget is capped at queueMaxChars so the text column stays
-// narrow and the pipe's end-cap ellipses (pipe.go) never cut into it; short
-// labels keep the aspect-ratio solve so they are not wrapped needlessly.
+// labels. Ratio-based wrapping (no fixed cap): a long description must grow
+// the node WIDER — a pipe — not taller, a tower. The end-cap ellipses stay
+// clear of the text for any length because queue nodes carry a 0.55in x-margin
+// (converter.go) that insets the label ~40pt from each border, more than the
+// 2*pipeMaxCap the caps can intrude.
 func labelMaxCharsForQueue(fixedRows, textLen int) int {
-	return min(labelMaxCharsForText(fixedRows, textLen, LabelRatio*1.2), queueMaxChars)
+	return labelMaxCharsForText(fixedRows, textLen, LabelRatio*1.6)
 }
 
 // personRatioFactor compensates the person label's icon column (36pt of
