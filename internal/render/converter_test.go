@@ -587,3 +587,58 @@ func TestRankReverseEmission(t *testing.T) {
 			"rank=reverse must produce the same canonical DOT as the <- + arrow=reverse idiom")
 	})
 }
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestUnitOverridesEmission(t *testing.T) {
+	t.Run("dotted border style and fill color emit in DOT", func(t *testing.T) {
+		g := &graph.Graph{
+			Title:     "T",
+			Direction: "TB",
+			Nodes: []*graph.Node{
+				{
+					ID:    "app",
+					Label: &graph.Label{Name: "App"},
+					Shape: graph.ShapeRecord,
+					Style: &graph.NodeStyle{
+						FillColor:   "#123456",
+						FontColor:   "#FFFFFF",
+						BorderColor: "#AA0000",
+						BorderStyle: "dotted",
+					},
+				},
+			},
+		}
+
+		output, err := render.RenderDOT(g)
+		require.NoError(t, err)
+		out := string(output)
+
+		assert.Contains(t, out, `fillcolor="#123456"`)
+		assert.Contains(t, out, `fontcolor="#FFFFFF"`)
+		assert.Contains(t, out, `color="#AA0000"`)
+		assert.Contains(t, out, `style="rounded,filled,dotted"`)
+	})
+
+	t.Run("edges=square maps to splines=ortho", func(t *testing.T) {
+		for _, edgeStyle := range []struct{ in, want string }{
+			{"square", "ortho"},
+			{"ortho", "ortho"},
+			{"straight", "false"},
+			{"spline", "true"},
+		} {
+			g := &graph.Graph{
+				Title:     "T",
+				Direction: "TB",
+				EdgeStyle: edgeStyle.in,
+				Nodes: []*graph.Node{
+					{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeRecord},
+				},
+			}
+
+			output, err := render.RenderDOT(g)
+			require.NoError(t, err)
+			assert.Contains(t, string(output), "splines="+edgeStyle.want,
+				"EdgeStyle %q should emit splines=%s", edgeStyle.in, edgeStyle.want)
+		}
+	})
+}

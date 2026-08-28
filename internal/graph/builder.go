@@ -2,6 +2,7 @@ package graph
 
 import (
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/Djarvur/c4drill/internal/model"
@@ -120,6 +121,7 @@ func buildBoundaryCluster(v *view.View) *Cluster {
 			Icon:        IconForType(unit.Type),
 		}
 		style = GetStyleForType(unit.Type, false)
+		applyUnitOverrides(style, unit)
 	} else {
 		// Fallback: derive name from ExpandedUnit path
 		name := v.ExpandedUnit
@@ -210,6 +212,7 @@ func buildNestedCluster(entry *view.Entry, path string, v *view.View) *Cluster {
 	} else {
 		style = GetStyleForType(entry.Unit.Type, entry.IsExternal)
 	}
+	applyUnitOverrides(style, entry.Unit)
 
 	cluster := &Cluster{
 		ID:         path,
@@ -289,6 +292,7 @@ func buildNode(entry *view.Entry) *Node {
 	} else {
 		style = GetStyleForType(entry.Unit.Type, entry.IsExternal)
 	}
+	applyUnitOverrides(style, entry.Unit)
 
 	return &Node{
 		ID:           entry.FullPath,
@@ -301,6 +305,53 @@ func buildNode(entry *view.Entry) *Node {
 	}
 }
 
+// applyUnitOverrides applies author-specified color/style/border fields on top
+// of the palette-derived style (COLOR-01/COLOR-02). Explicit author fields win
+// over both the level palette and the box-content heuristic — author intent
+// beats heuristics. A dark explicit fill forces a white font (luminance rule)
+// so labels stay legible; unset fields leave the style untouched.
+func applyUnitOverrides(style *NodeStyle, unit *model.Unit) {
+	if style == nil || unit == nil {
+		return
+	}
+
+	if unit.Color != "" {
+		style.FillColor = unit.Color
+		if luminance(unit.Color) < 0.5 {
+			style.FontColor = "#FFFFFF"
+		}
+	}
+
+	if unit.Border != "" {
+		style.BorderColor = unit.Border
+	}
+
+	if unit.Style != "" {
+		style.BorderStyle = unit.Style
+	}
+}
+
+// luminance estimates the relative luminance of a #RRGGBB colour (0 = dark,
+// 1 = light). Unparseable values (named colours, "") are treated as dark so
+// the font-colour fallback keeps the level default.
+func luminance(hex string) float64 {
+	hex = strings.TrimPrefix(hex, "#")
+	if len(hex) != 6 {
+		return 0
+	}
+
+	val, err := strconv.ParseUint(hex, 16, 32)
+	if err != nil {
+		return 0
+	}
+
+	r := float64((val>>16)&0xFF) / 255
+	g := float64((val>>8)&0xFF) / 255
+	b := float64(val&0xFF) / 255
+
+	return 0.299*r + 0.587*g + 0.114*b
+}
+
 // buildCluster creates a cluster for an expanded unit.
 func buildCluster(entry *view.Entry) *Cluster {
 	// Boxes use content-based styling (border colour derived from subunits)
@@ -310,6 +361,7 @@ func buildCluster(entry *view.Entry) *Cluster {
 	} else {
 		style = GetStyleForType(entry.Unit.Type, entry.IsExternal)
 	}
+	applyUnitOverrides(style, entry.Unit)
 
 	cluster := &Cluster{
 		ID:         entry.FullPath,

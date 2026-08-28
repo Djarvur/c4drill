@@ -42,6 +42,7 @@ func buildHTMLLabelForType(label *graph.Label, t model.UnitType) string {
 const (
 	// Border style constants.
 	borderStyleDashed = "dashed"
+	borderStyleDotted = "dotted"
 
 	// Font size constants.
 	fontSizeGraph = 14.0
@@ -64,8 +65,12 @@ func buildStyleString(style *styleInfo) []string {
 		styles = append(styles, "filled")
 	}
 
-	if style != nil && style.borderStyle == borderStyleDashed {
+	switch {
+	case style == nil:
+	case style.borderStyle == borderStyleDashed:
 		styles = append(styles, "dashed")
+	case style.borderStyle == borderStyleDotted:
+		styles = append(styles, "dotted")
 	}
 
 	return styles
@@ -164,7 +169,8 @@ func configureGraphSettings(cg *cgraph.Graph, g *graph.Graph) error {
 		cg.SetSplines("true")
 	case "straight":
 		cg.SetSplines("false")
-	case "ortho":
+	case "ortho", "square":
+		// "square" is the documented alias for ortho routing (GEDGE-02)
 		cg.SetSplines("ortho")
 	}
 
