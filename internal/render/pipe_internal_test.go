@@ -18,7 +18,8 @@ const queuePipeSVGFixture = `<?xml version="1.0" encoding="UTF-8" standalone="no
 <g id="graph0" class="graph">
 <g id="node1" class="node">
 <title>platform.queue</title>
-<polygon fill="none" stroke="#073b6f" stroke-width="1.5" stroke-dasharray="5,2" points="129.6,-57.6 0,-57.6 0,-16 129.6,-16 129.6,-57.6"/>
+<polygon fill="none" stroke="#073b6f" stroke-width="1.5" stroke-dasharray="5,2"
+ points="129.6,-57.6 0,-57.6 0,-16 129.6,-16 129.6,-57.6"/>
 <text xml:space="preserve" text-anchor="start" x="8" y="-25.2" font-size="14.00">Queue</text>
 </g>
 <g id="node2" class="node">
@@ -94,12 +95,13 @@ func TestPipePathFromPoints(t *testing.T) {
 
 	// Starts with an arc command (left bulge) after the initial moveto.
 	afterM := strings.TrimPrefix(d, "M")
-	afterM = strings.TrimLeft(afterM, "0123456789.,-")
+	afterM = strings.TrimLeft(strings.TrimLeft(afterM, "0123456789.,-"), " ")
 	assert.True(t, strings.HasPrefix(afterM, "A"), "path must start with the left-bulge arc, got %q", afterM)
 
 	// Ends with an arc command (right cap) before the closing Z.
-	beforeZ := strings.TrimSuffix(d, "Z")
-	assert.True(t, strings.HasSuffix(beforeZ, "83.00,20.00"), "path must end on the right cap arc endpoint, got %q", beforeZ)
+	beforeZ := strings.TrimSpace(strings.TrimSuffix(d, "Z"))
+	assert.True(t, strings.HasSuffix(beforeZ, "83.00,20.00"),
+		"path must end on the right cap arc endpoint, got %q", beforeZ)
 	assert.Equal(t, 3, strings.Count(d, "A7.00,20.00"),
 		"three arcs: left bulge, right silhouette, right full-ellipse cap")
 }
@@ -171,15 +173,16 @@ func TestReplaceQueuePolygons_RegexMetacharID(t *testing.T) {
 	t.Parallel()
 
 	out := string(replaceQueuePolygons([]byte(queuePipeSVGFixture), []string{`.*`}))
-	assert.Equal(t, queuePipeSVGFixture, string(out),
+	assert.Equal(t, queuePipeSVGFixture, out,
 		"a metacharacter ID matches no literal title, so nothing is rewritten")
 }
 
-// TestApplyPipeRendering_SVGOnly verifies the wiring contract: SVG bytes get
+// TestApplyPipeRendering_Wiring verifies the wiring contract: SVG bytes get
 // the pipe pass, DOT/XDOT bytes are returned untouched (queues stay plain
 // boxes in DOT per the locked design).
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestApplyPipeRendering_Wiring(t *testing.T) {
-	// go-graphviz WASM engine has concurrency issues — no parallel.
 	g := &graph.Graph{
 		Title:     "T",
 		Direction: "TB",

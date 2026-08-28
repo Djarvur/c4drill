@@ -134,7 +134,18 @@ func render(g *graph.Graph, format graphviz.Format) ([]byte, error) {
 		return nil, fmt.Errorf("render output: %w", err)
 	}
 
-	return buf.Bytes(), nil
+	out := buf.Bytes()
+
+	// Queue nodes render as horizontal pipes: post-process the SVG bytes,
+	// replacing each queue node's plain rect polygon with a pipe path (see
+	// pipe.go). RenderHTML inherits the pipe automatically — it funnels
+	// through render(g, graphviz.SVG). DOT/XDOT keeps plain boxes so edge
+	// anchoring stays on the box bbox.
+	if format == graphviz.SVG {
+		out = applyPipeRendering(g, out)
+	}
+
+	return out, nil
 }
 
 // xmlDeclOrDoctype matches the XML declaration (<?xml ...?>) and the SVG
