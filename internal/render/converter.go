@@ -111,7 +111,32 @@ func buildCgraph(
 		return nil, err
 	}
 
+	// Floating legend node (LEG-01)
+	if g.Legend != nil && len(g.Legend.Entries) > 0 {
+		if err := createLegendNode(cg, g.Legend); err != nil {
+			return nil, err
+		}
+	}
+
 	return cg, nil
+}
+
+// createLegendNode emits the legend as an isolated floating node rather than
+// rows in the graph label. With no edges it forms its own connected
+// component, which dot packs to the right of the main component on the top
+// rank — the upper-right corner (LEG-01) — without pushing the nav/title
+// label or the diagram content around. shape=plaintext keeps the node
+// borderless so only the legend table itself is drawn.
+func createLegendNode(cg *cgraph.Graph, legend *graph.Legend) error {
+	cn, err := cg.CreateNodeByName(legendNodeName)
+	if err != nil {
+		return fmt.Errorf("create legend node: %w", err)
+	}
+
+	cn.SetShape(cgraph.PlainTextShape)
+	cn.SetLabelHTML(BuildLegendLabel(legend))
+
+	return nil
 }
 
 // createTopLevelNodes creates nodes that are not inside clusters.
@@ -210,13 +235,13 @@ func configureGraphSettings(cg *cgraph.Graph, g *graph.Graph) error {
 	//     plain (default-size) content, GraphViz silently drops the title row
 	//     from the rendered SVG. Wrapping both rows in explicit FONT tags (10
 	//     for nav, 14 for title) makes both render.
+	// The nav and title share one multi-row HTML graph label. The legend is
+	// NOT part of it — it renders as a separate floating node (LEG-01), see
+	// createLegendNode.
 	navTDs := navigationTDs(g.Navigation)
 	hasTitle := g.Title != ""
-	hasLegend := g.Legend != nil && len(g.Legend.Entries) > 0
 
-	// The legend alone justifies a label: nameless C1/expanded views carry no
-	// nav and no title, yet the legend must still render (LEG-01).
-	if len(navTDs) == 0 && !hasTitle && !hasLegend {
+	if len(navTDs) == 0 && !hasTitle {
 		return nil
 	}
 
@@ -236,13 +261,6 @@ func configureGraphSettings(cg *cgraph.Graph, g *graph.Graph) error {
 		titleTD := fmt.Sprintf(`<TD COLSPAN="%d" ALIGN="CENTER"><FONT POINT-SIZE="14">%s</FONT></TD>`,
 			colspan, html.EscapeString(g.Title))
 		rows = append(rows, "<TR>"+titleTD+"</TR>")
-	}
-
-	if hasLegend {
-		// Legend rows hang right-aligned beneath the nav/title block (LEG-01):
-		// the upper-right of the diagram within the constraints of the top
-		// label area (GraphViz cannot absolutely position labels).
-		rows = append(rows, legendTDs(g.Legend, colspan)...)
 	}
 
 	combinedHTML := "<TABLE BORDER=\"0\" CELLBORDER=\"0\" CELLSPACING=\"0\" CELLPADDING=\"0\" ALIGN=\"CENTER\">" +

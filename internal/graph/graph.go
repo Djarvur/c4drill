@@ -152,20 +152,20 @@ type NodeStyle struct {
 	BorderStyle string
 }
 
-// Legend contains the entries rendered in the diagram's upper-right legend.
-// Default rows (kind colours + line styles) come first, then author lines.
+// Legend contains the entries rendered in the diagram's floating legend node
+// (upper-right corner). The renderer emits them as colored text — the text
+// itself is the sample — so each entry carries exactly the colour it
+// explains. Entries are conditional on what the view actually shows: element
+// level colours first, then link-kind colours, then author lines.
 type Legend struct {
 	Entries []LegendEntry
 }
 
-// LegendEntry is one legend row: a colour swatch (Color) and/or a line-style
-// sample (Style) plus its explanation text.
+// LegendEntry is one legend row: a text sample in the colour it documents.
 type LegendEntry struct {
-	// Label explains the row.
+	// Label explains the row (e.g. "container", "read").
 	Label string
-	// Color is the swatch colour (empty for pure line-style rows).
+	// Color is the colour the row documents (element border/label colour or
+	// link-kind colour). Empty falls back to the muted secondary grey.
 	Color string
-	// Style is the line-style sample (solid, dashed, dotted); empty for
-	// colour-swatch rows.
-	Style string
 }

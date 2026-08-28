@@ -184,5 +184,12 @@
 <polygon fill="#78a8d8" stroke="#78a8d8" stroke-width="2" points="289.5,-143.5 282.21,-135.81 283.12,-146.37 289.5,-143.5"/>
 <text xml:space="preserve" text-anchor="start" x="322.29" y="-192.4" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#78a8d8">Writes enriched data</text>
 </g>
+<!-- __c4drill_legend -->
+<g id="node10" class="node">
+<title>__c4drill_legend</title>
+<text xml:space="preserve" text-anchor="start" x="206.71" y="-917.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#073b6f">person / system</text>
+<text xml:space="preserve" text-anchor="start" x="206.71" y="-903.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#3c7fc0">container</text>
+<text xml:space="preserve" text-anchor="start" x="206.71" y="-889.6" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#78a8d8">component</text>
+</g>
 </g>
 </svg>

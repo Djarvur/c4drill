@@ -109,83 +109,34 @@ func plainNavTD(content string) string {
 	return "<TD>" + navFontOpen + content + "</FONT></TD>"
 }
 
-// Legend style glyphs. GraphViz HTML labels cannot draw dashed/dotted
-// strokes, so line-style samples are text glyphs in the muted default edge
-// colour; swatch cells carry BGCOLOR instead.
-const (
-	legendSolidGlyph  = "───"
-	legendDashedGlyph = "- - -"
-	legendDottedGlyph = "· · ·"
-)
+// legendNodeName is the GraphViz node name reserved for the floating legend.
+// The double-underscore prefix cannot collide with unit paths in practice.
+const legendNodeName = "__c4drill_legend"
 
-// legendStyleGlyph returns the text glyph for a line-style sample row.
-// GraphViz HTML labels cannot draw dashed/dotted strokes, so line-style
-// samples are text glyphs in the muted default edge colour; swatch cells
-// carry BGCOLOR instead.
-func legendStyleGlyph(style string) (string, bool) {
-	switch style {
-	case "solid":
-		return legendSolidGlyph, true
-	case "dashed":
-		return legendDashedGlyph, true
-	case "dotted":
-		return legendDottedGlyph, true
-	default:
-		return "", false
-	}
-}
-
-// legendTDs renders the legend rows as right-aligned table rows appended
-// under the nav/title rows. Each row is a nested borderless 2-column table
-// (sample cell + label cell) inside a COLSPAN'd right-aligned cell so the
-// block hugs the upper-right of the label area (GraphViz cannot absolutely
-// position labels; labeljust only affects plain labels). Every cell wraps its
-// content in an explicit <FONT POINT-SIZE> — rows mixing font sizes are
-// silently dropped by GraphViz (see configureGraphSettings quirk 2).
-// Label text and colour values are HTML-escaped (threat T-36-04-01).
-func legendTDs(legend *graph.Legend, colspan int) []string {
+// BuildLegendLabel renders the legend as a single-column HTML table where
+// every row IS the sample: the entry text is set in the colour it documents
+// (an element level colour or a link-kind colour), so no swatch cell or
+// stroke glyph is needed. Rows carry an explicit <FONT POINT-SIZE> — rows
+// mixing font sizes are silently dropped by GraphViz (see
+// configureGraphSettings quirk 2). Label text is HTML-escaped (threat
+// T-36-04-01).
+func BuildLegendLabel(legend *graph.Legend) string {
 	if legend == nil || len(legend.Entries) == 0 {
-		return nil
-	}
-
-	if colspan < 1 {
-		colspan = 1
+		return ""
 	}
 
 	rows := make([]string, 0, len(legend.Entries))
-
 	for _, entry := range legend.Entries {
-		label := html.EscapeString(entry.Label)
+		colour := entry.Color
+		if colour == "" {
+			colour = navFontColor
+		}
 
-		sample := legendSampleCell(entry)
-
-		nested := `<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">` +
-			`<TR>` + sample +
-			fmt.Sprintf(`<TD ALIGN="LEFT"><FONT POINT-SIZE="%s" COLOR="%s">%s</FONT></TD>`,
-				navFontPoint, navFontColor, label) +
-			`</TR></TABLE>`
-
-		rows = append(rows, fmt.Sprintf(`<TR><TD COLSPAN="%d" ALIGN="RIGHT">%s</TD></TR>`, colspan, nested))
+		rows = append(rows, fmt.Sprintf(
+			`<TR><TD ALIGN="LEFT"><FONT POINT-SIZE="%s" COLOR="%s">%s</FONT></TD></TR>`,
+			navFontPoint, html.EscapeString(colour), html.EscapeString(entry.Label)))
 	}
 
-	return rows
-}
-
-// legendSampleCell renders the sample cell for one legend row: a line-style
-// glyph, a colour swatch, or a plain text marker for text-only custom lines.
-func legendSampleCell(entry graph.LegendEntry) string {
-	if glyph, isStyle := legendStyleGlyph(entry.Style); isStyle {
-		return fmt.Sprintf(`<TD><FONT POINT-SIZE="%s" COLOR="%s">%s</FONT></TD>`,
-			navFontPoint, navFontColor, glyph)
-	}
-
-	if entry.Color != "" {
-		// Fixed-size BGCOLOR cell — the reliable GraphViz swatch mechanism.
-		return fmt.Sprintf(`<TD BGCOLOR="%s" WIDTH="12" HEIGHT="8"> </TD>`,
-			html.EscapeString(entry.Color))
-	}
-
-	// Text-only custom line.
-	return fmt.Sprintf(`<TD><FONT POINT-SIZE="%s" COLOR="%s">&#9644;</FONT></TD>`,
-		navFontPoint, navFontColor)
+	return "<TABLE BORDER=\"0\" CELLBORDER=\"0\" CELLSPACING=\"0\" CELLPADDING=\"1\">" +
+		strings.Join(rows, "") + "</TABLE>"
 }

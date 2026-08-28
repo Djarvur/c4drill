@@ -22,7 +22,6 @@ func BuildGraph(v *view.View) *Graph {
 		Title:     v.Title,
 		Direction: "TB",
 		EdgeStyle: v.Edges,
-		Legend:    buildLegend(v),
 		Nodes:     make([]*Node, 0),
 		Edges:     make([]*Edge, 0),
 		Clusters:  make([]*Cluster, 0),
@@ -36,8 +35,10 @@ func BuildGraph(v *view.View) *Graph {
 		buildC1ViewGraph(v, g)
 	}
 
-	// Build edges
+	// Build edges, then the legend — kind-colour rows need the resolved edge
+	// colours so the legend only explains what the diagram actually draws.
 	g.Edges = buildEdges(v)
+	g.Legend = buildLegend(v, g.Edges)
 
 	return g
 }
@@ -167,7 +168,6 @@ func BuildExpandedGraph(v *view.View) *Graph {
 		Title:     v.Title,
 		Direction: "TB",
 		EdgeStyle: v.Edges,
-		Legend:    buildLegend(v),
 		Nodes:     make([]*Node, 0),
 		Edges:     make([]*Edge, 0),
 		Clusters:  make([]*Cluster, 0),
@@ -198,8 +198,10 @@ func BuildExpandedGraph(v *view.View) *Graph {
 		}
 	}
 
-	// Build edges (handles cross-level connections)
+	// Build edges (handles cross-level connections), then the legend —
+	// kind-colour rows need the resolved edge colours.
 	g.Edges = buildEdges(v)
+	g.Legend = buildLegend(v, g.Edges)
 
 	return g
 }
@@ -335,35 +337,128 @@ func applyUnitOverrides(style *NodeStyle, unit *model.Unit) {
 	}
 }
 
-// buildLegend assembles the diagram legend (LEG-01..03) from the view: the
-// fixed default block (kind colours + line styles, LEG-02) first, then the
-// author-defined custom lines. Colors come from the model constants so the
-// legend can never drift from the renderer.
-func buildLegend(v *view.View) *Legend {
+// buildLegend assembles the diagram legend (LEG-01..03). Every row documents
+// a convention the view actually uses — nothing is explained that the diagram
+// does not show:
+//
+//  1. element level colours (person/system C1, container C2, component C3,
+//     external) — only for levels present among the visible units;
+//  2. link-kind colours (read/write/read-write) — only for kinds whose
+//     colour survived into a drawn edge (explicit author colours win over
+//     kind colours, so unresolved colours would be a lie);
+//  3. author-defined custom lines (LEG-03).
+//
+// Line styles (solid/dashed/dotted) are deliberately not explained: the
+// samples would be text approximations of a visual pattern, and a reader who
+// needs them can see the pattern on the diagram itself. Colors come from the
+// model constants so the legend can never drift from the renderer.
+func buildLegend(v *view.View, edges []*Edge) *Legend {
 	if v == nil || !v.ShowLegend {
 		return nil
 	}
 
-	legend := &Legend{
-		Entries: []LegendEntry{
-			{Label: "read", Color: model.LinkReadColour},
-			{Label: "write", Color: model.LinkWriteColour},
-			{Label: "read-write", Color: model.LinkReadWriteColour},
-			{Label: "solid", Style: "solid"},
-			{Label: "dashed", Style: "dashed"},
-			{Label: "dotted", Style: "dotted"},
-		},
+	entries := legendElementEntries(v)
+	entries = append(entries, legendKindEntries(edges)...)
+	entries = append(entries, legendCustomEntries(v)...)
+
+	if len(entries) == 0 {
+		return nil
 	}
 
+	return &Legend{Entries: entries}
+}
+
+// legendElementEntries emits one row per C4 level present in the view, using
+// the level's border colour — the same colour the renderer puts on element
+// borders AND label text (GetStyleForType), so the legend's coloured text
+// matches the diagram directly.
+func legendElementEntries(v *view.View) []LegendEntry {
+	var c1, c2, c3, external bool
+
+	for _, entry := range v.Units {
+		if entry == nil || entry.Unit == nil {
+			continue
+		}
+
+		if entry.IsExternal {
+			external = true
+		}
+
+		switch LevelForType(entry.Unit.Type) {
+		case levelC1:
+			c1 = true
+		case levelC2:
+			c2 = true
+		case levelC3:
+			c3 = true
+		}
+	}
+
+	entries := make([]LegendEntry, 0, 4)
+	if c1 {
+		entries = append(entries, LegendEntry{Label: "person / system", Color: model.PersonBorder})
+	}
+
+	if c2 {
+		entries = append(entries, LegendEntry{Label: "container", Color: model.ContainerBorder})
+	}
+
+	if c3 {
+		entries = append(entries, LegendEntry{Label: "component", Color: model.ComponentBorder})
+	}
+
+	if external {
+		entries = append(entries, LegendEntry{Label: "external", Color: model.PersonExternalBorder})
+	}
+
+	return entries
+}
+
+// legendKindEntries emits a row for each link-kind colour that actually
+// appears on a drawn edge. Edge colours are already resolved at this point
+// (explicit colour > kind colour > source border), so the legend can never
+// advertise a colour the diagram does not use.
+func legendKindEntries(edges []*Edge) []LegendEntry {
+	used := make(map[string]bool, len(edges))
+	for _, edge := range edges {
+		if edge != nil {
+			used[edge.Color] = true
+		}
+	}
+
+	kinds := []struct {
+		colour string
+		label  string
+	}{
+		{model.LinkReadColour, "read"},
+		{model.LinkWriteColour, "write"},
+		{model.LinkReadWriteColour, "read-write"},
+	}
+
+	entries := make([]LegendEntry, 0, len(kinds))
+	for _, kind := range kinds {
+		if used[kind.colour] {
+			entries = append(entries, LegendEntry{Label: kind.label, Color: kind.colour})
+		}
+	}
+
+	return entries
+}
+
+// legendCustomEntries appends the author-defined legend lines (LEG-03) after
+// the defaults. Lines without a colour render in the muted secondary grey.
+func legendCustomEntries(v *view.View) []LegendEntry {
+	entries := make([]LegendEntry, 0, len(v.LegendLines))
 	for _, line := range v.LegendLines {
-		legend.Entries = append(legend.Entries, LegendEntry{
-			Label: line.Label,
-			Color: line.Color,
-			Style: line.Style,
-		})
+		colour := line.Color
+		if colour == "" {
+			colour = model.ArrowColor
+		}
+
+		entries = append(entries, LegendEntry{Label: line.Label, Color: colour})
 	}
 
-	return legend
+	return entries
 }
 
 // luminance estimates the relative luminance of a #RRGGBB colour (0 = dark,

@@ -664,8 +664,8 @@ func TestUnitOverridesEmission(t *testing.T) {
 func TestLegendRendering(t *testing.T) {
 	legend := &graph.Legend{
 		Entries: []graph.LegendEntry{
+			{Label: "container", Color: "#3C7FC0"},
 			{Label: "read", Color: "#2E7D32"},
-			{Label: "solid", Style: "solid"},
 			{Label: "a<b & \"evil\"", Color: "#C0392B"},
 		},
 	}
@@ -687,41 +687,49 @@ func TestLegendRendering(t *testing.T) {
 		}
 	}
 
-	t.Run("legend rows render right-aligned with swatches", func(t *testing.T) {
+	t.Run("legend renders as a floating plaintext node", func(t *testing.T) {
 		g := baseGraph()
 		g.Legend = legend
 
 		out := renderWith(g)
-		assert.Contains(t, out, `BGCOLOR="#2E7D32"`, "kind colour swatch")
-		assert.Contains(t, out, "ALIGN=\"RIGHT\"", "legend block hugs the right")
-		assert.Contains(t, out, "solid", "style sample label")
+		assert.Contains(t, out, `__c4drill_legend`, "legend node exists")
+		assert.Contains(t, out, "shape=plaintext", "legend node is borderless plaintext")
+		assert.Contains(t, out, `COLOR="#2E7D32">read`, "entry text is the sample, in its colour")
 	})
 
-	t.Run("style rows render glyphs in the muted edge colour", func(t *testing.T) {
-		g := baseGraph()
-		g.Legend = &graph.Legend{Entries: []graph.LegendEntry{{Label: "dashed", Style: "dashed"}}}
-
-		out := renderWith(g)
-		assert.Contains(t, out, "- - -", "dashed glyph")
-		assert.Contains(t, out, "#666666", "muted sample colour")
-	})
-
-	t.Run("custom lines are HTML-escaped", func(t *testing.T) {
+	t.Run("legend stays out of the graph label", func(t *testing.T) {
 		g := baseGraph()
 		g.Legend = legend
 
 		out := renderWith(g)
-		assert.Contains(t, out, "a&lt;b &amp; &#34;evil&#34;", "label escaped into the label table")
+		assert.NotContains(t, out, "BGCOLOR=", "no swatch cells anywhere")
+		assert.NotContains(t, out, `ALIGN="RIGHT"`, "no legend rows in the label table")
+	})
+
+	t.Run("entries are HTML-escaped", func(t *testing.T) {
+		g := baseGraph()
+		g.Legend = legend
+
+		out := renderWith(g)
+		assert.Contains(t, out, "a&lt;b &amp; &#34;evil&#34;", "label escaped inside the legend node")
 		assert.NotContains(t, out, `>a<b`, "no raw markup injected")
 	})
 
-	t.Run("nameless graph with legend still emits a label", func(t *testing.T) {
+	t.Run("colourless entry falls back to the muted grey", func(t *testing.T) {
+		g := baseGraph()
+		g.Legend = &graph.Legend{Entries: []graph.LegendEntry{{Label: "custom"}}}
+
+		out := renderWith(g)
+		assert.Contains(t, out, `COLOR="#666666">custom`, "muted fallback colour")
+	})
+
+	t.Run("nameless graph with legend still emits the legend node", func(t *testing.T) {
 		g := baseGraph()
 		g.Title = ""
 		g.Legend = legend
 
 		out := renderWith(g)
-		assert.Contains(t, out, "BGCOLOR=", "legend present on nameless view (LEG-01)")
+		assert.Contains(t, out, "__c4drill_legend", "legend present on nameless view (LEG-01)")
 	})
 
 	t.Run("nameless graph without legend emits no label (shape preserved)", func(t *testing.T) {
@@ -729,6 +737,7 @@ func TestLegendRendering(t *testing.T) {
 		g.Title = ""
 
 		out := renderWith(g)
-		assert.NotContains(t, out, "label=<<TABLE", "no label table without nav/title/legend")
+		assert.NotContains(t, out, "label=<<TABLE", "no label table without nav/title")
+		assert.NotContains(t, out, "__c4drill_legend", "no legend node without legend")
 	})
 }

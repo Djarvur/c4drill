@@ -2783,7 +2783,111 @@ func TestPairAggregation(t *testing.T) {
 func TestBuildLegend(t *testing.T) {
 	t.Parallel()
 
-	t.Run("default-on assembles kind colours + style rows then custom lines", func(t *testing.T) {
+	t.Run("rows only for what the view shows", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {Type: model.TypeSystem, Name: "App"},
+				"ext": {Type: model.TypeSystemExternal, Name: "Ext"},
+			},
+		}
+
+		g := graph.BuildGraph(view.GenerateC1View(m))
+		require.NotNil(t, g.Legend, "legend default-on")
+
+		// C1 elements (internal + external) present; no links carry kind
+		// colours, so no kind rows — the legend explains nothing the diagram
+		// does not show.
+		require.Len(t, g.Legend.Entries, 2)
+		assert.Equal(t, "person / system", g.Legend.Entries[0].Label)
+		assert.Equal(t, model.PersonBorder, g.Legend.Entries[0].Color)
+		assert.Equal(t, "external", g.Legend.Entries[1].Label)
+		assert.Equal(t, model.PersonExternalBorder, g.Legend.Entries[1].Color)
+	})
+
+	t.Run("element rows cover every level present", func(t *testing.T) {
+		t.Parallel()
+
+		v := &view.View{
+			ShowLegend: true,
+			Units: map[string]*view.Entry{
+				"p": {Unit: &model.Unit{Type: model.TypePerson}},
+				"c": {Unit: &model.Unit{Type: model.TypeContainer}},
+				"k": {Unit: &model.Unit{Type: model.TypeComponent}},
+				"e": {Unit: &model.Unit{Type: model.TypeSystemExternal}, IsExternal: true},
+			},
+		}
+
+		g := graph.BuildGraph(v)
+		require.NotNil(t, g.Legend)
+		require.Len(t, g.Legend.Entries, 4)
+		assert.Equal(t, "person / system", g.Legend.Entries[0].Label)
+		assert.Equal(t, model.PersonBorder, g.Legend.Entries[0].Color)
+		assert.Equal(t, "container", g.Legend.Entries[1].Label)
+		assert.Equal(t, model.ContainerBorder, g.Legend.Entries[1].Color)
+		assert.Equal(t, "component", g.Legend.Entries[2].Label)
+		assert.Equal(t, model.ComponentBorder, g.Legend.Entries[2].Color)
+		assert.Equal(t, "external", g.Legend.Entries[3].Label)
+		assert.Equal(t, model.PersonExternalBorder, g.Legend.Entries[3].Color)
+	})
+
+	t.Run("kind rows only for colours drawn on edges", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type: model.TypeSystem,
+					Name: "App",
+					Links: []model.Link{
+						{Peer: "db", Kind: model.KindRead},
+						{Peer: "cache", Kind: model.KindWrite},
+					},
+				},
+				"db":    {Type: model.TypeDb, Name: "DB"},
+				"cache": {Type: model.TypeSystem, Name: "Cache"},
+			},
+		}
+
+		g := graph.BuildGraph(view.GenerateC1View(m))
+		require.NotNil(t, g.Legend)
+
+		// Element row + the two kinds actually used. read-write is not on any
+		// edge, so it must not be advertised.
+		require.Len(t, g.Legend.Entries, 3)
+		assert.Equal(t, "read", g.Legend.Entries[1].Label)
+		assert.Equal(t, model.LinkReadColour, g.Legend.Entries[1].Color)
+		assert.Equal(t, "write", g.Legend.Entries[2].Label)
+		assert.Equal(t, model.LinkWriteColour, g.Legend.Entries[2].Color)
+	})
+
+	t.Run("explicit colour wins over kind, row dropped", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type:  model.TypeSystem,
+					Name:  "App",
+					Links: []model.Link{{Peer: "db", Kind: model.KindRead, Color: "#FF0000"}},
+				},
+				"db": {Type: model.TypeDb, Name: "DB"},
+			},
+		}
+
+		g := graph.BuildGraph(view.GenerateC1View(m))
+		require.NotNil(t, g.Legend)
+
+		// The edge draws red, not the kind green — a "read" row would lie.
+		require.Len(t, g.Legend.Entries, 1)
+		assert.Equal(t, "person / system", g.Legend.Entries[0].Label)
+	})
+
+	t.Run("custom lines after defaults, colourless falls back to grey", func(t *testing.T) {
 		t.Parallel()
 
 		m := &parser.Model{
@@ -2791,6 +2895,7 @@ func TestBuildLegend(t *testing.T) {
 				Name: "Test",
 				LegendLines: []model.LegendLine{
 					{Label: "Batch", Color: "#C0392B", Style: "dashed"},
+					{Label: "Plain"},
 				},
 			},
 			Units: map[string]*model.Unit{
@@ -2799,26 +2904,31 @@ func TestBuildLegend(t *testing.T) {
 		}
 
 		g := graph.BuildGraph(view.GenerateC1View(m))
-		require.NotNil(t, g.Legend, "legend default-on")
+		require.NotNil(t, g.Legend)
+		require.Len(t, g.Legend.Entries, 3)
 
-		require.Len(t, g.Legend.Entries, 7)
+		assert.Equal(t, "person / system", g.Legend.Entries[0].Label)
 
-		// Default block: kind colours from the shared model constants (cannot
-		// drift from the renderer), then line-style rows.
-		assert.Equal(t, "read", g.Legend.Entries[0].Label)
-		assert.Equal(t, model.LinkReadColour, g.Legend.Entries[0].Color)
-		assert.Equal(t, "write", g.Legend.Entries[1].Label)
-		assert.Equal(t, model.LinkWriteColour, g.Legend.Entries[1].Color)
-		assert.Equal(t, "read-write", g.Legend.Entries[2].Label)
-		assert.Equal(t, model.LinkReadWriteColour, g.Legend.Entries[2].Color)
-		assert.Equal(t, "solid", g.Legend.Entries[3].Style)
-		assert.Equal(t, "dashed", g.Legend.Entries[4].Style)
-		assert.Equal(t, "dotted", g.Legend.Entries[5].Style)
+		// Custom line after defaults, verbatim; the Style hint is a leftover
+		// of the swatch legend and no longer renders.
+		assert.Equal(t, "Batch", g.Legend.Entries[1].Label)
+		assert.Equal(t, "#C0392B", g.Legend.Entries[1].Color)
 
-		// Custom line after defaults, verbatim.
-		assert.Equal(t, "Batch", g.Legend.Entries[6].Label)
-		assert.Equal(t, "#C0392B", g.Legend.Entries[6].Color)
-		assert.Equal(t, "dashed", g.Legend.Entries[6].Style)
+		// Colourless custom line renders in the muted secondary grey.
+		assert.Equal(t, "Plain", g.Legend.Entries[2].Label)
+		assert.Equal(t, model.ArrowColor, g.Legend.Entries[2].Color)
+	})
+
+	t.Run("nothing to explain yields no legend", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units:      map[string]*model.Unit{},
+		}
+
+		g := graph.BuildGraph(view.GenerateC1View(m))
+		assert.Nil(t, g.Legend, "empty view explains nothing")
 	})
 
 	t.Run("legend=false disables", func(t *testing.T) {
