@@ -32,6 +32,13 @@ jobs:
       - name: Build c4drill
         run: go build -o c4drill ./cmd/c4drill
 
+      - name: Validate plugin skill copies are in sync
+        # Runs FIRST, on the pristine checkout: the render steps below write
+        # drill-down artifacts next to the inputs, which would pollute the diff.
+        run: |
+          diff -r skill plugins/c4drill/skills/c4drill-toml
+          diff -r skill plugins/c4drill/opencode/skills/c4drill-toml
+
       - name: Validate skill examples
         run: |
           for file in skill/examples/*.toml; do
@@ -45,11 +52,6 @@ jobs:
             echo "Validating $file..."
             ./c4drill "$file" -f dot > /dev/null
           done
-
-      - name: Validate plugin skill copies are in sync
-        run: |
-          diff -r skill plugins/c4drill/skills/c4drill-toml
-          diff -r skill plugins/c4drill/opencode/skills/c4drill-toml
 
       - name: Validate ported likec4 examples
         run: |
