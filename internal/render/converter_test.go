@@ -6,6 +6,7 @@ import (
 
 	"github.com/Djarvur/c4drill/internal/graph"
 	"github.com/Djarvur/c4drill/internal/render"
+	"github.com/Djarvur/c4drill/internal/testutil/canonical"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -467,5 +468,114 @@ func TestEdgeColorRendering(t *testing.T) {
 		// Should still create the edge, just without color
 		assert.Contains(t, string(output), "a")
 		assert.Contains(t, string(output), "b")
+	})
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestRankReverseEmission(t *testing.T) {
+	// RANK-01: rank="reverse" swaps edge endpoints at emission and inverts the
+	// dir attribute, so the visual arrow stays pointed at the logical target
+	// while the vertical ranking flips. The logical Edge.Source/Target are
+	// unchanged; only emission swaps. Matrix from 36-RESEARCH.md §2.3:
+	//
+	// | authored arrow | rank=default      | rank=reverse       |
+	// |----------------|-------------------|--------------------|
+	// | "" (omitted)   | a -> b (no dir)   | b -> a [dir=back]  |
+	// | forward        | a -> b (no dir)   | b -> a [dir=back]  |
+	// | reverse        | a -> b [dir=back] | b -> a (no dir)    |
+	// | bidirectional  | a -> b [dir=both] | b -> a [dir=both]  |
+	// | none           | a -> b [dir=none] | b -> a [dir=none]  |
+
+	renderGraph := func(edge *graph.Edge) string {
+		g := &graph.Graph{
+			Title:     "T",
+			Direction: "TB",
+			Nodes: []*graph.Node{
+				{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeRecord},
+				{ID: "b", Label: &graph.Label{Name: "B"}, Shape: graph.ShapeRecord},
+			},
+			Edges: []*graph.Edge{edge},
+		}
+
+		output, err := render.RenderDOT(g)
+		require.NoError(t, err)
+
+		return string(output)
+	}
+
+	tests := []struct {
+		name         string
+		arrow        graph.ArrowDirection
+		rankReverse  bool
+		wantEdgeStmt string // the emitted edge statement tail
+		wantDirAttr  string // empty = no per-edge dir attribute
+	}{
+		{"omitted arrow, default rank", graph.ArrowDirection(""), false, "a -> b", ""},
+		{"omitted arrow, reverse rank", graph.ArrowDirection(""), true, "b -> a", "dir=back"},
+		{"forward arrow, default rank", graph.ArrowForward, false, "a -> b", ""},
+		{"forward arrow, reverse rank", graph.ArrowForward, true, "b -> a", "dir=back"},
+		{"reverse arrow, default rank", graph.ArrowReverse, false, "a -> b", "dir=back"},
+		{"reverse arrow, reverse rank", graph.ArrowReverse, true, "b -> a", ""},
+		{"bidirectional arrow, default rank", graph.ArrowBoth, false, "a -> b", "dir=both"},
+		{"bidirectional arrow, reverse rank", graph.ArrowBoth, true, "b -> a", "dir=both"},
+		{"none arrow, default rank", graph.ArrowNone, false, "a -> b", "dir=none"},
+		{"none arrow, reverse rank", graph.ArrowNone, true, "b -> a", "dir=none"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output := renderGraph(&graph.Edge{
+				Source:      "a",
+				Target:      "b",
+				ArrowHead:   tt.arrow,
+				RankReverse: tt.rankReverse,
+			})
+
+			assert.Contains(t, output, tt.wantEdgeStmt, "edge endpoint order")
+
+			// Per-edge dir attribute: check the edge statement block only
+			// (the graph-level `edge [dir=forward]` default is pre-existing).
+			edgeBlock := output[strings.Index(output, tt.wantEdgeStmt):]
+			edgeBlock = edgeBlock[:strings.Index(edgeBlock, ";")]
+			if tt.wantDirAttr == "" {
+				assert.NotContains(t, edgeBlock, "dir=", "no per-edge dir attribute expected")
+			} else {
+				assert.Contains(t, edgeBlock, tt.wantDirAttr, "per-edge dir attribute")
+			}
+		})
+	}
+
+	t.Run("no per-edge dir=forward is ever emitted", func(t *testing.T) {
+		for _, arrow := range []graph.ArrowDirection{"", graph.ArrowForward, graph.ArrowReverse, graph.ArrowBoth, graph.ArrowNone} {
+			for _, rev := range []bool{false, true} {
+				output := renderGraph(&graph.Edge{
+					Source:      "a",
+					Target:      "b",
+					ArrowHead:   arrow,
+					RankReverse: rev,
+				})
+
+				edgeBlock := output[strings.Index(output, "->"):]
+				edgeBlock = edgeBlock[:strings.Index(edgeBlock, ";")]
+				assert.NotContains(t, edgeBlock, "dir=forward")
+			}
+		}
+	})
+
+	t.Run("rank=reverse equals the linkFrom + arrow=reverse idiom (canonical)", func(t *testing.T) {
+		reverseRank := canonical.Canonical(t, renderGraph(&graph.Edge{
+			Source:      "a",
+			Target:      "b",
+			RankReverse: true,
+		}))
+
+		idiom := canonical.Canonical(t, renderGraph(&graph.Edge{
+			Source:    "b",
+			Target:    "a",
+			ArrowHead: graph.ArrowReverse,
+		}))
+
+		assert.Equal(t, idiom, reverseRank,
+			"rank=reverse must produce the same canonical DOT as the <- + arrow=reverse idiom")
 	})
 }

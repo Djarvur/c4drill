@@ -91,6 +91,10 @@ type Edge struct {
 	// NoConstraint excludes the edge from rank computation (constraint=false),
 	// so its endpoints may end up on the same rank. Set from link.Rank == "equal".
 	NoConstraint bool
+	// RankReverse flips the edge's layout ranking (link.Rank == "reverse"):
+	// Source/Target stay logical; the renderer swaps the endpoints at emission
+	// and inverts the dir attribute so the visual arrow still points at Target.
+	RankReverse bool
 	// PenWidth is the edge line width. 0 means the renderer applies the default
 	// (1.0 in resolved views, 2.0 in --expanded mode).
 	PenWidth float64

@@ -628,6 +628,10 @@ func createEdge(source, target string, link model.Link, sourceEntry *view.Entry,
 	// rank="equal" excludes the edge from rank computation (constraint=false)
 	edge.NoConstraint = link.Rank == model.RankEqual
 
+	// rank="reverse" flips the layout ranking (RANK-01): endpoints swap at
+	// emission, Source/Target stay logical
+	edge.RankReverse = link.Rank == model.RankReverse
+
 	return edge
 }
 
