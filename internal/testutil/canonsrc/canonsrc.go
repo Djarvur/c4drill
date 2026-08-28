@@ -227,6 +227,7 @@ func writeLinkCanonTOML(b *strings.Builder, header string, link model.Link) {
 		fields["rank"] = canonicalTOMLValue(string(link.Rank))
 	}
 
+	putString(fields, "kind", string(link.Kind))
 	putString(fields, "color", link.Color)
 	putString(fields, "style", link.Style)
 	putString(fields, "technology", link.Technology)

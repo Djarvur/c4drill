@@ -920,3 +920,64 @@ func TestEmitC4DQuotingNormalization(t *testing.T) {
 		assert.Contains(t, out, `description: "has, comma"`, "comma values cannot ride barewords")
 	})
 }
+
+func TestEmitCanonicalKindOrdering(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		UnitOrder: []string{"api"},
+		Units: map[string]*model.Unit{
+			"api": {
+				Type: model.TypeSystem,
+				Name: "API",
+				Links: []model.Link{{
+					Peer:  "db",
+					Rank:  model.RankEqual,
+					Kind:  model.KindReadWrite,
+					Color: "green",
+				}},
+			},
+		},
+	}
+
+	t.Run("C4D emits kind between rank and color", func(t *testing.T) {
+		t.Parallel()
+
+		out := c4d.EmitC4D(c4d.FromModel(m))
+
+		rankIdx := strings.Index(out, "rank: equal")
+		kindIdx := strings.Index(out, "kind: read-write")
+		colorIdx := strings.Index(out, "color: green")
+		require.NotEqual(t, -1, rankIdx)
+		require.NotEqual(t, -1, kindIdx)
+		require.NotEqual(t, -1, colorIdx)
+		assert.Less(t, rankIdx, kindIdx, "kind must come after rank")
+		assert.Less(t, kindIdx, colorIdx, "kind must come before color")
+	})
+
+	t.Run("TOML emits kind after rank", func(t *testing.T) {
+		t.Parallel()
+
+		out, err := c4d.EmitTOML(m)
+		require.NoError(t, err)
+
+		require.Contains(t, out, `kind = "read-write"`)
+		rankIdx := strings.Index(out, `rank = "equal"`)
+		kindIdx := strings.Index(out, `kind = "read-write"`)
+		require.NotEqual(t, -1, rankIdx)
+		assert.Less(t, rankIdx, kindIdx, "kind must come after rank")
+	})
+
+	t.Run("absent kind emits nothing (byte stability)", func(t *testing.T) {
+		t.Parallel()
+
+		noKind := *m
+		unit := *m.Units["api"]
+		unit.Links = []model.Link{{Peer: "db", Rank: model.RankEqual, Color: "green"}}
+		noKind.Units = map[string]*model.Unit{"api": &unit}
+
+		out, err := c4d.EmitTOML(&noKind)
+		require.NoError(t, err)
+		assert.NotContains(t, out, "kind")
+	})
+}

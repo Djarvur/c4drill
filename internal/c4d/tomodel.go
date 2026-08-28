@@ -706,6 +706,8 @@ func applyEdgeOption(opt *ast.FieldStmt, link *model.Link) error {
 		link.Arrow = model.ArrowDirection(v)
 	case "rank":
 		link.Rank = model.RankDirection(v)
+	case "kind":
+		link.Kind = model.LinkKind(v)
 	case "labelPosition":
 		link.LabelPosition = model.LabelPosition(v)
 	case "color":

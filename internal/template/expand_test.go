@@ -946,3 +946,89 @@ name = "gamma"
 	assert.ElementsMatch(t, expanded.UnitOrder, expanded2.UnitOrder, "idempotent UnitOrder")
 	assertExpandedEqual(t, expanded, expanded2)
 }
+
+// TestExpandKindSurvival pins the KIND-03 template contract: a literal kind
+// on a template-body link survives Clone + instantiation (value copy), while
+// ${param} inside a kind value is NOT substituted (kind joins the enum-ish
+// fields Arrow/Rank/LabelPosition — substitution could silently produce an
+// invalid kind).
+func TestExpandKindSurvival(t *testing.T) {
+	t.Parallel()
+
+	t.Run("literal kind survives instantiation", func(t *testing.T) {
+		t.Parallel()
+
+		data := []byte(`
+[properties]
+name = "Kind Survival Test"
+
+[template.reader]
+params = ["name"]
+name = "${name}"
+type = "system"
+
+[[template.reader.link]]
+peer = "data"
+kind = "read"
+description = "${name} reads"
+
+[[use]]
+template = "reader"
+name = "worker"
+
+[data]
+type = "db"
+name = "Data"
+`)
+
+		m, err := parser.Parse(data)
+		require.NoError(t, err, "Parse should not error")
+
+		m, err = template.Expand(m)
+		require.NoError(t, err, "Expand should not error")
+
+		unit, ok := m.Units["worker"]
+		require.True(t, ok, "instantiated unit present")
+		require.Len(t, unit.Links, 1)
+		assert.Equal(t, model.KindRead, unit.Links[0].Kind, "kind survives instantiation")
+		assert.Equal(t, "worker reads", unit.Links[0].Description, "string fields still substitute")
+	})
+
+	t.Run("kind is not substituted by params", func(t *testing.T) {
+		t.Parallel()
+
+		data := []byte(`
+[properties]
+name = "Kind Non-Substitution Test"
+
+[template.reader]
+params = ["name"]
+name = "${name}"
+type = "system"
+
+[[template.reader.link]]
+peer = "data"
+kind = "${name}"
+
+[[use]]
+template = "reader"
+name = "worker"
+
+[data]
+type = "db"
+name = "Data"
+`)
+
+		m, err := parser.Parse(data)
+		require.NoError(t, err, "Parse should not error")
+
+		m, err = template.Expand(m)
+		require.NoError(t, err, "Expand should not error")
+
+		unit, ok := m.Units["worker"]
+		require.True(t, ok, "instantiated unit present")
+		require.Len(t, unit.Links, 1)
+		assert.Equal(t, "${name}", string(unit.Links[0].Kind),
+			"kind is enum-ish: the literal token stays, never substituted")
+	})
+}

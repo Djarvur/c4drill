@@ -208,6 +208,7 @@ func edgeStmtFromLink(link model.Link, from bool) *ast.EdgeStmt {
 	}
 
 	addOpt("rank", string(link.Rank))
+	addOpt("kind", string(link.Kind))
 	addOpt("color", link.Color)
 	addOpt("style", link.Style)
 	addOpt("labelPosition", string(link.LabelPosition))

@@ -45,6 +45,7 @@ func repoRoot() string {
 //nolint:gochecknoglobals // immutable fixture manifest, the test corpus contract
 var expectedC4DFixtures = []string{
 	"external-types.toml",
+	"kind.toml",
 	"linkfrom.toml",
 	"multiline-strings.toml",
 	"rank-equal.toml",
@@ -243,6 +244,32 @@ func TestFixtureRankEqualCoverage(t *testing.T) {
 	})
 
 	assert.True(t, found, `rank = "equal" link present`)
+}
+
+// TestFixtureKindCoverage: kind.toml carries all three kinds and an explicit
+// colour override on a kind-carrying link (KIND-02).
+func TestFixtureKindCoverage(t *testing.T) {
+	t.Parallel()
+
+	kinds := map[model.LinkKind]bool{}
+	explicitColourOnKind := false
+
+	walkFixtureUnits(parseFixture(t, "kind.toml"), func(_ string, u *model.Unit) {
+		for _, link := range u.Links {
+			if link.Kind != "" {
+				kinds[link.Kind] = true
+			}
+
+			if link.Kind != "" && link.Color != "" {
+				explicitColourOnKind = true
+			}
+		}
+	})
+
+	assert.True(t, kinds[model.KindRead], `kind = "read" present`)
+	assert.True(t, kinds[model.KindWrite], `kind = "write" present`)
+	assert.True(t, kinds[model.KindReadWrite], `kind = "read-write" present`)
+	assert.True(t, explicitColourOnKind, "a kind link carries an explicit colour (KIND-02)")
 }
 
 // TestFixtureTemplateNestedUseCoverage: template-nested-use.toml combines

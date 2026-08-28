@@ -198,7 +198,7 @@ func emitLinksTOML(b *strings.Builder, path string, unit *model.Unit) {
 }
 
 // emitLinkTOML writes one [[header]] array table in the D-23 link field
-// order: peer, arrow, rank, color, style, technology, description,
+// order: peer, arrow, rank, kind, color, style, technology, description,
 // labelPosition, length.
 func emitLinkTOML(b *strings.Builder, header string, link model.Link) {
 	b.WriteString("[[" + header + "]]\n")
@@ -213,6 +213,10 @@ func emitLinkTOML(b *strings.Builder, header string, link model.Link) {
 
 	if link.Rank != "" {
 		fmt.Fprintf(b, "rank = %s\n", quoteTOML(string(link.Rank)))
+	}
+
+	if link.Kind != "" {
+		fmt.Fprintf(b, "kind = %s\n", quoteTOML(string(link.Kind)))
 	}
 
 	if link.Color != "" {

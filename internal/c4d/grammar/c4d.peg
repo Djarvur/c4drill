@@ -455,7 +455,7 @@ OptionFieldCore <- key:OptionKey _ ':' _ value:OptionValue {
 	return &ast.FieldStmt{Pos: c.pos.line, Key: key.(string), Value: value.(ast.Literal)}, nil
 }
 
-OptionKey <- ("labelPosition" / "color" / "style" / "rank" / "arrow" / "length") !IdentChar {
+OptionKey <- ("labelPosition" / "color" / "style" / "kind" / "rank" / "arrow" / "length") !IdentChar {
 	return string(c.text), nil
 }
 

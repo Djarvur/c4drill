@@ -34,7 +34,7 @@ var fieldKeywords = []string{
 	// FieldKey + OptionKey + PropertyKey (c4d.peg) + width/height (TOML
 	// unit fields) — union, alphabetical.
 	"arrow", "border", "color", "description", "edges", "expanded",
-	"height", "labelPosition", "length", "lineLength", "name", "rank",
+	"height", "kind", "labelPosition", "length", "lineLength", "name", "rank",
 	"reference", "style", "technology", "type", "width",
 }
 

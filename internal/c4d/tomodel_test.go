@@ -10,6 +10,7 @@
 package c4d_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -709,4 +710,41 @@ peer = "nosuch"
 	require.Error(t, tomlErr, "unresolvable bare peer in TOML errors")
 	require.Equal(t, tomlErr.Error(), c4dErr.Error(),
 		"identical peer.Resolve error for equivalent documents (D-10)")
+}
+
+func TestToModelEdgeKindOption(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		kind string
+		want model.LinkKind
+	}{
+		{"read", "read", model.KindRead},
+		{"write", "write", model.KindWrite},
+		{"read-write", "read-write", model.KindReadWrite},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			src := fmt.Sprintf("a: system {\n\t-> db { kind: %s }\n}\n", tt.kind)
+
+			m := toModel(t, src)
+
+			unit := m.Units["a"]
+			require.Len(t, unit.Links, 1)
+			assert.Equal(t, tt.want, unit.Links[0].Kind)
+		})
+	}
+
+	t.Run("unknown option kindd is a hard parse error", func(t *testing.T) {
+		t.Parallel()
+
+		// Edge options reject unknown keys loudly (pre-existing behavior for
+		// all options — the D-19 Levenshtein suggestions cover unit fields).
+		_, err := c4d.Parse([]byte("a: system {\n\t-> db { kindd: read }\n}\n"))
+		require.Error(t, err, "unknown edge option must error")
+	})
 }

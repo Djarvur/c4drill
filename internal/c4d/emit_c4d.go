@@ -47,10 +47,11 @@ var propertyFieldRank = map[string]int{
 var edgeOptionRank = map[string]int{
 	"arrow":         0,
 	"rank":          1,
-	"color":         2,
-	"style":         3,
-	"labelPosition": 4,
-	"length":        5,
+	"kind":          2,
+	"color":         3,
+	"style":         4,
+	"labelPosition": 5,
+	"length":        6,
 }
 
 // unknownFieldRank sorts unrecognized keys after every known one.

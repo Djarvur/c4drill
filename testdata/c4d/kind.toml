@@ -1,0 +1,39 @@
+# Fixture: link kind (KIND-01..03) — kind-classified links in every variant
+# plus an explicit colour override (KIND-02: explicit wins over kind).
+[properties]
+name = "Link Kind Test"
+description = "Read/write/read-write classified links"
+
+[web]
+type = "system"
+name = "Web"
+description = "Frontend"
+
+[[web.link]]
+peer = "data"
+technology = "SQL"
+description = "Reads"
+kind = "read"
+
+[[web.link]]
+peer = "auth"
+technology = "HTTPS"
+description = "Syncs"
+kind = "read-write"
+
+[auth]
+type = "system"
+name = "Auth"
+description = "Identity service"
+
+[[auth.link]]
+peer = "data"
+technology = "SQL"
+description = "Writes"
+kind = "write"
+color = "#AA0000"
+
+[data]
+type = "db"
+name = "Data"
+description = "Shared store"
