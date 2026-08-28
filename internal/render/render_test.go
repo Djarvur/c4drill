@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Djarvur/c4drill/internal/graph"
+	"github.com/Djarvur/c4drill/internal/model"
 	"github.com/Djarvur/c4drill/internal/render"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -233,6 +234,107 @@ func TestReferenceNavShim(t *testing.T) {
 	// scheme prefix and is the gate that prevents XSS via the reference URL.
 	assert.Contains(t, s, "[a-z][a-z0-9",
 		"nav shim must carry a generic scheme detector so javascript:/data: are no-ops (T-28-02)")
+}
+
+// TestQueuePipeIntegration proves the end-to-end queue rendering contract:
+// a queue node's SVG group carries the horizontal-pipe <path> (arc commands,
+// no polygon), non-queue nodes keep their original shape elements, and the
+// HTML wrapper inherits the same pipe because it funnels through
+// render(g, graphviz.SVG).
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestQueuePipeIntegration(t *testing.T) {
+	queueAndFriends := func() *graph.Graph {
+		return &graph.Graph{
+			Title:     "Queue Pipe Integration",
+			Direction: "TB",
+			Nodes: []*graph.Node{
+				{ID: "sys", Label: &graph.Label{Name: "System"}, Shape: graph.ShapeRecord, Type: model.TypeSystem},
+				{ID: "store", Label: &graph.Label{Name: "Store"}, Shape: graph.ShapeRecord, Type: model.TypeDb},
+				{
+					ID:    "events",
+					Label: &graph.Label{Name: "Events"},
+					Shape: graph.ShapeRecord,
+					Type:  model.TypeQueue,
+					Style: &graph.NodeStyle{BorderColor: "#073B6F", FontColor: "#073B6F", BorderStyle: "solid"},
+				},
+			},
+		}
+	}
+
+	// svgGroupAfterTitle returns the node group body from its <title> up to
+	// (excluding) the group's closing tag.
+	svgGroupAfterTitle := func(t *testing.T, svg, id string) string {
+		t.Helper()
+
+		needle := "<title>" + id + "</title>"
+		start := strings.Index(svg, needle)
+		require.NotEqual(t, -1, start, "node %s must be present in the SVG", id)
+
+		end := strings.Index(svg[start:], "</g>")
+		require.NotEqual(t, -1, end, "node %s group must close", id)
+
+		return svg[start : start+end]
+	}
+
+	// firstPathD extracts the first d="..." attribute value from a group.
+	firstPathD := func(group string) (string, bool) {
+		marker := `d="`
+		start := strings.Index(group, marker)
+
+		if start < 0 {
+			return "", false
+		}
+
+		rest := group[start+len(marker):]
+		end := strings.Index(rest, `"`)
+
+		if end < 0 {
+			return "", false
+		}
+
+		return rest[:end], true
+	}
+
+	t.Run("queue node renders a pipe path in SVG", func(t *testing.T) {
+		svg, err := render.RenderSVG(queueAndFriends())
+		require.NoError(t, err)
+
+		queueGroup := svgGroupAfterTitle(t, string(svg), "events")
+		assert.Contains(t, queueGroup, `<path d="M`, "queue node must render the pipe path")
+		assert.Contains(t, queueGroup, " A", "pipe path must carry arc commands")
+		assert.NotContains(t, queueGroup, "<polygon", "queue node must not keep its polygon")
+	})
+
+	t.Run("non-queue nodes keep their native shapes", func(t *testing.T) {
+		svg, err := render.RenderSVG(queueAndFriends())
+		require.NoError(t, err)
+
+		// Non-queue nodes keep the pre-existing rounded-box path (bezier
+		// corners, no arc commands) or polygon outlines — anything but the
+		// post-processor's arc-based pipe.
+		for _, id := range []string{"sys", "store"} {
+			group := svgGroupAfterTitle(t, string(svg), id)
+
+			assert.True(t, strings.Contains(group, "<polygon") || strings.Contains(group, "<path"),
+				"%s keeps a native shape element", id)
+
+			if d, ok := firstPathD(group); ok {
+				assert.NotContains(t, d, " A",
+					"%s path must not carry the pipe's arc commands", id)
+			}
+		}
+	})
+
+	t.Run("HTML output inherits the pipe path", func(t *testing.T) {
+		html, err := render.RenderHTML(queueAndFriends())
+		require.NoError(t, err)
+
+		queueGroup := svgGroupAfterTitle(t, string(html), "events")
+		assert.Contains(t, queueGroup, `<path d="M`, "HTML-wrapped SVG must carry the pipe path")
+		assert.Contains(t, queueGroup, " A", "HTML pipe path must carry arc commands")
+		assert.NotContains(t, queueGroup, "<polygon", "HTML queue node must not keep its polygon")
+	})
 }
 
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
