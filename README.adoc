@@ -154,11 +154,18 @@ c4drill examples/overflow-test/overflow-test.toml
 
 === Effect of Rank
 
-A minimal graph showing rank hints. The per-link `rank` attribute puts
-the link's endpoints on the same rank (`rank = "equal"`) or orders them
-along the layout direction (`rank = "forward"` / `"reverse"`).
-`D` carries a link to `C` to satisfy the orphan rule (see
-<<Validation Rules>>).
+The per-link `rank` attribute controls layout direction per edge:
+
+- `rank = "forward"` (default) — the target ranks after the source.
+- `rank = "equal"` — both endpoints share a rank.
+- `rank = "reverse"` (v1.13) — **flips the vertical ordering with one option
+  while the arrow still points at the target.** This replaces the old
+  two-part idiom of authoring the link as `"<-"` plus `arrow = "reverse"`
+  (the old idiom still works, but `rank = "reverse"` is the clear way to
+  express it).
+
+A minimal graph showing rank hints: `D` carries a link to `C` to satisfy
+the orphan rule (see <<Validation Rules>>).
 
 image::examples/rank-for-better-layout/rank-for-better-layout.svg[Effect of Rank — C1 diagram,width=520]
 
@@ -205,9 +212,70 @@ description = "Online store system" # Optional: Description
 color = "#E3F2FD"                   # Optional: Default background color
 style = "filled"                    # Optional: Default visual style
 border = "#1565C0"                  # Optional: Default border color
-edges = "spline"                    # Optional: Edge routing (straight|spline|square)
+edges = "spline"                    # Optional: Edge routing (straight|spline|square|ortho)
 lineLength = 40                     # Optional: Max line length before wrap (0=auto)
 expanded = ["payments"]             # Optional: Units to expand by default
+legend = true                       # Optional: Legend in the upper-right (default: on)
+----
+
+The `edges` routing value applies to **every** generated diagram (C1, C2,
+C3, expanded); `square` is an alias for ortho routing. A unit-level `edges`
+field overrides the global value for that unit's own diagram.
+
+=== Edge Kinds and the Legend
+
+Links accept a `kind` attribute that colours the edge by data flow — no
+explicit `color` needed:
+
+[cols="2,3"]
+|===
+|Kind |Edge colour
+
+|`read`
+|green `#2E7D32`
+
+|`write`
+|red `#C62828`
+
+|`read-write`
+|purple `#6A1B9A` (hue-distinct from both; a literal blend would be illegible)
+|===
+
+An explicit `color` overrides the kind colour (the kind still documents the
+data flow). Unknown kinds render with the default edge colour.
+
+**Collapsed edges keep their kind identity** (v1.13): when several links
+collapse to a visible ancestor, the collapsed edge's colour derives from the
+constituents — all-read green, all-write red, mixed purple. Its line style
+follows precedence: all constituents agree → that style; otherwise any solid
+→ solid, else any dashed → dashed, else dotted. If any constituent carries a
+custom `color`, kind colouring is suppressed and the default edge colour is
+used.
+
+**Legend** (default: on) — every diagram renders a legend in the upper-right
+listing the three kind colours and the line-style samples, followed by
+author-defined rows:
+
+[source,toml]
+----
+[properties]
+legend = false                      # Disable the legend model-wide
+
+[[properties.legendLine]]
+label = "Nightly batch"
+color = "#E65100"
+style = "dashed"
+----
+
+In the C4D format, `legend: false` disables the legend and custom lines are
+pipe-split list items (`"label|color|style"`; the label cannot contain a
+pipe):
+
+[source,c4d]
+----
+properties {
+  legendLine: ["Nightly batch|#E65100|dashed"]
+}
 ----
 
 === Unit Types
@@ -526,8 +594,9 @@ description = "Calls"
 |`technology` |Protocol/technology label |`"HTTPS"`, `"gRPC"`, `"TCP"`
 |`description` |Relationship description |`"Sends events to"`
 |`arrow` |Arrow direction |`"forward"`, `"reverse"`, `"bidirectional"`, `"none"`
-|`rank` |Layout ranking hint |`"forward"`, `"reverse"`, `"equal"`
-|`color` |Edge color |`"blue"`, `"++#++FF5733"`
+|`rank` |Layout ranking hint: `"reverse"` flips the vertical ordering while keeping the arrow direction (v1.13) |`"forward"`, `"reverse"`, `"equal"`
+|`kind` |Data-flow kind colouring (v1.13): read=green `#2E7D32`, write=red `#C62828`, read-write=purple `#6A1B9A`; explicit `color` wins |`"read"`, `"write"`, `"read-write"`
+|`color` |Edge color (overrides kind) |`"blue"`, `"++#++FF5733"`
 |`style` |Line style |`"solid"`, `"dashed"`, `"dotted"`
 |`labelPosition` |Where the label appears |`"middle"`, `"tail"`, `"head"`
 |===
@@ -618,6 +687,12 @@ height = 200                   # Explicit label height (0=auto)
 
 `width` and `height` are rarely needed — labels are normally sized
 from their content (see `--label-ratio` in the CLI Reference).
+
+Since v1.13 the unit styling triple actually renders: `color` fills the node
+(or the expanded-unit cluster) — a dark fill forces a white label for
+legibility — `border` sets the border colour, and `style` sets the border
+style (`solid`, `dashed`, or `dotted`). Author styling beats the automatic
+box-content heuristic. Units without these fields keep the C4 type palette.
 
 === Templates
 
@@ -872,8 +947,19 @@ Link attributes ride a trailing brace block on the edge statement:
 
 [source,c4d]
 ----
--> payment: "HTTPS | Processes payments" { rank: equal color: orange style: solid }
+-> payment: "HTTPS | Processes payments" { rank: equal kind: write color: orange style: solid }
 ----
+
+`kind: read | write | read-write` colours the edge (green / red / purple);
+`rank: reverse` flips the layout ranking while the arrow still points at the
+target — the single-knob replacement for the `<-` + `arrow: reverse` pair.
+The upper-right legend is on by default; `legend: false` in the properties
+block disables it and `legendLine: ["label|color|style"]` appends custom rows
+(see <<Edge Kinds and the Legend>>).
+
+Note: `kind` is an enum-like field and is *not* substituted by template
+`${param}` parameters (the same rule as `arrow`/`rank`); other link fields
+substitute normally.
 
 Peer targets use the same relative-peer semantics as TOML: a bare name
 resolves against the enclosing parent's ancestry walking up
