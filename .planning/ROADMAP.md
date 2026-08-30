@@ -97,24 +97,42 @@ Full details: [milestones/v1.13-ROADMAP.md](milestones/v1.13-ROADMAP.md)
 **Requirements**: CTX-01, CTX-02, CTX-03, PLAIN-01, PLAIN-02, PLAIN-03, PLAIN-04, BC-01, DOC-01, DOC-02, DOC-03, REL-01
 
 **Success Criteria** (what must be TRUE):
+
   1. Full ancestor chains on non-expanded views: every depicted element on any non-expanded generated diagram renders inside its complete chain of ancestor containers — intermediate containers appear as nested containers around it, and no depicted element ever appears outside its hierarchy. *(CTX-01)*
   2. Deep links keep target context: a link whose target is a deeply nested unit renders that target within its container chain, with the edge terminating at the target inside those containers — never silently collapsing to an anonymous top-level ancestor. *(CTX-02)*
   3. Expanded units render nested clusters, matching drill-downs: depicted nested elements appear through their intermediate containers (nested clusters, not flat lists), so the nesting picture on a non-expanded scheme matches the drill-down views and is recognizable end-to-end across all diagram levels. *(CTX-03)*
   4. `--plain` uniformly strips custom formatting, keeps semantics: `c4drill --plain` renders every generated file — the context diagram and all drill-down views, in svg/html/dot — with unit `color`/`style`/`border` fallen back to type-palette defaults, link `color`/`style` at defaults, `length`/`rank` ignored (default spacing, forward ranking), `properties.edges` ignored, and labels as plain text preserving name/technology/description content — while kind-derived edge colours and the legend remain. *(PLAIN-01, PLAIN-02, PLAIN-03, PLAIN-04)*
   5. Nothing else changed, documented, released: without `--plain`, models that do not exercise the new nesting-context scenarios render unchanged (canonicalDOT goldens re-baselined only for documented CTX deltas; full test suite green); README.adoc documents both features (what is ignored, what deliberately stays), skill/SKILL.md and all plugin copies are synced, example fixtures demonstrate both features and render cleanly through the full pipeline; the milestone tags product release **v1.21.0**. *(BC-01, DOC-01, DOC-02, DOC-03, REL-01)*
 
-**Plans**: 7 plans in 5 waves
-
+**Plans**: 7 plans in 6 waves
 Plans:
+**Wave 1**
+
 - [ ] 37-01-PLAN.md — CTX-03: recursive clusters in buildCluster (expanded units render nested clusters, not flat lists)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 37-02-PLAN.md — CTX-02: deep-link ancestor-chain entries in C1/C2/C3 view resolution (true-target edges)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 37-03-PLAN.md — PLAIN-01/02: --plain flag threading (View.Plain → Graph.Plain) + builder-level formatting suppression
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 37-04-PLAN.md — PLAIN-03/04: plain-text labels in the renderer + E2E --plain goldens and uniformity across all outputs
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 37-05-PLAN.md — CTX-01 invariant + ONE consolidated golden re-baseline (BC-01) + visual checkpoint
 - [ ] 37-06-PLAN.md — DOC-01..03: README, skill sync (3 byte-identical copies), example fixtures
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
 - [ ] 37-07-PLAN.md — REL-01: tag and ship product release v1.21.0
 
 **Notes** (from milestone context — phase research/codebase scan must pin exact gaps):
+
 - **Why one phase:** CTX (view semantics: `internal/view/scope.go` — GenerateC1View, visible subunits, boundary resolution; `internal/graph` cluster building) and PLAIN (CLI flag in `cmd/c4drill`, applied through the render pipeline) are largely disjoint in code but share canonicalDOT goldens and the same emission points; splitting would force cross-phase golden churn (single-phase precedent: v1.11, v1.12, v1.13 — STATE.md decision carry-forward).
 - **CTX scan targets:** the two known mechanisms losing nesting context today — C1 deep-link target collapse (target resolved to an anonymous top-level ancestor) and one-level expanded rendering (depicted nested elements as flat lists inside expanded clusters). Fix points expected in `internal/view/scope.go` + `internal/graph` cluster building.
 - **PLAIN suppression points:** unit styling at `applyNodeStyle`/`applyClusterStyle` (internal/render/converter.go), edge `color`/`style`/`length`/`rank` at edge emission, `properties.edges` in graph settings, label formatting in `internal/graph/labels.go` (plain-text label path; content preserved).
