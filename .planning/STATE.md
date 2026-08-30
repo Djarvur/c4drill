@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.14
-milestone_name: Nesting Context and Plain Rendering
-status: verifying
-last_updated: "2026-08-30T14:44:46.824Z"
+milestone: v1.15
+milestone_name: Hierarchy Wrapping and Granular Keys
+status: planning
+last_updated: "2026-08-30T15:04:18.296Z"
 last_activity: 2026-08-30
 progress:
-  total_phases: 2
-  completed_phases: 1
-  total_plans: 7
-  completed_plans: 7
-  percent: 50
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -24,12 +24,10 @@ See: .planning/PROJECT.md (updated 2026-08-30)
 
 ## Current Position
 
-Phase: 37 (nesting-context-and-plain-rendering) — EXECUTING
-Plan: 7 of 7
-Status: Phase complete — ready for verification
-Last activity: 2026-08-30
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-08-30 — Milestone v1.15 started
 
 ## Performance Metrics
 
