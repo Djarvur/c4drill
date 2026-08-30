@@ -426,6 +426,15 @@ type = "component"
 name = "Service"
 ```
 
+**Nesting context in rendered diagrams (v1.21):** authors can rely on
+container context being preserved. Any element a view depicts renders
+inside its complete ancestor-container chain; a link targeting a deeply
+nested unit terminates at the true target inside that chain (not at a
+collapsed top-level stand-in); and an expanded unit shows its nested
+containers as clusters (with the 🔍 drill-down marker), not a flat
+list. Sibling/external boundary nodes stay top-level by design, and
+collapsed subtrees are not restructured.
+
 ### Link Syntax
 
 Define relationships using `[[link]]` (outgoing) or
@@ -801,6 +810,12 @@ The following examples demonstrate increasing complexity:
    (`[[include]]`, `once`, cross-file subunits)
 9. **[09-composed/](examples/09-composed/)** - All four features
    composed (XC-05 golden pair)
+10. **[10-edge-kinds.toml](examples/10-edge-kinds.toml)** - Edge kind
+    colouring, `rank = "reverse"`, and the legend (v1.13)
+11. **[11-nesting-context.toml](examples/11-nesting-context.toml)** -
+    Deep container hierarchy, deep-link target, nested clusters (v1.21)
+12. **[12-plain.toml](examples/12-plain.toml)** - Custom formatting
+    fixture for the `--plain` before/after demo (v1.21)
 
 All examples parse and validate successfully with `c4drill <file>`
 (rendering runs the full validation pipeline).
@@ -945,6 +960,30 @@ with line number
 ```bash
 c4drill architecture.toml -f html    # Safari-compatible
 ```
+
+### Plain Rendering (--plain)
+
+`--plain` is a CLI-only render flag (the model file gains **no** new
+keys) that ignores author-custom formatting for a neutral, type-palette
+look — useful for reviews and diffs:
+
+```bash
+c4drill architecture.toml --plain             # neutral look
+c4drill architecture.toml --plain --expanded  # composes with --expanded
+```
+
+**Ignored under `--plain`:** unit `color`/`style`/`border` (units fall
+back to the C4 type palette, including expanded-unit clusters); link
+`color`/`style`; link `length` and `rank` (default spacing, forward
+ranking); `properties.edges` (default splines); custom label formatting
+(plain-text labels — name/technology/description content preserved).
+
+**Deliberately kept:** kind-derived edge colours and the legend
+(including custom legend lines), queue pipe shapes, the 🔍/📖 glyphs
+and their explore links, and collapsed subtrees stay collapsed.
+`convert` and `fmt` are unaffected. See
+`examples/12-plain.toml` — a fixture full of custom formatting to try
+the flag against.
 
 ---
 
