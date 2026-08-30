@@ -66,7 +66,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-See .planning/todos/pending/. (0 pending — the three 2026-08-30 rendering bugs fixed in quick task 260831-01u; todo cards moved to completed/)
+See .planning/todos/pending/. (1 pending: add CLI flag to override edge routing style — feature request, 2026-08-30)
 
 ### Blockers/Concerns
 
