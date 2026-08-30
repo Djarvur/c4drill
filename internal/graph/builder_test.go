@@ -3228,3 +3228,297 @@ func TestNoFeatureModelStability(t *testing.T) {
 	require.NoError(t, err, "round-trip parses")
 	assert.True(t, c4d.CanonicalEqual(m, reparsed), "round-trip is canonically equal")
 }
+
+// Plain-guard tests (PLAIN-01/PLAIN-02): with View.Plain set, author-custom
+// formatting falls back to type-palette/builder defaults at the graph layer —
+// unit color/style/border overrides are skipped (including expanded-unit
+// clusters), link color/style/length/rank/label-position are neutralized, and
+// properties.edges is ignored — while kind-derived edge colours and the legend
+// survive. Plain defaults to false, so the no-flag path is pinned by
+// TestBuildGraph_DefaultPathUnchanged (BC-01 at the builder level).
+
+func TestBuildGraph_PlainSkipsUnitOverrides(t *testing.T) {
+	t.Parallel()
+
+	t.Run("node falls back to the type palette", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type:   model.TypeSystem,
+					Name:   "App",
+					Color:  "#08427B",
+					Border: "#AA0000",
+					Style:  "dotted",
+				},
+				"db": {Type: model.TypeDb, Name: "Database"},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		v.Plain = true
+		g := graph.BuildGraph(v)
+
+		// Same assertions TestUnitStyleOverrides uses for the unset-fields
+		// case: the node style must equal the type-palette default the unit
+		// would receive with no overrides.
+		app := nodeByID(t, g, "app")
+		assert.Empty(t, app.Style.FillColor, "author color ignored under plain")
+		assert.Equal(t, model.PersonBorder, app.Style.BorderColor, "author border ignored under plain")
+		assert.Equal(t, model.PersonBorder, app.Style.FontColor)
+		assert.Equal(t, "solid", app.Style.BorderStyle, "author style ignored under plain")
+	})
+
+	t.Run("expanded-unit cluster falls back to the type palette", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type:     model.TypeSystem,
+					Name:     "App",
+					Color:    "#123456",
+					Border:   "#AA0000",
+					Expanded: []string{"app"},
+					Subunits: map[string]*model.Unit{
+						"api": {Type: model.TypeContainer, Name: "API"},
+					},
+					SubunitOrder: []string{"api"},
+				},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		v.Plain = true
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Clusters, 1)
+		style := g.Clusters[0].Style
+		assert.Empty(t, style.FillColor, "author color ignored under plain")
+		assert.Equal(t, model.PersonBorder, style.BorderColor, "author border ignored under plain")
+		assert.Equal(t, "solid", style.BorderStyle, "author style ignored under plain")
+	})
+
+	t.Run("C2 boundary cluster falls back to the type palette", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type:     model.TypeSystem,
+					Name:     "App",
+					Color:    "#123456",
+					Expanded: []string{"app"},
+					Subunits: map[string]*model.Unit{
+						"api": {Type: model.TypeContainer, Name: "API"},
+					},
+					SubunitOrder: []string{"api"},
+				},
+			},
+		}
+
+		v := view.GenerateC2View(m, "app")
+		require.NotNil(t, v)
+		v.Plain = true
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Clusters, 1)
+		style := g.Clusters[0].Style
+		assert.Empty(t, style.FillColor, "author color ignored under plain")
+		assert.Equal(t, model.PersonBorder, style.BorderColor, "author border ignored under plain")
+	})
+}
+
+func TestBuildGraph_PlainNeutralizesEdgeFormatting(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test", Edges: "straight"},
+		Units: map[string]*model.Unit{
+			"app": {
+				Type: model.TypeSystem,
+				Name: "App",
+				Links: []model.Link{{
+					Peer:          "db",
+					Color:         "#BA4A00",
+					Style:         "dashed",
+					Length:        3,
+					Rank:          model.RankReverse,
+					LabelPosition: model.LabelTail,
+					Kind:          model.KindWrite,
+				}},
+			},
+			"db": {Type: model.TypeDb, Name: "Database"},
+		},
+	}
+
+	v := view.GenerateC1View(m)
+	v.Plain = true
+	g := graph.BuildGraph(v)
+
+	require.Len(t, g.Edges, 1)
+	edge := g.Edges[0]
+
+	assert.Equal(t, model.LinkWriteColour, edge.Color,
+		"custom colour ignored; the kind-derived colour applies (kind colours STAY)")
+	assert.NotEqual(t, "#BA4A00", edge.Color, "author colour absent under plain")
+	assert.Equal(t, "solid", edge.Style, "custom line style falls back to the default")
+	assert.Zero(t, edge.MinLen, "length ignored — no minlen")
+	assert.False(t, edge.RankReverse, "rank=reverse ignored — no endpoint swap")
+	assert.False(t, edge.NoConstraint, "rank-based constraint suppression absent")
+	assert.Equal(t, "middle", edge.Label.Position, "label position falls back to the builder default")
+	assert.Empty(t, g.EdgeStyle, "properties.edges ignored under plain")
+
+	// Collapsed pairs must not leak author styles either: the AGG-02
+	// aggregate style override stays inert under plain while the aggregate's
+	// kind/source-border colour logic still applies.
+	t.Run("collapsed pair keeps the default style", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type: model.TypeSystem,
+					Name: "App",
+					Subunits: map[string]*model.Unit{
+						"api": {
+							Type:  model.TypeContainer,
+							Name:  "API",
+							Links: []model.Link{{Peer: "ext", Style: "dashed"}},
+						},
+						"etl": {
+							Type:  model.TypeContainer,
+							Name:  "ETL",
+							Links: []model.Link{{Peer: "ext", Style: "dashed"}},
+						},
+					},
+					SubunitOrder: []string{"api", "etl"},
+				},
+				"ext": {Type: model.TypeSystemExternal, Name: "Ext"},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		v.Plain = true
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Edges, 1)
+		assert.Equal(t, "solid", g.Edges[0].Style, "aggregate style override inert under plain")
+	})
+}
+
+func TestBuildGraph_PlainKeepsKindColourAndLegend(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"app": {
+				Type:  model.TypeSystem,
+				Name:  "App",
+				Links: []model.Link{{Peer: "db", Kind: model.KindRead}},
+			},
+			"db": {Type: model.TypeDb, Name: "Database"},
+		},
+	}
+
+	v := view.GenerateC1View(m)
+	v.Plain = true
+	g := graph.BuildGraph(v)
+
+	require.Len(t, g.Edges, 1)
+	assert.Equal(t, model.LinkReadColour, g.Edges[0].Color,
+		"kind-derived edge colour is semantic, not author formatting — it STAYS")
+
+	require.NotNil(t, g.Legend, "legend survives plain mode")
+
+	found := false
+
+	for _, entry := range g.Legend.Entries {
+		if entry.Label == "read" && entry.Color == model.LinkReadColour {
+			found = true
+		}
+	}
+
+	assert.True(t, found, "the drawn kind colour keeps its legend row")
+}
+
+func TestBuildGraph_PlainCopiedFromView(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"app": {
+				Type:     model.TypeSystem,
+				Name:     "App",
+				Expanded: []string{"app"},
+				Subunits: map[string]*model.Unit{
+					"api": {Type: model.TypeContainer, Name: "API"},
+				},
+				SubunitOrder: []string{"api"},
+			},
+		},
+	}
+
+	v := view.GenerateC1View(m)
+	v.Plain = true
+
+	assert.True(t, graph.BuildGraph(v).Plain, "BuildGraph copies View.Plain")
+	assert.True(t, graph.BuildExpandedGraph(v).Plain,
+		"BuildExpandedGraph copies View.Plain too (--plain x --expanded, Pitfall 5)")
+}
+
+// TestBuildGraph_DefaultPathUnchanged pins BC-01 at the builder level: with
+// Plain at its zero value the builder reproduces today's behavior exactly —
+// author unit overrides apply and custom link colour/style/length/rank and
+// label position all take effect.
+func TestBuildGraph_DefaultPathUnchanged(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test", Edges: "straight"},
+		Units: map[string]*model.Unit{
+			"app": {
+				Type:   model.TypeSystem,
+				Name:   "App",
+				Color:  "#08427B",
+				Border: "#AA0000",
+				Style:  "dotted",
+				Links: []model.Link{{
+					Peer:          "db",
+					Color:         "#BA4A00",
+					Style:         "dashed",
+					Length:        3,
+					Rank:          model.RankReverse,
+					LabelPosition: model.LabelTail,
+				}},
+			},
+			"db": {Type: model.TypeDb, Name: "Database"},
+		},
+	}
+
+	v := view.GenerateC1View(m) // Plain keeps its zero value (false)
+	g := graph.BuildGraph(v)
+
+	assert.False(t, g.Plain, "default path leaves Graph.Plain false")
+
+	app := nodeByID(t, g, "app")
+	assert.Equal(t, "#08427B", app.Style.FillColor, "author color applied on the default path")
+	assert.Equal(t, "#AA0000", app.Style.BorderColor, "author border applied on the default path")
+	assert.Equal(t, "dotted", app.Style.BorderStyle, "author style applied on the default path")
+
+	require.Len(t, g.Edges, 1)
+	edge := g.Edges[0]
+	assert.Equal(t, "#BA4A00", edge.Color, "custom link colour applied on the default path")
+	assert.Equal(t, "dashed", edge.Style)
+	assert.Equal(t, 3, edge.MinLen)
+	assert.True(t, edge.RankReverse)
+	assert.Equal(t, "tail", edge.Label.Position)
+	assert.Equal(t, "straight", g.EdgeStyle, "properties.edges honored on the default path")
+}
