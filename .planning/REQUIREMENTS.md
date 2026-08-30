@@ -42,7 +42,7 @@ Source: user review 2026-08-30 (retroactive answers to the yolo-skipped question
 
 ### REL — Release
 
-- [ ] **REL-01**: Milestone ships as product release **v1.22.0** (git tag; CI release workflow builds artifacts and creates the GitHub release).
+- [x] **REL-01**: Milestone ships as product release **v1.22.0** (git tag; CI release workflow builds artifacts and creates the GitHub release). ✅ 38-06 — tag on c550b05, workflow 33322118697 green, published with 6 binaries
 
 ---
 
@@ -73,7 +73,7 @@ Filled during roadmap creation.
 | DOC-01 | Phase 38 | ✅ 38-05 |
 | DOC-02 | Phase 38 | ✅ 38-05 |
 | DOC-03 | Phase 38 | ✅ 38-05 |
-| REL-01 | Phase 38 | Pending |
+| REL-01 | Phase 38 | ✅ 38-06 |
 
 **Coverage:**
 - v1 requirements: 13 total

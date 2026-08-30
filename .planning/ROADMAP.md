@@ -11,7 +11,7 @@
 - ✅ **v1.12 C4D DSL Alternative** — Phase 35 (shipped 2026-08-17) → [archive](milestones/v1.12-ROADMAP.md)
 - ✅ **v1.13 Edge Semantics and Legend** — Phase 36 (shipped 2026-08-28) → [archive](milestones/v1.13-ROADMAP.md) — product release tag: v1.18.0
 - ✅ **v1.14 Nesting Context and Plain Rendering** — Phase 37 (shipped 2026-08-30) — product release tag: v1.21.0
-- 🚧 **v1.15 Hierarchy Wrapping and Granular Keys** — Phase 38 (in progress) — product release tag: v1.22.0
+- ✅ **v1.15 Hierarchy Wrapping and Granular Keys** — Phase 38 (SHIPPED 2026-08-30) — product release tag: v1.22.0
 
 ## Phases
 
@@ -96,7 +96,7 @@ Full details: [milestones/v1.13-ROADMAP.md](milestones/v1.13-ROADMAP.md)
 
 **Milestone Goal:** Correct v1.14's scoping after user review — every depicted node on any generated view (regular, boundary, expanded) renders inside its complete ancestor-container chain so nothing hangs in the air (drawing containers only, never extra nodes); add granular CLI switches composing with `--plain`; add a dedicated key to disable labels entirely. Ships as product release **v1.22.0**.
 
-- [ ] **Phase 38: Hierarchy Wrapping and Granular Keys** - Boundary/sibling hierarchy wrapping (v1.14 scoping reversal), granular formatting switches composing with `--plain`, `--no-labels` label-suppression key, golden re-baseline, docs, release v1.22.0
+- [x] **Phase 38: Hierarchy Wrapping and Granular Keys** - Boundary/sibling hierarchy wrapping (v1.14 scoping reversal), granular formatting switches composing with `--plain`, `--no-labels` label-suppression key, golden re-baseline, docs, release v1.22.0 ✅ SHIPPED 2026-08-30 (v1.22.0)
 
 ## Phase Details
 
@@ -104,7 +104,7 @@ Full details: [milestones/v1.13-ROADMAP.md](milestones/v1.13-ROADMAP.md)
 
 **Goal**: Non-expanded diagrams preserve the full nesting picture and a `--plain` CLI key renders canonical default-styled output. 7 plans (37-01..37-07). Requirements: CTX-01..03, PLAIN-01..04, BC-01, DOC-01..03, REL-01. Landed: recursive cluster unfolding (buildNestedCluster), deep-link ancestor chains (Entry.UnfoldChain + ensureDeepLinkChain), cluster drill affordance (Cluster.ExploreURL), `--plain` threading (View.Plain/Graph.Plain + builder guards). Boundary/sibling entries deliberately kept top-level (v1.14 scoping decision — reversed by v1.15).
 
-### Phase 38: Hierarchy Wrapping and Granular Keys
+### Phase 38: Hierarchy Wrapping and Granular Keys *(SHIPPED 2026-08-30 — v1.22.0)*
 
 **Goal**: Every depicted node on any generated view renders inside its complete ancestor-container chain — boundary and sibling entries included (reversing the v1.14 scoping decision), with only containers drawn and no extra nodes — and users gain fine-grained CLI control over formatting: individual switches suppress one formatting aspect each (composing with the master `--plain`), and a dedicated key omits all label text so routing distortion from labels disappears. Ships as product release **v1.22.0**.
 
@@ -144,7 +144,7 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [ ] 38-06-PLAN.md — release v1.22.0 (REL-01)
+- [x] 38-06-PLAN.md — release v1.22.0 (REL-01) ✅ 2026-08-30 — tag v1.22.0 on c550b05, release workflow green, published with 6 binaries
 
 **Notes** (from milestone context — phase research/codebase scan must pin exact gaps):
 
