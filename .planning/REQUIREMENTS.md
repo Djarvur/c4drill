@@ -56,16 +56,25 @@ Source: user request 2026-08-30. Clarifying questions were auto-skipped (yolo mo
 
 ## Traceability
 
-Filled during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (pending roadmap) | | |
+| CTX-01 | Phase 37 | Pending |
+| CTX-02 | Phase 37 | Pending |
+| CTX-03 | Phase 37 | Pending |
+| PLAIN-01 | Phase 37 | Pending |
+| PLAIN-02 | Phase 37 | Pending |
+| PLAIN-03 | Phase 37 | Pending |
+| PLAIN-04 | Phase 37 | Pending |
+| BC-01 | Phase 37 | Pending |
+| DOC-01 | Phase 37 | Pending |
+| DOC-02 | Phase 37 | Pending |
+| DOC-03 | Phase 37 | Pending |
+| REL-01 | Phase 37 | Pending |
 
 **Coverage:**
 - v1 requirements: 11 total
-- Mapped to phases: 0
-- Unmapped: 11 ⚠️
+- Mapped to phases: 11
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-08-30*
