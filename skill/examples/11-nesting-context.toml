@@ -1,0 +1,75 @@
+# Nesting Context Example (v1.21)
+# Diagrams keep container context: every depicted element renders inside
+# its complete ancestor-container chain, deep links terminate at the true
+# target inside that chain, and expanded units show nested containers as
+# clusters (with the drill-down marker). Sibling/external boundary nodes
+# stay top-level and collapsed subtrees are not restructured.
+
+[properties]
+name = "Nesting Context"
+description = "Deep container chains, deep-link targets, and nested clusters"
+expanded = ["platform", "platform.gateway"]
+
+[admin]
+type = "person"
+name = "Platform Admin"
+description = "Operates the platform"
+
+# Deep link: the target sits three levels deep, so the C1 view renders it
+# inside its full ancestor chain (platform -> gateway -> router).
+[[admin.link]]
+peer = "platform.gateway.router"
+technology = "HTTPS"
+description = "Configures routing"
+
+[platform]
+type = "system"
+name = "Platform"
+technology = "Go"
+
+[platform.gateway]
+type = "container"
+name = "API Gateway"
+technology = "Go"
+
+[platform.gateway.router]
+type = "component"
+name = "Request Router"
+
+# A grouping box at C3 nests components one level deeper — expanded views
+# render it as a nested cluster, not a flat list.
+[platform.gateway.pipeline]
+type = "box"
+name = "Processing Pipeline"
+
+[platform.gateway.pipeline.parser]
+type = "component"
+name = "Parser"
+
+[[platform.gateway.pipeline.parser.link]]
+peer = "platform.gateway.pipeline.validator"
+description = "Feeds parsed requests"
+
+[platform.gateway.pipeline.validator]
+type = "component"
+name = "Validator"
+
+# Cross-branch deep link: validator -> index crosses from gateway into the
+# data box; the target renders inside its own ancestor chain.
+[[platform.gateway.pipeline.validator.link]]
+peer = "platform.data.store.index"
+technology = "gRPC"
+description = "Checks freshness"
+
+[platform.data]
+type = "box"
+name = "Data"
+
+[platform.data.store]
+type = "container"
+name = "Document Store"
+technology = "PostgreSQL"
+
+[platform.data.store.index]
+type = "component"
+name = "Index"

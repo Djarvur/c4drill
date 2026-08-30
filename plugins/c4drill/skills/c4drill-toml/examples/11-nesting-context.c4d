@@ -1,0 +1,32 @@
+properties {
+  name: Nesting Context
+  description: "Deep container chains, deep-link targets, and nested clusters"
+  expanded: [platform, platform.gateway]
+}
+
+admin: person "Platform Admin" {
+  description: Operates the platform
+  -> platform.gateway.router: "HTTPS | Configures routing"
+}
+
+platform: system "Platform" {
+  technology: Go
+  gateway: container "API Gateway" {
+    technology: Go
+    router: component "Request Router" { }
+    pipeline: componentBox "Processing Pipeline" {
+      parser: component "Parser" {
+        -> platform.gateway.pipeline.validator: Feeds parsed requests
+      }
+      validator: component "Validator" {
+        -> platform.data.store.index: "gRPC | Checks freshness"
+      }
+    }
+  }
+  data: containerBox "Data" {
+    store: container "Document Store" {
+      technology: PostgreSQL
+      index: component "Index" { }
+    }
+  }
+}

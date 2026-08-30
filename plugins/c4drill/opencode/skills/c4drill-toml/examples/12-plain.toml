@@ -1,0 +1,67 @@
+# Plain Rendering Example (v1.21)
+# This fixture is deliberately loaded with author-custom formatting.
+# Render it with `c4drill 12-plain.toml --plain` and watch the formatting
+# fall back to defaults: unit color/style/border -> type palette, link
+# color/style/length/rank -> defaults, properties.edges -> splines, and
+# labels as plain text. What stays: kind-derived colours, the legend,
+# queue pipes, and the drill-down/reference glyphs.
+
+[properties]
+name = "Plain Demo"
+description = "Custom formatting stripped by --plain"
+color = "#FFF9C4"
+style = "filled"
+border = "#1565C0"
+edges = "ortho"
+
+[customer]
+type = "person"
+name = "Customer"
+description = "Shopper"
+
+[[customer.link]]
+peer = "shop.web.catalog"
+technology = "HTTPS"
+description = "Browses"
+color = "#E65100"
+style = "dashed"
+
+[shop]
+type = "system"
+name = "Shop"
+technology = "Go"
+color = "#1565C0"
+border = "#0D47A1"
+style = "dashed"
+
+[shop.web]
+type = "container"
+name = "Web App"
+technology = "React"
+color = "#E8F5E9"
+border = "#2E7D32"
+style = "dotted"
+
+[shop.web.catalog]
+type = "component"
+name = "Catalog"
+color = "#FFE0B2"
+
+[[shop.web.catalog.link]]
+peer = "pg"
+technology = "SQL"
+description = "Queries"
+color = "#6A1B9A"
+style = "dotted"
+rank = "reverse"
+labelPosition = "head"
+
+[pg]
+type = "db"
+name = "PostgreSQL"
+technology = "PostgreSQL 15"
+color = "#E3F2FD"
+
+[[pg.linkFrom]]
+peer = "shop.web.catalog"
+description = "Queries"
