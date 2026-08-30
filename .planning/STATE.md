@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-08-30)
 Phase: 38 (hierarchy-wrapping-and-granular-keys) — COMPLETE (v1.22.0 SHIPPED 2026-08-30)
 Plan: 6 of 6
 Status: 38-06 complete — v1.22.0 tagged (c550b05), release workflow 33322118697 green, GitHub Release published with 6 binaries; milestone v1.15 closed
-Last activity: 2026-08-30 -- Plan 38-06 executed (tag v1.22.0; planning commit a6c271a)
+Last activity: 2026-08-30 - Completed quick task 260831-01u: three rendering bugs fixed (compact C1 root, edge-only --no-labels, pre-flag edge merge); verification Needs Review — 2 human items
 
 Progress: [██████████] 100%
 
@@ -66,12 +66,18 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-See .planning/todos/pending/. (3 pending: edge merge compares post-flag attributes; root diagram bloated by ancestor wrapping [regression v1.22.0/b2447da]; --no-labels should suppress only edge labels — 2026-08-30)
+See .planning/todos/pending/. (0 pending — the three 2026-08-30 rendering bugs fixed in quick task 260831-01u; todo cards moved to completed/)
 
 ### Blockers/Concerns
 
 - [Phase 38]: WRAP will cause REAL golden re-baselining for models with cross-container links (unlike v1.14's zero-delta outcome) — budget for documented delta churn.
 - [Phase 38 — planner must pin]: kind-derived colours / legend coverage under the colours switch; legend behavior under `--no-labels` (default: legend stays — metadata, not an element label).
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Status | Directory |
+|---|-------------|------|--------|--------|-----------|
+| 260831-01u | Fix three rendering bugs from todos/pending: root diagram bloated by ancestor wrapping (bisect: ships in v1.21.0 CTX-02/CTX-03, not b2447da), --no-labels narrowed to edge labels only, edge merge made flag-invariant via builder-assigned Edge.Name | 2026-08-30 | 72afbbb | Needs Review (2 human items) | [260831-01u-fix-three-rendering-bugs-from-todos-pend](./quick/260831-01u-fix-three-rendering-bugs-from-todos-pend/) |
 
 ## Deferred Items
 
