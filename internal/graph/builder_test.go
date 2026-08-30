@@ -1241,28 +1241,34 @@ func TestBuildExpandedGraphBaselineDOT(t *testing.T) {
 		"expanded DOT must match the committed golden baseline semantically (COMPAT-02)")
 }
 
-// TestBuildGraph_ExpandedClusterRendersNestedSubClusters pins CTX-03: a child
-// unit that itself has subunits renders as a NESTED sub-cluster inside an
-// expanded cluster — not as a flat collapsed node — and its own children
-// unfold recursively (containers as clusters, leaves as nodes). The nested
-// container cluster keeps the drill affordance: 🔍 on its label (the parent is
-// author-expanded, the nested container is not) and an ExploreURL assigned by
-// BuildGraphWithPath's recursive walk.
+// TestBuildGraph_ExpandedClusterRendersNestedSubClusters pins the compact-root
+// C1 semantics for an author-expanded cluster (BUG-1-ROOT-COMPACT revision of
+// CTX-03): a child unit that itself has subunits renders as a COLLAPSED node
+// (with the 🔍 affordance) unless the view's visible paths reach inside it —
+// only chain-visible children unfold as a NESTED cluster. The pre-compact
+// behavior unfolded every grandchild into the root, flooding the non-expanded
+// diagram into a de-facto --expanded render.
 func TestBuildGraph_ExpandedClusterRendersNestedSubClusters(t *testing.T) {
 	t.Parallel()
 
-	// Setup mirrors TestBuildGraphClusters (C1 self-referencing expansion):
 	// mainSystem is author-expanded, so its direct children render inside the
-	// mainSystem cluster. Child auth is a container WITH subunits (the CTX-03
-	// subject); auditLog is a leaf child (leaf dispatch must not change).
+	// mainSystem cluster. Child auth is a container WITH subunits but nothing
+	// links into it from outside — compact C1 keeps it collapsed. Child iam
+	// has an external deep link to iam.iamApi (CTX-02 chain), so iam unfolds
+	// as a nested cluster carrying its chain.
 	m := &parser.Model{
 		Properties: model.Properties{Name: "Test"},
 		Units: map[string]*model.Unit{
+			"webUser": {
+				Type:  model.TypePersonExternal,
+				Name:  "Web User",
+				Links: []model.Link{{Peer: "mainSystem.iam.iamApi"}},
+			},
 			"mainSystem": {
 				Type:         model.TypeSystem,
 				Name:         "Main System",
 				Expanded:     []string{"mainSystem"},
-				SubunitOrder: []string{"auth", "auditLog"},
+				SubunitOrder: []string{"auth", "auditLog", "iam"},
 				Subunits: map[string]*model.Unit{
 					"auth": {
 						Type:         model.TypeContainer,
@@ -1274,6 +1280,14 @@ func TestBuildGraph_ExpandedClusterRendersNestedSubClusters(t *testing.T) {
 						},
 					},
 					"auditLog": {Type: model.TypeComponent, Name: "Audit Log"},
+					"iam": {
+						Type:         model.TypeContainer,
+						Name:         "IAM",
+						SubunitOrder: []string{"iamApi"},
+						Subunits: map[string]*model.Unit{
+							"iamApi": {Type: model.TypeComponent, Name: "IAM API"},
+						},
+					},
 				},
 			},
 		},
@@ -1289,38 +1303,40 @@ func TestBuildGraph_ExpandedClusterRendersNestedSubClusters(t *testing.T) {
 	mainCluster := g.Clusters[0]
 	require.Equal(t, "mainSystem", mainCluster.ID)
 
-	// CTX-03: the auth subunit-container renders as a NESTED cluster inside
-	// the mainSystem cluster (walk by ID).
-	var authCluster *graph.Cluster
+	// Compact C1: the auth subunit-container renders as a COLLAPSED NODE with
+	// the 🔍 affordance — its unlinked grandchildren (authApi, authDb) stay
+	// hidden (no whole sibling subtrees in the root).
+	var authNode *graph.Node
 
-	for _, nested := range mainCluster.Clusters {
-		if nested.ID == "mainSystem.auth" {
-			authCluster = nested
-			break
+	for _, node := range mainCluster.Nodes {
+		if node.ID == "mainSystem.auth" {
+			authNode = node
 		}
 	}
 
-	require.NotNil(t, authCluster,
-		"expanded mainSystem cluster must contain a NESTED cluster for the auth container (CTX-03)")
-
-	// Grandchildren render inside the nested auth cluster: leaf grandchildren
-	// authApi and authDb unfold into it.
-	authNodeIDs := make(map[string]bool, len(authCluster.Nodes))
-	for _, node := range authCluster.Nodes {
-		authNodeIDs[node.ID] = true
+	require.NotNil(t, authNode,
+		"unlinked subunit-container must render as a collapsed node inside the expanded cluster")
+	require.NotNil(t, authNode.Label)
+	assert.Contains(t, authNode.Label.Name, "🔍",
+		"the collapsed container node keeps its drill affordance")
+	for _, id := range []string{"mainSystem.auth.authApi", "mainSystem.auth.authDb"} {
+		assert.NotContains(t, collectNodeIDs(g), id,
+			"unlinked grandchildren must not flood the root")
 	}
 
-	assert.True(t, authNodeIDs["mainSystem.auth.authApi"],
-		"authApi leaf grandchild must render inside the nested auth cluster")
-	assert.True(t, authNodeIDs["mainSystem.auth.authDb"],
-		"authDb leaf grandchild must render inside the nested auth cluster")
+	// Chain-visible child: iam has a visible descendant (the CTX-02 chain to
+	// iam.iamApi), so it renders as a NESTED cluster with the chain inside.
+	require.Len(t, mainCluster.Clusters, 1)
+	iamCluster := mainCluster.Clusters[0]
+	require.Equal(t, "mainSystem.iam", iamCluster.ID)
 
-	// The old flat behaviour appended a node FOR auth itself inside the
-	// mainSystem cluster — that must be gone.
-	for _, node := range mainCluster.Nodes {
-		assert.NotEqual(t, "mainSystem.auth", node.ID,
-			"auth must NOT render as a flat node inside the mainSystem cluster (old flat behaviour)")
+	iamNodeIDs := make(map[string]bool, len(iamCluster.Nodes))
+	for _, node := range iamCluster.Nodes {
+		iamNodeIDs[node.ID] = true
 	}
+
+	assert.True(t, iamNodeIDs["mainSystem.iam.iamApi"],
+		"the chain target renders inside the nested iam cluster")
 
 	// Leaf dispatch unchanged: auditLog is a direct node of the mainSystem
 	// cluster.
@@ -1335,32 +1351,27 @@ func TestBuildGraph_ExpandedClusterRendersNestedSubClusters(t *testing.T) {
 	assert.True(t, auditLogFound,
 		"auditLog leaf child must render as a direct node of the mainSystem cluster")
 
-	// Drill affordance on labels: the non-expanded nested auth container's
-	// cluster label carries 🔍 (same guard buildNode applies); the
-	// author-expanded mainSystem cluster label does not.
-	require.NotNil(t, authCluster.Label)
-	assert.Contains(t, authCluster.Label.Name, "🔍",
-		"non-expanded nested container cluster label must carry the 🔍 affordance")
+	// The author-expanded mainSystem cluster label does not carry 🔍.
 	require.NotNil(t, mainCluster.Label)
 	assert.NotContains(t, mainCluster.Label.Name, "🔍",
 		"the author-expanded mainSystem cluster label must NOT carry 🔍")
 
 	// Drill affordance URL: BuildGraphWithPath's walk must REACH nested
-	// clusters and assign the auth cluster its explore URL.
+	// clusters and assign the iam cluster its explore URL.
 	gWithPath := graph.BuildGraphWithPath(v, "", "diagram", "svg")
 	require.Len(t, gWithPath.Clusters, 1)
 
-	var authClusterWithPath *graph.Cluster
+	var iamClusterWithPath *graph.Cluster
 
 	for _, nested := range gWithPath.Clusters[0].Clusters {
-		if nested.ID == "mainSystem.auth" {
-			authClusterWithPath = nested
+		if nested.ID == "mainSystem.iam" {
+			iamClusterWithPath = nested
 			break
 		}
 	}
 
-	require.NotNil(t, authClusterWithPath, "nested auth cluster exists after BuildGraphWithPath")
-	assert.Equal(t, graph.ComputeExploreURL("", "mainSystem.auth", "diagram", "svg"), authClusterWithPath.ExploreURL,
+	require.NotNil(t, iamClusterWithPath, "nested iam cluster exists after BuildGraphWithPath")
+	assert.Equal(t, graph.ComputeExploreURL("", "mainSystem.iam", "diagram", "svg"), iamClusterWithPath.ExploreURL,
 		"the nested container cluster must get its explore URL assigned by the recursive walk")
 }
 
@@ -1494,14 +1505,23 @@ func TestC1RootStaysCompactOnDeepCrossFixture(t *testing.T) {
 		"yic.pipeline.ingest.api", "yic.pipeline.store.warehouse",
 	}
 
+	sort.Strings(expected)
+
 	assert.Equal(t, expected, collectNodeIDs(g),
 		"the non-expanded root must depict exactly the compact C1 set — no whole sibling subtrees")
 
-	// Every edge endpoint must be a depicted node (a flood or a dangling
-	// endpoint would both violate the compact contract).
+	// Every edge endpoint must be depicted: a node, or a cluster ID — a
+	// resolved edge may legitimately point at a depicted container; how the
+	// converter emits edges whose target is a cluster is pre-existing
+	// behavior outside this pin.
 	depicted := make(map[string]bool, len(expected))
+
 	for _, id := range expected {
 		depicted[id] = true
+	}
+
+	for _, c := range collectClusterTree(g.Clusters) {
+		depicted[c.ID] = true
 	}
 
 	for _, e := range g.Edges {

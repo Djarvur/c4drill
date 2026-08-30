@@ -309,6 +309,15 @@ func resolveBoundaryLink(
 	v *View, m *parser.Model, path, resolvedSource string,
 	sourceEntry *Entry, link model.Link,
 ) (model.Link, bool) {
+	// WR-02: validator-synthesized mirrors are duplicates of outgoing links —
+	// every authored link is resolved from its own unit elsewhere in this scan.
+	// Letting a mirror drive boundary resolution would re-reveal the original
+	// SOURCE side's subtree through its cross-system mirror (part of the
+	// BUG-1-ROOT-COMPACT root flood).
+	if link.Mirror {
+		return model.Link{}, false
+	}
+
 	resolved := resolveToTopLevel(v, link.Peer)
 	if resolved == "" {
 		return model.Link{}, false // Internal link (both sides under same ancestor or self-referencing)
@@ -323,6 +332,15 @@ func resolveBoundaryLink(
 	// because resolved != resolvedSource; D-08: no parent edge is synthesized
 	// when the link resolved to a child).
 	if sourceEntry == nil || resolved == resolvedSource {
+		return model.Link{}, false
+	}
+
+	// BUG-1-ROOT-COMPACT guard (a): the link stays inside the peer's depicted
+	// subtree — the source resolves to a strict descendant of the peer's
+	// visible ancestor. That is internal detail at C1: no boundary edge and no
+	// deep-link chain (chaining these is what flooded the root — every nested
+	// link made its target visible, so the root converged on the whole model).
+	if resolvedSource != "" && strings.HasPrefix(resolvedSource, resolved+".") {
 		return model.Link{}, false
 	}
 
@@ -350,7 +368,12 @@ func resolveBoundaryLink(
 	// CTX-02: when the peer is a real model path strictly under the resolved
 	// depicted ancestor, register the ancestor chain as visible entries and
 	// point the edge at the TRUE target instead of the collapsed ancestor.
-	if ensureDeepLinkChain(v, m, resolved, link.Peer) {
+	// BUG-1-ROOT-COMPACT guard (b): chains unfold only for genuine deep links
+	// — the source lives OUTSIDE the peer's top-level system. Links inside one
+	// top-level system resolve at the visible-container level and their true
+	// targets stay collapsed (cross-system links keep the CTX-02 contract).
+	if topLevelKey(resolvedSource) != topLevelKey(resolved) &&
+		ensureDeepLinkChain(v, m, resolved, link.Peer) {
 		resolvedLink.Peer = link.Peer
 	}
 

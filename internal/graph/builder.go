@@ -251,9 +251,15 @@ func wrapperLabel(path string, v *view.View) *Label {
 
 // buildC1ViewGraph renders the C1 view: nodes and clusters in definition
 // order (from view.UnitOrder). Visible subunits are rendered inside their
-// parent cluster by buildCluster — skipping prevents duplicate node IDs in
-// DOT. Nil-map reads are safe, so views without VisiblePaths (C2/C3,
+// parent cluster by buildVisibleCluster — skipping prevents duplicate node IDs
+// in DOT. Nil-map reads are safe, so views without VisiblePaths (C2/C3,
 // expanded, hand-built) are unaffected.
+//
+// BUG-1-ROOT-COMPACT: expanded and chain-bearing (UnfoldChain) entries render
+// EXCLUSIVELY the view's visible paths beneath them — the author-expanded
+// unit's direct visible subunits and CTX-02 deep-link chain entries. The
+// recursive whole-subtree build (buildCluster) is what flooded the non-
+// expanded root into a de-facto --expanded render.
 func buildC1ViewGraph(v *view.View, g *Graph) {
 	for _, key := range v.UnitOrder {
 		if v.VisiblePaths[key] {
@@ -264,16 +270,74 @@ func buildC1ViewGraph(v *view.View, g *Graph) {
 		// D-07: expansion only takes effect when there are subunits to
 		// show — an expanded-but-empty unit renders as a plain node.
 		// CTX-02: UnfoldChain entries (collapsed ancestors with an inserted
-		// deep-link chain) unfold as recursive clusters too, so the true
+		// deep-link chain) unfold as clusters too, so the true
 		// link target exists as a real node inside its chain.
 		if (entry.IsExpanded || entry.UnfoldChain) && len(entry.Unit.Subunits) > 0 {
-			cluster := buildCluster(entry, v, renderOptsFromView(v))
+			cluster := buildVisibleCluster(entry, v, renderOptsFromView(v))
 			g.Clusters = append(g.Clusters, cluster)
 		} else {
 			node := buildNode(entry, renderOptsFromView(v))
 			g.Nodes = append(g.Nodes, node)
 		}
 	}
+}
+
+// buildVisibleCluster renders an expanded or chain-bearing (UnfoldChain) C1
+// entry as a cluster containing EXACTLY the view's visible paths beneath it
+// (BUG-1-ROOT-COMPACT): the author-expanded unit's direct visible subunits
+// plus CTX-02 deep-link chain entries. A visible child that itself has visible
+// descendants recurses as a nested cluster (the chain's container levels); a
+// visible child without them renders as a plain node — a collapsed container
+// keeps its 🔍 affordance via buildNode. Views with no visible paths under the
+// entry (hand-built views) fall back to the recursive buildCluster so their
+// historical whole-subtree expansion is preserved — generated C1 views always
+// register an expanded unit's direct visible subunits.
+func buildVisibleCluster(entry *view.Entry, v *view.View, opts RenderOpts) *Cluster {
+	children := visibleChildren(entry.FullPath, v)
+
+	if len(children) == 0 {
+		return buildCluster(entry, v, opts)
+	}
+
+	cluster := buildClusterShell(entry, v, opts)
+
+	for _, childEntry := range children {
+		if len(visibleChildren(childEntry.FullPath, v)) > 0 {
+			nested := buildVisibleCluster(childEntry, v, opts)
+			cluster.Clusters = append(cluster.Clusters, nested)
+		} else {
+			node := buildNode(childEntry, opts)
+			node.IsInCluster = true
+			cluster.Nodes = append(cluster.Nodes, node)
+		}
+	}
+
+	return cluster
+}
+
+// visibleChildren returns the view entries for the direct visible subunits of
+// path — the VisiblePaths entries exactly one segment beneath it — in view
+// order.
+func visibleChildren(path string, v *view.View) []*view.Entry {
+	prefix := path + "."
+
+	children := make([]*view.Entry, 0)
+
+	for _, key := range v.UnitOrder {
+		if !v.VisiblePaths[key] || !strings.HasPrefix(key, prefix) {
+			continue
+		}
+
+		if strings.Contains(key[len(prefix):], ".") {
+			continue // deeper descendant — reached through its own ancestor
+		}
+
+		if entry, exists := v.Units[key]; exists && entry != nil {
+			children = append(children, entry)
+		}
+	}
+
+	return children
 }
 
 // buildBoundaryCluster creates a cluster representing the expanded system/container
@@ -828,34 +892,11 @@ func luminance(hex string) float64 {
 // the nesting picture inside an expanded cluster matches the drill-down views;
 // leaf children render as plain nodes. The caller keeps the D-07
 // expanded-but-empty guard — an expanded unit with zero subunits never reaches
-// this function.
+// this function. C2/C3 boundary views and the --expanded generation unfold the
+// full subtree here; the C1 root renders through buildVisibleCluster instead
+// (BUG-1-ROOT-COMPACT).
 func buildCluster(entry *view.Entry, v *view.View, opts RenderOpts) *Cluster {
-	// Boxes use content-based styling (border colour derived from subunits)
-	var style *NodeStyle
-	if IsBoxType(entry.Unit.Type) {
-		style = GetBoxStyleByContents(entry.Unit)
-	} else {
-		style = GetStyleForType(entry.Unit.Type, entry.IsExternal)
-	}
-
-	applyUnitOverrides(style, entry.Unit, opts)
-
-	// LBL-01: expanded-unit clusters drop label content under --no-labels;
-	// the cluster ID (structure) stays.
-	var label *Label
-	if !opts.NoLabels {
-		label = buildClusterLabel(entry)
-	}
-
-	cluster := &Cluster{
-		ID:         entry.FullPath,
-		Label:      label,
-		Nodes:      make([]*Node, 0),
-		Clusters:   make([]*Cluster, 0),
-		Style:      style,
-		Type:       entry.Unit.Type,
-		IsExternal: entry.IsExternal,
-	}
+	cluster := buildClusterShell(entry, v, opts)
 
 	// Process children in definition order (use SubunitOrder if available),
 	// dispatching subunit-containers to nested clusters (CTX-03) and leaves to
@@ -900,6 +941,38 @@ func buildCluster(entry *view.Entry, v *view.View, opts RenderOpts) *Cluster {
 	}
 
 	return cluster
+}
+
+// buildClusterShell allocates the cluster shell shared by the recursive
+// (buildCluster) and visible-only (buildVisibleCluster) expanded-cluster
+// builders: content-derived/level style, unit overrides, and identity fields.
+// LBL-01: expanded-unit clusters drop label content under --no-labels; the
+// cluster ID (structure) stays.
+func buildClusterShell(entry *view.Entry, v *view.View, opts RenderOpts) *Cluster {
+	// Boxes use content-based styling (border colour derived from subunits)
+	var style *NodeStyle
+	if IsBoxType(entry.Unit.Type) {
+		style = GetBoxStyleByContents(entry.Unit)
+	} else {
+		style = GetStyleForType(entry.Unit.Type, entry.IsExternal)
+	}
+
+	applyUnitOverrides(style, entry.Unit, opts)
+
+	var label *Label
+	if !opts.NoLabels {
+		label = buildClusterLabel(entry)
+	}
+
+	return &Cluster{
+		ID:         entry.FullPath,
+		Label:      label,
+		Nodes:      make([]*Node, 0),
+		Clusters:   make([]*Cluster, 0),
+		Style:      style,
+		Type:       entry.Unit.Type,
+		IsExternal: entry.IsExternal,
+	}
 }
 
 // buildClusterLabel creates a label for the cluster (parent unit info).

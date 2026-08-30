@@ -1599,6 +1599,25 @@ func TestPlainFlagC1Golden(t *testing.T) {
 		"--plain C1 output must match the committed plain.dot golden (canonical, DI-1)")
 }
 
+// TestDeeplinkRootCompactGolden locks the NON-EXPANDED root of the deepcross
+// fixture against the committed testdata/deepcross.dot golden (order-
+// insensitive canonical comparison, same DI-1 pattern as TestPlainFlagC1Golden).
+// The fixture reproduces the BUG-1-ROOT-COMPACT regression shape (deep nesting
+// + cross-container links + external actors deep-linking into nested subunits);
+// the golden pins the compact C1 so the whole-model flood can never ship
+// silently again (the pre-quick-task fixture corpus was blind to it).
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestDeeplinkRootCompactGolden(t *testing.T) {
+	dir := generateFixtureOutput(t, "deepcross.toml", "dot")
+
+	got := readOutputFile(t, filepath.Join(dir, "deepcross.dot"))
+	expected := readOutputFile(t, filepath.Join("testdata", "deepcross.dot"))
+
+	require.Equal(t, canonical.Canonical(t, expected), canonical.Canonical(t, got),
+		"non-expanded deepcross root must match the committed deepcross.dot golden (canonical, DI-1)")
+}
+
 // TestPlainFlagExpandedGolden locks --plain x --expanded against the committed
 // testdata/plain.expanded.dot golden (Pitfall 5: the expanded pipeline must
 // honour the flag too).

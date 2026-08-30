@@ -445,11 +445,13 @@ func TestIntegrationC1ViewNoNestedBoundaryPollution(t *testing.T) {
 	v := view.GenerateC1View(m)
 	require.NotNil(t, v)
 
-	// The 5 top-level units plus exactly 8 CTX-02 chain entries for depicted
+	// The 5 top-level units plus exactly 7 CTX-02 chain entries for depicted
 	// link targets: sshAuth+sshd (sshUser), localIDP+grpcAPIs+authAPI+sessionAPI
-	// (webUser), rbac (adminUser), and — transitively, once sshd is itself
-	// depicted — nss (sshd's own link resolves at its true endpoints).
-	assert.Len(t, v.Units, 13, "C1 should have 5 top-level units + 8 chain entries, got %d: %v",
+	// (webUser), rbac (adminUser). BUG-1-ROOT-COMPACT: sshd's own link to nss
+	// is INTERNAL to linuxSystem (source and target share the top-level
+	// system), so it no longer chains nss into the root — internal links stay
+	// collapsed and the root stays compact.
+	assert.Len(t, v.Units, 12, "C1 should have 5 top-level units + 7 chain entries, got %d: %v",
 		len(v.Units), keys(v.Units))
 
 	// Verify each expected top-level node is present
@@ -462,7 +464,7 @@ func TestIntegrationC1ViewNoNestedBoundaryPollution(t *testing.T) {
 	// CTX-02: the ancestor chains of depicted link targets are visible
 	// entries (Units + VisiblePaths), staying in scope (no boundary flags).
 	for _, chainPath := range []string{
-		"linuxSystem.sshAuth", "linuxSystem.sshAuth.sshd", "linuxSystem.sshAuth.nss",
+		"linuxSystem.sshAuth", "linuxSystem.sshAuth.sshd",
 		"linuxSystem.localIDP", "linuxSystem.localIDP.grpcAPIs",
 		"linuxSystem.localIDP.grpcAPIs.authAPI", "linuxSystem.localIDP.grpcAPIs.sessionAPI",
 		"linuxSystem.rbac",
@@ -474,13 +476,10 @@ func TestIntegrationC1ViewNoNestedBoundaryPollution(t *testing.T) {
 		assert.False(t, entry.IsExternal, "chain entry %s stays in scope", chainPath)
 	}
 
-	// A depicted chain entry carries its own links at their true endpoints:
-	// the depicted sshd's link to nss resolves sshd -> nss (no collapse to a
-	// remote ancestor), while units never scanned as sources keep nil.
-	if assert.NotNil(t, v.Units["linuxSystem.sshAuth.sshd"].ResolvedLinks) {
-		require.Len(t, v.Units["linuxSystem.sshAuth.sshd"].ResolvedLinks, 1)
-		assert.Equal(t, "linuxSystem.sshAuth.nss", v.Units["linuxSystem.sshAuth.sshd"].ResolvedLinks[0].Peer)
-	}
+	// BUG-1-ROOT-COMPACT: the internal sshd -> nss link produces no chain
+	// entry and no boundary edge — nss stays hidden.
+	assert.Nil(t, v.Units["linuxSystem.sshAuth.nss"],
+		"internal links must not chain their targets into the root")
 
 	assert.Nil(t, v.Units["linuxSystem"].ResolvedLinks)
 
