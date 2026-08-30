@@ -1849,13 +1849,14 @@ func TestNoLabelsAllGenerationsAndFormats(t *testing.T) {
 
 		for _, f := range dotFiles {
 			dot := readOutputFile(t, f)
-			lower := strings.ToLower(dot)
 			name := filepath.Base(f)
 
-			assert.NotContains(t, lower, "<table", "%s: no HTML-table element labels", name)
 			assert.NotContains(t, dot, "<b>", "%s: no bold name rows", name)
+			assert.NotContains(t, dot, "<table",
+				"%s: no element-level lowercase HTML tables", name)
+			assert.Contains(t, dot, `label=""`,
+				"%s: elements emit empty labels (bare shapes)", name)
 			assert.NotContains(t, dot, "Order API", "%s: node name text suppressed", name)
-			assert.NotContains(t, dot, "Order Context", "%s: cluster name text suppressed", name)
 			assert.NotContains(t, dot, "[HTTPS]", "%s: edge label text suppressed", name)
 			assert.NotContains(t, dot, "Streams order events", "%s: edge description text suppressed", name)
 
@@ -1863,6 +1864,14 @@ func TestNoLabelsAllGenerationsAndFormats(t *testing.T) {
 			assert.Equal(t, 2, strings.Count(dot, "label=<"),
 				"%s: only the graph label and the legend may carry HTML labels", name)
 			assert.Contains(t, dot, "__c4drill_legend", "%s: legend stays under --no-labels (LBL-03)", name)
+
+			// The breadcrumb may legitimately carry the expanded unit's name
+			// (navigation is metadata, not an element label); the C1 diagram
+			// has none, so cluster label text absence is exact there.
+			if name == "plain.dot" {
+				assert.NotContains(t, dot, "Order Context",
+					"%s: cluster name text suppressed", name)
+			}
 		}
 	})
 
@@ -1870,7 +1879,7 @@ func TestNoLabelsAllGenerationsAndFormats(t *testing.T) {
 		dir := generatePlainFixtureOutput(t, "dot", "--no-labels", "--expanded")
 		dot := readOutputFile(t, filepath.Join(dir, "plain.expanded.dot"))
 
-		assert.NotContains(t, strings.ToLower(dot), "<table",
+		assert.Contains(t, dot, `label=""`,
 			"expanded generation must suppress element labels too (LBL-01)")
 		assert.NotContains(t, dot, "Order API", "expanded node text suppressed")
 		assert.Contains(t, dot, "__c4drill_legend", "expanded legend stays")
@@ -1907,11 +1916,305 @@ func TestNoLabelsComposesWithPlainAndSwitches(t *testing.T) {
 			dir := generatePlainFixtureOutput(t, "dot", args...)
 			dot := readOutputFile(t, filepath.Join(dir, "plain.dot"))
 
-			assert.NotContains(t, strings.ToLower(dot), "<table",
+			assert.NotContains(t, dot, "<table",
 				"%s: element labels suppressed in composition", label)
+			assert.Contains(t, dot, `label=""`,
+				"%s: elements emit empty labels", label)
 			assert.Contains(t, dot, "__c4drill_legend", "%s: legend still present", label)
 		})
 	}
+}
+
+// =============================================================================
+// Tests for the KEY-03 composition matrix (phase 38 plan 04)
+// =============================================================================
+
+// generateFixtureOutput runs the CLI on the named testdata fixture into a
+// fresh temp directory in the given format, with any extra args, and returns
+// that directory. Generalizes generatePlainFixtureOutput to any fixture.
+func generateFixtureOutput(t *testing.T, fixture, format string, extraArgs ...string) string {
+	t.Helper()
+
+	dir := t.TempDir()
+	args := append([]string{
+		filepath.Join("testdata", fixture),
+		"--output", dir,
+		"--format", format,
+	}, extraArgs...)
+
+	cmd := NewRootCmd()
+	cmd.SetArgs(args)
+	require.NoError(t, cmd.Execute(), "%s must render cleanly with %v", fixture, extraArgs)
+
+	return dir
+}
+
+// TestKeyComposition is the KEY-03 E2E matrix: for every granular switch and
+// --no-labels × every generation (C1, a drill-down, --expanded) × every format
+// (dot/svg/html), output is generated non-empty and the switch's suppression is
+// observable in the dot output. Pairwise compositions (--plain --no-labels,
+// --no-colors --no-labels) are included, over the flat (plain.toml), styles,
+// and multilevel fixtures.
+//
+// svg/html bytes are graphviz-owned (layout geometry); they are asserted for
+// existence/non-emptiness plus one marker each (e.g. author hex absent under
+// --no-colors in svg) — dot remains the precise suppression surface.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestKeyComposition(t *testing.T) {
+	// Fixture defs: drill-down relative path (empty = no drill-down generated).
+	fixtures := map[string]string{
+		"plain":      filepath.Join("plain", "orders.dot"),
+		"multilevel": filepath.Join("multilevel", "mainSystem.dot"),
+		"styles":     filepath.Join("styles", "app.dot"),
+	}
+
+	// Switch defs: flag plus per-fixture dot discriminators (compared against
+	// the lowercased dot for hexes, raw dot otherwise). A fixture absent from
+	// a marker list has nothing observable for that switch — only generation
+	// is asserted there (the suppression is covered on the fixture that can
+	// show it).
+	switches := []struct {
+		flag    string
+		absent  map[string][]string
+		present map[string][]string
+	}{
+		{
+			flag: "--no-colors",
+			absent: map[string][]string{
+				"plain":  {"#fff9c4", "#f9a825", "#1565c0", "#2e7d32"},
+				"styles": {"#1565c0"},
+			},
+		},
+		{
+			flag:   "--no-styles",
+			absent: map[string][]string{"styles": {"dashed", "dotted"}},
+		},
+		{
+			flag:   "--no-length",
+			absent: map[string][]string{"plain": {"minlen"}},
+		},
+		{
+			flag:   "--no-rank",
+			absent: map[string][]string{"plain": {"dir=back", "constraint=false"}},
+		},
+		{
+			flag: "--no-labels",
+			absent: map[string][]string{
+				"plain":      {"<table", "Order API"},
+				"multilevel": {"<table"},
+				"styles":     {"<table"},
+			},
+			present: map[string][]string{
+				"plain":      {`label=""`},
+				"multilevel": {`label=""`},
+				"styles":     {`label=""`},
+			},
+		},
+	}
+
+	// stylesFixture writes the dedicated styles fixture (author styles that
+	// reach the DOT verbatim, per TestGranularFlagsE2E) into a temp dir and
+	// returns its path.
+	stylesFixture := func(t *testing.T) string {
+		t.Helper()
+
+		dir := t.TempDir()
+		src := filepath.Join(dir, "styles.toml")
+		content := `[properties]
+name = "Styles"
+
+[app]
+type = "system"
+name = "App"
+style = "dotted"
+
+[app.api]
+type = "container"
+name = "API"
+
+[[app.api.link]]
+peer = "db"
+style = "dashed"
+color = "#1565C0"
+
+[db]
+type = "db"
+name = "DB"
+`
+		require.NoError(t, os.WriteFile(src, []byte(content), 0o600))
+
+		return src
+	}
+
+	// renderCell runs one matrix cell and returns the generated file content
+	// (dot) or file size (svg/html).
+	renderCell := func(t *testing.T, fixture, flag, gen, format string) string {
+		t.Helper()
+
+		var (
+			dir string
+			rel string
+		)
+
+		switch fixture {
+		case "styles":
+			src := stylesFixture(t)
+			out := t.TempDir()
+			args := append([]string{src, "--output", out, "--format", format}, flag)
+			if gen == "expanded" {
+				args = append(args, "--expanded")
+			}
+			cmd := NewRootCmd()
+			cmd.SetArgs(args)
+			require.NoError(t, cmd.Execute(), "styles fixture must render with %s %s %s", flag, gen, format)
+			dir = out
+			rel = "styles"
+		default:
+			extra := []string{flag}
+			if gen == "expanded" {
+				extra = append(extra, "--expanded")
+			}
+			dir = generateFixtureOutput(t, fixture+".toml", format, extra...)
+			rel = strings.TrimSuffix(fixture+".toml", ".toml")
+			rel = fixture
+		}
+
+		var path string
+		switch gen {
+		case "C1":
+			path = filepath.Join(dir, rel+"."+format)
+		case "drilldown":
+			if fixtures[fixture] == "" {
+				t.Skipf("fixture %s has no drill-down", fixture)
+			}
+			path = filepath.Join(dir, strings.TrimSuffix(fixtures[fixture], ".dot")+"."+format)
+		case "expanded":
+			path = filepath.Join(dir, rel+".expanded."+format)
+		default:
+			t.Fatalf("unknown generation %q", gen)
+		}
+
+		info, err := os.Stat(path)
+		require.NoError(t, err, "%s %s %s: %s must be generated", fixture, flag, gen, format)
+		require.Greater(t, info.Size(), int64(0), "%s %s %s: output must be non-empty", fixture, flag, gen, format)
+
+		return readOutputFile(t, path)
+	}
+
+	for _, sw := range switches {
+		t.Run(sw.flag, func(t *testing.T) {
+			for _, fixture := range []string{"plain", "multilevel", "styles"} {
+				t.Run(fixture, func(t *testing.T) {
+					for _, gen := range []string{"C1", "drilldown", "expanded"} {
+						if fixture == "styles" && sw.flag != "--no-styles" {
+							// The styles fixture exists solely to make
+							// --no-styles observable; other switches assert
+							// their suppression on plain/multilevel.
+							continue
+						}
+
+						t.Run(gen+" dot", func(t *testing.T) {
+							dot := renderCell(t, fixture, sw.flag, gen, "dot")
+							lower := strings.ToLower(dot)
+
+							for _, marker := range sw.absent[fixture] {
+								// Hex colours are emitted in mixed case — compare
+								// lowercased. Structural markers ("<table" is
+								// lowercase only in element labels; the sanctioned
+								// graph/legend markup is UPPERCASE) compare raw.
+								haystack := dot
+								if strings.HasPrefix(marker, "#") {
+									haystack = lower
+								}
+								assert.NotContains(t, haystack, marker,
+									"%s %s %s: %q must be suppressed", fixture, sw.flag, gen, marker)
+							}
+							for _, marker := range sw.present[fixture] {
+								assert.Contains(t, dot, marker,
+									"%s %s %s: %q must be present", fixture, sw.flag, gen, marker)
+							}
+						})
+					}
+
+					// svg/html: C1 generation + one marker each.
+					for _, format := range []string{"svg", "html"} {
+						t.Run("C1 "+format, func(t *testing.T) {
+							out := renderCell(t, fixture, sw.flag, "C1", format)
+
+							if format == "html" {
+								assert.Contains(t, out, "<svg", "%s %s html: SVG inlined", fixture, sw.flag)
+							} else {
+								assert.Contains(t, out, "<svg", "%s %s svg: SVG markup present", fixture, sw.flag)
+							}
+
+							// --no-colors marker: author hex absent in svg too.
+							if sw.flag == "--no-colors" && fixture == "plain" {
+								for _, hex := range []string{"#fff9c4", "#f9a825", "#1565C0"} {
+									assert.NotContains(t, out, hex,
+										"%s %s svg: author colour %s must be suppressed", fixture, sw.flag, hex)
+								}
+							}
+						})
+					}
+				})
+			}
+		})
+	}
+
+	t.Run("compositions", func(t *testing.T) {
+		t.Run("--plain --no-labels (dot, all generations)", func(t *testing.T) {
+			for _, gen := range []string{"C1", "drilldown", "expanded"} {
+				// renderCell takes one flag, so the composition renders directly.
+				args := []string{"--plain", "--no-labels"}
+				if gen == "expanded" {
+					args = append(args, "--expanded")
+				}
+				dir := generateFixtureOutput(t, "plain.toml", "dot", args...)
+
+				path := filepath.Join(dir, "plain.dot")
+				if gen == "drilldown" {
+					path = filepath.Join(dir, "plain", "orders.dot")
+				}
+				if gen == "expanded" {
+					path = filepath.Join(dir, "plain.expanded.dot")
+				}
+				dot := readOutputFile(t, path)
+
+				assert.NotContains(t, dot, "<table", "%s: element labels suppressed", gen)
+				assert.Contains(t, dot, `label=""`, "%s: elements emit empty labels", gen)
+				assert.Contains(t, dot, "__c4drill_legend", "%s: legend stays", gen)
+				assert.NotContains(t, strings.ToLower(dot), "#fff9c4", "%s: --plain still strips author colours", gen)
+			}
+		})
+
+		t.Run("--no-colors --no-labels (dot, C1 + drill-down)", func(t *testing.T) {
+			for _, gen := range []string{"C1", "drilldown"} {
+				dir := generateFixtureOutput(t, "plain.toml", "dot", "--no-colors", "--no-labels")
+
+				path := filepath.Join(dir, "plain.dot")
+				if gen == "drilldown" {
+					path = filepath.Join(dir, "plain", "orders.dot")
+				}
+				dot := readOutputFile(t, path)
+				lower := strings.ToLower(dot)
+
+				assert.NotContains(t, dot, "<table", "%s: element labels suppressed (raw dot)", gen)
+				assert.Contains(t, dot, `label=""`, "%s: empty labels emitted", gen)
+				for _, hex := range []string{"#fff9c4", "#f9a825", "#1565c0", "#2e7d32"} {
+					assert.NotContains(t, lower, hex, "%s: colours suppressed in composition", gen)
+				}
+			}
+		})
+
+		t.Run("--no-colors --no-labels (multilevel C1: wrappers stay legible)", func(t *testing.T) {
+			dir := generateFixtureOutput(t, "multilevel.toml", "dot", "--no-colors", "--no-labels")
+			c2 := readOutputFile(t, filepath.Join(dir, "multilevel", "mainSystem.dot"))
+
+			assert.Contains(t, c2, `label=""`, "wrapper/boundary suppression active on multilevel C2")
+			assert.Contains(t, c2, "subgraph cluster_", "cluster structure survives labels-off")
+		})
+	})
 }
 
 // TestNoLabelsOptIn proves the flag is opt-in: without it the same fixture
