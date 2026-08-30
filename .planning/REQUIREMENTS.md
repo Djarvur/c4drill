@@ -26,9 +26,9 @@ Source: user review 2026-08-30 (retroactive answers to the yolo-skipped question
 
 ### LBL — Label suppression key
 
-- [ ] **LBL-01**: A CLI key (e.g. `--no-labels`) omits label text from all nodes and edges on the scheme — shapes render minimally with no label content, re-flowing the layout without label-induced routing distortion.
-- [ ] **LBL-02**: The key applies to every generation — C1, all drill-down views, and `--expanded` — in all formats.
-- [ ] **LBL-03**: The key composes with `--plain` and the granular switches. Whether the legend is suppressed with labels-off is pinned at planning and documented (default: legend stays, controlled by its own setting — it is metadata, not an element label).
+- [x] **LBL-01**: A CLI key (e.g. `--no-labels`) omits label text from all nodes and edges on the scheme — shapes render minimally with no label content, re-flowing the layout without label-induced routing distortion.
+- [x] **LBL-02**: The key applies to every generation — C1, all drill-down views, and `--expanded` — in all formats.
+- [x] **LBL-03**: The key composes with `--plain` and the granular switches. Whether the legend is suppressed with labels-off is pinned at planning and documented (default: legend stays, controlled by its own setting — it is metadata, not an element label).
 
 ### BC — Backward compatibility
 
@@ -66,9 +66,9 @@ Filled during roadmap creation.
 | KEY-01 | Phase 38 | Complete |
 | KEY-02 | Phase 38 | Complete |
 | KEY-03 | Phase 38 | Pending |
-| LBL-01 | Phase 38 | Pending |
-| LBL-02 | Phase 38 | Pending |
-| LBL-03 | Phase 38 | Pending |
+| LBL-01 | Phase 38 | Complete |
+| LBL-02 | Phase 38 | Complete |
+| LBL-03 | Phase 38 | Complete |
 | BC-01 | Phase 38 | Pending |
 | DOC-01 | Phase 38 | Pending |
 | DOC-02 | Phase 38 | Pending |

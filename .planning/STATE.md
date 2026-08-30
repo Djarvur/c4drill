@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: Hierarchy Wrapping and Granular Keys
 status: executing
-last_updated: "2026-08-30T15:45:39.210Z"
+last_updated: "2026-08-30T16:01:53.228Z"
 last_activity: 2026-08-30
 progress:
   total_phases: 2
   completed_phases: 0
   total_plans: 6
-  completed_plans: 2
-  percent: 33
+  completed_plans: 3
+  percent: 0
 ---
 
 # Project State
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-08-30)
 ## Current Position
 
 Phase: 38 (hierarchy-wrapping-and-granular-keys) — EXECUTING
-Plan: 3 of 6
-Status: 38-02 complete — granular switches landed, KEY-01/KEY-02 done, suite green
-Last activity: 2026-08-30 -- Plan 38-02 executed (commits 11556ae, 0e6bd24, 17aed63)
+Plan: 4 of 6
+Status: 38-03 complete — --no-labels landed, LBL-01/02/03 done, census EMPTY
+Last activity: 2026-08-30 -- Plan 38-03 executed (commits bdff1c0, 4936563, 0fbafd1)
 
-Progress: [███░░░░░░░] 33%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -40,7 +40,7 @@ Progress: [███░░░░░░░] 33%
 
 | Phase | Plans | Notes |
 |-------|-------|-------|
-| 38 | 38-01: 3 tasks, ~35m. 38-02: 3 tasks, ~30m | TDD RED→GREEN per plan |
+| 38 | 38-01: 3 tasks, ~35m. 38-02: 3 tasks, ~30m. 38-03: 3 tasks, ~30m | TDD RED→GREEN per plan |
 
 ## Accumulated Context
 
@@ -57,6 +57,7 @@ Recent decisions affecting current work:
 - [38-02]: kind colours survive --plain (v1.14 golden-pinned), so --no-colors suppresses kind colouring only when plain is unset — --plain stays the exact union (KEY-02, TestPlainUnionParity).
 - [38-02]: D-01 source-border default edge colour is structural and survives --no-colors; converter plain call-tree unchanged (only buildCgraph reads g.Opts.Plain).
 - [38-01]: committed goldens cover C1/expanded only and cmd E2E asserts C2/C3 via contains-checks → 38-04 golden re-baseline is EMPTY (see 38-01-SUMMARY census).
+- [38-03]: --no-labels suppresses at the GRAPH layer (builder drops Label content; converter empty-label emission is defense-in-depth); legend stays per LBL-03 pin; census stays EMPTY for 38-04.
 
 ### Pending Todos
 
@@ -75,6 +76,6 @@ See .planning/todos/pending/.
 
 ## Session Continuity
 
-Last session: 2026-08-30T15:45:39.204Z
-Stopped at: Plan 38-02 complete — next: 38-03 (--no-labels)
-Resume file: .planning/phases/38-hierarchy-wrapping-and-granular-keys/38-02-SUMMARY.md
+Last session: 2026-08-30T16:01:48.886Z
+Stopped at: Plan 38-03 complete — next: 38-04
+Resume file: .planning/phases/38-hierarchy-wrapping-and-granular-keys/38-03-SUMMARY.md
