@@ -3,6 +3,7 @@ package graph_test
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"testing"
 
@@ -3521,4 +3522,222 @@ func TestBuildGraph_DefaultPathUnchanged(t *testing.T) {
 	assert.True(t, edge.RankReverse)
 	assert.Equal(t, "tail", edge.Label.Position)
 	assert.Equal(t, "straight", g.EdgeStyle, "properties.edges honored on the default path")
+}
+
+// ---- Phase 38 WRAP-01/02/03: ancestor wrapper clusters on C2/C3 views ----
+//
+// v1.15 scoping reversal: boundary/sibling entries and the expanded unit render
+// INSIDE their complete ancestor-container chains. Fully external entries stay
+// top-level. Wrapping is cluster-structure only: node IDs and edge endpoints
+// are unchanged.
+
+// wrapTestMultilevelModel parses and validates the shared multilevel fixture.
+func wrapTestMultilevelModel(t *testing.T) *parser.Model {
+	t.Helper()
+
+	m, err := parser.ParseFile("../../cmd/c4drill/testdata/multilevel.toml")
+	require.NoError(t, err)
+
+	valErrors := validator.Validate(m)
+	require.Empty(t, valErrors, "model should be valid")
+
+	return m
+}
+
+// collectClusterTree walks the graph's cluster tree recursively and returns
+// every cluster (including nested ones) in depth-first order.
+func collectClusterTree(clusters []*graph.Cluster) []*graph.Cluster {
+	out := make([]*graph.Cluster, 0)
+
+	var walk func(cs []*graph.Cluster)
+
+	walk = func(cs []*graph.Cluster) {
+		for _, c := range cs {
+			out = append(out, c)
+			walk(c.Clusters)
+		}
+	}
+
+	walk(clusters)
+
+	return out
+}
+
+// collectNodeIDs returns the sorted multiset of every node ID reachable in the
+// graph: top-level nodes plus nodes inside the recursive cluster tree.
+func collectNodeIDs(g *graph.Graph) []string {
+	ids := make([]string, 0, len(g.Nodes))
+	for _, n := range g.Nodes {
+		ids = append(ids, n.ID)
+	}
+
+	for _, c := range collectClusterTree(g.Clusters) {
+		for _, n := range c.Nodes {
+			ids = append(ids, n.ID)
+		}
+	}
+
+	sort.Strings(ids)
+
+	return ids
+}
+
+// TestBoundaryEntryWrappedInAncestorChain pins WRAP-01: on a C3 drill-down of
+// mainSystem.storages.localStorage, a boundary entry resolving to
+// mainSystem.sshAuth (an in-model sibling branch) appears inside a wrapper
+// cluster for mainSystem — not at g.Nodes top level.
+func TestBoundaryEntryWrappedInAncestorChain(t *testing.T) {
+	t.Parallel()
+
+	m := wrapTestMultilevelModel(t)
+
+	v := view.GenerateC3View(m, "mainSystem.storages.localStorage")
+	require.NotNil(t, v)
+	g := graph.BuildGraph(v)
+
+	for _, id := range g.Nodes {
+		assert.NotEqual(t, "mainSystem.sshAuth", id.ID,
+			"boundary entry with an in-model ancestor must not hang at top level")
+	}
+
+	// Find the wrapper cluster for mainSystem and the boundary node inside it.
+	var mainWrapper *graph.Cluster
+
+	for _, c := range collectClusterTree(g.Clusters) {
+		if c.ID == "wrap_"+mainSystemPathSegment {
+			mainWrapper = c
+		}
+	}
+
+	require.NotNil(t, mainWrapper, "wrapper cluster for mainSystem must exist")
+	found := false
+
+	for _, n := range mainWrapper.Nodes {
+		if n.ID == "mainSystem.sshAuth" {
+			found = true
+		}
+	}
+
+	assert.True(t, found, "mainSystem.sshAuth must render inside the mainSystem wrapper cluster")
+}
+
+// mainSystemPathSegment is the top-level unit of the multilevel fixture.
+const mainSystemPathSegment = "mainSystem"
+
+// TestFullyExternalBoundaryStaysTopLevel pins WRAP-02's exception: an entry
+// with no in-model ancestor (externalSys at model root) remains a top-level
+// node in g.Nodes.
+func TestFullyExternalBoundaryStaysTopLevel(t *testing.T) {
+	t.Parallel()
+
+	m := wrapTestMultilevelModel(t)
+
+	// In the C2 view of mainSystem, externalSys is linked from
+	// mainSystem.storages.externalStorage.client and diverges at the model
+	// root — a fully external boundary entry.
+	v := view.GenerateC2View(m, "mainSystem")
+	g := graph.BuildGraph(v)
+
+	found := false
+
+	for _, n := range g.Nodes {
+		if n.ID == "externalSys" {
+			found = true
+		}
+	}
+
+	assert.True(t, found, "fully external boundary entry stays top-level")
+}
+
+// TestExpandedUnitAncestorSkeleton pins WRAP-02: a C3 view of
+// mainSystem.storages.localStorage shows wrapper clusters mainSystem ⊃
+// mainSystem.storages containing the expanded unit's boundary cluster; wrapper
+// labels use AncestorNames pretty names.
+func TestExpandedUnitAncestorSkeleton(t *testing.T) {
+	t.Parallel()
+
+	m := wrapTestMultilevelModel(t)
+
+	v := view.GenerateC3View(m, "mainSystem.storages.localStorage")
+	g := graph.BuildGraph(v)
+
+	require.Len(t, g.Clusters, 1, "exactly one root cluster: the outermost wrapper")
+	root := g.Clusters[0]
+	assert.Equal(t, "wrap_"+mainSystemPathSegment, root.ID)
+	assert.Equal(t, "Main System", root.Label.Name, "wrapper label uses the AncestorNames pretty name")
+
+	require.Len(t, root.Clusters, 1)
+	storages := root.Clusters[0]
+	assert.Equal(t, "wrap_mainSystem.storages", storages.ID)
+	assert.Equal(t, "Storages Registry", storages.Label.Name)
+
+	require.Len(t, storages.Clusters, 1)
+	boundary := storages.Clusters[0]
+	assert.Equal(t, "mainSystem.storages.localStorage", boundary.ID,
+		"the expanded unit's boundary cluster nests innermost")
+	require.NotEmpty(t, boundary.Nodes, "expanded unit's subunits render inside it")
+}
+
+// TestWrapperClustersHaveNoExploreURL pins the affordance rule: wrapper
+// clusters are containers, not drill targets — no ExploreURL; affordances stay
+// only on the expanded unit's own cluster subtree.
+func TestWrapperClustersHaveNoExploreURL(t *testing.T) {
+	t.Parallel()
+
+	m := wrapTestMultilevelModel(t)
+
+	v := view.GenerateC3View(m, "mainSystem.storages.localStorage")
+	g := graph.BuildGraphWithPath(v, "mainSystem/storages/localStorage", "multilevel", "svg")
+
+	for _, c := range collectClusterTree(g.Clusters) {
+		if strings.HasPrefix(c.ID, "wrap_") {
+			assert.Empty(t, c.ExploreURL, "wrapper cluster %s must not carry a drill affordance", c.ID)
+		}
+	}
+}
+
+// TestBoundaryViewNodeSetInvariant pins WRAP-03: wrapping changes cluster
+// structure only. Over the multilevel fixture's C3 view of
+// mainSystem.storages.localStorage, the multiset of node IDs in the built
+// graph is exactly the view's renderable entry set (v.UnitOrder) — no node
+// lost, duplicated, or renamed by wrapping.
+func TestBoundaryViewNodeSetInvariant(t *testing.T) {
+	t.Parallel()
+
+	m := wrapTestMultilevelModel(t)
+
+	v := view.GenerateC3View(m, "mainSystem.storages.localStorage")
+	g := graph.BuildGraph(v)
+
+	expected := append([]string(nil), v.UnitOrder...)
+	sort.Strings(expected)
+
+	assert.ElementsMatch(t, expected, collectNodeIDs(g),
+		"wrapping must not change the depicted node set (WRAP-03)")
+}
+
+// TestEdgeEndpointsUnchangedByWrapping locks the edge contract: wrapping adds
+// no new endpoint IDs — every edge source/target is a depicted node ID, and no
+// endpoint references a wrapper cluster.
+func TestEdgeEndpointsUnchangedByWrapping(t *testing.T) {
+	t.Parallel()
+
+	m := wrapTestMultilevelModel(t)
+
+	v := view.GenerateC3View(m, "mainSystem.storages.localStorage")
+	g := graph.BuildGraph(v)
+
+	nodeSet := make(map[string]bool, len(v.UnitOrder))
+	for _, id := range collectNodeIDs(g) {
+		nodeSet[id] = true
+	}
+
+	require.NotEmpty(t, g.Edges)
+
+	for _, e := range g.Edges {
+		assert.False(t, strings.HasPrefix(e.Source, "wrap_"), "edge source must never be a wrapper")
+		assert.False(t, strings.HasPrefix(e.Target, "wrap_"), "edge target must never be a wrapper")
+		assert.True(t, nodeSet[e.Source], "edge source %s must be a depicted node", e.Source)
+		assert.True(t, nodeSet[e.Target], "edge target %s must be a depicted node", e.Target)
+	}
 }
