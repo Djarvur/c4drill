@@ -1,6 +1,8 @@
 package view_test
 
 import (
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Djarvur/c4drill/internal/model"
@@ -1721,4 +1723,124 @@ func TestGenerateC2C3View_KindSurvivesResolution(t *testing.T) {
 	}
 
 	assert.True(t, found, "resolved link carries Kind and Rank")
+}
+
+// TestViewAncestorChainInvariant proves CTX-01 over the multilevel fixture:
+// on EVERY non-expanded view (C1 plus every C2/C3 drill-down), every depicted
+// element renders inside its complete chain of ancestor containers. For every
+// path in View.VisiblePaths (deep-link chains) and every Units entry that is
+// neither a boundary node nor external, every strict ancestor prefix that lies
+// within the view's scope (strictly below the drilled-into root) must also be
+// present in View.Units — the view-level definition of "renders inside its
+// complete chain" once the recursive cluster builders (CTX-03) render nested
+// entries as nested clusters.
+//
+// Boundary-node exclusion (RESEARCH scoping decision, T-37-10): entries with
+// IsBoundary or IsExternal are deliberately top-level — their out-of-scope
+// position IS their context. The invariant must not require ancestors for
+// them.
+//
+// CTX-01 falls out of CTX-02 (deep-link ancestor chains) + CTX-03 (recursive
+// clusters); if this invariant fails, a real nesting gap surfaced — fix the
+// view code, not the test.
+func TestViewAncestorChainInvariant(t *testing.T) {
+	t.Parallel()
+
+	m, err := parser.ParseFile(filepath.Join("..", "..", "cmd", "c4drill", "testdata", "multilevel.toml"))
+	require.NoError(t, err, "parse multilevel fixture")
+	require.NotEmpty(t, m.UnitOrder, "parsed fixture captures definition order")
+
+	// Enumerate every non-expanded view exactly like the CLI does
+	// (collectExpandedPaths + isC2Path): C1, then a C2 view for every
+	// top-level unit with subunits and a C3 view for every nested unit with
+	// subunits, in definition order.
+	views := map[string]*view.View{"": view.GenerateC1View(m)}
+
+	var walk func(parentPath string, unit *model.Unit, depth int)
+
+	walk = func(parentPath string, unit *model.Unit, depth int) {
+		if len(unit.Subunits) == 0 {
+			return
+		}
+
+		if depth == 1 {
+			views[parentPath] = view.GenerateC2View(m, parentPath)
+		} else {
+			views[parentPath] = view.GenerateC3View(m, parentPath)
+		}
+
+		for _, subName := range subunitOrderForTest(unit) {
+			if sub := unit.Subunits[subName]; sub != nil {
+				walk(parentPath+"."+subName, sub, depth+1)
+			}
+		}
+	}
+
+	for _, name := range m.UnitOrder {
+		if unit := m.Units[name]; unit != nil {
+			walk(name, unit, 1)
+		}
+	}
+
+	require.Len(t, views, 17, "C1 + C2(mainSystem) + 15 C3 drill-downs for the 4-level fixture")
+
+	for path, v := range views {
+		label := path
+		if label == "" {
+			label = "C1"
+		}
+
+		require.NotNil(t, v, "%s view must generate", label)
+
+		// Depicted in-scope paths: every VisiblePaths entry (deep-link chains)
+		// plus every Units entry that is neither boundary nor external.
+		depicted := make(map[string]bool, len(v.Units))
+
+		for p := range v.VisiblePaths {
+			depicted[p] = true
+		}
+
+		for p, entry := range v.Units {
+			if entry != nil && !entry.IsBoundary && !entry.IsExternal {
+				depicted[p] = true
+			}
+		}
+
+		for p := range depicted {
+			// Walk strict ancestor prefixes shallowest-first via LastIndex
+			// segmentation (top-level paths have no dot and impose nothing).
+			for idx := strings.LastIndex(p, "."); idx > 0; idx = strings.LastIndex(p[:idx], ".") {
+				ancestor := p[:idx]
+
+				// Only prefixes strictly below the view root are required:
+				// the drilled-into root itself (and its own ancestors) is the
+				// container the view opens, not an entry of it. In C1
+				// (ExpandedUnit empty) every prefix is in scope.
+				if v.ExpandedUnit != "" && !strings.HasPrefix(ancestor, v.ExpandedUnit+".") {
+					continue
+				}
+
+				assert.Contains(t, v.Units, ancestor,
+					"%s view: depicted element %q must render inside its ancestor %q (CTX-01)",
+					label, p, ancestor)
+			}
+		}
+	}
+}
+
+// subunitOrderForTest returns the unit's subunit iteration order: SubunitOrder
+// when captured, otherwise a fallback over map keys (test-model parity with
+// scope.go's subunitOrderOf, which is unexported).
+func subunitOrderForTest(unit *model.Unit) []string {
+	if len(unit.SubunitOrder) > 0 {
+		return unit.SubunitOrder
+	}
+
+	names := make([]string, 0, len(unit.Subunits))
+
+	for name := range unit.Subunits {
+		names = append(names, name)
+	}
+
+	return names
 }
