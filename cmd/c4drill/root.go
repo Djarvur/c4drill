@@ -51,6 +51,7 @@ var (
 	format     string
 	outputDir  string
 	expanded   bool
+	plain      bool
 	labelRatio float64
 	version    = "dev"
 )
@@ -93,6 +94,8 @@ Output:
 		"Output directory (default: same as input file)")
 	cmd.PersistentFlags().BoolVar(&expanded, "expanded", false,
 		"Generate all-expanded diagram showing all units")
+	cmd.PersistentFlags().BoolVar(&plain, "plain", false,
+		"Ignore author-custom formatting: default unit/edge styling, spacing and ranking, plain-text labels")
 	cmd.PersistentFlags().Float64Var(&labelRatio, "label-ratio", 0,
 		"Width:height ratio for unit labels (default: 1.6, credit card proportions)")
 
@@ -309,6 +312,10 @@ func processView(m *parser.Model, unitPath, basename string, writer *output.Writ
 		return fmt.Errorf("%w: %q", errGenerateView, unitPath)
 	}
 
+	// PLAIN-01: thread --plain onto every generated view so the graph builder
+	// suppresses author-custom formatting (PLAIN-02).
+	v.Plain = plain
+
 	// Build graph with navigation
 	g := graph.BuildGraphWithPath(v, unitPath, basename, format)
 	if g == nil {
@@ -351,6 +358,10 @@ func processExpandedView(m *parser.Model, basename string, writer *output.Writer
 	if v == nil {
 		return fmt.Errorf("%w: expanded view", errGenerateView)
 	}
+
+	// PLAIN-01: --plain x --expanded — the expanded view gets the flag too
+	// (BuildExpandedGraph copies View.Plain into Graph.Plain).
+	v.Plain = plain
 
 	// Build graph with nested clusters (no navigation for expanded view)
 	g := graph.BuildExpandedGraph(v)

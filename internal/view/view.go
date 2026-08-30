@@ -31,6 +31,12 @@ type View struct {
 	Units map[string]*Entry
 	// Edges is the edge routing style for this view.
 	Edges string
+	// Plain indicates author-custom formatting is ignored (--plain, PLAIN-01/
+	// PLAIN-02): unit color/style/border, link color/style/length/rank,
+	// properties.edges, and custom label formatting all fall back to
+	// defaults. Kind-derived edge colours and the legend stay — they derive
+	// from semantic kind, not author formatting.
+	Plain bool
 	// Parent is the parent unit path for C2/C3 views (empty for C1).
 	Parent string
 	// ExpandedUnit is the unit being expanded (for C2/C3 views).

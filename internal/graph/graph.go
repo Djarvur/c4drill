@@ -38,6 +38,10 @@ type Graph struct {
 	Direction string
 	// EdgeStyle is the edge routing style (straight, spline, square).
 	EdgeStyle string
+	// Plain mirrors View.Plain (--plain, PLAIN-01/PLAIN-02): author-custom
+	// formatting is ignored and units/edges fall back to defaults. Copied at
+	// graph construction by BOTH BuildGraph and BuildExpandedGraph.
+	Plain bool
 	// Nodes are all top-level nodes in the graph.
 	Nodes []*Node
 	// Edges are all edges connecting nodes.
