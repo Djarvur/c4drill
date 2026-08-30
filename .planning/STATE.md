@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.14
 milestone_name: Nesting Context and Plain Rendering
 status: executing
-last_updated: "2026-08-30T13:37:26.916Z"
+last_updated: "2026-08-30T14:02:12.436Z"
 last_activity: 2026-08-30
 progress:
   total_phases: 2
   completed_phases: 0
   total_plans: 7
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-08-30)
 ## Current Position
 
 Phase: 37 (nesting-context-and-plain-rendering) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-08-30
 
-Progress: [████░░░░░░] 43%
+Progress: [██████░░░░] 57%
 
 ## Performance Metrics
 
@@ -46,6 +46,7 @@ Progress: [████░░░░░░] 43%
 | Phase 37 P01 | 13min | 3 tasks | 6 files |
 | Phase 37 P02 | 32min | 3 tasks | 7 files |
 | Phase 37 P03 | 11min | 3 tasks | 5 files |
+| Phase 37 P04 | 18min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -88,8 +89,8 @@ See MILESTONES.md post-milestone section (260828-qbx queue pipes, 260828-tgf pip
 
 ## Session Continuity
 
-Last session: 2026-08-30T13:37:17.814Z
-Stopped at: Completed 37-02-PLAN.md
+Last session: 2026-08-30T14:02:12.429Z
+Stopped at: Completed 37-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
@@ -102,3 +103,6 @@ Resume file: None
 - [Phase ?]: CTX-02 true-target chains landed with zero committed-golden deltas; seven collapse-pinning content tests updated to the new contract; 37-05 re-baseline scope near-empty, focus BC-01 + CTX-01 proof — chains unfold only under in-scope depicted ancestors; external/sibling boundary nodes keep collapsed resolution per the plan scope guard
 - [Phase ?]: PLAIN-01/02 via flag-on-struct threading (View.Plain -> Graph.Plain -> builder guards), no package global; suppression = treat author fields as unset; kind colours + legend survive (semantic), arrow/penwidth unsuppressed (structural) — Matches the AllExpanded precedent and the plan's explicit rejection of the LabelRatio global; one guard point covers every render path
 - [Phase ?]: Zero committed-golden debt after 37-03 (15/15 green, expected-failure list EMPTY); 37-05 scope = BC-01 flat-model stability + goldens 37-04 adds; collapsed-pair AGG-02 aggregate style kept inert under plain so author line styles cannot leak — Plain=false keeps the default path byte-stable; the AGG-02 style derives from author link.Style and would otherwise bypass the createEdge guard
+- [Phase 37]: PLAIN-03/04 via SetLabel plain-text labels (buildRecordLabel for nodes/clusters, '[Technology] Description' via buildEdgePlainTextLabel for edges) threaded through the converter call tree — true plain text chosen over SetLabelHTML record path per the plan's pinned decision; graphviz escaping covers T-37-07 — PLAIN-03/04 via SetLabel plain-text labels (buildRecordLabel for nodes/clusters, '[Technology] Description' via buildEdgePlainTextLabel for edges) threaded through the converter call tree — true plain text chosen over SetLabelHTML record path per the plan's pinned decision; graphviz escaping covers T-37-07
+- [Phase 37]: Cluster drill-down URL emission restructured to run AFTER the plain/HTML label branch in setClusterLabel so the CTX-03 structural affordance survives --plain while the default path early-return (no URL on empty HTML label) stays byte-identical — Cluster drill-down URL emission restructured to run AFTER the plain/HTML label branch in setClusterLabel so the CTX-03 structural affordance survives --plain while the default path early-return (no URL on empty HTML label) stays byte-identical
+- [Phase 37]: E2E plain-uniformity assertion uses lowercase HTML markers (<table/<b>/<i> absent) + label=< count == 2 because legend and nav/title legitimately keep UPPERCASE HTML tables under plain — a literal '<TABLE absent' assertion would contradict the locked plain-mode boundary — E2E plain-uniformity assertion uses lowercase HTML markers (<table/<b>/<i> absent) + label=< count == 2 because legend and nav/title legitimately keep UPPERCASE HTML tables under plain — a literal '<TABLE absent' assertion would contradict the locked plain-mode boundary

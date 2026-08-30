@@ -25,8 +25,8 @@ Source: user request 2026-08-30. Clarifying questions were auto-skipped (yolo mo
 
 - [x] **PLAIN-01**: `c4drill --plain` renders every generated diagram with explicit unit formatting ignored: `color`/`style`/`border` on any unit (including expanded-unit clusters) fall back to the type-palette defaults.
 - [x] **PLAIN-02**: `--plain` ignores explicit edge formatting: link `color` and `style` fall back to defaults; `length` and `rank` are ignored (default spacing, forward ranking); global `properties.edges` is ignored. Kind-derived edge colours and the legend are kept — they derive from semantic `kind`, not custom formatting.
-- [ ] **PLAIN-03**: `--plain` simplifies label formatting: labels render as plain text (no custom HTML-rectangle formatting); label text content (name, technology, description) is preserved.
-- [ ] **PLAIN-04**: `--plain` applies uniformly to every generated output file — the context diagram and all drill-down views, in all formats (svg/html/dot).
+- [x] **PLAIN-03**: `--plain` simplifies label formatting: labels render as plain text (no custom HTML-rectangle formatting); label text content (name, technology, description) is preserved.
+- [x] **PLAIN-04**: `--plain` applies uniformly to every generated output file — the context diagram and all drill-down views, in all formats (svg/html/dot).
 
 ### BC — Backward compatibility
 
@@ -63,8 +63,8 @@ Source: user request 2026-08-30. Clarifying questions were auto-skipped (yolo mo
 | CTX-03 | Phase 37 | Complete |
 | PLAIN-01 | Phase 37 | Complete |
 | PLAIN-02 | Phase 37 | Complete |
-| PLAIN-03 | Phase 37 | Pending |
-| PLAIN-04 | Phase 37 | Pending |
+| PLAIN-03 | Phase 37 | Complete |
+| PLAIN-04 | Phase 37 | Complete |
 | BC-01 | Phase 37 | Pending |
 | DOC-01 | Phase 37 | Pending |
 | DOC-02 | Phase 37 | Pending |
