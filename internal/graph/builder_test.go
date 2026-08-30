@@ -4059,3 +4059,162 @@ func TestPlainImpliesAllAspects(t *testing.T) {
 	assert.Equal(t, gPlain.Edges[0].RankReverse, gUnion.Edges[0].RankReverse)
 	assert.Equal(t, gPlain.Edges[0].NoConstraint, gUnion.Edges[0].NoConstraint)
 }
+
+// TestSwitchCombination (Task 3 lock): pairwise and full combinations of the
+// granular switches each suppress exactly the union of their aspects — and
+// nothing else — over the post-WRAP multilevel boundary view, with the 38-01
+// wrapper-cluster nesting intact in every combination.
+func TestSwitchCombination(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"mainSystem": {
+				Type: model.TypeSystem,
+				Name: "Main System",
+				Subunits: map[string]*model.Unit{
+					"storages": {
+						Type: model.TypeContainer,
+						Name: "Storages",
+						Subunits: map[string]*model.Unit{
+							"localStorage": {
+								Type: model.TypeContainer,
+								Name: "Local Storage",
+								Subunits: map[string]*model.Unit{
+									"client": {
+										Type:  model.TypeComponent,
+										Name:  "Client",
+										Color: "#AA0000",
+										Style: "dotted",
+										Links: []model.Link{{
+											Peer:   "externalSys",
+											Color:  "#BA4A00",
+											Style:  "dashed",
+											Length: 3,
+											Rank:   model.RankReverse,
+											Kind:   model.KindWrite,
+										}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			"externalSys": {Type: model.TypeSystemExternal, Name: "External Sys"},
+		},
+	}
+
+	type opts struct {
+		noColors, noStyles, noLength, noRank bool
+	}
+
+	build := func(o opts) *graph.Graph {
+		v := view.GenerateC3View(m, "mainSystem.storages.localStorage")
+		v.NoColors = o.noColors
+		v.NoStyles = o.noStyles
+		v.NoLength = o.noLength
+		v.NoRank = o.noRank
+
+		return graph.BuildGraph(v)
+	}
+
+	findClient := func(t *testing.T, g *graph.Graph) *graph.Node {
+		t.Helper()
+
+		for _, id := range collectNodeIDs(g) {
+			if id == "mainSystem.storages.localStorage.client" {
+				for _, n := range g.Nodes {
+					if n.ID == id {
+						return n
+					}
+				}
+
+				for _, c := range collectClusterTree(g.Clusters) {
+					for _, n := range c.Nodes {
+						if n.ID == id {
+							return n
+						}
+					}
+				}
+			}
+		}
+
+		t.Fatal("client node not found")
+
+		return nil
+	}
+
+	findEdge := func(t *testing.T, g *graph.Graph) *graph.Edge {
+		t.Helper()
+
+		require.Len(t, g.Edges, 1)
+		require.Equal(t, "mainSystem.storages.localStorage.client", g.Edges[0].Source)
+
+		return g.Edges[0]
+	}
+
+	assertWrappingIntact := func(t *testing.T, g *graph.Graph) {
+		t.Helper()
+
+		found := false
+
+		for _, c := range collectClusterTree(g.Clusters) {
+			if c.ID == "wrap_mainSystem.storages" {
+				found = true
+			}
+		}
+
+		assert.True(t, found, "wrapper-cluster nesting from 38-01 must stay intact under flag combinations")
+	}
+
+	// --no-colors + --no-length: colour and length suppressed; style and rank
+	// still applied.
+	g := build(opts{noColors: true, noLength: true})
+	assertWrappingIntact(t, g)
+
+	client := findClient(t, g)
+	assert.Empty(t, client.Style.FillColor, "colour aspect suppressed")
+	assert.Equal(t, "dotted", client.Style.BorderStyle, "style aspect kept")
+
+	e := findEdge(t, g)
+	assert.NotEqual(t, "#BA4A00", e.Color, "author link colour suppressed")
+	assert.NotEqual(t, model.LinkWriteColour, e.Color, "kind colour suppressed")
+	assert.Zero(t, e.MinLen, "length aspect suppressed")
+	assert.Equal(t, "dashed", e.Style, "style aspect kept")
+	assert.True(t, e.RankReverse, "rank aspect kept")
+
+	// --no-styles + --no-rank: style and rank suppressed; colour and length
+	// still applied.
+	g = build(opts{noStyles: true, noRank: true})
+	assertWrappingIntact(t, g)
+
+	client = findClient(t, g)
+	assert.Equal(t, "#AA0000", client.Style.FillColor, "colour aspect kept")
+	assert.Equal(t, "solid", client.Style.BorderStyle, "style aspect suppressed")
+
+	e = findEdge(t, g)
+	assert.Equal(t, "#BA4A00", e.Color, "colour aspect kept")
+	assert.Equal(t, 3, e.MinLen, "length aspect kept")
+	assert.Equal(t, "solid", e.Style, "style aspect suppressed")
+	assert.False(t, e.RankReverse, "rank aspect suppressed")
+	assert.False(t, e.NoConstraint, "rank aspect suppressed")
+
+	// All four: full suppression — the granular union of everything except
+	// the plain-only label-position/properties.edges aspects.
+	g = build(opts{noColors: true, noStyles: true, noLength: true, noRank: true})
+	assertWrappingIntact(t, g)
+
+	client = findClient(t, g)
+	assert.Empty(t, client.Style.FillColor)
+	assert.Equal(t, "solid", client.Style.BorderStyle)
+
+	e = findEdge(t, g)
+	assert.NotEqual(t, "#BA4A00", e.Color)
+	assert.NotEqual(t, model.LinkWriteColour, e.Color)
+	assert.Equal(t, "solid", e.Style)
+	assert.Zero(t, e.MinLen)
+	assert.False(t, e.RankReverse)
+	assert.False(t, e.NoConstraint)
+}
