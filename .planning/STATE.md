@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: Hierarchy Wrapping and Granular Keys
 status: executing
-last_updated: "2026-08-30T15:25:07.481Z"
-last_activity: 2026-08-30 -- Phase 38 execution started
+last_updated: "2026-08-30T15:45:39.210Z"
+last_activity: 2026-08-30
 progress:
   total_phases: 2
   completed_phases: 0
   total_plans: 6
-  completed_plans: 0
-  percent: 0
+  completed_plans: 2
+  percent: 33
 ---
 
 # Project State
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-08-30)
 ## Current Position
 
 Phase: 38 (hierarchy-wrapping-and-granular-keys) — EXECUTING
-Plan: 2 of 6
-Status: 38-01 complete — WRAP-01/02/03 landed, suite green, empty re-baseline census
-Last activity: 2026-08-30 -- Plan 38-01 executed (commits f94d1de, b2447da, dd798d4)
+Plan: 3 of 6
+Status: 38-02 complete — granular switches landed, KEY-01/KEY-02 done, suite green
+Last activity: 2026-08-30 -- Plan 38-02 executed (commits 11556ae, 0e6bd24, 17aed63)
 
-Progress: [█░░░░░░░░░] 17%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -40,7 +40,7 @@ Progress: [█░░░░░░░░░] 17%
 
 | Phase | Plans | Notes |
 |-------|-------|-------|
-| 38 | - | Not planned yet |
+| 38 | 38-01: 3 tasks, ~35m. 38-02: 3 tasks, ~30m | TDD RED→GREEN per plan |
 
 ## Accumulated Context
 
@@ -54,6 +54,8 @@ Recent decisions affecting current work:
 - [v1.15 start]: single-phase milestone (precedent: v1.11–v1.14; shared packages + goldens).
 - [38-01]: wrapper cluster IDs namespaced `wrap_<dotted path>` (T-38-01); dots kept — graphviz quotes them, dot(1) validates.
 - [38-01]: boundary-chain prefix equal to ExpandedUnit maps onto the boundary cluster (no duplicate wrapper) — C2 sibling boundaries land inside the expanded unit's cluster.
+- [38-02]: kind colours survive --plain (v1.14 golden-pinned), so --no-colors suppresses kind colouring only when plain is unset — --plain stays the exact union (KEY-02, TestPlainUnionParity).
+- [38-02]: D-01 source-border default edge colour is structural and survives --no-colors; converter plain call-tree unchanged (only buildCgraph reads g.Opts.Plain).
 - [38-01]: committed goldens cover C1/expanded only and cmd E2E asserts C2/C3 via contains-checks → 38-04 golden re-baseline is EMPTY (see 38-01-SUMMARY census).
 
 ### Pending Todos
@@ -73,6 +75,6 @@ See .planning/todos/pending/.
 
 ## Session Continuity
 
-Last session: 2026-08-30
-Stopped at: Plan 38-01 complete — next: 38-02 (granular keys)
-Resume file: .planning/phases/38-hierarchy-wrapping-and-granular-keys/38-01-SUMMARY.md
+Last session: 2026-08-30T15:45:39.204Z
+Stopped at: Plan 38-02 complete — next: 38-03 (--no-labels)
+Resume file: .planning/phases/38-hierarchy-wrapping-and-granular-keys/38-02-SUMMARY.md

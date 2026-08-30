@@ -128,7 +128,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 38-02-PLAN.md — KEY: granular switches --no-colors/--no-styles/--no-length/--no-rank (KEY-01, KEY-02)
+- [x] 38-02-PLAN.md — KEY: granular switches --no-colors/--no-styles/--no-length/--no-rank (KEY-01, KEY-02) ✅ 2026-08-30
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -172,6 +172,6 @@ Plans:
 | 35. C4D DSL alternative | v1.12 | 9/9 | Complete | 2026-08-14 |
 | 36. Edge Semantics and Legend | v1.13 | 6/6 | Complete | 2026-08-28 |
 | 37. Nesting Context and Plain Rendering | v1.14 | 7/7 | Complete | 2026-08-30 |
-| 38. Hierarchy Wrapping and Granular Keys | v1.15 | 0/? | Not started | - |
+| 38. Hierarchy Wrapping and Granular Keys | v1.15 | 2/6 | In Progress|  |
 
 **Post-milestone (2026-08-28):** user-directed design review shipped outside any phase as v1.19.0–v1.20.0 — legend reworked into a floating framed node outside an invisible content cluster (REQUIREMENTS.md LEG-01..03 re-specified in place), queue units render as SVG pipes (SHAPE-01, quick task [260828-qbx](.planning/quick/260828-qbx-render-queue-units-as-horizontal-pipe-sh/)). Quick tasks are not tracked in the phase table above (GSD quick-mode convention).

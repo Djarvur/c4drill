@@ -20,8 +20,8 @@ Source: user review 2026-08-30 (retroactive answers to the yolo-skipped question
 
 ### KEY — Granular formatting switches
 
-- [ ] **KEY-01**: Individual CLI switches exist, each independently suppressing one author-custom formatting aspect with defaults restored: colours (unit `color`/`border` fills + link `color`), styles (unit/link line and border styles), lengths (link `length`), ranks (link `rank`). Unset switch = exactly current behavior.
-- [ ] **KEY-02**: `--plain` renders identically to v1.14 — the union of all granular switches (locked by existing plain goldens staying green).
+- [x] **KEY-01**: Individual CLI switches exist, each independently suppressing one author-custom formatting aspect with defaults restored: colours (unit `color`/`border` fills + link `color`), styles (unit/link line and border styles), lengths (link `length`), ranks (link `rank`). Unset switch = exactly current behavior.
+- [x] **KEY-02**: `--plain` renders identically to v1.14 — the union of all granular switches (locked by existing plain goldens staying green).
 - [ ] **KEY-03**: Every switch composes with every generation (C1, all drill-downs, `--expanded`) and format (dot/svg/html). Kind-derived colours and the legend follow the v1.14 semantic-vs-custom boundary unless the colours switch explicitly covers them (planner pins; documented either way).
 
 ### LBL — Label suppression key
@@ -63,8 +63,8 @@ Filled during roadmap creation.
 | WRAP-01 | Phase 38 | ✅ 38-01 |
 | WRAP-02 | Phase 38 | ✅ 38-01 |
 | WRAP-03 | Phase 38 | ✅ 38-01 |
-| KEY-01 | Phase 38 | Pending |
-| KEY-02 | Phase 38 | Pending |
+| KEY-01 | Phase 38 | Complete |
+| KEY-02 | Phase 38 | Complete |
 | KEY-03 | Phase 38 | Pending |
 | LBL-01 | Phase 38 | Pending |
 | LBL-02 | Phase 38 | Pending |
