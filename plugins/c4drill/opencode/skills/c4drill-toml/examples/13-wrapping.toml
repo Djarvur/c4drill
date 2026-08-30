@@ -1,0 +1,83 @@
+# Wrapping and Granular Keys Example (v1.22)
+# Every depicted node renders inside its full ancestor-container chain:
+# sibling and boundary entries appear in wrapper clusters (labelled with
+# the container's pretty name), and only fully external units stay
+# top-level. Render with the granular keys to switch off one formatting
+# concern at a time: --no-colors, --no-styles, --no-length, --no-rank,
+# --no-labels (shape-only layout; the legend stays). --plain is the
+# union of them all.
+
+[properties]
+name = "Wrapping and Keys"
+description = "Ancestor wrapping plus the granular suppression flags"
+expanded = ["core"]
+
+# Fully external system: no ancestor relationship to the depicted
+# subtree, so it stays top-level in every view.
+[[devops.link]]
+peer = "core.app.worker"
+technology = "SSH"
+description = "Deploys"
+
+[devops]
+type = "person"
+name = "DevOps Engineer"
+
+[core]
+type = "system"
+name = "Core Platform"
+technology = "Go"
+color = "#E3F2FD"
+border = "#1565C0"
+
+[core.app]
+type = "container"
+name = "Application"
+technology = "Go"
+color = "#E8F5E9"
+border = "#2E7D32"
+style = "dashed"
+
+[core.app.worker]
+type = "component"
+name = "Worker"
+
+# Sibling boundary: audit.trail is outside the expanded core.app subtree
+# but inside core — in core's C2 view it renders inside its "Audit"
+# wrapper cluster, not flat at the top level.
+[core.audit]
+type = "container"
+name = "Audit"
+
+[core.audit.trail]
+type = "component"
+name = "Audit Trail"
+
+# Cross-branch link with custom formatting: try --no-colors (author and
+# kind colours off), --no-styles (dashed gone), --no-length (spacing
+# default), --no-rank (reverse ignored).
+[[core.app.worker.link]]
+peer = "core.audit.trail"
+technology = "gRPC"
+description = "Emits events"
+kind = "write"
+color = "#6A1B9A"
+style = "dotted"
+length = 3
+rank = "reverse"
+
+[[core.audit.trail.link]]
+peer = "core.data.store"
+technology = "SQL"
+description = "Persists events"
+length = 2
+
+[core.data]
+type = "box"
+name = "Data"
+
+[core.data.store]
+type = "container"
+name = "Event Store"
+technology = "PostgreSQL"
+color = "#FFF3E0"

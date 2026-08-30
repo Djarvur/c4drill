@@ -426,14 +426,18 @@ type = "component"
 name = "Service"
 ```
 
-**Nesting context in rendered diagrams (v1.21):** authors can rely on
-container context being preserved. Any element a view depicts renders
-inside its complete ancestor-container chain; a link targeting a deeply
-nested unit terminates at the true target inside that chain (not at a
-collapsed top-level stand-in); and an expanded unit shows its nested
-containers as clusters (with the 🔍 drill-down marker), not a flat
-list. Sibling/external boundary nodes stay top-level by design, and
-collapsed subtrees are not restructured.
+**Nesting context in rendered diagrams (v1.21, extended v1.22):**
+authors can rely on container context being preserved. Any element a
+view depicts renders inside its complete ancestor-container chain; a
+link targeting a deeply nested unit terminates at the true target
+inside that chain (not at a collapsed top-level stand-in); and an
+expanded unit shows its nested containers as clusters (with the 🔍
+drill-down marker), not a flat list. **Ancestor wrapping (v1.22):**
+sibling and boundary entries a view depicts render inside their
+ancestor chains too — the generator synthesises wrapper clusters
+(labelled with the container's pretty name, no 🔍, no explore link)
+where the chain is not otherwise part of the view. Only fully external
+units stay top-level, and collapsed subtrees are not restructured.
 
 ### Link Syntax
 
@@ -816,6 +820,9 @@ The following examples demonstrate increasing complexity:
     Deep container hierarchy, deep-link target, nested clusters (v1.21)
 12. **[12-plain.toml](examples/12-plain.toml)** - Custom formatting
     fixture for the `--plain` before/after demo (v1.21)
+13. **[13-wrapping.toml](examples/13-wrapping.toml)** - Ancestor
+    wrapping (wrapper cluster, sibling boundary, external top-level)
+    and the granular `--no-*` keys (v1.22)
 
 All examples parse and validate successfully with `c4drill <file>`
 (rendering runs the full validation pipeline).
@@ -984,6 +991,42 @@ and their explore links, and collapsed subtrees stay collapsed.
 `convert` and `fmt` are unaffected. See
 `examples/12-plain.toml` — a fixture full of custom formatting to try
 the flag against.
+
+### Granular Render Flags (--no-*)
+
+Each granular switch (v1.22) turns off exactly one formatting concern;
+they compose freely with each other, with `--plain`, and with
+`--expanded`. The model file gains no new keys:
+
+```bash
+c4drill architecture.toml --no-colors           # author + kind colours off
+c4drill architecture.toml --no-styles           # author line styles off
+c4drill architecture.toml --no-length           # link length -> default spacing
+c4drill architecture.toml --no-rank             # link rank hints ignored
+c4drill architecture.toml --no-labels           # shape-only: no element label text
+c4drill architecture.toml --plain --no-labels   # switches compose
+```
+
+Boundaries worth knowing:
+
+- `--no-colors` suppresses author unit/link colours *and* kind-derived
+  edge colours; the structural default source-border colour stays. The
+  legend keeps its rows but loses its colour swatches. Under `--plain`
+  alone kind colours survive (semantic), so `--plain --no-colors`
+  removes them.
+- `--no-labels` suppresses label *text* at the graph layer (nodes
+  render as bare shapes; edges, wrapper and boundary clusters lose
+  their labels; the 🔍/📖 glyphs go with them) so layout re-flows
+  without label geometry — but colour/style semantics, cluster
+  structure, explore/reference URLs, and **the legend all stay**
+  (the legend is metadata governed by `properties.legend`). Applies to
+  every generation, including `--expanded`.
+- `properties.edges` is tied to `--plain` only; no granular switch
+  touches it.
+- `--plain` remains the exact union of all the concerns above.
+
+See `examples/13-wrapping.toml` — ancestor wrapping plus custom
+formatting to try every switch against.
 
 ---
 
