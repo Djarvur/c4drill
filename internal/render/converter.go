@@ -230,6 +230,11 @@ func createTopLevelNodes(
 
 // createEdges creates all edges from the edge list.
 func createEdges(cg *cgraph.Graph, edges []*graph.Edge, nodeMap map[string]*cgraph.Node, opts graph.RenderOpts) error {
+	// Fallback name uniquifier for hand-built graphs whose edges carry no
+	// builder-assigned Name (BUG-3): parallel fallback edges stay distinct
+	// without ever deriving names from flag-suppressible label content.
+	nameCounts := make(map[string]int)
+
 	for _, edge := range edges {
 		source := nodeMap[edge.Source]
 		target := nodeMap[edge.Target]
@@ -238,7 +243,7 @@ func createEdges(cg *cgraph.Graph, edges []*graph.Edge, nodeMap map[string]*cgra
 			continue // Skip edges with missing endpoints
 		}
 
-		if err := createEdge(cg, source, target, edge, opts); err != nil {
+		if err := createEdge(cg, source, target, edge, opts, nameCounts); err != nil {
 			return fmt.Errorf("create edge %s->%s: %w", edge.Source, edge.Target, err)
 		}
 	}
@@ -600,18 +605,21 @@ func setClusterAttribute(subgraph *cgraph.Graph, attr, value string) error {
 }
 
 // createEdge creates a cgraph.Edge from a graph.Edge.
-func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge, opts graph.RenderOpts) error {
+func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge, opts graph.RenderOpts, nameCounts map[string]int) error {
 	// BUG-3 (flag-invariant edge identity): use the builder-assigned unique
 	// name verbatim — model-derived, sanitized, flag-independent — so
 	// CreateEdgeByName's find-or-create can never silently merge two builder
 	// edges whose label content was suppressed by a formatting flag
 	// (threats T-Q1-01/T-Q1-02). Hand-built graphs without a Name fall back
-	// to the legacy label-derived construction.
+	// to a uniquified "{source}_to_{target}" name; label content never
+	// contributes to edge identity.
 	edgeName := edge.Name
 	if edgeName == "" {
-		edgeName = edge.Source + "_to_" + edge.Target
-		if edge.Label != nil && edge.Label.Description != "" {
-			edgeName += "_" + sanitizeForName(edge.Label.Description)
+		edgeName = sanitizeForName(edge.Source + "_to_" + edge.Target)
+
+		nameCounts[edgeName]++
+		if n := nameCounts[edgeName]; n > 1 {
+			edgeName = fmt.Sprintf("%s_%d", edgeName, n)
 		}
 	}
 
