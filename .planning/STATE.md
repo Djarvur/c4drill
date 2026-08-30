@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.14
 milestone_name: Nesting Context and Plain Rendering
 status: executing
-last_updated: "2026-08-30T13:22:33.051Z"
+last_updated: "2026-08-30T13:37:26.916Z"
 last_activity: 2026-08-30
 progress:
   total_phases: 2
   completed_phases: 0
   total_plans: 7
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-08-30)
 ## Current Position
 
 Phase: 37 (nesting-context-and-plain-rendering) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
 Status: Ready to execute
 Last activity: 2026-08-30
 
-Progress: [███░░░░░░░] 29%
+Progress: [████░░░░░░] 43%
 
 ## Performance Metrics
 
@@ -45,6 +45,7 @@ Progress: [███░░░░░░░] 29%
 | 36 (v1.13) | 6 done | 20/20 requirements; release v1.18.0 |
 | Phase 37 P01 | 13min | 3 tasks | 6 files |
 | Phase 37 P02 | 32min | 3 tasks | 7 files |
+| Phase 37 P03 | 11min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -87,7 +88,7 @@ See MILESTONES.md post-milestone section (260828-qbx queue pipes, 260828-tgf pip
 
 ## Session Continuity
 
-Last session: 2026-08-30T13:22:33.043Z
+Last session: 2026-08-30T13:37:17.814Z
 Stopped at: Completed 37-02-PLAN.md
 Resume file: None
 
@@ -99,3 +100,5 @@ Resume file: None
 
 - [Phase ?]: CTX-03 landed with zero golden deltas — Expanded-mode baselines stayed green: GenerateExpandedView sets IsExpanded=HasSubunits (buildNestedCluster path untouched, magnifier guard inert) and no test reads the committed cmd .dot/.svg artifacts; 37-05 re-baseline scope must be re-assessed
 - [Phase ?]: CTX-02 true-target chains landed with zero committed-golden deltas; seven collapse-pinning content tests updated to the new contract; 37-05 re-baseline scope near-empty, focus BC-01 + CTX-01 proof — chains unfold only under in-scope depicted ancestors; external/sibling boundary nodes keep collapsed resolution per the plan scope guard
+- [Phase ?]: PLAIN-01/02 via flag-on-struct threading (View.Plain -> Graph.Plain -> builder guards), no package global; suppression = treat author fields as unset; kind colours + legend survive (semantic), arrow/penwidth unsuppressed (structural) — Matches the AllExpanded precedent and the plan's explicit rejection of the LabelRatio global; one guard point covers every render path
+- [Phase ?]: Zero committed-golden debt after 37-03 (15/15 green, expected-failure list EMPTY); 37-05 scope = BC-01 flat-model stability + goldens 37-04 adds; collapsed-pair AGG-02 aggregate style kept inert under plain so author line styles cannot leak — Plain=false keeps the default path byte-stable; the AGG-02 style derives from author link.Style and would otherwise bypass the createEdge guard

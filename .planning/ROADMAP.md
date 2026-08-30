@@ -116,7 +116,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 37-03-PLAN.md — PLAIN-01/02: --plain flag threading (View.Plain → Graph.Plain) + builder-level formatting suppression
+- [x] 37-03-PLAN.md — PLAIN-01/02: --plain flag threading (View.Plain → Graph.Plain) + builder-level formatting suppression
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -155,6 +155,6 @@ Plans:
 | 34. Label formatting fixes | v1.11 | 4/4 | Complete | 2026-08-10 |
 | 35. C4D DSL alternative | v1.12 | 9/9 | Complete | 2026-08-14 |
 | 36. Edge Semantics and Legend | v1.13 | 6/6 | Complete | 2026-08-28 |
-| 37. Nesting Context and Plain Rendering | v1.14 | 2/7 | In Progress|  |
+| 37. Nesting Context and Plain Rendering | v1.14 | 3/7 | In Progress|  |
 
 **Post-milestone (2026-08-28):** user-directed design review shipped outside any phase as v1.19.0–v1.20.0 — legend reworked into a floating framed node outside an invisible content cluster (REQUIREMENTS.md LEG-01..03 re-specified in place), queue units render as SVG pipes (SHAPE-01, quick task [260828-qbx](.planning/quick/260828-qbx-render-queue-units-as-horizontal-pipe-sh/)). Quick tasks are not tracked in the phase table above (GSD quick-mode convention).
