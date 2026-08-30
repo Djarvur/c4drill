@@ -70,7 +70,7 @@ func buildBoundaryViewGraph(v *view.View, g *Graph) {
 		// the C1 branch): expansion only takes effect when there are subunits
 		// to show — an expanded-but-empty unit renders as a plain node.
 		if entry.IsExpanded && len(entry.Unit.Subunits) > 0 {
-			cluster := buildCluster(entry)
+			cluster := buildCluster(entry, v)
 			boundaryCluster.Clusters = append(boundaryCluster.Clusters, cluster)
 		} else {
 			node := buildNode(entry)
@@ -97,7 +97,7 @@ func buildC1ViewGraph(v *view.View, g *Graph) {
 		// D-07: expansion only takes effect when there are subunits to
 		// show — an expanded-but-empty unit renders as a plain node.
 		if entry.IsExpanded && len(entry.Unit.Subunits) > 0 {
-			cluster := buildCluster(entry)
+			cluster := buildCluster(entry, v)
 			g.Clusters = append(g.Clusters, cluster)
 		} else {
 			node := buildNode(entry)
@@ -606,8 +606,13 @@ func luminance(hex string) float64 {
 	return 0.299*r + 0.587*g + 0.114*b
 }
 
-// buildCluster creates a cluster for an expanded unit.
-func buildCluster(entry *view.Entry) *Cluster {
+// buildCluster creates a cluster for an expanded unit. CTX-03: children that
+// themselves have subunits recurse into nested clusters (buildNestedCluster) so
+// the nesting picture inside an expanded cluster matches the drill-down views;
+// leaf children render as plain nodes. The caller keeps the D-07
+// expanded-but-empty guard — an expanded unit with zero subunits never reaches
+// this function.
+func buildCluster(entry *view.Entry, v *view.View) *Cluster {
 	// Boxes use content-based styling (border colour derived from subunits)
 	var style *NodeStyle
 	if IsBoxType(entry.Unit.Type) {
@@ -622,12 +627,15 @@ func buildCluster(entry *view.Entry) *Cluster {
 		ID:         entry.FullPath,
 		Label:      buildClusterLabel(entry),
 		Nodes:      make([]*Node, 0),
+		Clusters:   make([]*Cluster, 0),
 		Style:      style,
 		Type:       entry.Unit.Type,
 		IsExternal: entry.IsExternal,
 	}
 
-	// Add child units as nodes inside the cluster in definition order
+	// Process children in definition order (use SubunitOrder if available),
+	// dispatching subunit-containers to nested clusters (CTX-03) and leaves to
+	// nodes.
 	var childOrder []string
 	if len(entry.Unit.SubunitOrder) > 0 {
 		childOrder = entry.Unit.SubunitOrder
@@ -641,17 +649,30 @@ func buildCluster(entry *view.Entry) *Cluster {
 	for _, childName := range childOrder {
 		childUnit := entry.Unit.Subunits[childName]
 		childPath := entry.FullPath + "." + childName
-		childEntry := &view.Entry{
-			Unit:        childUnit,
-			FullPath:    childPath,
-			IsExpanded:  isUnitExpanded(entry.Unit, childName),
-			HasSubunits: len(childUnit.Subunits) > 0,
-			IsExternal:  view.IsExternalType(childUnit.Type),
+
+		childEntry, exists := v.Units[childPath]
+		if !exists {
+			// Create entry if not in view (shouldn't happen, but be defensive),
+			// preserving the expansion hint from the parent's Expanded list.
+			childEntry = &view.Entry{
+				Unit:        childUnit,
+				FullPath:    childPath,
+				IsExpanded:  isUnitExpanded(entry.Unit, childName),
+				HasSubunits: len(childUnit.Subunits) > 0,
+				IsExternal:  view.IsExternalType(childUnit.Type),
+			}
 		}
 
-		node := buildNode(childEntry)
-		node.IsInCluster = true
-		cluster.Nodes = append(cluster.Nodes, node)
+		if childEntry.HasSubunits {
+			// Recursively build nested cluster for subunit-containers (CTX-03)
+			nestedCluster := buildNestedCluster(childEntry, childPath, v)
+			cluster.Clusters = append(cluster.Clusters, nestedCluster)
+		} else {
+			// Build node for leaf child
+			node := buildNode(childEntry)
+			node.IsInCluster = true
+			cluster.Nodes = append(cluster.Nodes, node)
+		}
 	}
 
 	return cluster
@@ -672,6 +693,14 @@ func buildClusterLabel(entry *view.Entry) *Label {
 	// drill-down/explore URL handling is unchanged.
 	if entry.Unit.Reference != "" {
 		label.Name += " 📖"
+	}
+
+	// CTX-03: collapsed containers rendered as (nested) clusters keep the same
+	// 🔍 affordance buildNode gives collapsed units with subunits. Author-
+	// expanded entries — including every entry of an all-expanded view, where
+	// IsExpanded mirrors HasSubunits — stay 🔍-free (D-04).
+	if entry.HasSubunits && !entry.IsExpanded {
+		label.Name += " 🔍"
 	}
 
 	return label
@@ -1162,22 +1191,11 @@ func BuildGraphWithPath(v *view.View, currentPath, basename, format string) *Gra
 		return nil
 	}
 
-	// Add explore URLs to collapsed nodes with subunits
-	for _, node := range g.Nodes {
-		if shouldHaveExploreLink(node, v) {
-			node.ExploreURL = ComputeExploreURL(currentPath, node.ID, basename, format)
-		}
-	}
-
-	// Add explore URLs to cluster nodes (if collapsed representation needed)
-	for _, cluster := range g.Clusters {
-		// Clusters are expanded units, their children might need explore links
-		for _, node := range cluster.Nodes {
-			if shouldHaveExploreLink(node, v) {
-				node.ExploreURL = ComputeExploreURL(currentPath, node.ID, basename, format)
-			}
-		}
-	}
+	// Add explore URLs to collapsed nodes with subunits — at the top level AND
+	// inside clusters (CTX-03: the walk recurses into cluster.Clusters so
+	// nested container clusters keep their drill affordance too).
+	assignExploreURLs(g.Nodes, v, currentPath, basename, format)
+	assignExploreURLsToClusters(g.Clusters, v, currentPath, basename, format)
 
 	// Add navigation for C2/C3 views
 	if v.Level != view.LevelC1 && v.ExpandedUnit != "" {
@@ -1185,6 +1203,35 @@ func BuildGraphWithPath(v *view.View, currentPath, basename, format string) *Gra
 	}
 
 	return g
+}
+
+// assignExploreURLs assigns an ExploreURL to every collapsed container node in
+// the list. Helper wrapping the shouldHaveExploreLink + ComputeExploreURL body
+// that previously lived in BuildGraphWithPath's one-level loops, so cluster
+// walks can reuse it at every nesting depth.
+func assignExploreURLs(nodes []*Node, v *view.View, currentPath, basename, format string) {
+	for _, node := range nodes {
+		if shouldHaveExploreLink(node, v) {
+			node.ExploreURL = ComputeExploreURL(currentPath, node.ID, basename, format)
+		}
+	}
+}
+
+// assignExploreURLsToClusters recursively walks the cluster tree: each
+// collapsed container cluster gets its own ExploreURL (same predicate nodes
+// use, keyed on the cluster's unit entry), the cluster's nodes are processed
+// via assignExploreURLs, and nested clusters are visited (CTX-03).
+func assignExploreURLsToClusters(clusters []*Cluster, v *view.View, currentPath, basename, format string) {
+	for _, cluster := range clusters {
+		// Clusters are expanded units by construction; a collapsed container
+		// rendered as a nested cluster still drills down via its URL attribute.
+		if entry, exists := v.Units[cluster.ID]; exists && entryShouldHaveExploreLink(entry) {
+			cluster.ExploreURL = ComputeExploreURL(currentPath, cluster.ID, basename, format)
+		}
+
+		assignExploreURLs(cluster.Nodes, v, currentPath, basename, format)
+		assignExploreURLsToClusters(cluster.Clusters, v, currentPath, basename, format)
+	}
 }
 
 // shouldHaveExploreLink determines if a node should have an explore link.
@@ -1195,6 +1242,13 @@ func shouldHaveExploreLink(node *Node, v *view.View) bool {
 		return false
 	}
 
+	return entryShouldHaveExploreLink(entry)
+}
+
+// entryShouldHaveExploreLink reports whether a view entry is a collapsed
+// container-capable unit that deserves a drill-down (explore) link — the
+// shared predicate for nodes and nested container clusters (CTX-03).
+func entryShouldHaveExploreLink(entry *view.Entry) bool {
 	// Only types that can contain subunits can be expanded
 	switch entry.Unit.Type {
 	case model.TypeSystem, model.TypeBox,

@@ -369,6 +369,71 @@ func TestCreateNode_WithExploreURL(t *testing.T) {
 	})
 }
 
+// TestClusterExploreURLEmission exercises CTX-03 (converter side): a cluster
+// carrying an ExploreURL emits it as the subgraph URL attribute — the
+// cluster-side analog of the node's URL attribute. Clusters without an
+// ExploreURL emit no URL.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestClusterExploreURLEmission(t *testing.T) {
+	t.Run("cluster with ExploreURL gets URL attribute in DOT output", func(t *testing.T) {
+		g := &graph.Graph{
+			Title:     "T",
+			Direction: "TB",
+			Clusters: []*graph.Cluster{
+				{
+					ID:         "mainsystem.auth",
+					Label:      &graph.Label{Name: "Auth"},
+					ExploreURL: "diagram/mainsystem/auth.svg",
+					Nodes: []*graph.Node{
+						{
+							ID:          "mainsystem.auth.api",
+							Label:       &graph.Label{Name: "API"},
+							Shape:       graph.ShapeRecord,
+							IsInCluster: true,
+						},
+					},
+					Style: &graph.NodeStyle{},
+				},
+			},
+		}
+
+		output, err := render.RenderDOT(g)
+		require.NoError(t, err)
+
+		assert.Contains(t, string(output), "diagram/mainsystem/auth.svg",
+			"a cluster with ExploreURL must emit the subgraph URL attribute in DOT")
+	})
+
+	t.Run("cluster without ExploreURL emits no URL", func(t *testing.T) {
+		g := &graph.Graph{
+			Title:     "T",
+			Direction: "TB",
+			Clusters: []*graph.Cluster{
+				{
+					ID:    "mainsystem",
+					Label: &graph.Label{Name: "Main System"},
+					Nodes: []*graph.Node{
+						{
+							ID:          "mainsystem.api",
+							Label:       &graph.Label{Name: "API"},
+							Shape:       graph.ShapeRecord,
+							IsInCluster: true,
+						},
+					},
+					Style: &graph.NodeStyle{},
+				},
+			},
+		}
+
+		output, err := render.RenderDOT(g)
+		require.NoError(t, err)
+
+		assert.NotContains(t, string(output), ".svg",
+			"a cluster without ExploreURL must not emit a URL attribute")
+	})
+}
+
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestNodeRoundedStyle(t *testing.T) {
 	t.Run("node has rounded style by default", func(t *testing.T) {

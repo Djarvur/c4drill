@@ -483,6 +483,15 @@ func setClusterLabel(subgraph *cgraph.Graph, cluster *graph.Cluster) {
 	}
 
 	subgraph.SetLabelHTML(htmlLabel)
+
+	// CTX-03: a collapsed container cluster carries its drill-down URL as the
+	// subgraph URL attribute — the cluster-side analog of the node's SetURL
+	// (GraphViz supports URL on clusters, so clicking the cluster frame drills
+	// in). SafeSet errors are ignored, matching the best-effort treatment in
+	// applyNodeStyle.
+	if cluster.ExploreURL != "" {
+		_ = subgraph.SafeSet("URL", cluster.ExploreURL, "")
+	}
 }
 
 // applyClusterStyle applies visual styles to a cluster.

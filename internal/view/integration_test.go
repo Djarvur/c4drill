@@ -460,6 +460,8 @@ func TestIntegrationC1ViewNoNestedBoundaryPollution(t *testing.T) {
 // visible subunits of an expanded C1 unit render inside the parent cluster
 // (skipped as top-level nodes — duplicate node IDs would break DOT), and that
 // resolved edges point at the visible subunit node (D-07) rather than the parent.
+// CTX-03: a visible subunit WITH subunits (sshAuth) renders as a NESTED
+// cluster inside the parent cluster — not as a flat node.
 func TestBuildGraphExpandedC1VisibleSubunitEdges(t *testing.T) {
 	t.Parallel()
 
@@ -474,20 +476,22 @@ func TestBuildGraphExpandedC1VisibleSubunitEdges(t *testing.T) {
 		assert.NotEqual(t, sshAuthPath, node.ID, "visible subunit must not render as top-level node")
 	}
 
-	// The cluster renders the visible subunit node
+	// The cluster renders the visible subunit — as a nested cluster (CTX-03),
+	// since sshAuth itself has subunits.
 	require.Len(t, g.Clusters, 1)
 	cluster := g.Clusters[0]
 	assert.Equal(t, linuxSystemPath, cluster.ID)
 
-	found := false
+	var sshAuthCluster *graph.Cluster
 
-	for _, node := range cluster.Nodes {
-		if node.ID == sshAuthPath {
-			found = true
+	for _, nested := range cluster.Clusters {
+		if nested.ID == sshAuthPath {
+			sshAuthCluster = nested
 		}
 	}
 
-	assert.True(t, found, "cluster must contain node "+sshAuthPath)
+	require.NotNil(t, sshAuthCluster, "cluster must contain nested cluster "+sshAuthPath)
+	assert.NotEmpty(t, sshAuthCluster.Nodes, "the nested sshAuth cluster unfolds its children")
 
 	// D-07: the edge points at the visible subunit, not the parent
 	edgeFound := false
@@ -510,7 +514,8 @@ func TestBuildGraphExpandedC1VisibleSubunitEdges(t *testing.T) {
 // of visible-subunit entries in v.Units: BuildGraphWithPath can now look up
 // the entry when deciding explore links, so a visible subunit WITH subunits
 // (sshAuth) gets an ExploreURL for drill-down to its C2 diagram (which
-// auto-generation produces since it has subunits).
+// auto-generation produces since it has subunits). CTX-03: the subunit renders
+// as a nested cluster, so the explore URL lives on Cluster.ExploreURL.
 func TestBuildGraphExpandedC1VisibleSubunitExploreLink(t *testing.T) {
 	t.Parallel()
 
@@ -521,16 +526,17 @@ func TestBuildGraphExpandedC1VisibleSubunitExploreLink(t *testing.T) {
 	require.NotNil(t, g)
 	require.Len(t, g.Clusters, 1)
 
-	var sshAuthNode *graph.Node
+	var sshAuthCluster *graph.Cluster
 
-	for _, node := range g.Clusters[0].Nodes {
-		if node.ID == sshAuthPath {
-			sshAuthNode = node
+	for _, nested := range g.Clusters[0].Clusters {
+		if nested.ID == sshAuthPath {
+			sshAuthCluster = nested
 		}
 	}
 
-	require.NotNil(t, sshAuthNode, "cluster must contain node "+sshAuthPath)
-	assert.NotEmpty(t, sshAuthNode.ExploreURL)
+	require.NotNil(t, sshAuthCluster, "cluster must contain nested cluster "+sshAuthPath)
+	assert.NotEmpty(t, sshAuthCluster.ExploreURL,
+		"the nested sshAuth cluster keeps its drill-down explore URL")
 }
 
 // keys returns the keys of a map for error messages.
