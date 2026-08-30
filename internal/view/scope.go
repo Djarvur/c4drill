@@ -347,7 +347,103 @@ func resolveBoundaryLink(
 		Mirror:        link.Mirror,
 	}
 
+	// CTX-02: when the peer is a real model path strictly under the resolved
+	// depicted ancestor, register the ancestor chain as visible entries and
+	// point the edge at the TRUE target instead of the collapsed ancestor.
+	if ensureDeepLinkChain(v, m, resolved, link.Peer) {
+		resolvedLink.Peer = link.Peer
+	}
+
 	return resolvedLink, true
+}
+
+// ensureDeepLinkChain implements the CTX-02 deep-link contract: when peer is a
+// real model path strictly under the resolved depicted ancestor, every path
+// prefix of peer strictly below resolved (peer included) is registered as a
+// visible chain entry (Units + UnitOrder + VisiblePaths — the top-level skip
+// contract shared by the C1 and C2/C3 builders) carrying the REAL model unit,
+// and the depicted ancestor is marked UnfoldChain so the graph layer renders
+// it as a recursive cluster. It returns true exactly when the chain was
+// ensured, in which case the caller resolves the link to peer (the TRUE
+// target) instead of resolved.
+//
+// The helper only fires for peers that findUnitByPath resolves and whose
+// depicted ancestor is an in-scope entry — junk paths and external/sibling
+// boundary nodes fall through (false) to today's collapsed resolution, and the
+// walk itself is bounded by the peer's nesting depth.
+func ensureDeepLinkChain(v *View, m *parser.Model, resolved, peer string) bool {
+	if resolved == "" || peer == "" || !strings.HasPrefix(peer, resolved+".") {
+		return false // external or already-depicted peer — keep collapsed resolution
+	}
+
+	if findUnitByPath(m, peer) == nil {
+		return false // not a real model path — keep collapsed resolution
+	}
+
+	depicted := v.Units[resolved]
+	if depicted == nil || depicted.IsBoundary || depicted.IsExternal {
+		return false // chains unfold only beneath in-scope depicted ancestors
+	}
+
+	if v.VisiblePaths == nil {
+		v.VisiblePaths = make(map[string]bool)
+	}
+
+	// Walk the chain shallowest-first from the segment below resolved down to
+	// peer, registering every path not already depicted (visible subunits and
+	// previously inserted chain entries are reused as-is).
+	path := resolved
+
+	for _, part := range strings.Split(strings.TrimPrefix(peer, resolved+"."), ".") {
+		path += "." + part
+
+		if _, exists := v.Units[path]; exists {
+			continue
+		}
+
+		unit := findUnitByPath(m, path)
+		if unit == nil {
+			break // defensive; unreachable once findUnitByPath(peer) succeeded
+		}
+
+		v.Units[path] = &Entry{
+			Unit:        unit,
+			FullPath:    path,
+			HasSubunits: len(unit.Subunits) > 0,
+			IsExternal:  IsExternalType(unit.Type),
+		}
+		v.VisiblePaths[path] = true
+		insertAdjacentToAncestor(v, resolved, path)
+	}
+
+	// Already author-expanded ancestors render as clusters anyway; only
+	// collapsed ones need the unfold marker.
+	if !depicted.IsExpanded {
+		depicted.UnfoldChain = true
+	}
+
+	return true
+}
+
+// insertAdjacentToAncestor inserts path into v.UnitOrder right after the last
+// entry under (or equal to) ancestor, so chain entries land adjacent to their
+// depicted ancestor in model definition order rather than at the tail in
+// link-scan order. The ancestor itself is already in v.UnitOrder by
+// construction; failing to find it (cannot happen) appends at the tail.
+func insertAdjacentToAncestor(v *View, ancestor, path string) {
+	prefix := ancestor + "."
+
+	insertAt := len(v.UnitOrder)
+
+	for i := len(v.UnitOrder) - 1; i >= 0; i-- {
+		existing := v.UnitOrder[i]
+		if existing == ancestor || strings.HasPrefix(existing, prefix) {
+			insertAt = i + 1
+			break
+		}
+	}
+
+	v.UnitOrder = slices.Insert(v.UnitOrder, insertAt, path)
 }
 
 // resolveToTopLevel resolves a peer path to its nearest VISIBLE ancestor in
@@ -432,7 +528,7 @@ func GenerateC2View(m *parser.Model, systemPath string) *View {
 	// descendant of subunit B (or to an external boundary node), create a
 	// resolved link A -> B on subunit A's entry. Without this, edges between
 	// sibling subunits are lost because the peer path is too deep for isTargetInView.
-	resolveSubunitCrossLinks(v, systemUnit.Subunits, subunitOrder, systemPath)
+	resolveSubunitCrossLinks(v, m, systemUnit.Subunits, subunitOrder, systemPath)
 
 	return v
 }
@@ -519,7 +615,7 @@ func GenerateC3View(m *parser.Model, containerPath string) *View {
 	// Resolve cross-subunit links: when a descendant of one component links to
 	// a descendant of another component (or to an external boundary node), create
 	// a resolved link between the components.
-	resolveSubunitCrossLinks(v, containerUnit.Subunits, subunitOrderOf(containerUnit), containerPath)
+	resolveSubunitCrossLinks(v, m, containerUnit.Subunits, subunitOrderOf(containerUnit), containerPath)
 
 	return v
 }
@@ -893,7 +989,9 @@ func resolveToViewAncestor(v *View, peer string) string {
 // This ensures that edges between sibling subunits (e.g., dacProxy -> authModules)
 // appear in C2/C3 diagrams even though the actual links are between deeply nested
 // descendants (e.g., dacProxy.Unit.Links -> authModules.otp.settingsAPI).
-func resolveSubunitCrossLinks(v *View, subunits map[string]*model.Unit, subunitOrder []string, parentPath string) {
+func resolveSubunitCrossLinks(
+	v *View, m *parser.Model, subunits map[string]*model.Unit, subunitOrder []string, parentPath string,
+) {
 	for _, name := range subunitOrder {
 		unit := subunits[name]
 		if unit == nil {
@@ -909,17 +1007,17 @@ func resolveSubunitCrossLinks(v *View, subunits map[string]*model.Unit, subunitO
 
 		// Process direct links on the subunit itself
 		for _, link := range unit.Links {
-			addResolvedCrossLink(v, subunitEntry, fullPath, fullPath, link)
+			addResolvedCrossLink(v, m, subunitEntry, fullPath, fullPath, link)
 		}
 
 		// Process direct incoming links on the subunit itself
 		for _, link := range unit.LinksFrom {
-			addResolvedCrossLinkFrom(v, subunitEntry, fullPath, fullPath, link)
+			addResolvedCrossLinkFrom(v, m, subunitEntry, fullPath, fullPath, link)
 		}
 
 		// Recursively process descendant links
 		if len(unit.Subunits) > 0 {
-			resolveDescendantCrossLinks(v, subunitEntry, fullPath, unit.Subunits, subunitOrderOf(unit), fullPath)
+			resolveDescendantCrossLinks(v, m, subunitEntry, fullPath, unit.Subunits, subunitOrderOf(unit), fullPath)
 		}
 	}
 }
@@ -930,7 +1028,7 @@ func resolveSubunitCrossLinks(v *View, subunits map[string]*model.Unit, subunitO
 // entryPath is the fixed path of the subunit entry (used to detect self-links).
 // parentPath is the current recursion depth (changes as we recurse deeper).
 func resolveDescendantCrossLinks(
-	v *View, subunitEntry *Entry, entryPath string,
+	v *View, m *parser.Model, subunitEntry *Entry, entryPath string,
 	subunits map[string]*model.Unit, subunitOrder []string, parentPath string,
 ) {
 	for _, name := range subunitOrder {
@@ -943,17 +1041,17 @@ func resolveDescendantCrossLinks(
 
 		// Process outgoing links
 		for _, link := range unit.Links {
-			addResolvedCrossLink(v, subunitEntry, entryPath, fullPath, link)
+			addResolvedCrossLink(v, m, subunitEntry, entryPath, fullPath, link)
 		}
 
 		// Process incoming links (LinksFrom)
 		for _, link := range unit.LinksFrom {
-			addResolvedCrossLinkFrom(v, subunitEntry, entryPath, fullPath, link)
+			addResolvedCrossLinkFrom(v, m, subunitEntry, entryPath, fullPath, link)
 		}
 
 		// Recurse into nested subunits
 		if len(unit.Subunits) > 0 {
-			resolveDescendantCrossLinks(v, subunitEntry, entryPath, unit.Subunits, subunitOrderOf(unit), fullPath)
+			resolveDescendantCrossLinks(v, m, subunitEntry, entryPath, unit.Subunits, subunitOrderOf(unit), fullPath)
 		}
 	}
 }
@@ -965,7 +1063,9 @@ func resolveDescendantCrossLinks(
 // Every contributing link is appended without dedup (WR-01): D-05 multiplicity
 // counting in buildEdges needs the full pre-dedup set, and the builder's
 // pair-only markSeen performs the edge dedup (D-01 first-wins).
-func addResolvedCrossLink(v *View, subunitEntry *Entry, sourcePath string, originalSource string, link model.Link) {
+func addResolvedCrossLink(
+	v *View, m *parser.Model, subunitEntry *Entry, sourcePath string, originalSource string, link model.Link,
+) {
 	resolvedPeer := resolveToViewAncestor(v, link.Peer)
 	if resolvedPeer == "" || resolvedPeer == sourcePath {
 		return
@@ -978,8 +1078,16 @@ func addResolvedCrossLink(v *View, subunitEntry *Entry, sourcePath string, origi
 		length = link.Length
 	}
 
+	// CTX-02: when the peer is a real model path strictly under the resolved
+	// depicted ancestor, register the ancestor chain as visible entries and
+	// point the edge at the TRUE target instead of the collapsed ancestor.
+	peer := resolvedPeer
+	if ensureDeepLinkChain(v, m, resolvedPeer, link.Peer) {
+		peer = link.Peer
+	}
+
 	subunitEntry.ResolvedLinks = append(subunitEntry.ResolvedLinks, model.Link{
-		Peer:          resolvedPeer,
+		Peer:          peer,
 		Technology:    link.Technology,
 		Description:   link.Description,
 		Style:         link.Style,
@@ -999,7 +1107,9 @@ func addResolvedCrossLink(v *View, subunitEntry *Entry, sourcePath string, origi
 // Every contributing link is appended without dedup (WR-01): D-05 multiplicity
 // counting in buildEdges needs the full pre-dedup set, and the builder's
 // pair-only markSeen performs the edge dedup (D-01 first-wins).
-func addResolvedCrossLinkFrom(v *View, subunitEntry *Entry, sourcePath string, originalSource string, link model.Link) {
+func addResolvedCrossLinkFrom(
+	v *View, m *parser.Model, subunitEntry *Entry, sourcePath string, originalSource string, link model.Link,
+) {
 	resolvedPeer := resolveToViewAncestor(v, link.Peer)
 	if resolvedPeer == "" || resolvedPeer == sourcePath {
 		return
@@ -1012,8 +1122,16 @@ func addResolvedCrossLinkFrom(v *View, subunitEntry *Entry, sourcePath string, o
 		length = link.Length
 	}
 
+	// CTX-02: when the peer is a real model path strictly under the resolved
+	// depicted ancestor, register the ancestor chain as visible entries and
+	// point the edge at the TRUE target instead of the collapsed ancestor.
+	peer := resolvedPeer
+	if ensureDeepLinkChain(v, m, resolvedPeer, link.Peer) {
+		peer = link.Peer
+	}
+
 	subunitEntry.ResolvedLinksFrom = append(subunitEntry.ResolvedLinksFrom, model.Link{
-		Peer:          resolvedPeer,
+		Peer:          peer,
 		Technology:    link.Technology,
 		Description:   link.Description,
 		Style:         link.Style,

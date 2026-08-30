@@ -342,15 +342,20 @@ func TestIntegrationLinksWithExternalBoundary(t *testing.T) {
 	assert.True(t, v.Units["externalservice"].IsExternal)
 }
 
-// TestIntegrationC1ViewNoNestedBoundaryPollution verifies that deeply nested subunit links
-// do NOT create boundary nodes for every nested unit in C1 view.
+// TestIntegrationC1ViewNoNestedBoundaryPollution verifies that deeply nested
+// subunit links do not pollute C1 with arbitrary boundary nodes: only the
+// ancestor chains of DEPICTED LINK TARGETS are added (CTX-02) — internal links
+// (sshd -> nss) still depict nothing, and no other nested unit appears.
 // This is the regression test for the bug where C1 showed ~100 nodes instead of ~5.
 func TestIntegrationC1ViewNoNestedBoundaryPollution(t *testing.T) {
 	t.Parallel()
 
-	// Model mimics the real saira TOML: top-level users, keycloak, and a deeply nested system
+	// Model mimics the real saira TOML: top-level users, keycloak, and a deeply nested system.
+	// Definition orders are explicit (the parser always produces them) so the
+	// CTX-02 chain set below is deterministic.
 	m := &parser.Model{
 		Properties: model.Properties{Name: "Test"},
+		UnitOrder:  []string{"webUser", "sshUser", "adminUser", "keycloak", "linuxSystem"},
 		Units: map[string]*model.Unit{
 			"webUser": {
 				Type: model.TypePersonExternal,
@@ -380,13 +385,15 @@ func TestIntegrationC1ViewNoNestedBoundaryPollution(t *testing.T) {
 				Technology: "External IDP",
 			},
 			"linuxSystem": {
-				Type:        model.TypeSystem,
-				Name:        "Linux System",
-				Description: "Linux server",
+				Type:         model.TypeSystem,
+				Name:         "Linux System",
+				Description:  "Linux server",
+				SubunitOrder: []string{"sshAuth", "localIDP", "rbac"},
 				Subunits: map[string]*model.Unit{
 					"sshAuth": {
-						Type: model.TypeContainerBox,
-						Name: "SSH Auth",
+						Type:         model.TypeContainerBox,
+						Name:         "SSH Auth",
+						SubunitOrder: []string{"sshd", "nss"},
 						Subunits: map[string]*model.Unit{
 							"sshd": {
 								Type: model.TypeContainer,
@@ -402,12 +409,14 @@ func TestIntegrationC1ViewNoNestedBoundaryPollution(t *testing.T) {
 						},
 					},
 					"localIDP": {
-						Type: model.TypeContainerBox,
-						Name: "Local IDP",
+						Type:         model.TypeContainerBox,
+						Name:         "Local IDP",
+						SubunitOrder: []string{"grpcAPIs"},
 						Subunits: map[string]*model.Unit{
 							"grpcAPIs": {
-								Type: model.TypeComponentBox,
-								Name: "gRPC APIs",
+								Type:         model.TypeComponentBox,
+								Name:         "gRPC APIs",
+								SubunitOrder: []string{"authAPI", "sessionAPI"},
 								Subunits: map[string]*model.Unit{
 									"authAPI": {
 										Type: model.TypeComponent,
@@ -436,32 +445,57 @@ func TestIntegrationC1ViewNoNestedBoundaryPollution(t *testing.T) {
 	v := view.GenerateC1View(m)
 	require.NotNil(t, v)
 
-	// C1 should show exactly 5 top-level units: webUser, sshUser, adminUser, keycloak, linuxSystem
-	assert.Len(t, v.Units, 5, "C1 should have exactly 5 nodes, got %d: %v", len(v.Units), keys(v.Units))
+	// The 5 top-level units plus exactly 8 CTX-02 chain entries for depicted
+	// link targets: sshAuth+sshd (sshUser), localIDP+grpcAPIs+authAPI+sessionAPI
+	// (webUser), rbac (adminUser), and — transitively, once sshd is itself
+	// depicted — nss (sshd's own link resolves at its true endpoints).
+	assert.Len(t, v.Units, 13, "C1 should have 5 top-level units + 8 chain entries, got %d: %v",
+		len(v.Units), keys(v.Units))
 
-	// Verify each expected node is present
+	// Verify each expected top-level node is present
 	assert.Contains(t, v.Units, "webUser")
 	assert.Contains(t, v.Units, "sshUser")
 	assert.Contains(t, v.Units, "adminUser")
 	assert.Contains(t, v.Units, "keycloak")
 	assert.Contains(t, v.Units, "linuxSystem")
 
-	// Nested units should NOT appear in C1
-	assert.NotContains(t, v.Units, "linuxSystem.sshAuth")
-	assert.NotContains(t, v.Units, "linuxSystem.sshAuth.sshd")
-	assert.NotContains(t, v.Units, "linuxSystem.localIDP.grpcAPIs.authAPI")
-	assert.NotContains(t, v.Units, "linuxSystem.rbac")
+	// CTX-02: the ancestor chains of depicted link targets are visible
+	// entries (Units + VisiblePaths), staying in scope (no boundary flags).
+	for _, chainPath := range []string{
+		"linuxSystem.sshAuth", "linuxSystem.sshAuth.sshd", "linuxSystem.sshAuth.nss",
+		"linuxSystem.localIDP", "linuxSystem.localIDP.grpcAPIs",
+		"linuxSystem.localIDP.grpcAPIs.authAPI", "linuxSystem.localIDP.grpcAPIs.sessionAPI",
+		"linuxSystem.rbac",
+	} {
+		entry := v.Units[chainPath]
+		require.NotNil(t, entry, "chain entry %s must exist", chainPath)
+		assert.True(t, v.VisiblePaths[chainPath], "chain entry %s must be a visible path", chainPath)
+		assert.False(t, entry.IsBoundary, "chain entry %s stays in scope", chainPath)
+		assert.False(t, entry.IsExternal, "chain entry %s stays in scope", chainPath)
+	}
 
-	// linuxSystem should have [+] indicator
+	// A depicted chain entry carries its own links at their true endpoints:
+	// the depicted sshd's link to nss resolves sshd -> nss (no collapse to a
+	// remote ancestor), while units never scanned as sources keep nil.
+	if assert.NotNil(t, v.Units["linuxSystem.sshAuth.sshd"].ResolvedLinks) {
+		require.Len(t, v.Units["linuxSystem.sshAuth.sshd"].ResolvedLinks, 1)
+		assert.Equal(t, "linuxSystem.sshAuth.nss", v.Units["linuxSystem.sshAuth.sshd"].ResolvedLinks[0].Peer)
+	}
+
+	assert.Nil(t, v.Units["linuxSystem"].ResolvedLinks)
+
+	// linuxSystem should have [+] indicator and the chain-unfold marker
 	assert.True(t, v.Units["linuxSystem"].HasSubunits)
+	assert.True(t, v.Units["linuxSystem"].UnfoldChain)
 }
 
 // TestBuildGraphExpandedC1VisibleSubunitEdges verifies at graph level that
 // visible subunits of an expanded C1 unit render inside the parent cluster
 // (skipped as top-level nodes — duplicate node IDs would break DOT), and that
-// resolved edges point at the visible subunit node (D-07) rather than the parent.
-// CTX-03: a visible subunit WITH subunits (sshAuth) renders as a NESTED
-// cluster inside the parent cluster — not as a flat node.
+// resolved edges terminate at the TRUE target (CTX-02) — the chain entry
+// inside the visible subunit's nested cluster. CTX-03: a visible subunit WITH
+// subunits (sshAuth) renders as a NESTED cluster inside the parent cluster —
+// not as a flat node.
 func TestBuildGraphExpandedC1VisibleSubunitEdges(t *testing.T) {
 	t.Parallel()
 
@@ -493,16 +527,17 @@ func TestBuildGraphExpandedC1VisibleSubunitEdges(t *testing.T) {
 	require.NotNil(t, sshAuthCluster, "cluster must contain nested cluster "+sshAuthPath)
 	assert.NotEmpty(t, sshAuthCluster.Nodes, "the nested sshAuth cluster unfolds its children")
 
-	// D-07: the edge points at the visible subunit, not the parent
+	// D-07 as refined by CTX-02: the edge terminates at the TRUE target —
+	// the chain entry inside the nested sshAuth cluster — not the parent.
 	edgeFound := false
 
 	for _, edge := range g.Edges {
-		if edge.Source == webUserPath && edge.Target == sshAuthPath {
+		if edge.Source == webUserPath && edge.Target == sshAuthPath+".sshd" {
 			edgeFound = true
 		}
 	}
 
-	assert.True(t, edgeFound, "expected edge webUser -> "+sshAuthPath)
+	assert.True(t, edgeFound, "expected edge webUser -> "+sshAuthPath+".sshd")
 
 	// RenderDOT must succeed — duplicate node IDs would break rendering
 	dot, err := render.RenderDOT(g)
@@ -589,16 +624,22 @@ func TestIntegrationC1EdgeResolution(t *testing.T) {
 	v := view.GenerateC1View(m)
 	require.NotNil(t, v)
 
-	// Should have 3 nodes: webUser, system, externaldb
-	assert.Len(t, v.Units, 3)
+	// 2 top-level units (webUser, system), the external boundary node
+	// (externaldb), and the CTX-02 chain entries (system.api,
+	// system.api.handler) for the depicted deep-link target.
+	assert.Len(t, v.Units, 5)
 
-	// webUser should have a resolved link to system (not system.api.handler)
+	// webUser's link terminates at the TRUE target (CTX-02) — the chain entry
+	// added beneath the collapsed system ancestor.
 	if assert.NotNil(t, v.Units["webUser"].ResolvedLinks) {
-		assert.Equal(t, "system", v.Units["webUser"].ResolvedLinks[0].Peer)
+		assert.Equal(t, "system.api.handler", v.Units["webUser"].ResolvedLinks[0].Peer)
 	}
 
-	// system should have a resolved link to externaldb (from handler's link)
-	if assert.NotNil(t, v.Units["system"].ResolvedLinks) {
-		assert.Equal(t, "externaldb", v.Units["system"].ResolvedLinks[0].Peer)
+	// handler is now a depicted chain entry, so ITS externaldb link is
+	// recorded on the handler entry (true source), not the collapsed system.
+	if assert.NotNil(t, v.Units["system.api.handler"].ResolvedLinks) {
+		assert.Equal(t, "externaldb", v.Units["system.api.handler"].ResolvedLinks[0].Peer)
 	}
+
+	assert.Nil(t, v.Units["system"].ResolvedLinks)
 }

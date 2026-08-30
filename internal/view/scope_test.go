@@ -1436,13 +1436,16 @@ func TestGenerateC1View_ExpandedUnitExposesVisibleSubunits(t *testing.T) {
 	assert.True(t, v.VisiblePaths[sshAuthPath])
 	assert.True(t, v.VisiblePaths[webAPIPath])
 
-	// Grandchildren stay hidden (buildCluster renders one level only)
-	assert.False(t, v.VisiblePaths[sshAuthPath+".sshd"])
-	assert.NotContains(t, v.Units, sshAuthPath+".sshd")
+	// CTX-02: the grandchild sshd is a deep-link target (webUser links to it),
+	// so it joins as a visible chain entry beneath the visible subunit.
+	assert.True(t, v.VisiblePaths[sshAuthPath+".sshd"])
+	assert.Contains(t, v.Units, sshAuthPath+".sshd")
 }
 
-// D-07: a link to a hidden grandchild resolves to the deepest VISIBLE
-// ancestor — the visible subunit node inside the expanded cluster.
+// D-07 as refined by CTX-02: a link to a hidden grandchild under a visible
+// subunit resolves to the TRUE target — the chain entry added beneath the
+// visible subunit — not to the collapsed visible subunit or the top-level
+// ancestor.
 func TestGenerateC1View_ResolvesToVisibleSubunit(t *testing.T) {
 	t.Parallel()
 
@@ -1453,8 +1456,13 @@ func TestGenerateC1View_ResolvesToVisibleSubunit(t *testing.T) {
 	require.NotNil(t, webUser)
 	require.NotNil(t, webUser.ResolvedLinks)
 	require.Len(t, webUser.ResolvedLinks, 1)
-	assert.Equal(t, sshAuthPath, webUser.ResolvedLinks[0].Peer)
+	assert.Equal(t, sshAuthPath+".sshd", webUser.ResolvedLinks[0].Peer)
 	assert.NotEqual(t, linuxSystemPath, webUser.ResolvedLinks[0].Peer)
+
+	// The chain entry is registered and the depicted ancestor is marked for
+	// unfolding.
+	assert.True(t, v.VisiblePaths[sshAuthPath+".sshd"])
+	assert.True(t, v.Units[sshAuthPath].UnfoldChain)
 }
 
 // D-09: the edge source also resolves to its deepest visible ancestor — a
@@ -1491,7 +1499,7 @@ func TestGenerateC1View_WithinClusterEdge(t *testing.T) {
 	assert.Nil(t, v.Units[linuxSystemPath].ResolvedLinks)
 }
 
-// D-08: a link to a hidden grandchild produces ONLY the subunit edge — no
+// D-08: a link to a hidden grandchild produces ONLY the true-target edge — no
 // redundant parent-level edge is added.
 func TestGenerateC1View_NoRedundantParentEdge(t *testing.T) {
 	t.Parallel()
@@ -1502,7 +1510,7 @@ func TestGenerateC1View_NoRedundantParentEdge(t *testing.T) {
 	webUser := v.Units[webUserPath]
 	require.NotNil(t, webUser)
 	require.Len(t, webUser.ResolvedLinks, 1)
-	assert.Equal(t, sshAuthPath, webUser.ResolvedLinks[0].Peer)
+	assert.Equal(t, sshAuthPath+".sshd", webUser.ResolvedLinks[0].Peer)
 }
 
 // D-11: box grouping units follow the SAME resolution rules as systems — no
@@ -1520,12 +1528,12 @@ func TestGenerateC1View_BoxResolutionParity(t *testing.T) {
 	assert.Contains(t, v.Units, sshAuthPath)
 	assert.True(t, v.VisiblePaths[sshAuthPath])
 
-	// Target resolves to the visible child (D-07)
+	// Target resolves to the TRUE target under the visible child (D-07, CTX-02)
 	webUser := v.Units[webUserPath]
 	require.NotNil(t, webUser)
 	require.NotNil(t, webUser.ResolvedLinks)
 	require.Len(t, webUser.ResolvedLinks, 1)
-	assert.Equal(t, sshAuthPath, webUser.ResolvedLinks[0].Peer)
+	assert.Equal(t, sshAuthPath+".sshd", webUser.ResolvedLinks[0].Peer)
 
 	// Source resolves to the visible child (D-09)
 	sshAuth := v.Units[sshAuthPath]

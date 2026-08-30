@@ -46,12 +46,21 @@ func BuildGraph(v *view.View) *Graph {
 
 // buildBoundaryViewGraph renders C2/C3 views: boundary/external nodes go at
 // top level — outside the expanded unit's cluster — while internal nodes are
-// wrapped in the boundary cluster.
+// wrapped in the boundary cluster. VisiblePaths entries (CTX-02 deep-link
+// chain entries) are skipped as standalone nodes — the ancestor-cluster
+// recursion renders them at their proper depth (mirrors buildC1ViewGraph).
 func buildBoundaryViewGraph(v *view.View, g *Graph) {
 	boundaryCluster := buildBoundaryCluster(v)
 
 	// Build nodes and clusters in definition order
 	for _, key := range v.UnitOrder {
+		// CTX-02: chain entries are in Units for edge building but render
+		// only inside their ancestor cluster. Nil-map reads are safe for
+		// views without VisiblePaths.
+		if v.VisiblePaths[key] {
+			continue
+		}
+
 		entry := v.Units[key]
 
 		// IsBoundary covers both genuinely external units (actors, external
@@ -69,7 +78,9 @@ func buildBoundaryViewGraph(v *view.View, g *Graph) {
 		// Internal nodes go inside the boundary cluster. D-07 (same guard as
 		// the C1 branch): expansion only takes effect when there are subunits
 		// to show — an expanded-but-empty unit renders as a plain node.
-		if entry.IsExpanded && len(entry.Unit.Subunits) > 0 {
+		// CTX-02: UnfoldChain entries (collapsed ancestors with an inserted
+		// deep-link chain) unfold the same way.
+		if (entry.IsExpanded || entry.UnfoldChain) && len(entry.Unit.Subunits) > 0 {
 			cluster := buildCluster(entry, v)
 			boundaryCluster.Clusters = append(boundaryCluster.Clusters, cluster)
 		} else {
@@ -96,7 +107,10 @@ func buildC1ViewGraph(v *view.View, g *Graph) {
 		entry := v.Units[key]
 		// D-07: expansion only takes effect when there are subunits to
 		// show — an expanded-but-empty unit renders as a plain node.
-		if entry.IsExpanded && len(entry.Unit.Subunits) > 0 {
+		// CTX-02: UnfoldChain entries (collapsed ancestors with an inserted
+		// deep-link chain) unfold as recursive clusters too, so the true
+		// link target exists as a real node inside its chain.
+		if (entry.IsExpanded || entry.UnfoldChain) && len(entry.Unit.Subunits) > 0 {
 			cluster := buildCluster(entry, v)
 			g.Clusters = append(g.Clusters, cluster)
 		} else {
