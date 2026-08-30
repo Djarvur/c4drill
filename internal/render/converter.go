@@ -161,19 +161,19 @@ func buildCgraph(
 	}
 
 	// Create top-level nodes (not in clusters)
-	if err := createTopLevelNodes(content, g.Nodes, nodeMap, g.Plain); err != nil {
+	if err := createTopLevelNodes(content, g.Nodes, nodeMap, g.Opts.Plain); err != nil {
 		return nil, err
 	}
 
 	// Create clusters with their nodes
 	for _, cluster := range g.Clusters {
-		if err := createCluster(content, cluster, nodeMap, g.Plain); err != nil {
+		if err := createCluster(content, cluster, nodeMap, g.Opts.Plain); err != nil {
 			return nil, fmt.Errorf("create cluster %s: %w", cluster.ID, err)
 		}
 	}
 
 	// Create edges
-	if err := createEdges(cg, g.Edges, nodeMap, g.Plain); err != nil {
+	if err := createEdges(cg, g.Edges, nodeMap, g.Opts.Plain); err != nil {
 		return nil, err
 	}
 

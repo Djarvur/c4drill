@@ -10,6 +10,19 @@ import (
 	"github.com/Djarvur/c4drill/internal/view"
 )
 
+// renderOptsFromView copies the CLI formatting-suppression switches
+// (--plain + the four granular flags, KEY-01) from a view onto the graph's
+// RenderOpts. Used by every graph constructor.
+func renderOptsFromView(v *view.View) RenderOpts {
+	return RenderOpts{
+		Plain:    v.Plain,
+		NoColors: v.NoColors,
+		NoStyles: v.NoStyles,
+		NoLength: v.NoLength,
+		NoRank:   v.NoRank,
+	}
+}
+
 // BuildGraph constructs a graph structure from a view.
 // The graph contains nodes, edges, and clusters ready for DOT rendering.
 // For C2/C3 views, internal nodes are wrapped in a boundary cluster representing
@@ -33,7 +46,7 @@ func BuildGraph(v *view.View) *Graph {
 		Title:     v.Title,
 		Direction: "TB",
 		EdgeStyle: edgeStyle,
-		Plain:     v.Plain,
+		Opts:      renderOptsFromView(v),
 		Nodes:     make([]*Node, 0),
 		Edges:     make([]*Edge, 0),
 		Clusters:  make([]*Cluster, 0),
@@ -106,7 +119,7 @@ func buildBoundaryViewGraph(v *view.View, g *Graph) {
 		// containers/systems are IsExternal=false but still need wrapping
 		// when they're boundary nodes.
 		if entry.IsBoundary || entry.IsExternal {
-			node := buildNode(entry, v.Plain)
+			node := buildNode(entry, renderOptsFromView(v))
 
 			// WRAP-01: a fully external entry (no dotted path, hence no
 			// in-model ancestor) stays top-level exactly as before.
@@ -146,10 +159,10 @@ func buildBoundaryViewGraph(v *view.View, g *Graph) {
 		// CTX-02: UnfoldChain entries (collapsed ancestors with an inserted
 		// deep-link chain) unfold the same way.
 		if (entry.IsExpanded || entry.UnfoldChain) && len(entry.Unit.Subunits) > 0 {
-			cluster := buildCluster(entry, v, v.Plain)
+			cluster := buildCluster(entry, v, renderOptsFromView(v))
 			boundaryCluster.Clusters = append(boundaryCluster.Clusters, cluster)
 		} else {
-			node := buildNode(entry, v.Plain)
+			node := buildNode(entry, renderOptsFromView(v))
 			node.IsInCluster = true
 			boundaryCluster.Nodes = append(boundaryCluster.Nodes, node)
 		}
@@ -246,10 +259,10 @@ func buildC1ViewGraph(v *view.View, g *Graph) {
 		// deep-link chain) unfold as recursive clusters too, so the true
 		// link target exists as a real node inside its chain.
 		if (entry.IsExpanded || entry.UnfoldChain) && len(entry.Unit.Subunits) > 0 {
-			cluster := buildCluster(entry, v, v.Plain)
+			cluster := buildCluster(entry, v, renderOptsFromView(v))
 			g.Clusters = append(g.Clusters, cluster)
 		} else {
-			node := buildNode(entry, v.Plain)
+			node := buildNode(entry, renderOptsFromView(v))
 			g.Nodes = append(g.Nodes, node)
 		}
 	}
@@ -273,7 +286,7 @@ func buildBoundaryCluster(v *view.View) *Cluster {
 			Icon:        IconForType(unit.Type),
 		}
 		style = GetStyleForType(unit.Type, false)
-		applyUnitOverrides(style, unit, v.Plain)
+		applyUnitOverrides(style, unit, renderOptsFromView(v))
 	} else {
 		// Fallback: derive name from ExpandedUnit path
 		name := v.ExpandedUnit
@@ -324,7 +337,7 @@ func BuildExpandedGraph(v *view.View) *Graph {
 		Title:     v.Title,
 		Direction: "TB",
 		EdgeStyle: edgeStyle,
-		Plain:     v.Plain,
+		Opts:      renderOptsFromView(v),
 		Nodes:     make([]*Node, 0),
 		Edges:     make([]*Edge, 0),
 		Clusters:  make([]*Cluster, 0),
@@ -350,7 +363,7 @@ func BuildExpandedGraph(v *view.View) *Graph {
 			cluster := buildNestedCluster(entry, path, v)
 			g.Clusters = append(g.Clusters, cluster)
 		} else {
-			node := buildNode(entry, v.Plain)
+			node := buildNode(entry, renderOptsFromView(v))
 			g.Nodes = append(g.Nodes, node)
 		}
 	}
@@ -374,7 +387,7 @@ func buildNestedCluster(entry *view.Entry, path string, v *view.View) *Cluster {
 		style = GetStyleForType(entry.Unit.Type, entry.IsExternal)
 	}
 
-	applyUnitOverrides(style, entry.Unit, v.Plain)
+	applyUnitOverrides(style, entry.Unit, renderOptsFromView(v))
 
 	cluster := &Cluster{
 		ID:         path,
@@ -418,7 +431,7 @@ func buildNestedCluster(entry *view.Entry, path string, v *view.View) *Cluster {
 			cluster.Clusters = append(cluster.Clusters, nestedCluster)
 		} else {
 			// Build node for leaf subunit
-			node := buildNode(childEntry, v.Plain)
+			node := buildNode(childEntry, renderOptsFromView(v))
 			node.IsInCluster = true
 			cluster.Nodes = append(cluster.Nodes, node)
 		}
@@ -428,7 +441,7 @@ func buildNestedCluster(entry *view.Entry, path string, v *view.View) *Cluster {
 }
 
 // buildNode creates a node from a view entry.
-func buildNode(entry *view.Entry, plain bool) *Node {
+func buildNode(entry *view.Entry, opts RenderOpts) *Node {
 	label := &Label{
 		Name:        entry.Unit.Name,
 		Technology:  entry.Unit.Technology,
@@ -455,7 +468,7 @@ func buildNode(entry *view.Entry, plain bool) *Node {
 		style = GetStyleForType(entry.Unit.Type, entry.IsExternal)
 	}
 
-	applyUnitOverrides(style, entry.Unit, plain)
+	applyUnitOverrides(style, entry.Unit, opts)
 
 	return &Node{
 		ID:           entry.FullPath,
@@ -474,24 +487,27 @@ func buildNode(entry *view.Entry, plain bool) *Node {
 // beats heuristics. A dark explicit fill forces a white font (luminance rule)
 // so labels stay legible; unset fields leave the style untouched.
 // PLAIN-01: under plain every override is skipped — units render exactly the
-// type-palette default.
-func applyUnitOverrides(style *NodeStyle, unit *model.Unit, plain bool) {
-	if plain || style == nil || unit == nil {
+// type-palette default. KEY-01: the granular switches skip only their own
+// aspect (NoColors the Color/Border fills, NoStyles the Style override).
+func applyUnitOverrides(style *NodeStyle, unit *model.Unit, opts RenderOpts) {
+	if opts.Plain || style == nil || unit == nil {
 		return
 	}
 
-	if unit.Color != "" {
-		style.FillColor = unit.Color
-		if luminance(unit.Color) < 0.5 {
-			style.FontColor = "#FFFFFF"
+	if !opts.NoColors {
+		if unit.Color != "" {
+			style.FillColor = unit.Color
+			if luminance(unit.Color) < 0.5 {
+				style.FontColor = "#FFFFFF"
+			}
+		}
+
+		if unit.Border != "" {
+			style.BorderColor = unit.Border
 		}
 	}
 
-	if unit.Border != "" {
-		style.BorderColor = unit.Border
-	}
-
-	if unit.Style != "" {
+	if !opts.NoStyles && unit.Style != "" {
 		style.BorderStyle = unit.Style
 	}
 }
@@ -770,7 +786,7 @@ func luminance(hex string) float64 {
 // leaf children render as plain nodes. The caller keeps the D-07
 // expanded-but-empty guard — an expanded unit with zero subunits never reaches
 // this function.
-func buildCluster(entry *view.Entry, v *view.View, plain bool) *Cluster {
+func buildCluster(entry *view.Entry, v *view.View, opts RenderOpts) *Cluster {
 	// Boxes use content-based styling (border colour derived from subunits)
 	var style *NodeStyle
 	if IsBoxType(entry.Unit.Type) {
@@ -779,7 +795,7 @@ func buildCluster(entry *view.Entry, v *view.View, plain bool) *Cluster {
 		style = GetStyleForType(entry.Unit.Type, entry.IsExternal)
 	}
 
-	applyUnitOverrides(style, entry.Unit, plain)
+	applyUnitOverrides(style, entry.Unit, opts)
 
 	cluster := &Cluster{
 		ID:         entry.FullPath,
@@ -827,7 +843,7 @@ func buildCluster(entry *view.Entry, v *view.View, plain bool) *Cluster {
 			cluster.Clusters = append(cluster.Clusters, nestedCluster)
 		} else {
 			// Build node for leaf child
-			node := buildNode(childEntry, plain)
+			node := buildNode(childEntry, opts)
 			node.IsInCluster = true
 			cluster.Nodes = append(cluster.Nodes, node)
 		}
@@ -1170,13 +1186,13 @@ func processOutgoingLinks(
 			penWidth = 2.0
 		}
 
-		edge := createEdge(path, link.Peer, link, sourceEntry, penWidth, v.Plain)
+		edge := createEdge(path, link.Peer, link, sourceEntry, penWidth, renderOptsFromView(v))
 
 		if markSeen(seen, edgeKey) {
 			// AGG-01..03: collapsed pairs override the surviving edge's
 			// colour/style from the pair aggregate.
 			if !v.AllExpanded && pairCounts[edgeKey] >= 2 {
-				applyCollapsedPairStyle(edge, pairAggs[edgeKey], sourceEntry, v.Plain)
+				applyCollapsedPairStyle(edge, pairAggs[edgeKey], sourceEntry, renderOptsFromView(v))
 			}
 
 			edges = append(edges, edge)
@@ -1217,11 +1233,11 @@ func processIncomingLinks(
 		}
 
 		sourceEntry := v.Units[link.Peer] // Source is link.Peer for incoming links
-		edge := createEdge(link.Peer, path, link, sourceEntry, penWidth, v.Plain)
+		edge := createEdge(link.Peer, path, link, sourceEntry, penWidth, renderOptsFromView(v))
 
 		if markSeen(seen, edgeKey) {
 			if !v.AllExpanded && pairCounts[edgeKey] >= 2 {
-				applyCollapsedPairStyle(edge, pairAggs[edgeKey], sourceEntry, v.Plain)
+				applyCollapsedPairStyle(edge, pairAggs[edgeKey], sourceEntry, renderOptsFromView(v))
 			}
 
 			edges = append(edges, edge)
@@ -1239,20 +1255,25 @@ func processIncomingLinks(
 // of the drawn edge. PLAIN-02: under plain the aggregate STYLE derives from
 // author link.Style fields, so it stays inert — the drawn edge keeps the
 // builder default; the kind/source-border colour logic still applies (kind
-// colours are semantic and survive plain mode).
+// colours are semantic and survive plain mode). KEY-01: --no-styles skips the
+// aggregate style override too; --no-colors skips the kind-derived aggregate
+// colour, falling back to the source-border default — unless plain is set,
+// which retains kind colouring (KEY-02 union lock).
 func applyCollapsedPairStyle(
 	edge *Edge,
 	agg *pairAggregate,
 	sourceEntry *view.Entry,
-	plain bool,
+	opts RenderOpts,
 ) {
-	if colour, ok := agg.kindColourFor(); ok {
+	kindColoursSuppressed := opts.NoColors && !opts.Plain
+
+	if colour, ok := agg.kindColourFor(); ok && !kindColoursSuppressed {
 		edge.Color = colour
-	} else if agg.anyExplicitClr || agg.anyKindUnset {
+	} else if agg.anyExplicitClr || agg.anyKindUnset || kindColoursSuppressed {
 		edge.Color = sourceBorderColour(sourceEntry)
 	}
 
-	if !plain {
+	if !opts.Plain && !opts.NoStyles {
 		edge.Style = agg.styleFor(edge.Style)
 	}
 }
@@ -1291,14 +1312,20 @@ func kindColour(kind model.LinkKind) string {
 // colour falls through to the kind/source-border defaults (kind colours stay),
 // style falls back to solid, the label position to middle, and the
 // length/rank hints are ignored entirely.
-func createEdge(source, target string, link model.Link, sourceEntry *view.Entry, penWidth float64, plain bool) *Edge {
+func createEdge(source, target string, link model.Link, sourceEntry *view.Entry, penWidth float64, opts RenderOpts) *Edge {
 	linkColor := link.Color
 	linkStyle := link.Style
 	labelPosition := string(link.LabelPosition)
 
-	if plain {
+	if opts.Plain || opts.NoColors {
 		linkColor = ""
+	}
+
+	if opts.Plain || opts.NoStyles {
 		linkStyle = ""
+	}
+
+	if opts.Plain {
 		labelPosition = ""
 	}
 
@@ -1325,28 +1352,40 @@ func createEdge(source, target string, link model.Link, sourceEntry *view.Entry,
 	}
 
 	// Determine color: explicit override -> kind colour -> source border color
-	// (D-01, D-03, KIND-01, KIND-02)
+	// (D-01, D-03, KIND-01, KIND-02). KEY-01: --no-colors suppresses the
+	// author colour AND the kind colour; the D-01 source-border default is
+	// structural and stays. KEY-02 union lock: plain retains kind colouring,
+	// so NoColors defers to plain there.
+	kindColoursSuppressed := opts.NoColors && !opts.Plain
+
 	if linkColor != "" {
 		edge.Color = linkColor
-	} else if colour := kindColour(link.Kind); colour != "" {
-		edge.Color = colour
+	} else if !kindColoursSuppressed {
+		if colour := kindColour(link.Kind); colour != "" {
+			edge.Color = colour
+		} else if sourceEntry != nil {
+			style := GetStyleForType(sourceEntry.Unit.Type, sourceEntry.IsExternal)
+			edge.Color = style.BorderColor
+		}
 	} else if sourceEntry != nil {
 		style := GetStyleForType(sourceEntry.Unit.Type, sourceEntry.IsExternal)
 		edge.Color = style.BorderColor
 	}
 
 	// Copy length to MinLen (D-01: length > 0 sets minlen attribute).
-	// PLAIN-02: length ignored under plain — no minlen.
-	if !plain {
+	// PLAIN-02: length ignored under plain — no minlen. KEY-01: --no-length
+	// suppresses it granularly.
+	if !opts.Plain && !opts.NoLength {
 		edge.MinLen = link.Length
 	}
 
 	// rank="equal" excludes the edge from rank computation (constraint=false)
-	edge.NoConstraint = !plain && link.Rank == model.RankEqual
+	edge.NoConstraint = !opts.Plain && !opts.NoRank && link.Rank == model.RankEqual
 
 	// rank="reverse" flips the layout ranking (RANK-01): endpoints swap at
-	// emission, Source/Target stay logical
-	edge.RankReverse = !plain && link.Rank == model.RankReverse
+	// emission, Source/Target stay logical. KEY-01: --no-rank suppresses both
+	// rank hints, neutralizing all converter emission sites.
+	edge.RankReverse = !opts.Plain && !opts.NoRank && link.Rank == model.RankReverse
 
 	return edge
 }

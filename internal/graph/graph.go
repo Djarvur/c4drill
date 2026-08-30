@@ -30,6 +30,29 @@ const (
 	ArrowNone ArrowDirection = "none"
 )
 
+// RenderOpts carries the formatting-suppression switches threaded from the
+// CLI onto every graph: --plain (master switch, PLAIN-01/PLAIN-02) plus the
+// four granular opt-outs (KEY-01). --plain is the UNION of the granular
+// switches (KEY-02): everything a granular switch suppresses, plain already
+// suppresses — except kind-derived edge colours, which are semantic and
+// survive plain (pinned by the v1.14 plain goldens), so the granular guards
+// defer to plain there.
+type RenderOpts struct {
+	// Plain mirrors View.Plain (--plain): author-custom formatting is ignored
+	// and units/edges fall back to defaults.
+	Plain bool
+	// NoColors mirrors View.NoColors (--no-colors): author + kind colouring
+	// suppressed, source-border default retained.
+	NoColors bool
+	// NoStyles mirrors View.NoStyles (--no-styles): line/border styles
+	// suppressed.
+	NoStyles bool
+	// NoLength mirrors View.NoLength (--no-length): minlen suppressed.
+	NoLength bool
+	// NoRank mirrors View.NoRank (--no-rank): rank hints suppressed.
+	NoRank bool
+}
+
 // Graph represents a graph structure ready for DOT rendering.
 type Graph struct {
 	// Title is the diagram title.
@@ -38,10 +61,10 @@ type Graph struct {
 	Direction string
 	// EdgeStyle is the edge routing style (straight, spline, square).
 	EdgeStyle string
-	// Plain mirrors View.Plain (--plain, PLAIN-01/PLAIN-02): author-custom
-	// formatting is ignored and units/edges fall back to defaults. Copied at
-	// graph construction by BOTH BuildGraph and BuildExpandedGraph.
-	Plain bool
+	// Opts carries the suppression switches (--plain + granular flags),
+	// copied at graph construction by BuildGraph, BuildExpandedGraph and
+	// BuildGraphWithPath.
+	Opts RenderOpts
 	// Nodes are all top-level nodes in the graph.
 	Nodes []*Node
 	// Edges are all edges connecting nodes.

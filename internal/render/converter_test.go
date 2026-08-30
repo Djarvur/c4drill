@@ -895,7 +895,7 @@ func TestLegendRendering(t *testing.T) {
 func TestConverter_PlainNodeLabelsArePlainText(t *testing.T) {
 	g := &graph.Graph{
 		Direction: "TB",
-		Plain:     true,
+		Opts:      graph.RenderOpts{Plain: true},
 		Nodes: []*graph.Node{
 			{
 				ID:    "plain_sys",
@@ -922,7 +922,7 @@ func TestConverter_PlainNodeLabelsArePlainText(t *testing.T) {
 func TestConverter_PlainClusterLabelsArePlainText(t *testing.T) {
 	g := &graph.Graph{
 		Direction: "TB",
-		Plain:     true,
+		Opts:      graph.RenderOpts{Plain: true},
 		Clusters: []*graph.Cluster{
 			{
 				ID:         "orders",
@@ -961,7 +961,7 @@ func TestConverter_PlainClusterLabelsArePlainText(t *testing.T) {
 func TestConverter_PlainEdgeLabelsArePlainText(t *testing.T) {
 	g := &graph.Graph{
 		Direction: "TB",
-		Plain:     true,
+		Opts:      graph.RenderOpts{Plain: true},
 		Nodes: []*graph.Node{
 			{ID: "client", Label: &graph.Label{Name: "Client"}, Shape: graph.ShapeRecord, Type: model.TypeSystem, Style: &graph.NodeStyle{}},
 			{ID: "server", Label: &graph.Label{Name: "Server"}, Shape: graph.ShapeRecord, Type: model.TypeSystem, Style: &graph.NodeStyle{}},
@@ -991,7 +991,7 @@ func TestConverter_NonPlainLabelsUnchanged(t *testing.T) {
 	// routes through the HTML table builders at all three sites.
 	g := &graph.Graph{
 		Direction: "TB",
-		Plain:     false,
+		Opts:      graph.RenderOpts{},
 		Nodes: []*graph.Node{
 			{
 				ID:    "styled_sys",
@@ -1043,7 +1043,7 @@ func TestConverter_PlainKeepsLegendAndKindColour(t *testing.T) {
 	// edge.Color) must still be present in the emitted DOT.
 	g := &graph.Graph{
 		Direction: "TB",
-		Plain:     true,
+		Opts:      graph.RenderOpts{Plain: true},
 		Nodes: []*graph.Node{
 			{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeRecord, Type: model.TypeSystem, Style: &graph.NodeStyle{}},
 			{ID: "b", Label: &graph.Label{Name: "B"}, Shape: graph.ShapeRecord, Type: model.TypeSystem, Style: &graph.NodeStyle{}},

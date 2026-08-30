@@ -52,6 +52,10 @@ var (
 	outputDir  string
 	expanded   bool
 	plain      bool
+	noColors   bool
+	noStyles   bool
+	noLength   bool
+	noRank     bool
 	labelRatio float64
 	version    = "dev"
 )
@@ -96,6 +100,14 @@ Output:
 		"Generate all-expanded diagram showing all units")
 	cmd.PersistentFlags().BoolVar(&plain, "plain", false,
 		"Ignore author-custom formatting: default unit/edge styling, spacing and ranking, plain-text labels")
+	cmd.PersistentFlags().BoolVar(&noColors, "no-colors", false,
+		"Suppress colouring only: author unit/link colors and kind-derived edge colours")
+	cmd.PersistentFlags().BoolVar(&noStyles, "no-styles", false,
+		"Suppress line styles only: author unit/link style overrides")
+	cmd.PersistentFlags().BoolVar(&noLength, "no-length", false,
+		"Suppress link spacing only: link length no longer sets minlen")
+	cmd.PersistentFlags().BoolVar(&noRank, "no-rank", false,
+		"Suppress ranking hints only: link rank reverse/equal ignored")
 	cmd.PersistentFlags().Float64Var(&labelRatio, "label-ratio", 0,
 		"Width:height ratio for unit labels (default: 1.6, credit card proportions)")
 
@@ -313,8 +325,13 @@ func processView(m *parser.Model, unitPath, basename string, writer *output.Writ
 	}
 
 	// PLAIN-01: thread --plain onto every generated view so the graph builder
-	// suppresses author-custom formatting (PLAIN-02).
+	// suppresses author-custom formatting (PLAIN-02). KEY-01: the granular
+	// switches thread the same way onto every view.
 	v.Plain = plain
+	v.NoColors = noColors
+	v.NoStyles = noStyles
+	v.NoLength = noLength
+	v.NoRank = noRank
 
 	// Build graph with navigation
 	g := graph.BuildGraphWithPath(v, unitPath, basename, format)
@@ -360,8 +377,13 @@ func processExpandedView(m *parser.Model, basename string, writer *output.Writer
 	}
 
 	// PLAIN-01: --plain x --expanded — the expanded view gets the flag too
-	// (BuildExpandedGraph copies View.Plain into Graph.Plain).
+	// (BuildExpandedGraph copies View.Plain into Graph.Opts.Plain).
+	// KEY-01: the granular switches thread the same way.
 	v.Plain = plain
+	v.NoColors = noColors
+	v.NoStyles = noStyles
+	v.NoLength = noLength
+	v.NoRank = noRank
 
 	// Build graph with nested clusters (no navigation for expanded view)
 	g := graph.BuildExpandedGraph(v)

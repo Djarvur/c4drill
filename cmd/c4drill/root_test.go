@@ -1764,13 +1764,39 @@ func TestGranularFlagsE2E(t *testing.T) {
 	})
 
 	t.Run("no-styles suppresses styles only", func(t *testing.T) {
-		dir := generatePlainFixtureOutput(t, "dot", "--no-styles")
-		dot := readOutputFile(t, filepath.Join(dir, "plain.dot"))
+		// plain.toml's author styles are not DOT-observable (the pair collapse
+		// aggregates the dashed link style to solid, and node style emission
+		// is fill-colour-driven), so this subtest uses a dedicated fixture
+		// where author styles reach the DOT verbatim.
+		dir := t.TempDir()
+		src := filepath.Join(dir, "styles.toml")
+		content := `[properties]
+name = "Styles"
 
-		assert.NotContains(t, dot, "dashed", "--no-styles must suppress node and link styles")
+[app]
+type = "system"
+name = "App"
+style = "dotted"
+[[app.link]]
+peer = "db"
+style = "dashed"
+color = "#1565C0"
 
-		// Other aspects untouched.
-		assert.Contains(t, dot, "minlen=3", "--no-styles must keep link length")
+[db]
+type = "db"
+name = "DB"
+`
+		require.NoError(t, os.WriteFile(src, []byte(content), 0o600))
+
+		out := filepath.Join(dir, "out")
+		cmd := NewRootCmd()
+		cmd.SetArgs([]string{src, "--output", out, "--format", "dot", "--no-styles"})
+		require.NoError(t, cmd.Execute())
+
+		dot := readOutputFile(t, filepath.Join(out, "styles.dot"))
+
+		assert.NotContains(t, dot, "dashed", "--no-styles must suppress the author link style")
+		assert.NotContains(t, dot, "dotted", "--no-styles must suppress the author node style")
 		assert.Contains(t, dot, "#1565C0", "--no-styles must keep the author link colour")
 	})
 

@@ -37,6 +37,22 @@ type View struct {
 	// defaults. Kind-derived edge colours and the legend stay — they derive
 	// from semantic kind, not author formatting.
 	Plain bool
+	// NoColors suppresses ALL colouring (--no-colors, KEY-01): author unit
+	// color/border fills, the author link colour, and kind-derived edge
+	// colours are skipped; edges fall back to the D-01 source-border default
+	// and legend kind rows drop emergently. Granular opt-out beside Plain —
+	// --plain is the union of the four granular switches (KEY-02).
+	NoColors bool
+	// NoStyles suppresses line/border styles (--no-styles, KEY-01): author
+	// unit Style (BorderStyle) and the author link style, including the
+	// collapsed-pair aggregate style override.
+	NoStyles bool
+	// NoLength suppresses link spacing (--no-length, KEY-01): link.Length no
+	// longer becomes the edge minlen attribute.
+	NoLength bool
+	// NoRank suppresses layout ranking hints (--no-rank, KEY-01): link.Rank
+	// reverse/equal no longer set RankReverse/NoConstraint on edges.
+	NoRank bool
 	// Parent is the parent unit path for C2/C3 views (empty for C1).
 	Parent string
 	// ExpandedUnit is the unit being expanded (for C2/C3 views).

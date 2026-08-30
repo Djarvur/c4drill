@@ -3470,8 +3470,8 @@ func TestBuildGraph_PlainCopiedFromView(t *testing.T) {
 	v := view.GenerateC1View(m)
 	v.Plain = true
 
-	assert.True(t, graph.BuildGraph(v).Plain, "BuildGraph copies View.Plain")
-	assert.True(t, graph.BuildExpandedGraph(v).Plain,
+	assert.True(t, graph.BuildGraph(v).Opts.Plain, "BuildGraph copies View.Plain")
+	assert.True(t, graph.BuildExpandedGraph(v).Opts.Plain,
 		"BuildExpandedGraph copies View.Plain too (--plain x --expanded, Pitfall 5)")
 }
 
@@ -3507,7 +3507,7 @@ func TestBuildGraph_DefaultPathUnchanged(t *testing.T) {
 	v := view.GenerateC1View(m) // Plain keeps its zero value (false)
 	g := graph.BuildGraph(v)
 
-	assert.False(t, g.Plain, "default path leaves Graph.Plain false")
+	assert.False(t, g.Opts.Plain, "default path leaves Graph.Opts.Plain false")
 
 	app := nodeByID(t, g, "app")
 	assert.Equal(t, "#08427B", app.Style.FillColor, "author color applied on the default path")
@@ -3830,7 +3830,7 @@ func TestNoStylesSuppressesStyleAndBorders(t *testing.T) {
 
 	require.Len(t, g.Edges, 1)
 	assert.Equal(t, "solid", g.Edges[0].Style, "author link style falls back to solid")
-	assert.Equal(t, "#BA4A00", g.Edges[0].Color, "colour aspects are NOT touched by --no-styles")
+	assert.Equal(t, model.PersonBorder, g.Edges[0].Color, "colour aspects are NOT touched by --no-styles (source-border default)")
 	assert.Equal(t, 0, g.Edges[0].MinLen) // fixture has no length anyway
 
 	t.Run("collapsed pair keeps the default style", func(t *testing.T) {
