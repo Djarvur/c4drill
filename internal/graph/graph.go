@@ -51,6 +51,10 @@ type RenderOpts struct {
 	NoLength bool
 	// NoRank mirrors View.NoRank (--no-rank): rank hints suppressed.
 	NoRank bool
+	// NoLabels mirrors View.NoLabels (--no-labels, LBL-01..03): all element
+	// label content dropped at the builder so dot lays out without label
+	// geometry; legend and URL attributes are exempt (metadata/structural).
+	NoLabels bool
 }
 
 // Graph represents a graph structure ready for DOT rendering.

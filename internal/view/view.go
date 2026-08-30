@@ -53,6 +53,15 @@ type View struct {
 	// NoRank suppresses layout ranking hints (--no-rank, KEY-01): link.Rank
 	// reverse/equal no longer set RankReverse/NoConstraint on edges.
 	NoRank bool
+	// NoLabels suppresses ALL element label text (--no-labels, LBL-01..03):
+	// nodes render as their plain default shape (ShapeForType) with an empty
+	// label, edges carry no label, clusters (including 38-01 wrapper clusters
+	// and the boundary cluster) emit no label HTML. Suppression happens at the
+	// GRAPH layer so dot lays out without label geometry. The legend is
+	// metadata governed by properties.legend, not an element label — it STAYS
+	// by default (LBL-03 pin). ExploreURL/ReferenceURL attributes are
+	// structural and survive.
+	NoLabels bool
 	// Parent is the parent unit path for C2/C3 views (empty for C1).
 	Parent string
 	// ExpandedUnit is the unit being expanded (for C2/C3 views).

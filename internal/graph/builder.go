@@ -20,6 +20,7 @@ func renderOptsFromView(v *view.View) RenderOpts {
 		NoStyles: v.NoStyles,
 		NoLength: v.NoLength,
 		NoRank:   v.NoRank,
+		NoLabels: v.NoLabels,
 	}
 }
 
@@ -193,9 +194,16 @@ func ensureWrapperCluster(
 		return existing
 	}
 
+	// LBL-01: wrapper clusters are label carriers too — under --no-labels the
+	// wrapper keeps its ID (structure only), no label content.
+	var label *Label
+	if !v.NoLabels {
+		label = wrapperLabel(path, v)
+	}
+
 	cluster := &Cluster{
 		ID:       "wrap_" + path,
-		Label:    wrapperLabel(path, v),
+		Label:    label,
 		Nodes:    make([]*Node, 0),
 		Clusters: make([]*Cluster, 0),
 	}
@@ -279,11 +287,15 @@ func buildBoundaryCluster(v *view.View) *Cluster {
 	var style *NodeStyle
 
 	if unit != nil {
-		label = &Label{
-			Name:        unit.Name,
-			Technology:  unit.Technology,
-			Description: unit.Description,
-			Icon:        IconForType(unit.Type),
+		// LBL-01: the boundary cluster is a label carrier too — under
+		// --no-labels it keeps its ID and style, no label content.
+		if !v.NoLabels {
+			label = &Label{
+				Name:        unit.Name,
+				Technology:  unit.Technology,
+				Description: unit.Description,
+				Icon:        IconForType(unit.Type),
+			}
 		}
 		style = GetStyleForType(unit.Type, false)
 		applyUnitOverrides(style, unit, renderOptsFromView(v))
@@ -389,9 +401,16 @@ func buildNestedCluster(entry *view.Entry, path string, v *view.View) *Cluster {
 
 	applyUnitOverrides(style, entry.Unit, renderOptsFromView(v))
 
+	// LBL-01: expanded-unit clusters drop label content under --no-labels;
+	// the cluster ID (structure) stays.
+	var label *Label
+	if !v.NoLabels {
+		label = buildClusterLabel(entry)
+	}
+
 	cluster := &Cluster{
 		ID:         path,
-		Label:      buildClusterLabel(entry),
+		Label:      label,
 		Nodes:      make([]*Node, 0),
 		Clusters:   make([]*Cluster, 0),
 		Style:      style,
@@ -442,6 +461,30 @@ func buildNestedCluster(entry *view.Entry, path string, v *view.View) *Cluster {
 
 // buildNode creates a node from a view entry.
 func buildNode(entry *view.Entry, opts RenderOpts) *Node {
+	// LBL-01: under --no-labels the node drops label CONTENT entirely — the
+	// converter emits an empty label and the node renders as its plain
+	// default shape (ShapeForType, from Type below). Glyphs (🔍/📖) are label
+	// content and are suppressed with it; ReferenceURL survives (structural).
+	if opts.NoLabels {
+		var style *NodeStyle
+		if IsBoxType(entry.Unit.Type) {
+			style = GetBoxStyleByContents(entry.Unit)
+		} else {
+			style = GetStyleForType(entry.Unit.Type, entry.IsExternal)
+		}
+
+		applyUnitOverrides(style, entry.Unit, opts)
+
+		return &Node{
+			ID:           entry.FullPath,
+			Shape:        ShapeForType(entry.Unit.Type),
+			Type:         entry.Unit.Type,
+			Style:        style,
+			IsExternal:   entry.IsExternal,
+			ReferenceURL: entry.Unit.Reference,
+		}
+	}
+
 	label := &Label{
 		Name:        entry.Unit.Name,
 		Technology:  entry.Unit.Technology,
@@ -797,9 +840,16 @@ func buildCluster(entry *view.Entry, v *view.View, opts RenderOpts) *Cluster {
 
 	applyUnitOverrides(style, entry.Unit, opts)
 
+	// LBL-01: expanded-unit clusters drop label content under --no-labels;
+	// the cluster ID (structure) stays.
+	var label *Label
+	if !opts.NoLabels {
+		label = buildClusterLabel(entry)
+	}
+
 	cluster := &Cluster{
 		ID:         entry.FullPath,
-		Label:      buildClusterLabel(entry),
+		Label:      label,
 		Nodes:      make([]*Node, 0),
 		Clusters:   make([]*Cluster, 0),
 		Style:      style,
@@ -1330,16 +1380,21 @@ func createEdge(source, target string, link model.Link, sourceEntry *view.Entry,
 	}
 
 	edge := &Edge{
-		Source: source,
-		Target: target,
-		Label: &EdgeLabel{
-			Technology:  link.Technology,
-			Description: link.Description,
-			Position:    labelPosition,
-		},
+		Source:    source,
+		Target:    target,
 		Style:     linkStyle,
 		ArrowHead: ArrowDirection(link.Arrow),
 		PenWidth:  penWidth,
+	}
+
+	// LBL-01: edge labels are label content — under --no-labels the builder
+	// drops the Label entirely so the converter emits none.
+	if !opts.NoLabels {
+		edge.Label = &EdgeLabel{
+			Technology:  link.Technology,
+			Description: link.Description,
+			Position:    labelPosition,
+		}
 	}
 
 	// Apply defaults
@@ -1347,7 +1402,7 @@ func createEdge(source, target string, link model.Link, sourceEntry *view.Entry,
 		edge.Style = "solid"
 	}
 
-	if edge.Label.Position == "" {
+	if edge.Label != nil && edge.Label.Position == "" {
 		edge.Label.Position = "middle"
 	}
 

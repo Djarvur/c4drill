@@ -56,6 +56,7 @@ var (
 	noStyles   bool
 	noLength   bool
 	noRank     bool
+	noLabels   bool
 	labelRatio float64
 	version    = "dev"
 )
@@ -108,6 +109,8 @@ Output:
 		"Suppress link spacing only: link length no longer sets minlen")
 	cmd.PersistentFlags().BoolVar(&noRank, "no-rank", false,
 		"Suppress ranking hints only: link rank reverse/equal ignored")
+	cmd.PersistentFlags().BoolVar(&noLabels, "no-labels", false,
+		"Suppress all element label text: shape-only nodes/edges/clusters so layout re-flows (legend stays)")
 	cmd.PersistentFlags().Float64Var(&labelRatio, "label-ratio", 0,
 		"Width:height ratio for unit labels (default: 1.6, credit card proportions)")
 
@@ -326,12 +329,13 @@ func processView(m *parser.Model, unitPath, basename string, writer *output.Writ
 
 	// PLAIN-01: thread --plain onto every generated view so the graph builder
 	// suppresses author-custom formatting (PLAIN-02). KEY-01: the granular
-	// switches thread the same way onto every view.
+	// switches thread the same way onto every view. LBL-02: --no-labels too.
 	v.Plain = plain
 	v.NoColors = noColors
 	v.NoStyles = noStyles
 	v.NoLength = noLength
 	v.NoRank = noRank
+	v.NoLabels = noLabels
 
 	// Build graph with navigation
 	g := graph.BuildGraphWithPath(v, unitPath, basename, format)
@@ -378,12 +382,13 @@ func processExpandedView(m *parser.Model, basename string, writer *output.Writer
 
 	// PLAIN-01: --plain x --expanded — the expanded view gets the flag too
 	// (BuildExpandedGraph copies View.Plain into Graph.Opts.Plain).
-	// KEY-01: the granular switches thread the same way.
+	// KEY-01: the granular switches thread the same way. LBL-02: --no-labels.
 	v.Plain = plain
 	v.NoColors = noColors
 	v.NoStyles = noStyles
 	v.NoLength = noLength
 	v.NoRank = noRank
+	v.NoLabels = noLabels
 
 	// Build graph with nested clusters (no navigation for expanded view)
 	g := graph.BuildExpandedGraph(v)

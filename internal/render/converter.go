@@ -161,19 +161,19 @@ func buildCgraph(
 	}
 
 	// Create top-level nodes (not in clusters)
-	if err := createTopLevelNodes(content, g.Nodes, nodeMap, g.Opts.Plain); err != nil {
+	if err := createTopLevelNodes(content, g.Nodes, nodeMap, g.Opts); err != nil {
 		return nil, err
 	}
 
 	// Create clusters with their nodes
 	for _, cluster := range g.Clusters {
-		if err := createCluster(content, cluster, nodeMap, g.Opts.Plain); err != nil {
+		if err := createCluster(content, cluster, nodeMap, g.Opts); err != nil {
 			return nil, fmt.Errorf("create cluster %s: %w", cluster.ID, err)
 		}
 	}
 
 	// Create edges
-	if err := createEdges(cg, g.Edges, nodeMap, g.Opts.Plain); err != nil {
+	if err := createEdges(cg, g.Edges, nodeMap, g.Opts); err != nil {
 		return nil, err
 	}
 
@@ -210,14 +210,14 @@ func createTopLevelNodes(
 	cg *cgraph.Graph,
 	nodes []*graph.Node,
 	nodeMap map[string]*cgraph.Node,
-	plain bool,
+	opts graph.RenderOpts,
 ) error {
 	for _, node := range nodes {
 		if node.IsInCluster {
 			continue // Will be created inside cluster
 		}
 
-		cn, err := createNode(cg, node, plain)
+		cn, err := createNode(cg, node, opts)
 		if err != nil {
 			return fmt.Errorf("create node %s: %w", node.ID, err)
 		}
@@ -229,7 +229,7 @@ func createTopLevelNodes(
 }
 
 // createEdges creates all edges from the edge list.
-func createEdges(cg *cgraph.Graph, edges []*graph.Edge, nodeMap map[string]*cgraph.Node, plain bool) error {
+func createEdges(cg *cgraph.Graph, edges []*graph.Edge, nodeMap map[string]*cgraph.Node, opts graph.RenderOpts) error {
 	for _, edge := range edges {
 		source := nodeMap[edge.Source]
 		target := nodeMap[edge.Target]
@@ -238,7 +238,7 @@ func createEdges(cg *cgraph.Graph, edges []*graph.Edge, nodeMap map[string]*cgra
 			continue // Skip edges with missing endpoints
 		}
 
-		if err := createEdge(cg, source, target, edge, plain); err != nil {
+		if err := createEdge(cg, source, target, edge, opts); err != nil {
 			return fmt.Errorf("create edge %s->%s: %w", edge.Source, edge.Target, err)
 		}
 	}
@@ -347,7 +347,7 @@ func configureGraphSettings(cg *cgraph.Graph, g *graph.Graph) error {
 func createNode(
 	cg *cgraph.Graph,
 	node *graph.Node,
-	plain bool,
+	opts graph.RenderOpts,
 ) (*cgraph.Node, error) {
 	cn, err := cg.CreateNodeByName(node.ID)
 	if err != nil {
@@ -365,7 +365,7 @@ func createNode(
 	}
 
 	// Build and set label (HTML by default, plain text under --plain)
-	setNodeLabel(cn, node, plain)
+	setNodeLabel(cn, node, opts)
 
 	// Apply style (queue nodes drop "rounded", see applyNodeStyle)
 	applyNodeStyle(cn, node)
@@ -403,13 +403,22 @@ func createNode(
 }
 
 // setNodeLabel builds and sets the label for a node: the HTML label by
-// default, the plain-text record label under plain (--plain, PLAIN-03).
-func setNodeLabel(cn *cgraph.Node, node *graph.Node, plain bool) {
+// default, the plain-text record label under plain (--plain, PLAIN-03), and
+// an EMPTY label under --no-labels (LBL-01) — the node renders as its bare
+// ShapeForType shape. The NoLabels branch also covers hand-built graphs whose
+// Label is non-nil (defense-in-depth).
+func setNodeLabel(cn *cgraph.Node, node *graph.Node, opts graph.RenderOpts) {
+	if opts.NoLabels {
+		cn.SetLabel("")
+
+		return
+	}
+
 	if node.Label == nil {
 		return
 	}
 
-	if plain {
+	if opts.Plain {
 		// Plain mode routes labels to the record path (labels.go): no HTML
 		// tables, name/technology/description content preserved. SetLabel
 		// stores a true plain string — graphviz escapes it — so author text
@@ -473,7 +482,7 @@ func createCluster(
 	parent *cgraph.Graph,
 	cluster *graph.Cluster,
 	nodeMap map[string]*cgraph.Node,
-	plain bool,
+	opts graph.RenderOpts,
 ) error {
 	// Name must start with "cluster_" for GraphViz to render as cluster
 	subgraph, err := parent.CreateSubGraphByName("cluster_" + cluster.ID)
@@ -482,7 +491,7 @@ func createCluster(
 	}
 
 	// Set cluster label
-	setClusterLabel(subgraph, cluster, plain)
+	setClusterLabel(subgraph, cluster, opts)
 
 	// Apply style
 	if err := applyClusterStyle(subgraph, cluster.Style); err != nil {
@@ -491,7 +500,7 @@ func createCluster(
 
 	// Create nodes inside cluster
 	for _, node := range cluster.Nodes {
-		cn, err := createNode(subgraph, node, plain)
+		cn, err := createNode(subgraph, node, opts)
 		if err != nil {
 			return fmt.Errorf("create node %s in cluster: %w", node.ID, err)
 		}
@@ -501,7 +510,7 @@ func createCluster(
 
 	// Create nested clusters recursively
 	for _, nestedCluster := range cluster.Clusters {
-		if err := createCluster(subgraph, nestedCluster, nodeMap, plain); err != nil {
+		if err := createCluster(subgraph, nestedCluster, nodeMap, opts); err != nil {
 			return fmt.Errorf("create nested cluster %s: %w", nestedCluster.ID, err)
 		}
 	}
@@ -510,14 +519,15 @@ func createCluster(
 }
 
 // setClusterLabel builds and sets the label for a cluster: the HTML label by
-// default, the plain-text record label under plain (--plain, PLAIN-03). The
-// drill-down URL emission is structural and survives plain mode.
-func setClusterLabel(subgraph *cgraph.Graph, cluster *graph.Cluster, plain bool) {
-	if cluster.Label == nil {
+// default, the plain-text record label under plain (--plain, PLAIN-03), and
+// an EMPTY label under --no-labels (LBL-01 — cluster structure survives, label
+// text does not). The drill-down URL emission is structural and survives both.
+func setClusterLabel(subgraph *cgraph.Graph, cluster *graph.Cluster, opts graph.RenderOpts) {
+	if opts.NoLabels {
+		subgraph.SetLabel("")
+	} else if cluster.Label == nil {
 		return
-	}
-
-	if plain {
+	} else if opts.Plain {
 		// Plain mode routes cluster labels to the record path (labels.go) —
 		// no HTML tables, content preserved, escaping via SetLabel (T-37-07).
 		if label := buildRecordLabel(cluster.Label); label != "" {
@@ -598,7 +608,7 @@ func setClusterAttribute(subgraph *cgraph.Graph, attr, value string) error {
 }
 
 // createEdge creates a cgraph.Edge from a graph.Edge.
-func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge, plain bool) error {
+func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge, opts graph.RenderOpts) error {
 	// Include description in edge name to allow multiple edges between same nodes
 	edgeName := edge.Source + "_to_" + edge.Target
 	if edge.Label != nil && edge.Label.Description != "" {
@@ -622,11 +632,16 @@ func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge,
 	// Set edge label and font
 	e.SetFontName("Helvetica")
 
-	if edge.Label != nil {
+	if opts.NoLabels {
+		// LBL-01: no edge label under --no-labels — an explicit empty label
+		// keeps the emitted DOT clean even for hand-built graphs carrying a
+		// non-nil Label (defense-in-depth; the builder already drops it).
+		e.SetLabel("")
+	} else if edge.Label != nil {
 		// Plain mode (PLAIN-03) emits the label as plain text via SetLabel —
 		// never the HTML rectangle. SetLabel routes through the same escaping
 		// as every existing plain label (threat T-37-07).
-		if plain {
+		if opts.Plain {
 			if plainLabel := buildEdgePlainTextLabel(edge.Label); plainLabel != "" {
 				e.SetLabel(plainLabel)
 			} else {
