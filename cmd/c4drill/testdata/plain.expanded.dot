@@ -1,0 +1,82 @@
+digraph "" {
+	graph [bb="0,0,452.11,245.6",
+		fontname=Helvetica,
+		fontsize=14,
+		label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0" ALIGN="CENTER"><TR><TD COLSPAN="1" ALIGN="CENTER"><FONT POINT-SIZE="14">Plain Mode Fixture</FONT></TD></TR></TABLE>>,
+		labelloc=t,
+		lheight=0.23,
+		lp="226.06,233.2",
+		lwidth=1.62,
+		rankdir=TB
+	];
+	node [color=black,
+		fontcolor=black,
+		fontname=Helvetica,
+		label="\N",
+		shape=ellipse
+	];
+	edge [color=black,
+		fontcolor=black,
+		fontname=Helvetica,
+		fontsize=14.0,
+		label="\E",
+		penwidth=1.0
+	];
+	subgraph cluster___content {
+		graph [bb="8,8,390,201.8",
+			label="",
+			style=invis
+		];
+		subgraph cluster_orders {
+			graph [bb="16,16,382,92.8",
+				color="#073B6F",
+				fontcolor="#073B6F",
+				fontname=Helvetica,
+				label="{Order Context|Event Sourcing|Orders bounded context}",
+				lheight=0.23,
+				lp="199,80.4",
+				lwidth=4.86,
+				style="rounded,dashed"
+			];
+			"orders.api"	[color="#073B6F",
+				fontcolor="#073B6F",
+				height=0.5,
+				label="{Order API|Go|Order processing API}",
+				pos="193,42",
+				shape=box,
+				style=rounded,
+				width=3.4358];
+		}
+		admin	[color="#073B6F",
+			fontcolor="#073B6F",
+			height=0.5,
+			label="{👤 Administrator|System administrator}",
+			pos="186,175.8",
+			shape=box,
+			style=rounded,
+			width=3.6443];
+		admin -> "orders.api"	[key="admin_to_orders.api_Manages_the_orders_platform",
+			color="#073B6F",
+			fontcolor="#073B6F",
+			fontsize=10,
+			label="[HTTPS] Manages the orders platform",
+			lp="131.52,106.8",
+			penwidth=2,
+			pos="e,101.68,60.419 94.409,157.3 57.991,145.88 28.611,127.93 47.045,100.8 57.562,85.324 72.936,73.991 89.805,65.693",
+			style=solid];
+		"orders.api" -> admin	[key="orders.api_to_admin_Streams_order_events",
+			color="#2E7D32",
+			fontcolor="#2E7D32",
+			fontsize=10,
+			label="[gRPC] Streams order events",
+			lp="282.43,106.8",
+			penwidth=2,
+			pos="e,197.05,157.42 204.24,60.244 211.98,74.217 220.19,94.518 216,112.8 213.37,124.28 208.32,136.1 203.11,146.3",
+			style=solid];
+	}
+	__c4drill_legend	[height=1.25,
+		label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" COLOR="#666666"><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#666666"><B>legend</B></FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#073B6F">person</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#073B6F">system</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#073B6F">box</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#2E7D32">read</FONT></TD></TR></TABLE>>,
+		pos="425,175.8",
+		shape=plaintext,
+		width=0.75315];
+}

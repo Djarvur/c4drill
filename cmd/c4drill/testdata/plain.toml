@@ -1,0 +1,52 @@
+# Plain-mode fixture (v1.14 PLAIN-04): exercises every author input that
+# --plain must ignore while keeping content and semantic colouring.
+# Committed goldens: plain.dot (--plain), plain.expanded.dot (--plain --expanded).
+
+[properties]
+name = "Plain Mode Fixture"
+description = "Styled fixture proving --plain uniformity"
+edges = "straight" # author edge routing — ignored under --plain
+expanded = ["orders"]
+
+# Person with explicit color, style and border — all ignored under --plain.
+[admin]
+type = "person"
+name = "Administrator"
+description = "System administrator"
+color = "#FFF9C4"
+border = "#F9A825"
+style = "filled,dashed"
+
+# Author link carrying every formatting input --plain must suppress:
+# color, style, length, rank and labelPosition.
+[[admin.link]]
+peer = "orders.api"
+technology = "HTTPS"
+description = "Manages the orders platform"
+color = "#1565C0"
+style = "dashed"
+length = 3
+rank = "reverse"
+labelPosition = "tail"
+
+# Expanded box grouping with a nested subunit (C1 box, 04-styling precedent).
+[orders]
+type = "box"
+name = "Order Context"
+technology = "Event Sourcing"
+description = "Orders bounded context"
+
+[orders.api]
+type = "system"
+name = "Order API"
+technology = "Go"
+description = "Order processing API"
+
+# Kind-coloured link: the kind colour is SEMANTIC and survives --plain,
+# while rank = "equal" (constraint suppression) does not.
+[[orders.api.link]]
+peer = "admin"
+technology = "gRPC"
+description = "Streams order events"
+rank = "equal"
+kind = "read"

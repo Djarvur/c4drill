@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -1534,4 +1535,189 @@ name = "DB"
 	require.NoError(t, err, "C2 dot generated")
 	assert.Contains(t, string(c2), "splines=false",
 		"global edges=straight disables splines on the C2 diagram")
+}
+
+// =============================================================================
+// Tests for --plain flag E2E (PLAIN-03/PLAIN-04, phase 37 plan 04)
+// =============================================================================
+
+// generatePlainFixtureOutput runs the CLI on the styled plain.toml fixture
+// into a fresh temp directory in the given format, with any extra args
+// (e.g. "--plain", "--expanded"), and returns that directory.
+func generatePlainFixtureOutput(t *testing.T, format string, extraArgs ...string) string {
+	t.Helper()
+
+	dir := t.TempDir()
+	args := append([]string{
+		filepath.Join("testdata", "plain.toml"),
+		"--output", dir,
+		"--format", format,
+	}, extraArgs...)
+
+	cmd := NewRootCmd()
+	cmd.SetArgs(args)
+	require.NoError(t, cmd.Execute(), "plain fixture must render cleanly")
+
+	return dir
+}
+
+// collectGeneratedFiles returns every regular file generated under dir
+// (C1 + drill-down tree), relative walk in lexical order.
+func collectGeneratedFiles(t *testing.T, dir string) []string {
+	t.Helper()
+
+	var files []string
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !d.IsDir() {
+			files = append(files, path)
+		}
+
+		return nil
+	})
+	require.NoError(t, err, "walk output dir")
+	require.NotEmpty(t, files, "at least the C1 output must be generated")
+
+	return files
+}
+
+// TestPlainFlagC1Golden locks the --plain C1 output against the committed
+// testdata/plain.dot golden (order-insensitive canonical comparison, DI-1).
+// The golden is a NEW file — no existing golden is re-baselined by it.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestPlainFlagC1Golden(t *testing.T) {
+	dir := generatePlainFixtureOutput(t, "dot", "--plain")
+
+	got := readOutputFile(t, filepath.Join(dir, "plain.dot"))
+	expected := readOutputFile(t, filepath.Join("testdata", "plain.dot"))
+
+	require.Equal(t, canonical.Canonical(t, expected), canonical.Canonical(t, got),
+		"--plain C1 output must match the committed plain.dot golden (canonical, DI-1)")
+}
+
+// TestPlainFlagExpandedGolden locks --plain x --expanded against the committed
+// testdata/plain.expanded.dot golden (Pitfall 5: the expanded pipeline must
+// honour the flag too).
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestPlainFlagExpandedGolden(t *testing.T) {
+	dir := generatePlainFixtureOutput(t, "dot", "--plain", "--expanded")
+
+	got := readOutputFile(t, filepath.Join(dir, "plain.expanded.dot"))
+	expected := readOutputFile(t, filepath.Join("testdata", "plain.expanded.dot"))
+
+	require.Equal(t, canonical.Canonical(t, expected), canonical.Canonical(t, got),
+		"--plain --expanded output must match the committed plain.expanded.dot golden (canonical, DI-1)")
+}
+
+// TestPlainFlagAppliesToAllGeneratedFiles proves PLAIN-04's "every generated
+// output file" contract: for EVERY .dot file the --plain run produces (the C1
+// context diagram AND each drill-down), author-custom formatting from the
+// fixture is suppressed and labels render as plain text, while the semantic
+// surface (legend, kind-derived colours, label content) survives.
+//
+// HTML-marker note: the nav/title graph label and the legend node carry
+// UPPERCASE <TABLE> markup by design (both stay under --plain); unit/edge
+// HTML labels are the only source of LOWERCASE html tags, so the lowercase
+// markers are the precise per-file signal that label formatting simplified.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestPlainFlagAppliesToAllGeneratedFiles(t *testing.T) {
+	dir := generatePlainFixtureOutput(t, "dot", "--plain")
+
+	dotFiles := make([]string, 0)
+	for _, f := range collectGeneratedFiles(t, dir) {
+		if strings.HasSuffix(f, ".dot") {
+			dotFiles = append(dotFiles, f)
+		}
+	}
+	require.Len(t, dotFiles, 2, "C1 plus the orders drill-down must be generated")
+
+	for _, f := range dotFiles {
+		dot := readOutputFile(t, f)
+		lower := strings.ToLower(dot)
+		name := filepath.Base(f)
+
+		// Suppressed author formatting (fixture custom colours).
+		for _, hex := range []string{"#fff9c4", "#f9a825", "#1565c0"} {
+			assert.NotContains(t, lower, hex,
+				"%s: author colour %s must be suppressed under --plain", name, hex)
+		}
+
+		// Suppressed author formatting (spacing/ranking/labels).
+		assert.NotContains(t, lower, "minlen", "%s: link length=3 must not emit minlen", name)
+		assert.NotContains(t, lower, "dir=back", "%s: rank=reverse must not swap endpoints", name)
+		assert.NotContains(t, lower, "constraint=false", "%s: rank=equal must not suppress constraint", name)
+		assert.NotContains(t, lower, "splines=false", "%s: properties.edges must be ignored", name)
+
+		// Plain-text labels: no LOWERCASE html label markup (nodes/edges).
+		assert.NotContains(t, dot, "<table", "%s: node/edge labels must not emit HTML tables", name)
+		assert.NotContains(t, dot, "<b>", "%s: no bold name rows (HTML node labels)", name)
+		assert.NotContains(t, dot, "<i>", "%s: no italic technology rows (HTML labels)", name)
+
+		// Exactly the two sanctioned HTML labels remain: the nav/title graph
+		// label and the floating legend node.
+		assert.Equal(t, 2, strings.Count(dot, "label=<"),
+			"%s: only the graph label and the legend may carry HTML labels", name)
+
+		// Semantic surface survives plain mode.
+		assert.Contains(t, dot, "__c4drill_legend", "%s: legend must be present", name)
+		assert.Contains(t, dot, "#2E7D32", "%s: kind-derived colour must survive", name)
+		assert.Contains(t, dot, "[gRPC] Streams order events",
+			"%s: edge label content must be preserved as plain text", name)
+		assert.Contains(t, dot, "Order API|Go|Order processing API",
+			"%s: node label content must be preserved as plain text", name)
+	}
+}
+
+// TestPlainFlagAllFormats proves the flag reaches the svg and html pipelines:
+// every expected output file exists and is non-empty. Exact svg/html bytes are
+// graphviz-owned (layout geometry), so dot remains the precise golden format.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestPlainFlagAllFormats(t *testing.T) {
+	for _, format := range []string{"svg", "html"} {
+		t.Run(format, func(t *testing.T) {
+			dir := generatePlainFixtureOutput(t, format, "--plain")
+
+			expected := []string{
+				filepath.Join(dir, "plain."+format),
+				filepath.Join(dir, "plain", "orders."+format),
+			}
+
+			for _, path := range expected {
+				info, err := os.Stat(path)
+				require.NoError(t, err, "%s must exist", path)
+				assert.Greater(t, info.Size(), int64(0), "%s must be non-empty", path)
+			}
+
+			for _, f := range collectGeneratedFiles(t, dir) {
+				info, err := os.Stat(f)
+				require.NoError(t, err, "stat %s", f)
+				assert.Greater(t, info.Size(), int64(0), "%s must be non-empty", f)
+			}
+		})
+	}
+}
+
+// TestPlainFlagOptIn proves the flag is opt-in: WITHOUT --plain the same
+// fixture still renders its author formatting (custom link colour, HTML
+// labels) — default output is untouched by the plain pipeline.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestPlainFlagOptIn(t *testing.T) {
+	dir := generatePlainFixtureOutput(t, "dot")
+
+	dot := readOutputFile(t, filepath.Join(dir, "plain.dot"))
+
+	assert.Contains(t, dot, "#1565C0",
+		"default mode must keep the author link colour (opt-in proven)")
+	assert.Contains(t, strings.ToLower(dot), "<table",
+		"default mode must keep the HTML label path")
+	assert.Contains(t, dot, "minlen",
+		"default mode must keep the author link length")
 }
