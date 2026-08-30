@@ -1847,15 +1847,15 @@ name = "DB"
 // Tests for --no-labels (LBL-01..03, phase 38 plan 03)
 // =============================================================================
 
-// TestNoLabelsAllGenerationsAndFormats proves LBL-02: --no-labels applies to
-// the C1 context diagram, every drill-down, and the --expanded generation,
-// across dot/svg/html formats. Element labels are silenced at the graph layer
-// (no HTML tables, no label text) while the legend — metadata, LBL-03 pin —
-// stays.
+// TestNoLabelsAllGenerationsAndFormats proves the quick 260831-01u BUG-2
+// semantics: --no-labels suppresses ONLY edge label text. It applies to the C1
+// context diagram, every drill-down, and the --expanded generation, across
+// dot/svg/html formats, while node/cluster labels and the legend (metadata,
+// LBL-03 pin) all stay.
 //
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestNoLabelsAllGenerationsAndFormats(t *testing.T) {
-	t.Run("dot: C1 and drill-downs carry no label text", func(t *testing.T) {
+	t.Run("dot: edge labels suppressed, node/cluster labels survive", func(t *testing.T) {
 		dir := generatePlainFixtureOutput(t, "dot", "--no-labels")
 
 		dotFiles := make([]string, 0)
@@ -1870,27 +1870,18 @@ func TestNoLabelsAllGenerationsAndFormats(t *testing.T) {
 			dot := readOutputFile(t, f)
 			name := filepath.Base(f)
 
-			assert.NotContains(t, dot, "<b>", "%s: no bold name rows", name)
-			assert.NotContains(t, dot, "<table",
-				"%s: no element-level lowercase HTML tables", name)
-			assert.Contains(t, dot, `label=""`,
-				"%s: elements emit empty labels (bare shapes)", name)
-			assert.NotContains(t, dot, "Order API", "%s: node name text suppressed", name)
+			// Suppressed: edge label text only.
 			assert.NotContains(t, dot, "[HTTPS]", "%s: edge label text suppressed", name)
 			assert.NotContains(t, dot, "Streams order events", "%s: edge description text suppressed", name)
 
-			// The legend (and the nav/title graph label) are the only HTML labels.
-			assert.Equal(t, 2, strings.Count(dot, "label=<"),
-				"%s: only the graph label and the legend may carry HTML labels", name)
-			assert.Contains(t, dot, "__c4drill_legend", "%s: legend stays under --no-labels (LBL-03)", name)
+			// Surviving: node and cluster label content.
+			assert.Contains(t, dot, "Order API", "%s: node name text survives", name)
+			assert.Contains(t, dot, "Order Context", "%s: cluster name text survives", name)
 
-			// The breadcrumb may legitimately carry the expanded unit's name
-			// (navigation is metadata, not an element label); the C1 diagram
-			// has none, so cluster label text absence is exact there.
-			if name == "plain.dot" {
-				assert.NotContains(t, dot, "Order Context",
-					"%s: cluster name text suppressed", name)
-			}
+			// The legend (and the nav/title graph label) are the only
+			// sanctioned UPPERCASE HTML labels; element labels now add their
+			// lowercase HTML tables.
+			assert.Contains(t, dot, "__c4drill_legend", "%s: legend stays under --no-labels (LBL-03)", name)
 		}
 	})
 
@@ -1898,9 +1889,9 @@ func TestNoLabelsAllGenerationsAndFormats(t *testing.T) {
 		dir := generatePlainFixtureOutput(t, "dot", "--no-labels", "--expanded")
 		dot := readOutputFile(t, filepath.Join(dir, "plain.expanded.dot"))
 
-		assert.Contains(t, dot, `label=""`,
-			"expanded generation must suppress element labels too (LBL-01)")
-		assert.NotContains(t, dot, "Order API", "expanded node text suppressed")
+		assert.NotContains(t, dot, "[HTTPS]", "expanded edge label text suppressed")
+		assert.NotContains(t, dot, "Streams order events", "expanded edge description text suppressed")
+		assert.Contains(t, dot, "Order API", "expanded node text survives (edge labels only)")
 		assert.Contains(t, dot, "__c4drill_legend", "expanded legend stays")
 	})
 
@@ -1917,9 +1908,9 @@ func TestNoLabelsAllGenerationsAndFormats(t *testing.T) {
 	})
 }
 
-// TestNoLabelsComposesWithPlainAndSwitches proves LBL-02 composition: the
+// TestNoLabelsComposesWithPlainAndSwitches proves the flag composition: the
 // flag unions with --plain and the granular switches without error, and the
-// composed output still carries no element labels.
+// composed output still suppresses edge label text only.
 //
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestNoLabelsComposesWithPlainAndSwitches(t *testing.T) {
@@ -1935,10 +1926,10 @@ func TestNoLabelsComposesWithPlainAndSwitches(t *testing.T) {
 			dir := generatePlainFixtureOutput(t, "dot", args...)
 			dot := readOutputFile(t, filepath.Join(dir, "plain.dot"))
 
-			assert.NotContains(t, dot, "<table",
-				"%s: element labels suppressed in composition", label)
-			assert.Contains(t, dot, `label=""`,
-				"%s: elements emit empty labels", label)
+			assert.NotContains(t, dot, "Streams order events",
+				"%s: edge label text suppressed in composition", label)
+			assert.Contains(t, dot, "Order API",
+				"%s: node label text survives (edge labels only)", label)
 			assert.Contains(t, dot, "__c4drill_legend", "%s: legend still present", label)
 		})
 	}
@@ -1970,7 +1961,8 @@ func generateFixtureOutput(t *testing.T, fixture, format string, extraArgs ...st
 
 // TestNoLabelsC1Golden locks the --no-labels C1 output against the committed
 // testdata/nolabels.dot golden (order-insensitive canonical comparison, DI-1).
-// Additive golden from phase 38 plan 04 — no existing golden is re-baselined.
+// Golden re-baselined in quick 260831-01u for the BUG-2 semantics (edge-label
+// suppression only: node/cluster labels returned, edge labels still gone).
 //
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestNoLabelsC1Golden(t *testing.T) {
@@ -1984,7 +1976,8 @@ func TestNoLabelsC1Golden(t *testing.T) {
 }
 
 // TestNoLabelsExpandedGolden locks --no-labels x --expanded against the
-// committed testdata/nolabels.expanded.dot golden.
+// committed testdata/nolabels.expanded.dot golden (re-baselined in quick
+// 260831-01u for the edge-labels-only semantics).
 //
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestNoLabelsExpandedGolden(t *testing.T) {
@@ -2049,14 +2042,14 @@ func TestKeyComposition(t *testing.T) {
 		{
 			flag: "--no-labels",
 			absent: map[string][]string{
-				"plain":      {"<table", "Order API"},
-				"multilevel": {"<table"},
-				"styles":     {"<table"},
+				// Edge label text only — node/cluster labels survive
+				// (quick 260831-01u BUG-2).
+				"plain": {"[HTTPS]"},
 			},
 			present: map[string][]string{
-				"plain":      {`label=""`},
-				"multilevel": {`label=""`},
-				"styles":     {`label=""`},
+				"plain":      {"Order API"},
+				"multilevel": {"<table"},
+				"styles":     {"<table"},
 			},
 		},
 	}
@@ -2229,8 +2222,8 @@ name = "DB"
 				}
 				dot := readOutputFile(t, path)
 
-				assert.NotContains(t, dot, "<table", "%s: element labels suppressed", gen)
-				assert.Contains(t, dot, `label=""`, "%s: elements emit empty labels", gen)
+				assert.NotContains(t, dot, "Streams order events", "%s: edge label text suppressed", gen)
+				assert.Contains(t, dot, "Order API", "%s: node label text survives", gen)
 				assert.Contains(t, dot, "__c4drill_legend", "%s: legend stays", gen)
 				assert.NotContains(t, strings.ToLower(dot), "#fff9c4", "%s: --plain still strips author colours", gen)
 			}
@@ -2247,19 +2240,19 @@ name = "DB"
 				dot := readOutputFile(t, path)
 				lower := strings.ToLower(dot)
 
-				assert.NotContains(t, dot, "<table", "%s: element labels suppressed (raw dot)", gen)
-				assert.Contains(t, dot, `label=""`, "%s: empty labels emitted", gen)
+				assert.NotContains(t, dot, "Streams order events", "%s: edge label text suppressed (raw dot)", gen)
+				assert.Contains(t, dot, "Order API", "%s: node labels survive", gen)
 				for _, hex := range []string{"#fff9c4", "#f9a825", "#1565c0", "#2e7d32"} {
 					assert.NotContains(t, lower, hex, "%s: colours suppressed in composition", gen)
 				}
 			}
 		})
 
-		t.Run("--no-colors --no-labels (multilevel C1: wrappers stay legible)", func(t *testing.T) {
+		t.Run("--no-colors --no-labels (multilevel C2: wrappers stay legible)", func(t *testing.T) {
 			dir := generateFixtureOutput(t, "multilevel.toml", "dot", "--no-colors", "--no-labels")
 			c2 := readOutputFile(t, filepath.Join(dir, "multilevel", "mainSystem.dot"))
 
-			assert.Contains(t, c2, `label=""`, "wrapper/boundary suppression active on multilevel C2")
+			assert.Contains(t, c2, "Main System", "wrapper/boundary labels legible on multilevel C2 (edge labels only)")
 			assert.Contains(t, c2, "subgraph cluster_", "cluster structure survives labels-off")
 		})
 	})

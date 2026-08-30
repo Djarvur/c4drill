@@ -1003,7 +1003,7 @@ c4drill architecture.toml --no-colors           # author + kind colours off
 c4drill architecture.toml --no-styles           # author line styles off
 c4drill architecture.toml --no-length           # link length -> default spacing
 c4drill architecture.toml --no-rank             # link rank hints ignored
-c4drill architecture.toml --no-labels           # shape-only: no element label text
+c4drill architecture.toml --no-labels           # edge labels only: nodes/clusters/legend keep labels
 c4drill architecture.toml --plain --no-labels   # switches compose
 ```
 
@@ -1014,13 +1014,13 @@ Boundaries worth knowing:
   legend keeps its rows but loses its colour swatches. Under `--plain`
   alone kind colours survive (semantic), so `--plain --no-colors`
   removes them.
-- `--no-labels` suppresses label *text* at the graph layer (nodes
-  render as bare shapes; edges, wrapper and boundary clusters lose
-  their labels; the 🔍/📖 glyphs go with them) so layout re-flows
-  without label geometry — but colour/style semantics, cluster
-  structure, explore/reference URLs, and **the legend all stay**
-  (the legend is metadata governed by `properties.legend`). Applies to
-  every generation, including `--expanded`.
+- `--no-labels` suppresses *edge label text* only (the
+  `[technology] description` on arrows) — node, cluster (wrapper and
+  boundary included), and legend labels all keep their text, so
+  identity never disappears. Colour/style semantics, cluster
+  structure, explore/reference URLs also stay (the legend is metadata
+  governed by `properties.legend`). Applies to every generation,
+  including `--expanded`.
 - `properties.edges` is tied to `--plain` only; no granular switch
   touches it.
 - `--plain` remains the exact union of all the concerns above.

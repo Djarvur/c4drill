@@ -1240,7 +1240,7 @@ Flags:
   -h, --help                help for c4drill
       --label-ratio float   Width:height ratio for unit labels (default: 1.6, credit card proportions)
       --no-colors           Suppress colouring only: author unit/link colors and kind-derived edge colours
-      --no-labels           Suppress all element label text: shape-only nodes/edges/clusters so layout re-flows (legend stays)
+      --no-labels           Suppress edge label text only: nodes, clusters and the legend keep their labels
       --no-length           Suppress link spacing only: link length no longer sets minlen
       --no-rank             Suppress ranking hints only: link rank reverse/equal ignored
       --no-styles           Suppress line styles only: author unit/link style overrides
@@ -1297,12 +1297,11 @@ Flags:
      default spacing applies.
   ** `--no-rank` — link `rank` (`reverse`/`equal`) is ignored; edges
      rank forward with no endpoint swap or constraint suppression.
-  ** `--no-labels` — all *element* label text is suppressed at the
-     graph layer: nodes render as bare shapes, edges and clusters
-     (wrapper and boundary included) carry no label, so dot lays out
-     without label geometry. Colour/style semantics, cluster
-     structure, and explore/reference URL attributes survive. The 🔍
-     and 📖 glyphs are label content and go too. Pinned boundaries:
+  ** `--no-labels` — *edge* label text only is suppressed: the
+     `[technology] description` text on arrows is dropped while node,
+     cluster (wrapper and boundary included), and legend labels all
+     keep their text. Colour/style semantics, cluster structure, and
+     explore/reference URL attributes survive. Pinned boundaries:
      the legend *stays* (it is metadata governed by
      `properties.legend`, not an element label), and it applies to
      all generations including `--expanded`.

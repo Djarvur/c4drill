@@ -403,17 +403,10 @@ func createNode(
 }
 
 // setNodeLabel builds and sets the label for a node: the HTML label by
-// default, the plain-text record label under plain (--plain, PLAIN-03), and
-// an EMPTY label under --no-labels (LBL-01) — the node renders as its bare
-// ShapeForType shape. The NoLabels branch also covers hand-built graphs whose
-// Label is non-nil (defense-in-depth).
+// default, the plain-text record label under plain (--plain, PLAIN-03).
+// BUG-2 (edge-labels-only --no-labels): node labels are NOT suppressed by
+// --no-labels — only edge label text is.
 func setNodeLabel(cn *cgraph.Node, node *graph.Node, opts graph.RenderOpts) {
-	if opts.NoLabels {
-		cn.SetLabel("")
-
-		return
-	}
-
 	if node.Label == nil {
 		return
 	}
@@ -519,13 +512,12 @@ func createCluster(
 }
 
 // setClusterLabel builds and sets the label for a cluster: the HTML label by
-// default, the plain-text record label under plain (--plain, PLAIN-03), and
-// an EMPTY label under --no-labels (LBL-01 — cluster structure survives, label
-// text does not). The drill-down URL emission is structural and survives both.
+// default, the plain-text record label under plain (--plain, PLAIN-03).
+// BUG-2 (edge-labels-only --no-labels): cluster labels are NOT suppressed by
+// --no-labels — only edge label text is. The drill-down URL emission is
+// structural and survives both.
 func setClusterLabel(subgraph *cgraph.Graph, cluster *graph.Cluster, opts graph.RenderOpts) {
-	if opts.NoLabels {
-		subgraph.SetLabel("")
-	} else if cluster.Label == nil {
+	if cluster.Label == nil {
 		return
 	} else if opts.Plain {
 		// Plain mode routes cluster labels to the record path (labels.go) —
@@ -633,9 +625,11 @@ func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge,
 	e.SetFontName("Helvetica")
 
 	if opts.NoLabels {
-		// LBL-01: no edge label under --no-labels — an explicit empty label
-		// keeps the emitted DOT clean even for hand-built graphs carrying a
-		// non-nil Label (defense-in-depth; the builder already drops it).
+		// BUG-2 (edge-labels-only --no-labels): no edge label under
+		// --no-labels — an explicit empty label keeps the emitted DOT clean
+		// even for hand-built graphs carrying a non-nil Label
+		// (defense-in-depth; the builder already drops it). Edge labels are
+		// the ONLY thing the flag suppresses.
 		e.SetLabel("")
 	} else if edge.Label != nil {
 		// Plain mode (PLAIN-03) emits the label as plain text via SetLabel —

@@ -1,11 +1,11 @@
 digraph "" {
-	graph [bb="0,0,156.11,276.8",
+	graph [bb="0,0,252.11,382.6",
 		fontname=Helvetica,
 		fontsize=14,
 		label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0" ALIGN="CENTER"><TR><TD COLSPAN="1" ALIGN="CENTER"><FONT POINT-SIZE="14">Plain Mode Fixture</FONT></TD></TR></TABLE>>,
 		labelloc=t,
 		lheight=0.23,
-		lp="78.057,264.4",
+		lp="126.06,370.2",
 		lwidth=1.62,
 		rankdir=TB,
 		splines=false
@@ -27,36 +27,39 @@ digraph "" {
 		penwidth=1.0
 	];
 	subgraph cluster___content {
-		graph [bb="8,8,94,241",
+		graph [bb="8,8,190,349.8",
 			label="",
 			style=invis
 		];
 		subgraph cluster_orders {
-			graph [bb="16,181,86,233",
+			graph [bb="16,192.2,182,341.8",
 				color="#073B6F",
 				fontcolor="#073B6F",
 				fontname=Helvetica,
-				label="",
+				label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>Order Context</b></td></tr><tr align="center"><td valign="middle"><i>[Event Sourcing]</i></td></tr><tr align="center"><td valign="top">Orders bounded<BR/>context</td></tr></table>>,
+				lheight=0.93,
+				lp="99,304.2",
+				lwidth=1.43,
 				style="rounded,dashed"
 			];
 			"orders.api"	[color="#073B6F",
 				fontcolor="#073B6F",
-				height=0.5,
-				label="",
-				pos="51,207",
+				height=0.81111,
+				label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>Order API</b></td></tr><tr align="center"><td valign="middle"><i>[Go]</i></td></tr><tr align="center"><td valign="top">Order processing API</td></tr></table>>,
+				pos="99,229.4",
 				shape=box,
 				style=rounded,
-				width=0.75];
+				width=2.081];
 		}
 		admin	[color="#F9A825",
 			fillcolor="#FFF9C4",
 			fontcolor="#073B6F",
-			height=0.5,
-			label="",
-			pos="51,34",
+			height=0.81111,
+			label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td rowspan="2" valign="middle"><font POINT-SIZE="32">&#x1F464;</font></td><td valign="bottom"><b>Administrator</b></td></tr><tr align="center"><td valign="top">System<BR/>administrator</td></tr></table>>,
+			pos="99,45.2",
 			shape=box,
 			style="rounded,filled",
-			width=0.75];
+			width=1.991];
 		"orders.api" -> admin	[key="admin_to_orders.api",
 			color="#1565C0",
 			dir=back,
@@ -64,7 +67,7 @@ digraph "" {
 			label="",
 			minlen=3,
 			penwidth=1,
-			pos="s,46.661,188.81 45.783,177.66 43.486,141.86 43.77,82.42 46.634,52.464",
+			pos="s,93.885,199.81 93.288,188.7 91.726,154.21 91.927,105.58 93.89,74.721",
 			style=dashed];
 		"orders.api" -> admin	[key="orders.api_to_admin",
 			color="#2E7D32",
@@ -72,12 +75,12 @@ digraph "" {
 			fontcolor="#2E7D32",
 			label="",
 			penwidth=1,
-			pos="e,55.366,52.464 55.339,188.81 58.219,159.04 58.519,99.62 56.238,63.677",
+			pos="e,104.11,74.721 104.11,199.81 106.08,168.92 106.27,120.29 104.71,85.821",
 			style=solid];
 	}
 	__c4drill_legend	[height=1.25,
 		label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" COLOR="#666666"><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#666666"><B>legend</B></FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#073B6F">person</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#073B6F">system</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#073B6F">box</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#2E7D32">read</FONT></TD></TR></TABLE>>,
-		pos="129,207",
+		pos="225,229.4",
 		shape=plaintext,
 		width=0.75315];
 }

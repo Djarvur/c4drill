@@ -1073,7 +1073,10 @@ func TestConverter_PlainKeepsLegendAndKindColour(t *testing.T) {
 // URLs, cluster URLs) and the LEGEND (metadata, exempt) survive.
 //
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
-func TestNoLabelsDOTEmitsNoLabelMarkup(t *testing.T) {
+// TestNoLabelsDOTEmitsEdgeLabelSuppressionOnly: under NoLabels the converter
+// suppresses ONLY edge label text — the edge emits label="" while node and
+// cluster labels render at full HTML fidelity and the legend stays.
+func TestNoLabelsDOTEmitsEdgeLabelSuppressionOnly(t *testing.T) {
 	g := &graph.Graph{
 		Direction: "TB",
 		Opts:      graph.RenderOpts{NoLabels: true},
@@ -1124,18 +1127,16 @@ func TestNoLabelsDOTEmitsNoLabelMarkup(t *testing.T) {
 
 	dot := string(output)
 
-	// No element label TEXT anywhere. The legend (sanctioned HTML) is the
-	// ONLY label=<...> HTML label in this graph (no nav/title here); the
-	// count-based check is robust to the engine's HTML case canonicalization.
-	assert.Equal(t, 1, strings.Count(dot, "label=<"),
-		"only the legend may carry an HTML label under NoLabels")
-	assert.NotContains(t, dot, "<table",
-		"no element-level lowercase HTML tables (sanctioned markup is uppercase)")
-	assert.NotContains(t, dot, "Order Service", "node name text must be suppressed")
-	assert.NotContains(t, dot, "Kubernetes", "node technology text must be suppressed")
-	assert.NotContains(t, dot, "Order Context", "cluster name text must be suppressed")
+	// Edge label suppressed: the edge statement carries an explicit empty
+	// label and none of the edge label text.
 	assert.NotContains(t, dot, "gRPC", "edge technology text must be suppressed")
 	assert.NotContains(t, dot, "streams order events", "edge description text must be suppressed")
+
+	// Node and cluster labels SURVIVE at full fidelity (quick 260831-01u
+	// BUG-2 — edge labels are the only suppression).
+	assert.Contains(t, dot, "Order Service", "node name text survives")
+	assert.Contains(t, dot, "Kubernetes", "node technology text survives")
+	assert.Contains(t, dot, "Order Context", "cluster name text survives")
 
 	// Structural attributes survive.
 	assert.Contains(t, dot, "https://docs.example.com", "node URL is structural and survives")

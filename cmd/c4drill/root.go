@@ -110,7 +110,7 @@ Output:
 	cmd.PersistentFlags().BoolVar(&noRank, "no-rank", false,
 		"Suppress ranking hints only: link rank reverse/equal ignored")
 	cmd.PersistentFlags().BoolVar(&noLabels, "no-labels", false,
-		"Suppress all element label text: shape-only nodes/edges/clusters so layout re-flows (legend stays)")
+		"Suppress edge label text only: nodes, clusters and the legend keep their labels")
 	cmd.PersistentFlags().Float64Var(&labelRatio, "label-ratio", 0,
 		"Width:height ratio for unit labels (default: 1.6, credit card proportions)")
 
