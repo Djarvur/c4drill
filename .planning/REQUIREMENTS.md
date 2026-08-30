@@ -17,7 +17,7 @@ Source: user request 2026-08-30. Clarifying questions were auto-skipped (yolo mo
 
 ### CTX — Nesting context on non-expanded views
 
-- [ ] **CTX-01**: Every depicted element on a non-expanded generated diagram renders inside its complete chain of ancestor containers — all intermediate containers render as nested containers around it, so no element ever appears outside its hierarchy.
+- [x] **CTX-01**: Every depicted element on a non-expanded generated diagram renders inside its complete chain of ancestor containers — all intermediate containers render as nested containers around it, so no element ever appears outside its hierarchy.
 - [x] **CTX-02**: A link whose target is a deeply nested unit keeps the target's context: the target renders within its container chain and the edge terminates at the target inside those containers, instead of silently collapsing to an anonymous top-level ancestor.
 - [x] **CTX-03**: Expanded units render depicted nested elements through their intermediate containers (nested clusters, not flat lists), so the nesting picture on a non-expanded scheme matches the drill-down views — end-to-end recognizability across all diagram levels.
 
@@ -30,7 +30,7 @@ Source: user request 2026-08-30. Clarifying questions were auto-skipped (yolo mo
 
 ### BC — Backward compatibility
 
-- [ ] **BC-01**: Without `--plain`, models that do not exercise the new nesting-context scenarios render unchanged; canonicalDOT goldens are re-baselined only for documented CTX deltas; the full test suite stays green.
+- [x] **BC-01**: Without `--plain`, models that do not exercise the new nesting-context scenarios render unchanged; canonicalDOT goldens are re-baselined only for documented CTX deltas; the full test suite stays green.
 
 ### DOC — Documentation and skills
 
@@ -58,14 +58,14 @@ Source: user request 2026-08-30. Clarifying questions were auto-skipped (yolo mo
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CTX-01 | Phase 37 | Pending |
+| CTX-01 | Phase 37 | Complete |
 | CTX-02 | Phase 37 | Complete |
 | CTX-03 | Phase 37 | Complete |
 | PLAIN-01 | Phase 37 | Complete |
 | PLAIN-02 | Phase 37 | Complete |
 | PLAIN-03 | Phase 37 | Complete |
 | PLAIN-04 | Phase 37 | Complete |
-| BC-01 | Phase 37 | Pending |
+| BC-01 | Phase 37 | Complete |
 | DOC-01 | Phase 37 | Pending |
 | DOC-02 | Phase 37 | Pending |
 | DOC-03 | Phase 37 | Pending |
