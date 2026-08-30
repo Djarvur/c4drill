@@ -601,10 +601,18 @@ func setClusterAttribute(subgraph *cgraph.Graph, attr, value string) error {
 
 // createEdge creates a cgraph.Edge from a graph.Edge.
 func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge, opts graph.RenderOpts) error {
-	// Include description in edge name to allow multiple edges between same nodes
-	edgeName := edge.Source + "_to_" + edge.Target
-	if edge.Label != nil && edge.Label.Description != "" {
-		edgeName += "_" + sanitizeForName(edge.Label.Description)
+	// BUG-3 (flag-invariant edge identity): use the builder-assigned unique
+	// name verbatim — model-derived, sanitized, flag-independent — so
+	// CreateEdgeByName's find-or-create can never silently merge two builder
+	// edges whose label content was suppressed by a formatting flag
+	// (threats T-Q1-01/T-Q1-02). Hand-built graphs without a Name fall back
+	// to the legacy label-derived construction.
+	edgeName := edge.Name
+	if edgeName == "" {
+		edgeName = edge.Source + "_to_" + edge.Target
+		if edge.Label != nil && edge.Label.Description != "" {
+			edgeName += "_" + sanitizeForName(edge.Label.Description)
+		}
 	}
 
 	// rank="reverse" (RANK-01): flip layout ranking by swapping the endpoints

@@ -109,6 +109,15 @@ type Edge struct {
 	Source string
 	// Target is the target node ID.
 	Target string
+	// Name is the unique, model-derived, flag-independent cgraph edge
+	// identifier assigned by the builder (quick 260831-01u BUG-3):
+	// "{source}_to_{target}_{n}" with a per-(source, target) sequence number
+	// from the PRE-dedup link walk, sanitized to [A-Za-z0-9_]. The converter
+	// uses it verbatim as the cgraph edge name so every builder Edge maps to
+	// its own drawn edge regardless of which flags suppressed which
+	// attributes (empty for hand-built graphs — the renderer falls back to
+	// its legacy name construction).
+	Name string
 	// Label contains edge label information.
 	Label *EdgeLabel
 	// Style is the line style (solid, dashed, dotted).

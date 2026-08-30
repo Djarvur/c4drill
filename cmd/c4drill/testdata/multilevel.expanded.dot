@@ -105,7 +105,7 @@ digraph "" {
 						shape=box,
 						style=rounded,
 						width=1.8647];
-					"mainSystem.sshAuth.pam.common" -> "mainSystem.sshAuth.pam.cypAuth"	[key="mainSystem.sshAuth.pam.common_to_mainSystem.sshAuth.pam.cypAuth",
+					"mainSystem.sshAuth.pam.common" -> "mainSystem.sshAuth.pam.cypAuth"	[key=mainSystem_sshAuth_pam_common_to_mainSystem_sshAuth_pam_cypAuth_1,
 						color="#78A8D8",
 						fontcolor="#78A8D8",
 						fontsize=10,
@@ -121,7 +121,7 @@ digraph "" {
 						shape=box,
 						style=rounded,
 						width=1.433];
-					"mainSystem.sshAuth.pam.common" -> "mainSystem.sshAuth.pam.unix"	[key="mainSystem.sshAuth.pam.common_to_mainSystem.sshAuth.pam.unix",
+					"mainSystem.sshAuth.pam.common" -> "mainSystem.sshAuth.pam.unix"	[key=mainSystem_sshAuth_pam_common_to_mainSystem_sshAuth_pam_unix_1,
 						color="#78A8D8",
 						fontcolor="#78A8D8",
 						fontsize=10,
@@ -213,7 +213,7 @@ digraph "" {
 						shape=cylinder,
 						style=rounded,
 						width=2.2104];
-					"mainSystem.sshAuth.authProxy.sessionManager" -> "mainSystem.sshAuth.authProxy.sessionDb"	[key="mainSystem.sshAuth.authProxy.sessionManager_to_mainSystem.sshAuth.authProxy.sessionDb",
+					"mainSystem.sshAuth.authProxy.sessionManager" -> "mainSystem.sshAuth.authProxy.sessionDb"	[key=mainSystem_sshAuth_authProxy_sessionManager_to_mainSystem_sshAuth_authProxy_sessionDb_1,
 						color="#78A8D8",
 						fontcolor="#78A8D8",
 						fontsize=10,
@@ -221,7 +221,7 @@ digraph "" {
 						penwidth=2,
 						pos="e,890.14,1771.9 853.8,1896.3 862.84,1865.3 875.94,1820.5 886.62,1784",
 						style=solid];
-					"mainSystem.sshAuth.authProxy.sessionManager" -> "mainSystem.sshAuth.authProxy.localIDPClients.sessionAPI"	[key="mainSystem.sshAuth.authProxy.sessionManager_to_mainSystem.sshAuth.authProxy.localIDPClients.sessionAPI",
+					"mainSystem.sshAuth.authProxy.sessionManager" -> "mainSystem.sshAuth.authProxy.localIDPClients.sessionAPI"	[key=mainSystem_sshAuth_authProxy_sessionManager_to_mainSystem_sshAuth_authProxy_localIDPClients_sessionAPI_1,
 						color="#78A8D8",
 						fontcolor="#78A8D8",
 						fontsize=10,
@@ -231,7 +231,7 @@ digraph "" {
 						pos="e,823.27,1614.4 823.08,1896.1 820.15,1889.1 817.58,1881.7 816,1874.5 795.39,1780.4 806.05,1753.5 816,1657.7 817.04,1647.7 818.74,\
 1637.1 820.69,1627",
 						style=solid];
-					"mainSystem.sshAuth.authProxy.varlinkAPIs.authVarlinkAPI" -> "mainSystem.sshAuth.authProxy.localIDPClients.authAPI"	[key="mainSystem.sshAuth.authProxy.varlinkAPIs.authVarlinkAPI_to_mainSystem.sshAuth.authProxy.localIDPClients.authAPI",
+					"mainSystem.sshAuth.authProxy.varlinkAPIs.authVarlinkAPI" -> "mainSystem.sshAuth.authProxy.localIDPClients.authAPI"	[key=mainSystem_sshAuth_authProxy_varlinkAPIs_authVarlinkAPI_to_mainSystem_sshAuth_authProxy_localIDPClients_authAPI_1,
 						color="#78A8D8",
 						fontcolor="#78A8D8",
 						fontsize=10,
@@ -239,7 +239,7 @@ digraph "" {
 						penwidth=2,
 						pos="e,997.78,1617.3 1003.8,2029.9 1003.4,1958.2 1002.2,1795 999,1657.7 998.79,1648.8 998.51,1639.4 998.21,1630.1",
 						style=solid];
-					"mainSystem.sshAuth.authProxy.varlinkAPIs.sessionVarlinkAPI" -> "mainSystem.sshAuth.authProxy.sessionManager"	[key="mainSystem.sshAuth.authProxy.varlinkAPIs.sessionVarlinkAPI_to_mainSystem.sshAuth.authProxy.sessionManager",
+					"mainSystem.sshAuth.authProxy.varlinkAPIs.sessionVarlinkAPI" -> "mainSystem.sshAuth.authProxy.sessionManager"	[key=mainSystem_sshAuth_authProxy_varlinkAPIs_sessionVarlinkAPI_to_mainSystem_sshAuth_authProxy_sessionManager_1,
 						color="#78A8D8",
 						fontcolor="#78A8D8",
 						fontsize=10,
@@ -264,7 +264,7 @@ digraph "" {
 					shape=box,
 					style=rounded,
 					width=1.7895];
-				"mainSystem.sshAuth.sshd" -> "mainSystem.sshAuth.nss"	[key="mainSystem.sshAuth.sshd_to_mainSystem.sshAuth.nss",
+				"mainSystem.sshAuth.sshd" -> "mainSystem.sshAuth.nss"	[key=mainSystem_sshAuth_sshd_to_mainSystem_sshAuth_nss_1,
 					color="#3C7FC0",
 					fontcolor="#3C7FC0",
 					fontsize=10,
@@ -272,7 +272,7 @@ digraph "" {
 					penwidth=2,
 					pos="e,628.52,2106 648.45,2456.1 646.72,2453.6 645.21,2451 644,2448.3 595.16,2339.1 612.09,2193.9 626.05,2118.7",
 					style=solid];
-				"mainSystem.sshAuth.sshd" -> "mainSystem.sshAuth.pam.common"	[key="mainSystem.sshAuth.sshd_to_mainSystem.sshAuth.pam.common",
+				"mainSystem.sshAuth.sshd" -> "mainSystem.sshAuth.pam.common"	[key=mainSystem_sshAuth_sshd_to_mainSystem_sshAuth_pam_common_1,
 					color="#3C7FC0",
 					fontcolor="#3C7FC0",
 					fontsize=10,
@@ -288,7 +288,7 @@ digraph "" {
 					shape=cylinder,
 					style=rounded,
 					width=2.2865];
-				"mainSystem.sshAuth.nss" -> "mainSystem.sshAuth.etcStorage"	[key="mainSystem.sshAuth.nss_to_mainSystem.sshAuth.etcStorage",
+				"mainSystem.sshAuth.nss" -> "mainSystem.sshAuth.etcStorage"	[key=mainSystem_sshAuth_nss_to_mainSystem_sshAuth_etcStorage_1,
 					color="#3C7FC0",
 					fontcolor="#3C7FC0",
 					fontsize=10,
@@ -296,7 +296,7 @@ digraph "" {
 					penwidth=2,
 					pos="e,575.12,1986.2 608.6,2029.9 600.56,2019.4 591.6,2007.7 582.79,1996.2",
 					style=solid];
-				"mainSystem.sshAuth.nss" -> "mainSystem.sshAuth.systemd.userdbd"	[key="mainSystem.sshAuth.nss_to_mainSystem.sshAuth.systemd.userdbd",
+				"mainSystem.sshAuth.nss" -> "mainSystem.sshAuth.systemd.userdbd"	[key=mainSystem_sshAuth_nss_to_mainSystem_sshAuth_systemd_userdbd_1,
 					color="#3C7FC0",
 					fontcolor="#3C7FC0",
 					fontsize=10,
@@ -305,7 +305,7 @@ digraph "" {
 					pos="e,512.98,1766.3 647.08,2030.1 655.93,1988.8 662.49,1922.6 627,1882.5 613.54,1867.3 598.41,1886.5 582,1874.5 550.04,1851.2 529.55,\
 1811.4 517.18,1778.2",
 					style=solid];
-				"mainSystem.sshAuth.pam.cypAuth" -> "mainSystem.sshAuth.authProxy.varlinkAPIs.authVarlinkAPI"	[key="mainSystem.sshAuth.pam.cypAuth_to_mainSystem.sshAuth.authProxy.varlinkAPIs.authVarlinkAPI",
+				"mainSystem.sshAuth.pam.cypAuth" -> "mainSystem.sshAuth.authProxy.varlinkAPIs.authVarlinkAPI"	[key=mainSystem_sshAuth_pam_cypAuth_to_mainSystem_sshAuth_authProxy_varlinkAPIs_authVarlinkAPI_1,
 					color="#78A8D8",
 					fontcolor="#78A8D8",
 					fontsize=10,
@@ -313,7 +313,7 @@ digraph "" {
 					penwidth=2,
 					pos="e,990.02,2105.9 911.45,2212.1 918.83,2207.4 925.88,2202.2 932,2196.3 954.9,2174.4 972.58,2143.6 984.69,2117.8",
 					style=solid];
-				"mainSystem.sshAuth.pam.cypAuth" -> "mainSystem.sshAuth.authProxy.varlinkAPIs.sessionVarlinkAPI"	[key="mainSystem.sshAuth.pam.cypAuth_to_mainSystem.sshAuth.authProxy.varlinkAPIs.sessionVarlinkAPI",
+				"mainSystem.sshAuth.pam.cypAuth" -> "mainSystem.sshAuth.authProxy.varlinkAPIs.sessionVarlinkAPI"	[key=mainSystem_sshAuth_pam_cypAuth_to_mainSystem_sshAuth_authProxy_varlinkAPIs_sessionVarlinkAPI_1,
 					color="#78A8D8",
 					fontcolor="#78A8D8",
 					fontsize=10,
@@ -321,7 +321,7 @@ digraph "" {
 					penwidth=2,
 					pos="e,845,2114.1 845,2212.2 845,2189 845,2155.6 845,2126.9",
 					style=solid];
-				"mainSystem.sshAuth.pam.unix" -> "mainSystem.sshAuth.nss"	[key="mainSystem.sshAuth.pam.unix_to_mainSystem.sshAuth.nss",
+				"mainSystem.sshAuth.pam.unix" -> "mainSystem.sshAuth.nss"	[key=mainSystem_sshAuth_pam_unix_to_mainSystem_sshAuth_nss_1,
 					color="#78A8D8",
 					fontcolor="#78A8D8",
 					fontsize=10,
@@ -329,7 +329,7 @@ digraph "" {
 					penwidth=2,
 					pos="e,652.34,2106 696.28,2212.2 685.67,2186.5 669.83,2148.2 657.19,2117.7",
 					style=solid];
-				"mainSystem.sshAuth.authProxy.sessionManager" -> "mainSystem.sshAuth.systemd.logind"	[key="mainSystem.sshAuth.authProxy.sessionManager_to_mainSystem.sshAuth.systemd.logind",
+				"mainSystem.sshAuth.authProxy.sessionManager" -> "mainSystem.sshAuth.systemd.logind"	[key=mainSystem_sshAuth_authProxy_sessionManager_to_mainSystem_sshAuth_systemd_logind_1,
 					color="#78A8D8",
 					fontcolor="#78A8D8",
 					fontsize=10,
@@ -393,7 +393,7 @@ digraph "" {
 					shape=cylinder,
 					style=rounded,
 					width=2.2215];
-				"mainSystem.localIDP.sessionManager" -> "mainSystem.localIDP.sessionManagerDb"	[key="mainSystem.localIDP.sessionManager_to_mainSystem.localIDP.sessionManagerDb",
+				"mainSystem.localIDP.sessionManager" -> "mainSystem.localIDP.sessionManagerDb"	[key=mainSystem_localIDP_sessionManager_to_mainSystem_localIDP_sessionManagerDb_1,
 					color="#78A8D8",
 					fontcolor="#78A8D8",
 					fontsize=10,
@@ -409,7 +409,7 @@ digraph "" {
 					shape=box,
 					style=rounded,
 					width=1.9299];
-				"mainSystem.localIDP.sessionManager" -> "mainSystem.localIDP.authProvidersClient"	[key="mainSystem.localIDP.sessionManager_to_mainSystem.localIDP.authProvidersClient",
+				"mainSystem.localIDP.sessionManager" -> "mainSystem.localIDP.authProvidersClient"	[key=mainSystem_localIDP_sessionManager_to_mainSystem_localIDP_authProvidersClient_1,
 					color="#78A8D8",
 					fontcolor="#78A8D8",
 					fontsize=10,
@@ -425,7 +425,7 @@ digraph "" {
 					shape=box,
 					style=rounded,
 					width=1.8328];
-				"mainSystem.localIDP.authProvidersClient" -> "mainSystem.localIDP.authValidateScenario"	[key="mainSystem.localIDP.authProvidersClient_to_mainSystem.localIDP.authValidateScenario",
+				"mainSystem.localIDP.authProvidersClient" -> "mainSystem.localIDP.authValidateScenario"	[key=mainSystem_localIDP_authProvidersClient_to_mainSystem_localIDP_authValidateScenario_1,
 					color="#78A8D8",
 					fontcolor="#78A8D8",
 					fontsize=10,
@@ -433,7 +433,7 @@ digraph "" {
 					penwidth=2,
 					pos="e,872.89,1049 871.93,1092.7 872.15,1082.9 872.38,1072.2 872.61,1061.6",
 					style=solid];
-				"mainSystem.localIDP.grpcAPIs.authAPI" -> "mainSystem.localIDP.sessionManager"	[key="mainSystem.localIDP.grpcAPIs.authAPI_to_mainSystem.localIDP.sessionManager",
+				"mainSystem.localIDP.grpcAPIs.authAPI" -> "mainSystem.localIDP.sessionManager"	[key=mainSystem_localIDP_grpcAPIs_authAPI_to_mainSystem_localIDP_sessionManager_1,
 					color="#78A8D8",
 					fontcolor="#78A8D8",
 					fontsize=10,
@@ -441,7 +441,7 @@ digraph "" {
 					penwidth=2,
 					pos="e,742.34,1299.6 720.68,1334.9 725.49,1327.1 730.62,1318.7 735.63,1310.6",
 					style=solid];
-				"mainSystem.localIDP.grpcAPIs.sessionAPI" -> "mainSystem.localIDP.sessionManager"	[key="mainSystem.localIDP.grpcAPIs.sessionAPI_to_mainSystem.localIDP.sessionManager",
+				"mainSystem.localIDP.grpcAPIs.sessionAPI" -> "mainSystem.localIDP.sessionManager"	[key=mainSystem_localIDP_grpcAPIs_sessionAPI_to_mainSystem_localIDP_sessionManager_1,
 					color="#78A8D8",
 					fontcolor="#78A8D8",
 					fontsize=10,
@@ -488,7 +488,7 @@ digraph "" {
 						shape=box,
 						style=rounded,
 						width=2.1786];
-					"mainSystem.storages.localStorage.authAPI" -> "mainSystem.storages.localStorage.provider"	[key="mainSystem.storages.localStorage.authAPI_to_mainSystem.storages.localStorage.provider",
+					"mainSystem.storages.localStorage.authAPI" -> "mainSystem.storages.localStorage.provider"	[key=mainSystem_storages_localStorage_authAPI_to_mainSystem_storages_localStorage_provider_1,
 						color="#78A8D8",
 						fontcolor="#78A8D8",
 						fontsize=10,
@@ -504,7 +504,7 @@ digraph "" {
 						shape=box,
 						style=rounded,
 						width=2.2641];
-					"mainSystem.storages.localStorage.lookupAPI" -> "mainSystem.storages.localStorage.provider"	[key="mainSystem.storages.localStorage.lookupAPI_to_mainSystem.storages.localStorage.provider",
+					"mainSystem.storages.localStorage.lookupAPI" -> "mainSystem.storages.localStorage.provider"	[key=mainSystem_storages_localStorage_lookupAPI_to_mainSystem_storages_localStorage_provider_1,
 						color="#78A8D8",
 						fontcolor="#78A8D8",
 						fontsize=10,
@@ -520,7 +520,7 @@ digraph "" {
 						shape=box,
 						style=rounded,
 						width=1.7889];
-					"mainSystem.storages.localStorage.managementAPI" -> "mainSystem.storages.localStorage.provider"	[key="mainSystem.storages.localStorage.managementAPI_to_mainSystem.storages.localStorage.provider",
+					"mainSystem.storages.localStorage.managementAPI" -> "mainSystem.storages.localStorage.provider"	[key=mainSystem_storages_localStorage_managementAPI_to_mainSystem_storages_localStorage_provider_1,
 						color="#78A8D8",
 						fontcolor="#78A8D8",
 						fontsize=10,
@@ -536,7 +536,7 @@ digraph "" {
 						shape=cylinder,
 						style=rounded,
 						width=2.1026];
-					"mainSystem.storages.localStorage.provider" -> "mainSystem.storages.localStorage.storage"	[key="mainSystem.storages.localStorage.provider_to_mainSystem.storages.localStorage.storage",
+					"mainSystem.storages.localStorage.provider" -> "mainSystem.storages.localStorage.storage"	[key=mainSystem_storages_localStorage_provider_to_mainSystem_storages_localStorage_storage_1,
 						color="#78A8D8",
 						fontcolor="#78A8D8",
 						fontsize=10,
@@ -600,7 +600,7 @@ digraph "" {
 						shape=box,
 						style=rounded,
 						width=1.9192];
-					"mainSystem.storages.externalStorage.sessionManager" -> "mainSystem.storages.externalStorage.client"	[key="mainSystem.storages.externalStorage.sessionManager_to_mainSystem.storages.externalStorage.client",
+					"mainSystem.storages.externalStorage.sessionManager" -> "mainSystem.storages.externalStorage.client"	[key=mainSystem_storages_externalStorage_sessionManager_to_mainSystem_storages_externalStorage_client_1,
 						color="#78A8D8",
 						fontcolor="#78A8D8",
 						fontsize=10,
@@ -616,7 +616,7 @@ digraph "" {
 						shape=cylinder,
 						style=rounded,
 						width=2.6754];
-					"mainSystem.storages.externalStorage.sessionManager" -> "mainSystem.storages.externalStorage.sessionStorage"	[key="mainSystem.storages.externalStorage.sessionManager_to_mainSystem.storages.externalStorage.sessionStorage",
+					"mainSystem.storages.externalStorage.sessionManager" -> "mainSystem.storages.externalStorage.sessionStorage"	[key=mainSystem_storages_externalStorage_sessionManager_to_mainSystem_storages_externalStorage_sessionStorage_1,
 						color="#78A8D8",
 						fontcolor="#78A8D8",
 						fontsize=10,
@@ -632,7 +632,7 @@ digraph "" {
 						shape=box,
 						style=rounded,
 						width=2.3728];
-					"mainSystem.storages.externalStorage.sessionManager" -> "mainSystem.storages.externalStorage.dynamicUserManager"	[key="mainSystem.storages.externalStorage.sessionManager_to_mainSystem.storages.externalStorage.dynamicUserManager",
+					"mainSystem.storages.externalStorage.sessionManager" -> "mainSystem.storages.externalStorage.dynamicUserManager"	[key=mainSystem_storages_externalStorage_sessionManager_to_mainSystem_storages_externalStorage_dynamicUserManager_1,
 						color="#78A8D8",
 						fontcolor="#78A8D8",
 						fontsize=10,
@@ -648,7 +648,7 @@ digraph "" {
 						shape=cylinder,
 						style=rounded,
 						width=2.7729];
-					"mainSystem.storages.externalStorage.dynamicUserManager" -> "mainSystem.storages.externalStorage.dynamicUserDb"	[key="mainSystem.storages.externalStorage.dynamicUserManager_to_mainSystem.storages.externalStorage.dynamicUserDb",
+					"mainSystem.storages.externalStorage.dynamicUserManager" -> "mainSystem.storages.externalStorage.dynamicUserDb"	[key=mainSystem_storages_externalStorage_dynamicUserManager_to_mainSystem_storages_externalStorage_dynamicUserDb_1,
 						color="#78A8D8",
 						fontcolor="#78A8D8",
 						fontsize=10,
@@ -656,7 +656,7 @@ digraph "" {
 						penwidth=2,
 						pos="e,243.55,297.2 239.66,341.76 240.55,331.62 241.49,320.77 242.44,309.91",
 						style=solid];
-					"mainSystem.storages.externalStorage.varlinkAPIs.authAPI" -> "mainSystem.storages.externalStorage.sessionManager"	[key="mainSystem.storages.externalStorage.varlinkAPIs.authAPI_to_mainSystem.storages.externalStorage.sessionManager",
+					"mainSystem.storages.externalStorage.varlinkAPIs.authAPI" -> "mainSystem.storages.externalStorage.sessionManager"	[key=mainSystem_storages_externalStorage_varlinkAPIs_authAPI_to_mainSystem_storages_externalStorage_sessionManager_1,
 						color="#78A8D8",
 						fontcolor="#78A8D8",
 						fontsize=10,
@@ -664,7 +664,7 @@ digraph "" {
 						penwidth=2,
 						pos="e,526.86,607.25 579.56,710.66 565.21,682.5 547.57,647.89 532.65,618.6",
 						style=solid];
-					"mainSystem.storages.externalStorage.varlinkAPIs.lookupAPI" -> "mainSystem.storages.externalStorage.dynamicUserManager"	[key="mainSystem.storages.externalStorage.varlinkAPIs.lookupAPI_to_mainSystem.storages.externalStorage.dynamicUserManager",
+					"mainSystem.storages.externalStorage.varlinkAPIs.lookupAPI" -> "mainSystem.storages.externalStorage.dynamicUserManager"	[key=mainSystem_storages_externalStorage_varlinkAPIs_lookupAPI_to_mainSystem_storages_externalStorage_dynamicUserManager_1,
 						color="#78A8D8",
 						fontcolor="#78A8D8",
 						fontsize=10,
@@ -712,7 +712,7 @@ digraph "" {
 						shape=cylinder,
 						style=rounded,
 						width=2.232];
-					"mainSystem.authModules.otp.settingsAPI" -> "mainSystem.authModules.otp.db"	[key="mainSystem.authModules.otp.settingsAPI_to_mainSystem.authModules.otp.db",
+					"mainSystem.authModules.otp.settingsAPI" -> "mainSystem.authModules.otp.db"	[key=mainSystem_authModules_otp_settingsAPI_to_mainSystem_authModules_otp_db_1,
 						color="#78A8D8",
 						fontcolor="#78A8D8",
 						fontsize=10,
@@ -728,7 +728,7 @@ digraph "" {
 						shape=box,
 						style=rounded,
 						width=1.93];
-					"mainSystem.authModules.otp.validateAPI" -> "mainSystem.authModules.otp.db"	[key="mainSystem.authModules.otp.validateAPI_to_mainSystem.authModules.otp.db",
+					"mainSystem.authModules.otp.validateAPI" -> "mainSystem.authModules.otp.db"	[key=mainSystem_authModules_otp_validateAPI_to_mainSystem_authModules_otp_db_1,
 						color="#78A8D8",
 						fontcolor="#78A8D8",
 						fontsize=10,
@@ -764,7 +764,7 @@ digraph "" {
 						shape=cylinder,
 						style=rounded,
 						width=1.8328];
-					"mainSystem.authModules.userlock.settingsAPI" -> "mainSystem.authModules.userlock.db"	[key="mainSystem.authModules.userlock.settingsAPI_to_mainSystem.authModules.userlock.db",
+					"mainSystem.authModules.userlock.settingsAPI" -> "mainSystem.authModules.userlock.db"	[key=mainSystem_authModules_userlock_settingsAPI_to_mainSystem_authModules_userlock_db_1,
 						color="#78A8D8",
 						fontcolor="#78A8D8",
 						fontsize=10,
@@ -780,7 +780,7 @@ digraph "" {
 						shape=box,
 						style=rounded,
 						width=1.919];
-					"mainSystem.authModules.userlock.validateAPI" -> "mainSystem.authModules.userlock.db"	[key="mainSystem.authModules.userlock.validateAPI_to_mainSystem.authModules.userlock.db",
+					"mainSystem.authModules.userlock.validateAPI" -> "mainSystem.authModules.userlock.db"	[key=mainSystem_authModules_userlock_validateAPI_to_mainSystem_authModules_userlock_db_1,
 						color="#78A8D8",
 						fontcolor="#78A8D8",
 						fontsize=10,
@@ -806,7 +806,7 @@ digraph "" {
 				shape=box,
 				style=rounded,
 				width=2.054];
-			"mainSystem.rbac" -> "mainSystem.dacService_lookupAPI"	[key="mainSystem.rbac_to_mainSystem.dacService_lookupAPI",
+			"mainSystem.rbac" -> "mainSystem.dacService_lookupAPI"	[key=mainSystem_rbac_to_mainSystem_dacService_lookupAPI_1,
 				color="#3C7FC0",
 				fontcolor="#3C7FC0",
 				fontsize=10,
@@ -814,7 +814,7 @@ digraph "" {
 				penwidth=2,
 				pos="e,1033,1043.6 1033,1098.6 1033,1085.7 1033,1070.8 1033,1056.5",
 				style=solid];
-			"mainSystem.dacService_lookupAPI" -> "mainSystem.storages.localStorage.lookupAPI"	[key="mainSystem.dacService_lookupAPI_to_mainSystem.storages.localStorage.lookupAPI",
+			"mainSystem.dacService_lookupAPI" -> "mainSystem.storages.localStorage.lookupAPI"	[key=mainSystem_dacService_lookupAPI_to_mainSystem_storages_localStorage_lookupAPI_1,
 				color="#3C7FC0",
 				fontcolor="#3C7FC0",
 				fontsize=10,
@@ -822,7 +822,7 @@ digraph "" {
 				penwidth=2,
 				pos="e,975.97,809.05 1019.2,950.74 1007.8,913.59 991.78,860.91 979.73,821.39",
 				style=solid];
-			"mainSystem.dacService_lookupAPI" -> "mainSystem.storages.externalStorage.varlinkAPIs.lookupAPI"	[key="mainSystem.dacService_lookupAPI_to_mainSystem.storages.externalStorage.varlinkAPIs.lookupAPI",
+			"mainSystem.dacService_lookupAPI" -> "mainSystem.storages.externalStorage.varlinkAPIs.lookupAPI"	[key=mainSystem_dacService_lookupAPI_to_mainSystem_storages_externalStorage_varlinkAPIs_lookupAPI_1,
 				color="#3C7FC0",
 				fontcolor="#3C7FC0",
 				fontsize=10,
@@ -839,7 +839,7 @@ digraph "" {
 				shape=box,
 				style=rounded,
 				width=2.2642];
-			"mainSystem.dacProxy" -> "mainSystem.dacService_lookupAPI"	[key="mainSystem.dacProxy_to_mainSystem.dacService_lookupAPI",
+			"mainSystem.dacProxy" -> "mainSystem.dacService_lookupAPI"	[key=mainSystem_dacProxy_to_mainSystem_dacService_lookupAPI_1,
 				color="#3C7FC0",
 				fontcolor="#3C7FC0",
 				fontsize=10,
@@ -847,7 +847,7 @@ digraph "" {
 				penwidth=2,
 				pos="e,1107.1,1021.1 1410.6,1115.1 1333.4,1091.2 1204.8,1051.3 1119.4,1024.9",
 				style=solid];
-			"mainSystem.dacProxy" -> "mainSystem.storages.localStorage.managementAPI"	[key="mainSystem.dacProxy_to_mainSystem.storages.localStorage.managementAPI",
+			"mainSystem.dacProxy" -> "mainSystem.storages.localStorage.managementAPI"	[key=mainSystem_dacProxy_to_mainSystem_storages_localStorage_managementAPI_1,
 				color="#3C7FC0",
 				fontcolor="#3C7FC0",
 				fontsize=10,
@@ -855,7 +855,7 @@ digraph "" {
 				penwidth=2,
 				pos="e,1137.8,808.96 1435.7,1115.2 1375.8,1083.2 1262.9,1015.8 1195,929.5 1169.9,897.56 1152.5,854.99 1141.6,821.37",
 				style=solid];
-			"mainSystem.dacProxy" -> "mainSystem.authModules.otp.settingsAPI"	[key="mainSystem.dacProxy_to_mainSystem.authModules.otp.settingsAPI",
+			"mainSystem.dacProxy" -> "mainSystem.authModules.otp.settingsAPI"	[key=mainSystem_dacProxy_to_mainSystem_authModules_otp_settingsAPI_1,
 				color="#3C7FC0",
 				fontcolor="#3C7FC0",
 				fontsize=10,
@@ -863,7 +863,7 @@ digraph "" {
 				penwidth=2,
 				pos="e,1476,593.6 1476,1115.1 1476,1033.5 1476,727.65 1476,606.43",
 				style=solid];
-			"mainSystem.dacProxy" -> "mainSystem.authModules.userlock.settingsAPI"	[key="mainSystem.dacProxy_to_mainSystem.authModules.userlock.settingsAPI",
+			"mainSystem.dacProxy" -> "mainSystem.authModules.userlock.settingsAPI"	[key=mainSystem_dacProxy_to_mainSystem_authModules_userlock_settingsAPI_1,
 				color="#3C7FC0",
 				fontcolor="#3C7FC0",
 				fontsize=10,
@@ -871,7 +871,7 @@ digraph "" {
 				penwidth=2,
 				pos="e,1809.2,593.6 1488.5,1115.1 1538.9,1033.1 1728.7,724.55 1802.4,604.6",
 				style=solid];
-			"mainSystem.sshAuth.systemd.userdbd" -> "mainSystem.storages.localStorage.lookupAPI"	[key="mainSystem.sshAuth.systemd.userdbd_to_mainSystem.storages.localStorage.lookupAPI",
+			"mainSystem.sshAuth.systemd.userdbd" -> "mainSystem.storages.localStorage.lookupAPI"	[key=mainSystem_sshAuth_systemd_userdbd_to_mainSystem_storages_localStorage_lookupAPI_1,
 				color="#78A8D8",
 				fontcolor="#78A8D8",
 				fontsize=10,
@@ -880,7 +880,7 @@ digraph "" {
 				pos="e,952.46,808.9 507.69,1673.7 516.8,1607.8 532,1481.8 532,1373.9 532,1373.9 532,1373.9 532,1135.4 532,1040.5 534.17,991.74 612,937.5 \
 635.8,920.91 848.24,944.63 873,929.5 911.91,905.73 935.26,858.67 948.39,821.2",
 				style=solid];
-			"mainSystem.sshAuth.systemd.userdbd" -> "mainSystem.storages.externalStorage.varlinkAPIs.lookupAPI"	[key="mainSystem.sshAuth.systemd.userdbd_to_mainSystem.storages.externalStorage.varlinkAPIs.lookupAPI",
+			"mainSystem.sshAuth.systemd.userdbd" -> "mainSystem.storages.externalStorage.varlinkAPIs.lookupAPI"	[key=mainSystem_sshAuth_systemd_userdbd_to_mainSystem_storages_externalStorage_varlinkAPIs_lookupAPI_1,
 				color="#78A8D8",
 				fontcolor="#78A8D8",
 				fontsize=10,
@@ -888,7 +888,7 @@ digraph "" {
 				penwidth=2,
 				pos="e,441.49,803.37 491.94,1673.8 479.59,1608 459,1482.1 459,1373.9 459,1373.9 459,1373.9 459,1135.4 459,1021 448.82,887.08 442.63,816.26",
 				style=solid];
-			"mainSystem.sshAuth.authProxy.localIDPClients.authAPI" -> "mainSystem.localIDP.grpcAPIs.authAPI"	[key="mainSystem.sshAuth.authProxy.localIDPClients.authAPI_to_mainSystem.localIDP.grpcAPIs.authAPI",
+			"mainSystem.sshAuth.authProxy.localIDPClients.authAPI" -> "mainSystem.localIDP.grpcAPIs.authAPI"	[key=mainSystem_sshAuth_authProxy_localIDPClients_authAPI_to_mainSystem_localIDP_grpcAPIs_authAPI_1,
 				color="#78A8D8",
 				fontcolor="#78A8D8",
 				fontsize=10,
@@ -897,7 +897,7 @@ digraph "" {
 				pos="e,710.03,1410.9 950.22,1524.7 938.05,1515.2 924.29,1506.4 910,1500.9 881.12,1489.8 797.55,1508.8 771,1492.9 744.78,1477.2 726.69,\
 1448.1 715.07,1422.6",
 				style=solid];
-			"mainSystem.sshAuth.authProxy.localIDPClients.sessionAPI" -> "mainSystem.localIDP.grpcAPIs.sessionAPI"	[key="mainSystem.sshAuth.authProxy.localIDPClients.sessionAPI_to_mainSystem.localIDP.grpcAPIs.sessionAPI",
+			"mainSystem.sshAuth.authProxy.localIDPClients.sessionAPI" -> "mainSystem.localIDP.grpcAPIs.sessionAPI"	[key=mainSystem_sshAuth_authProxy_localIDPClients_sessionAPI_to_mainSystem_localIDP_grpcAPIs_sessionAPI_1,
 				color="#78A8D8",
 				fontcolor="#78A8D8",
 				fontsize=10,
@@ -905,7 +905,7 @@ digraph "" {
 				penwidth=2,
 				pos="e,851.05,1410.7 838.56,1527.4 841.83,1496.8 846.26,1455.5 849.7,1423.4",
 				style=solid];
-			"mainSystem.localIDP.authValidateScenario" -> "mainSystem.authModules.otp.validateAPI"	[key="mainSystem.localIDP.authValidateScenario_to_mainSystem.authModules.otp.validateAPI",
+			"mainSystem.localIDP.authValidateScenario" -> "mainSystem.authModules.otp.validateAPI"	[key=mainSystem_localIDP_authValidateScenario_to_mainSystem_authModules_otp_validateAPI_1,
 				color="#78A8D8",
 				fontcolor="#78A8D8",
 				fontsize=10,
@@ -915,7 +915,7 @@ digraph "" {
 				pos="e,1303.3,593.41 928.42,945.15 933.45,942.15 938.67,939.53 944,937.5 970.91,927.25 1180.5,947.46 1203,929.5 1300.7,851.51 1307.5,\
 688.66 1304,606.37",
 				style=solid];
-			"mainSystem.localIDP.authValidateScenario" -> "mainSystem.authModules.userlock.validateAPI"	[key="mainSystem.localIDP.authValidateScenario_to_mainSystem.authModules.userlock.validateAPI",
+			"mainSystem.localIDP.authValidateScenario" -> "mainSystem.authModules.userlock.validateAPI"	[key=mainSystem_localIDP_authValidateScenario_to_mainSystem_authModules_userlock_validateAPI_1,
 				color="#78A8D8",
 				fontcolor="#78A8D8",
 				fontsize=10,
@@ -925,7 +925,7 @@ digraph "" {
 				pos="e,1643.6,601.69 928.41,945.12 933.44,942.13 938.66,939.52 944,937.5 976.54,925.2 1227.6,948.07 1257,929.5 1352.4,869.25 1277,764 \
 1372,703.1 1391.1,690.86 1556.6,706.77 1576,695.1 1606,677.07 1626.1,643.34 1638.7,613.67",
 				style=solid];
-			"mainSystem.localIDP.authProvidersClient" -> "mainSystem.storages.localStorage.authAPI"	[key="mainSystem.localIDP.authProvidersClient_to_mainSystem.storages.localStorage.authAPI",
+			"mainSystem.localIDP.authProvidersClient" -> "mainSystem.storages.localStorage.authAPI"	[key=mainSystem_localIDP_authProvidersClient_to_mainSystem_storages_localStorage_authAPI_1,
 				color="#78A8D8",
 				fontcolor="#78A8D8",
 				fontsize=10,
@@ -934,7 +934,7 @@ digraph "" {
 				penwidth=2,
 				pos="e,780.26,825.97 826.22,1092.7 815.32,1079.7 805.06,1064.6 799,1048.7 773.19,980.99 773.85,897.38 779.02,838.81",
 				style=solid];
-			"mainSystem.localIDP.authProvidersClient" -> "mainSystem.storages.externalStorage.varlinkAPIs.authAPI"	[key="mainSystem.localIDP.authProvidersClient_to_mainSystem.storages.externalStorage.varlinkAPIs.authAPI",
+			"mainSystem.localIDP.authProvidersClient" -> "mainSystem.storages.externalStorage.varlinkAPIs.authAPI"	[key=mainSystem_localIDP_authProvidersClient_to_mainSystem_storages_externalStorage_varlinkAPIs_authAPI_1,
 				color="#78A8D8",
 				fontcolor="#78A8D8",
 				fontsize=10,
@@ -942,7 +942,7 @@ digraph "" {
 				penwidth=2,
 				pos="e,632.31,820.18 817.65,1092.8 802.64,1079.5 786.9,1064.3 774,1048.7 717.61,980.71 668.23,891.47 638.08,831.72",
 				style=solid];
-			"mainSystem.localIDP.grpcAPIs.authAPI" -> "mainSystem.rbac"	[key="mainSystem.localIDP.grpcAPIs.authAPI_to_mainSystem.rbac",
+			"mainSystem.localIDP.grpcAPIs.authAPI" -> "mainSystem.rbac"	[key=mainSystem_localIDP_grpcAPIs_authAPI_to_mainSystem_rbac_1,
 				color="#78A8D8",
 				fontcolor="#78A8D8",
 				fontsize=10,
@@ -960,7 +960,7 @@ digraph "" {
 			shape=box,
 			style=rounded,
 			width=1.4183];
-		actorA -> "mainSystem.localIDP.grpcAPIs.authAPI"	[key="actorA_to_mainSystem.localIDP.grpcAPIs.authAPI",
+		actorA -> "mainSystem.localIDP.grpcAPIs.authAPI"	[key=actorA_to_mainSystem_localIDP_grpcAPIs_authAPI_1,
 			color="#8A8A8A",
 			fontcolor="#8A8A8A",
 			fontsize=10,
@@ -968,7 +968,7 @@ digraph "" {
 			penwidth=2,
 			pos="e,633.51,1393.9 118.37,1553.9 229.11,1519.5 490.84,1438.2 621.3,1397.7",
 			style=solid];
-		actorA -> "mainSystem.localIDP.grpcAPIs.sessionAPI"	[key="actorA_to_mainSystem.localIDP.grpcAPIs.sessionAPI",
+		actorA -> "mainSystem.localIDP.grpcAPIs.sessionAPI"	[key=actorA_to_mainSystem_localIDP_grpcAPIs_sessionAPI_1,
 			color="#8A8A8A",
 			fontcolor="#8A8A8A",
 			fontsize=10,
@@ -984,7 +984,7 @@ digraph "" {
 			shape=box,
 			style=rounded,
 			width=1.4183];
-		actorB -> "mainSystem.sshAuth.sshd"	[key="actorB_to_mainSystem.sshAuth.sshd",
+		actorB -> "mainSystem.sshAuth.sshd"	[key=actorB_to_mainSystem_sshAuth_sshd_1,
 			color="#8A8A8A",
 			fontcolor="#8A8A8A",
 			fontsize=10,
@@ -1000,7 +1000,7 @@ digraph "" {
 			shape=box,
 			style=rounded,
 			width=1.4183];
-		actorC -> "mainSystem.rbac"	[key="actorC_to_mainSystem.rbac",
+		actorC -> "mainSystem.rbac"	[key=actorC_to_mainSystem_rbac_1,
 			color="#8A8A8A",
 			fontcolor="#8A8A8A",
 			fontsize=10,
@@ -1008,7 +1008,7 @@ digraph "" {
 			penwidth=2,
 			pos="e,1092.7,1174.5 1951.6,1559.9 1892.8,1547.6 1794.1,1524.4 1713,1492.9 1480.6,1402.6 1224.6,1254.3 1103.7,1181.1",
 			style=solid];
-		actorC -> "mainSystem.dacProxy"	[key="actorC_to_mainSystem.dacProxy",
+		actorC -> "mainSystem.dacProxy"	[key=actorC_to_mainSystem_dacProxy_1,
 			color="#8A8A8A",
 			fontcolor="#8A8A8A",
 			fontsize=10,
@@ -1016,7 +1016,7 @@ digraph "" {
 			penwidth=2,
 			pos="e,1500.5,1157.5 1975.4,1547.3 1886.6,1474.4 1608.4,1246.1 1510.5,1165.7",
 			style=solid];
-		actorC -> "mainSystem.localIDP.grpcAPIs.sessionAPI"	[key="actorC_to_mainSystem.localIDP.grpcAPIs.sessionAPI",
+		actorC -> "mainSystem.localIDP.grpcAPIs.sessionAPI"	[key=actorC_to_mainSystem_localIDP_grpcAPIs_sessionAPI_1,
 			color="#8A8A8A",
 			fontcolor="#8A8A8A",
 			fontsize=10,
@@ -1033,7 +1033,7 @@ digraph "" {
 			shape=box,
 			style=rounded,
 			width=1.4217];
-		"mainSystem.storages.externalStorage.client" -> externalSys	[key="mainSystem.storages.externalStorage.client_to_externalSys",
+		"mainSystem.storages.externalStorage.client" -> externalSys	[key=mainSystem_storages_externalStorage_client_to_externalSys_1,
 			color="#78A8D8",
 			fontcolor="#78A8D8",
 			fontsize=10,

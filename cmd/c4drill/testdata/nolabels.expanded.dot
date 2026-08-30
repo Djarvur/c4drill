@@ -60,7 +60,7 @@ digraph "" {
 			shape=box,
 			style="rounded,filled",
 			width=1.991];
-		"orders.api" -> admin	[key="admin_to_orders.api",
+		"orders.api" -> admin	[key=admin_to_orders_api_1,
 			color="#1565C0",
 			dir=back,
 			fontcolor="#1565C0",
@@ -69,7 +69,7 @@ digraph "" {
 			penwidth=2,
 			pos="s,93.885,199.81 93.208,186.89 91.734,152.52 91.961,105.04 93.89,74.721",
 			style=dashed];
-		"orders.api" -> admin	[key="orders.api_to_admin",
+		"orders.api" -> admin	[key=orders_api_to_admin_1,
 			color="#2E7D32",
 			constraint=false,
 			fontcolor="#2E7D32",

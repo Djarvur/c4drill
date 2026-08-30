@@ -1311,11 +1311,13 @@ func TestEdgeTopologyFlagInvariant(t *testing.T) {
 
 					// The canonical merge semantics decide the exact counts:
 					// expanded mode draws every parallel link separately
-					// (COMPAT-02) — 5 builder edges, mirror deduped — while
-					// the resolved C1 view collapses the pair (D-01). The
-					// same-description collapse on the pre-fix converter
-					// breaks the expanded count (5 -> 4).
-					wantCount := 5
+					// (COMPAT-02 v1.7 semantics — including the mirror
+					// linkFrom, 6 edges), while the resolved C1 view
+					// collapses the pair and dedupes the mirror (D-01/WR-02,
+					// 1 edge). The same-description collapse on the pre-fix
+					// converter broke the expanded count (6 -> 5) and
+					// --no-labels collapsed it further.
+					wantCount := 6
 					if gen.name == "C1 view" {
 						wantCount = 1
 					}

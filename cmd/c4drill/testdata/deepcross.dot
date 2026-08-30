@@ -76,7 +76,7 @@ digraph "" {
 				shape=box,
 				style=rounded,
 				width=1.7351];
-			"actors.identity.tokenApi" -> "actors.audit"	[key="actors.identity.tokenApi_to_actors.audit_Appends_audit_events",
+			"actors.identity.tokenApi" -> "actors.audit"	[key=actors_identity_tokenApi_to_actors_audit_1,
 				color="#78A8D8",
 				fontcolor="#78A8D8",
 				fontsize=10,
@@ -161,7 +161,7 @@ digraph "" {
 			shape=box,
 			style=rounded,
 			width=1.613];
-		webUser -> "actors.identity.sessionMgr"	[key="webUser_to_actors.identity.sessionMgr_Manages_web_session",
+		webUser -> "actors.identity.sessionMgr"	[key=webUser_to_actors_identity_sessionMgr_1,
 			color="#8A8A8A",
 			fontcolor="#8A8A8A",
 			fontsize=10,
@@ -178,7 +178,7 @@ digraph "" {
 			shape=box,
 			style=rounded,
 			width=1.3319];
-		mobileUser -> "actors.identity.tokenApi"	[key="mobileUser_to_actors.identity.tokenApi_Requests_tokens",
+		mobileUser -> "actors.identity.tokenApi"	[key=mobileUser_to_actors_identity_tokenApi_1,
 			color="#8A8A8A",
 			fontcolor="#8A8A8A",
 			fontsize=10,
@@ -203,7 +203,7 @@ digraph "" {
 			shape=box,
 			style=rounded,
 			width=1.6813];
-		metricsScraper -> "yic.pipeline.store.warehouse"	[key="metricsScraper_to_yic.pipeline.store.warehouse_Reads_aggregates",
+		metricsScraper -> "yic.pipeline.store.warehouse"	[key=metricsScraper_to_yic_pipeline_store_warehouse_1,
 			color="#8A8A8A",
 			fontcolor="#8A8A8A",
 			fontsize=10,
@@ -212,7 +212,7 @@ digraph "" {
 			penwidth=1,
 			pos="e,394.45,192.42 414.46,419.17 410.66,376.08 400.74,263.69 395.45,203.69",
 			style=solid];
-		"actors.audit" -> "yic.pipeline.ingest.api"	[key="actors.audit_to_yic.pipeline.ingest.api_Ships_audit_batches",
+		"actors.audit" -> "yic.pipeline.ingest.api"	[key=actors_audit_to_yic_pipeline_ingest_api_1,
 			color="#3C7FC0",
 			fontcolor="#3C7FC0",
 			fontsize=10,
@@ -222,7 +222,7 @@ digraph "" {
 			pos="e,238.98,201.34 194.19,416.45 187.26,411.7 181.1,405.89 176.72,398.8 171.12,389.72 174.76,385.29 176.72,374.8 187.64,316.3 214.28,\
 253.1 234.1,211.45",
 			style=solid];
-		"yic.pipeline.ingest.api" -> adminCli	[key="yic.pipeline.ingest.api_to_adminCli_Feeds_ingest_metrics",
+		"yic.pipeline.ingest.api" -> adminCli	[key=yic_pipeline_ingest_api_to_adminCli_1,
 			color="#78A8D8",
 			fontcolor="#78A8D8",
 			fontsize=10,

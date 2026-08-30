@@ -977,6 +977,12 @@ func buildEdges(v *view.View) []*Edge {
 	edges := make([]*Edge, 0)
 	seen := make(map[string]bool) // Track processed links
 
+	// BUG-3 (flag-invariant edge identity): per-(source, target) sequence
+	// counters over the PRE-dedup link walk — every drawn edge gets a unique
+	// cgraph name "{source}_to_{target}_{n}" so the renderer can never merge
+	// two builder edges, whichever flags suppressed which attributes.
+	nameCounters := make(map[string]int)
+
 	// Count contributing links per pair (D-05) before the edge loop so
 	// collapsed pairs (2+) can be thickened (D-04).
 	pairCounts := countPairMultiplicity(v)
@@ -1002,15 +1008,44 @@ func buildEdges(v *view.View) []*Edge {
 		}
 
 		// Process outgoing links
-		outEdges := processOutgoingLinks(v, path, outLinks, seen, pairCounts, pairAggs)
+		outEdges := processOutgoingLinks(v, path, outLinks, seen, pairCounts, pairAggs, nameCounters)
 		edges = append(edges, outEdges...)
 
 		// Process incoming links (linkFrom)
-		inEdges := processIncomingLinks(v, path, inLinks, seen, pairCounts, pairAggs)
+		inEdges := processIncomingLinks(v, path, inLinks, seen, pairCounts, pairAggs, nameCounters)
 		edges = append(edges, inEdges...)
 	}
 
 	return edges
+}
+
+// sanitizeEdgeName converts a path segment to a safe cgraph identifier
+// ([A-Za-z0-9_], dots and everything else become underscores) — the builder
+// mirror of the renderer's sanitizeForName, so author-controlled unit paths
+// never flow raw into cgraph names (threat T-Q1-01).
+func sanitizeEdgeName(s string) string {
+	var result strings.Builder
+
+	for _, r := range s {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
+			result.WriteRune(r)
+		} else {
+			result.WriteRune('_')
+		}
+	}
+
+	return result.String()
+}
+
+// assignEdgeName allocates the edge's unique cgraph name from the per-pair
+// sequence counter (BUG-3). The counter advances for EVERY pre-dedup link —
+// survivors keep identities anchored to the model, not to dedup outcomes.
+func assignEdgeName(nameCounters map[string]int, source, target string) string {
+	key := source + "->" + target
+
+	nameCounters[key]++
+
+	return sanitizeEdgeName(source) + "_to_" + sanitizeEdgeName(target) + "_" + strconv.Itoa(nameCounters[key])
 }
 
 // countPairMultiplicity counts how many contributing links land on each
@@ -1250,6 +1285,7 @@ func processOutgoingLinks(
 	seen map[string]bool,
 	pairCounts map[string]int,
 	pairAggs map[string]*pairAggregate,
+	nameCounters map[string]int,
 ) []*Edge {
 	edges := make([]*Edge, 0)
 	sourceEntry := v.Units[path] // Get source entry for color lookup
@@ -1260,7 +1296,10 @@ func processOutgoingLinks(
 		}
 
 		// D-01/D-02: pair-only dedup key in resolved views; expanded mode
-		// keeps the v1.7 technology+description key (COMPAT-02).
+		// keeps the v1.7 technology+description key (COMPAT-02). The key is
+		// computed purely from model data BEFORE any format-disabling flag is
+		// consulted — the BUG-3 invariant: flags never change merge outcomes
+		// or edge topology, only styling.
 		edgeKey := path + "->" + link.Peer
 		if v.AllExpanded {
 			edgeKey += ":" + link.Technology + ":" + link.Description
@@ -1274,6 +1313,10 @@ func processOutgoingLinks(
 		}
 
 		edge := createEdge(path, link.Peer, link, sourceEntry, penWidth, renderOptsFromView(v))
+
+		// BUG-3: unique, flag-independent cgraph identity from the pre-dedup
+		// walk — every builder Edge maps to its own drawn edge.
+		edge.Name = assignEdgeName(nameCounters, path, link.Peer)
 
 		if markSeen(seen, edgeKey) {
 			// AGG-01..03: collapsed pairs override the surviving edge's
@@ -1297,6 +1340,7 @@ func processIncomingLinks(
 	seen map[string]bool,
 	pairCounts map[string]int,
 	pairAggs map[string]*pairAggregate,
+	nameCounters map[string]int,
 ) []*Edge {
 	edges := make([]*Edge, 0)
 
@@ -1306,7 +1350,10 @@ func processIncomingLinks(
 		}
 
 		// D-01/D-02: pair-only dedup key in resolved views; expanded mode
-		// keeps the v1.7 technology+description key (COMPAT-02).
+		// keeps the v1.7 technology+description key (COMPAT-02). The key is
+		// computed purely from model data BEFORE any format-disabling flag is
+		// consulted — the BUG-3 invariant: flags never change merge outcomes
+		// or edge topology, only styling.
 		edgeKey := link.Peer + "->" + path
 		if v.AllExpanded {
 			edgeKey += ":" + link.Technology + ":" + link.Description
@@ -1321,6 +1368,10 @@ func processIncomingLinks(
 
 		sourceEntry := v.Units[link.Peer] // Source is link.Peer for incoming links
 		edge := createEdge(link.Peer, path, link, sourceEntry, penWidth, renderOptsFromView(v))
+
+		// BUG-3: unique, flag-independent cgraph identity from the pre-dedup
+		// walk — every builder Edge maps to its own drawn edge.
+		edge.Name = assignEdgeName(nameCounters, link.Peer, path)
 
 		if markSeen(seen, edgeKey) {
 			if !v.AllExpanded && pairCounts[edgeKey] >= 2 {

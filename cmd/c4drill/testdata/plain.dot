@@ -55,7 +55,7 @@ digraph "" {
 			shape=box,
 			style=rounded,
 			width=3.6443];
-		admin -> "orders.api"	[key="admin_to_orders.api_Manages_the_orders_platform",
+		admin -> "orders.api"	[key=admin_to_orders_api_1,
 			color="#073B6F",
 			fontcolor="#073B6F",
 			fontsize=10,
@@ -64,7 +64,7 @@ digraph "" {
 			penwidth=1,
 			pos="e,101.68,60.419 94.409,157.3 57.991,145.88 28.611,127.93 47.045,100.8 57.865,84.877 73.827,73.341 91.268,64.982",
 			style=solid];
-		"orders.api" -> admin	[key="orders.api_to_admin_Streams_order_events",
+		"orders.api" -> admin	[key=orders_api_to_admin_1,
 			color="#2E7D32",
 			fontcolor="#2E7D32",
 			fontsize=10,
