@@ -4297,18 +4297,16 @@ func TestSwitchCombination(t *testing.T) {
 	assert.False(t, e.NoConstraint)
 }
 
-// ---- Phase 38 LBL-01..03: --no-labels graph-layer label suppression ----
+// ---- quick 260831-01u BUG-2: --no-labels suppresses EDGE labels only ----
 //
-// Suppression happens at the GRAPH layer: under NoLabels the builder drops
-// label CONTENT before emission (nodes keep their ShapeForType default shape
-// with no label, edges keep no Label, clusters keep IDs/structure with no
-// label). The legend is metadata governed by properties.legend, NOT an element
-// label — it stays (LBL-03, planner pin). ExploreURL/ReferenceURL attributes
-// are structural and survive.
+// Re-baselined semantics (superseding the phase-38 LBL-01 all-labels pin):
+// under NoLabels the builder drops ONLY edge label content. Nodes, clusters
+// (wrapper, boundary, expanded, nested) and the legend keep their labels; the
+// legend was already exempt (LBL-03) and URL attributes are structural.
 
 // noLabelsModel builds a model with named/tech/description units, a collapsed
-// expanded box, a referenced unit and a kind link — everything --no-labels
-// must silence.
+// expanded box, a referenced unit and a kind link — the edge label is the one
+// thing --no-labels must silence.
 func noLabelsModel() *parser.Model {
 	return &parser.Model{
 		Properties: model.Properties{Name: "Test"},
@@ -4340,7 +4338,10 @@ func noLabelsModel() *parser.Model {
 	}
 }
 
-func TestNoLabelsNodesAreBareShapes(t *testing.T) {
+// TestNoLabelsNodesKeepFullLabels: under --no-labels NODE labels survive with
+// their full content (name, technology, description, glyphs) — the flag mutes
+// edge label text only.
+func TestNoLabelsNodesKeepFullLabels(t *testing.T) {
 	t.Parallel()
 
 	v := view.GenerateC1View(noLabelsModel())
@@ -4348,14 +4349,17 @@ func TestNoLabelsNodesAreBareShapes(t *testing.T) {
 	g := graph.BuildGraph(v)
 
 	app := nodeByID(t, g, "app")
-	assert.Nil(t, app.Label, "node label content must be dropped under NoLabels")
+	require.NotNil(t, app.Label, "node label content must SURVIVE NoLabels (edge labels only)")
+	assert.Equal(t, "Application 📖", app.Label.Name, "name incl. glyph retained")
+	assert.Equal(t, "Go", app.Label.Technology, "technology retained")
+	assert.Equal(t, "the main app", app.Label.Description, "description retained")
 	assert.Equal(t, graph.ShapeForType(model.TypeSystem), app.Shape,
 		"the unit's plain default shape (ShapeForType) is retained")
 	assert.Equal(t, "app", app.ID, "node ID retained")
 	assert.Equal(t, "https://docs.example.com/app", app.ReferenceURL,
 		"reference URL is structural and survives labels-off")
 
-	// Cluster-resident leaf nodes are bare too.
+	// Cluster-resident leaf nodes keep their labels too.
 	var api *graph.Node
 
 	for _, c := range collectClusterTree(g.Clusters) {
@@ -4367,7 +4371,8 @@ func TestNoLabelsNodesAreBareShapes(t *testing.T) {
 	}
 
 	require.NotNil(t, api, "expanded child node present")
-	assert.Nil(t, api.Label, "cluster child node label dropped under NoLabels")
+	require.NotNil(t, api.Label, "cluster child node label survives NoLabels")
+	assert.Equal(t, "API", api.Label.Name)
 	assert.Equal(t, graph.ShapeForType(model.TypeContainer), api.Shape)
 }
 
@@ -4384,7 +4389,10 @@ func TestNoLabelsEdgesHaveNoLabel(t *testing.T) {
 		"colour is not a label — kind colour semantics untouched")
 }
 
-func TestNoLabelsClustersUnlabelled(t *testing.T) {
+// TestNoLabelsClustersKeepLabels: under --no-labels every cluster kind —
+// wrapper, boundary, expanded, nested — keeps its label; edge labels are the
+// only suppression.
+func TestNoLabelsClustersKeepLabels(t *testing.T) {
 	t.Parallel()
 
 	m := wrapTestMultilevelModel(t)
@@ -4397,12 +4405,13 @@ func TestNoLabelsClustersUnlabelled(t *testing.T) {
 	require.NotEmpty(t, clusters, "cluster structure retained")
 
 	for _, c := range clusters {
-		assert.Nil(t, c.Label,
-			"cluster %s label content dropped under NoLabels", c.ID)
+		require.NotNil(t, c.Label,
+			"cluster %s label content SURVIVES NoLabels (edge labels only)", c.ID)
+		assert.NotEmpty(t, c.Label.Name, "cluster %s label has name text", c.ID)
 
 		for _, n := range c.Nodes {
-			assert.Nil(t, n.Label,
-				"node %s label content dropped under NoLabels", n.ID)
+			require.NotNil(t, n.Label,
+				"node %s label content SURVIVES NoLabels (edge labels only)", n.ID)
 		}
 	}
 
@@ -4421,7 +4430,7 @@ func TestNoLabelsClustersUnlabelled(t *testing.T) {
 	}
 
 	assert.True(t, foundBoundary, "expanded unit's boundary cluster retained")
-	assert.True(t, foundWrapMain, "wrapper cluster retained (structure only)")
+	assert.True(t, foundWrapMain, "wrapper cluster retained (labelled)")
 	assert.True(t, foundWrapStorages, "nested wrapper cluster retained")
 }
 
