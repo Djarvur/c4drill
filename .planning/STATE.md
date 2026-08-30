@@ -66,7 +66,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-See .planning/todos/pending/. (1 pending: fix --no-labels to suppress only edge labels — 2026-08-30)
+See .planning/todos/pending/. (2 pending: root diagram bloated by ancestor wrapping [regression v1.22.0/b2447da]; --no-labels should suppress only edge labels — 2026-08-30)
 
 ### Blockers/Concerns
 
