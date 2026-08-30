@@ -60,12 +60,25 @@ Filled during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (pending roadmap) | | |
+| WRAP-01 | Phase 38 | Pending |
+| WRAP-02 | Phase 38 | Pending |
+| WRAP-03 | Phase 38 | Pending |
+| KEY-01 | Phase 38 | Pending |
+| KEY-02 | Phase 38 | Pending |
+| KEY-03 | Phase 38 | Pending |
+| LBL-01 | Phase 38 | Pending |
+| LBL-02 | Phase 38 | Pending |
+| LBL-03 | Phase 38 | Pending |
+| BC-01 | Phase 38 | Pending |
+| DOC-01 | Phase 38 | Pending |
+| DOC-02 | Phase 38 | Pending |
+| DOC-03 | Phase 38 | Pending |
+| REL-01 | Phase 38 | Pending |
 
 **Coverage:**
 - v1 requirements: 13 total
-- Mapped to phases: 0
-- Unmapped: 13 ⚠️
+- Mapped to phases: 13
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-08-30*

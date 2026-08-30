@@ -10,7 +10,8 @@
 - ✅ **v1.11 Label Formatting Fixes** — Phase 34 (shipped 2026-08-10) → [archive](milestones/v1.11-ROADMAP.md)
 - ✅ **v1.12 C4D DSL Alternative** — Phase 35 (shipped 2026-08-17) → [archive](milestones/v1.12-ROADMAP.md)
 - ✅ **v1.13 Edge Semantics and Legend** — Phase 36 (shipped 2026-08-28) → [archive](milestones/v1.13-ROADMAP.md) — product release tag: v1.18.0
-- 🚧 **v1.14 Nesting Context and Plain Rendering** — Phase 37 (in progress) — product release tag: v1.21.0
+- ✅ **v1.14 Nesting Context and Plain Rendering** — Phase 37 (shipped 2026-08-30) — product release tag: v1.21.0
+- 🚧 **v1.15 Hierarchy Wrapping and Granular Keys** — Phase 38 (in progress) — product release tag: v1.22.0
 
 ## Phases
 
@@ -57,9 +58,9 @@ Full details: [milestones/v1.11-ROADMAP.md](milestones/v1.11-ROADMAP.md)
 <details>
 <summary>✅ v1.12 C4D DSL Alternative (Phase 35) — SHIPPED 2026-08-17</summary>
 
-**Goal:** Deliver the C4D format — a `.c4d` brace-block D2-inspired DSL with full TOML feature parity — parseable directly to `*parser.Model` and renderable through the unchanged pipeline, with bidirectional canonical-equivalent converters (`convert to-toml`/`to-c4d`), a gofmt-style comment-preserving formatter (`fmt`) for both formats, nested use (`[[unit.use]]` in TOML, `use` in blocks in C4D) and recursive template-instantiating-template expansion, plus full README/skill/example documentation.
+**Goal:** Deliver the C4D format — a `.c4d` brace-block D2-inspired alternative to TOML with full feature parity — parseable directly to `*parser.Model` and renderable through the unchanged pipeline, with bidirectional canonical-equivalent converters (`convert to-toml`/`to-c4d`), a gofmt-style comment-preserving formatter (`fmt`) for both formats, nested use and recursive template-instantiating-template expansion, plus full README/skill/example documentation.
 
-- [x] Phase 35: Add a simple DSL alternative to the TOML diagram definition (9/9 plans) — completed 2026-08-14
+- [x] Phase 35: C4D DSL alternative (9/9 plans) — completed 2026-08-14
 
 **Stats:** 1 phase, 9 plans, 25 tasks. Requirements D-01..D-35 satisfied. Verification: 24/24 truths (3 gap fixes at close). UAT: 12/12. Security: 30/30 threats closed (ASVS 1).
 
@@ -80,69 +81,60 @@ Full details: [milestones/v1.13-ROADMAP.md](milestones/v1.13-ROADMAP.md)
 
 </details>
 
-### 🚧 v1.14 Nesting Context and Plain Rendering (In Progress)
+<details>
+<summary>✅ v1.14 Nesting Context and Plain Rendering (Phase 37) — SHIPPED 2026-08-30</summary>
 
-**Milestone Goal:** Non-expanded diagrams preserve the full nesting context — every depicted element renders inside its complete chain of ancestor containers, deep-link targets keep their container context, and expanded units show nested clusters rather than flat lists, so the nesting picture is recognizable across all generated views — and a `--plain` CLI generation key renders every diagram with author-custom formatting ignored, for canonical default-styled output. Ships as product release **v1.21.0**.
+**Goal:** Non-expanded diagrams preserve the full nesting context — every depicted element renders inside its complete chain of ancestor containers, deep-link targets keep their container context, and expanded units show nested clusters rather than flat lists — and a `--plain` CLI key renders every diagram with author-custom formatting ignored. Shipped as v1.21.0.
 
-- [x] **Phase 37: Nesting Context and Plain Rendering** - Full ancestor chains on all non-expanded views, `--plain` formatting-ignoring generation key, backward-compat goldens, docs + release v1.21.0 (completed 2026-08-30)
+- [x] Phase 37: Nesting Context and Plain Rendering (7/7 plans) — completed 2026-08-30
+
+**Stats:** 1 phase, 7 plans. Requirements CTX-01..03, PLAIN-01..04, BC-01, DOC-01..03, REL-01 validated. Scoping note: boundary/sibling entries were kept top-level by an explicit v1.14 decision — reversed by user review 2026-08-30 and corrected in v1.15.
+
+</details>
+
+### 🚧 v1.15 Hierarchy Wrapping and Granular Keys (In Progress)
+
+**Milestone Goal:** Correct v1.14's scoping after user review — every depicted node on any generated view (regular, boundary, expanded) renders inside its complete ancestor-container chain so nothing hangs in the air (drawing containers only, never extra nodes); add granular CLI switches composing with `--plain`; add a dedicated key to disable labels entirely. Ships as product release **v1.22.0**.
+
+- [ ] **Phase 38: Hierarchy Wrapping and Granular Keys** - Boundary/sibling hierarchy wrapping (v1.14 scoping reversal), granular formatting switches composing with `--plain`, `--no-labels` label-suppression key, golden re-baseline, docs, release v1.22.0
 
 ## Phase Details
 
-### Phase 37: Nesting Context and Plain Rendering
+### Phase 37: Nesting Context and Plain Rendering *(SHIPPED 2026-08-30 — v1.21.0)*
 
-**Goal**: Non-expanded diagrams preserve the full nesting picture — every depicted element renders inside its complete chain of ancestor containers, links to deeply nested units keep the target's container context, and expanded units render nested clusters instead of flat lists so the nesting picture matches the drill-down views — and a `--plain` CLI key renders every generated diagram with author-custom formatting ignored, for canonical default-styled output. Ships as product release **v1.21.0**.
+**Goal**: Non-expanded diagrams preserve the full nesting picture and a `--plain` CLI key renders canonical default-styled output. 7 plans (37-01..37-07). Requirements: CTX-01..03, PLAIN-01..04, BC-01, DOC-01..03, REL-01. Landed: recursive cluster unfolding (buildNestedCluster), deep-link ancestor chains (Entry.UnfoldChain + ensureDeepLinkChain), cluster drill affordance (Cluster.ExploreURL), `--plain` threading (View.Plain/Graph.Plain + builder guards). Boundary/sibling entries deliberately kept top-level (v1.14 scoping decision — reversed by v1.15).
 
-**Depends on**: Phase 36 (v1.13 — plain mode must interact correctly with the v1.13 styling surface: unit colour/style/border are suppressed under `--plain`, while kind-derived edge colours and the legend stay)
+### Phase 38: Hierarchy Wrapping and Granular Keys
 
-**Requirements**: CTX-01, CTX-02, CTX-03, PLAIN-01, PLAIN-02, PLAIN-03, PLAIN-04, BC-01, DOC-01, DOC-02, DOC-03, REL-01
+**Goal**: Every depicted node on any generated view renders inside its complete ancestor-container chain — boundary and sibling entries included (reversing the v1.14 scoping decision), with only containers drawn and no extra nodes — and users gain fine-grained CLI control over formatting: individual switches suppress one formatting aspect each (composing with the master `--plain`), and a dedicated key omits all label text so routing distortion from labels disappears. Ships as product release **v1.22.0**.
+
+**Depends on**: Phase 37 (v1.14 — builds directly on buildNestedCluster, Entry.UnfoldChain/ensureDeepLinkChain, createExternalBoundaryNode/addResolvedBoundaryNode/resolveBoundaryByDivergence in internal/view/scope.go, and the --plain flag plumbing precedent in cmd/c4drill/root.go → View.Plain → Graph.Plain)
+
+**Requirements**: WRAP-01, WRAP-02, WRAP-03, KEY-01, KEY-02, KEY-03, LBL-01, LBL-02, LBL-03, BC-01, DOC-01, DOC-02, DOC-03, REL-01
 
 **Success Criteria** (what must be TRUE):
 
-  1. Full ancestor chains on non-expanded views: every depicted element on any non-expanded generated diagram renders inside its complete chain of ancestor containers — intermediate containers appear as nested containers around it, and no depicted element ever appears outside its hierarchy. *(CTX-01)*
-  2. Deep links keep target context: a link whose target is a deeply nested unit renders that target within its container chain, with the edge terminating at the target inside those containers — never silently collapsing to an anonymous top-level ancestor. *(CTX-02)*
-  3. Expanded units render nested clusters, matching drill-downs: depicted nested elements appear through their intermediate containers (nested clusters, not flat lists), so the nesting picture on a non-expanded scheme matches the drill-down views and is recognizable end-to-end across all diagram levels. *(CTX-03)*
-  4. `--plain` uniformly strips custom formatting, keeps semantics: `c4drill --plain` renders every generated file — the context diagram and all drill-down views, in svg/html/dot — with unit `color`/`style`/`border` fallen back to type-palette defaults, link `color`/`style` at defaults, `length`/`rank` ignored (default spacing, forward ranking), `properties.edges` ignored, and labels as plain text preserving name/technology/description content — while kind-derived edge colours and the legend remain. *(PLAIN-01, PLAIN-02, PLAIN-03, PLAIN-04)*
-  5. Nothing else changed, documented, released: without `--plain`, models that do not exercise the new nesting-context scenarios render unchanged (canonicalDOT goldens re-baselined only for documented CTX deltas; full test suite green); README.adoc documents both features (what is ignored, what deliberately stays), skill/SKILL.md and all plugin copies are synced, example fixtures demonstrate both features and render cleanly through the full pipeline; the milestone tags product release **v1.21.0**. *(BC-01, DOC-01, DOC-02, DOC-03, REL-01)*
+  1. Boundary and sibling nodes are wrapped: on any generated view (C1, C2/C3 drill-downs, expanded), a boundary or sibling entry with an in-model ancestor renders inside its complete chain of ancestor containers as nested clusters (box, system/container/component chains) — nothing depicted hangs in the air; entries with no in-model ancestor (fully external) stay top-level, and the depicted node set is unchanged from v1.14 (containers drawn only, locked by test). *(WRAP-01, WRAP-02, WRAP-03)*
+  2. Granular switches each suppress exactly one aspect: individual CLI switches independently restore defaults for colours (unit `color`/`border` fills + link `color`), styles (unit/link line and border styles), lengths (link `length`), and ranks (link `rank`); with no switch set, behavior is exactly v1.14; `--plain` output is byte/canonically identical to v1.14 (union of all switches — existing plain goldens stay green); the semantic-vs-custom boundary for kind-derived colours and the legend is pinned at planning and honoured. *(KEY-01, KEY-02, KEY-03)*
+  3. Every switch composes everywhere: each granular switch and the labels key works across every generation (C1, all drill-downs, `--expanded`) and every format (dot/svg/html), and composes with `--plain` and each other. *(KEY-03, LBL-02, LBL-03)*
+  4. Labels can be silenced: `--no-labels` renders all nodes and edges with shapes only — no label content — re-flowing layout without label-induced routing distortion, on drill-down AND `--expanded` generation alike; the legend's behavior under labels-off is pinned at planning and documented (default: legend stays — it is metadata, not an element label). *(LBL-01, LBL-03)*
+  5. Only the documented deltas, then shipped: without the new keys, output changes ONLY for the documented WRAP boundary-wrapping deltas (real golden re-baselining expected for models with cross-container links; KEY/LBL are opt-in with zero default-path change; full suite green); README.adoc documents wrapping + every key, skill/SKILL.md and all plugin copies are synced (CI `diff -r` parity), example fixtures demonstrate wrapping and the new keys and render cleanly; the milestone tags product release **v1.22.0**. *(BC-01, DOC-01, DOC-02, DOC-03, REL-01)*
 
-**Plans**: 7 plans in 6 waves
-Plans:
-**Wave 1**
-
-- [x] 37-01-PLAN.md — CTX-03: recursive clusters in buildCluster (expanded units render nested clusters, not flat lists)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 37-02-PLAN.md — CTX-02: deep-link ancestor-chain entries in C1/C2/C3 view resolution (true-target edges)
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 37-03-PLAN.md — PLAIN-01/02: --plain flag threading (View.Plain → Graph.Plain) + builder-level formatting suppression
-
-**Wave 4** *(blocked on Wave 3 completion)*
-
-- [x] 37-04-PLAN.md — PLAIN-03/04: plain-text labels in the renderer + E2E --plain goldens and uniformity across all outputs
-
-**Wave 5** *(blocked on Wave 4 completion)*
-
-- [x] 37-05-PLAN.md — CTX-01 invariant + ONE consolidated golden re-baseline (BC-01) + visual checkpoint
-- [x] 37-06-PLAN.md — DOC-01..03: README, skill sync (3 byte-identical copies), example fixtures
-
-**Wave 6** *(blocked on Wave 5 completion)*
-
-- [x] 37-07-PLAN.md — REL-01: tag and ship product release v1.21.0
+**Plans**: TBD
 
 **Notes** (from milestone context — phase research/codebase scan must pin exact gaps):
 
-- **Why one phase:** CTX (view semantics: `internal/view/scope.go` — GenerateC1View, visible subunits, boundary resolution; `internal/graph` cluster building) and PLAIN (CLI flag in `cmd/c4drill`, applied through the render pipeline) are largely disjoint in code but share canonicalDOT goldens and the same emission points; splitting would force cross-phase golden churn (single-phase precedent: v1.11, v1.12, v1.13 — STATE.md decision carry-forward).
-- **CTX scan targets:** the two known mechanisms losing nesting context today — C1 deep-link target collapse (target resolved to an anonymous top-level ancestor) and one-level expanded rendering (depicted nested elements as flat lists inside expanded clusters). Fix points expected in `internal/view/scope.go` + `internal/graph` cluster building.
-- **PLAIN suppression points:** unit styling at `applyNodeStyle`/`applyClusterStyle` (internal/render/converter.go), edge `color`/`style`/`length`/`rank` at edge emission, `properties.edges` in graph settings, label formatting in `internal/graph/labels.go` (plain-text label path; content preserved).
-- **Plain-mode boundary:** kind-derived edge colours and the legend STAY — they are semantic, not custom formatting; collapsed (non-depicted) subtrees are NOT restructured — container chains render only for DEPICTED elements (Out of Scope).
-- **BC-01 delta discipline (differs from v1.13):** `--plain` is opt-in, so there is NO universal output delta — only CTX's documented nesting deltas may re-baseline goldens; flat models must render unchanged; comparisons use canonicalDOT (DI-1, order-insensitive) via `internal/testutil/canonical`.
-- **TDD mode on** (config workflow.tdd_mode); docs + skill sync land inside the phase (v1.12/v1.13 precedent); REL-01 (tag v1.21.0) is the phase's final task, not a separate phase.
+- **Why one phase:** the last four milestones were each a single phase (shared packages and goldens); WRAP/KEY/LBL all converge on the same emission points (internal/view/scope.go, internal/graph builder, internal/render/converter.go, cmd/c4drill flags) and share canonicalDOT goldens — splitting would force cross-phase golden churn. No hard dependency boundary exists.
+- **WRAP fix points:** createExternalBoundaryNode, addResolvedBoundaryNode, resolveBoundaryByDivergence (internal/view/scope.go) — wrap ancestor chains via the v1.14 buildNestedCluster / UnfoldChain machinery; fully external entries (no in-model ancestor) stay top-level.
+- **KEY plumbing precedent:** v1.14's `--plain` (cmd/c4drill/root.go → View.Plain → Graph.Plain + builder guards); granular flags thread the same path. v1.14's deferred-items entry for granular flags is superseded — they are now in scope.
+- **LBL fix points:** render/converter.go label emission + graph label construction; labels affect routing, so suppression changes layout (expect its own visual deltas under the flag only).
+- **Golden discipline:** real re-baselining expected THIS time for WRAP (unlike v1.14's zero-delta outcome); use canonicalDOT (DI-1) via internal/testutil/canonical; document every delta.
+- **Planner must pin:** kind-derived colours / legend coverage under the colours switch; legend behavior under labels-off (default: stays).
+- **TDD mode on** (config workflow.tdd_mode); docs + skill sync inside the phase; REL-01 (tag v1.22.0) is the final task.
 
 ## Progress
 
-**Execution Order:** Phase 37 (single phase; plans sequenced by plan-phase)
+**Execution Order:** Phase 38 (single phase; plans sequenced by plan-phase)
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -155,6 +147,7 @@ Plans:
 | 34. Label formatting fixes | v1.11 | 4/4 | Complete | 2026-08-10 |
 | 35. C4D DSL alternative | v1.12 | 9/9 | Complete | 2026-08-14 |
 | 36. Edge Semantics and Legend | v1.13 | 6/6 | Complete | 2026-08-28 |
-| 37. Nesting Context and Plain Rendering | v1.14 | 7/7 | Complete   | 2026-08-30 |
+| 37. Nesting Context and Plain Rendering | v1.14 | 7/7 | Complete | 2026-08-30 |
+| 38. Hierarchy Wrapping and Granular Keys | v1.15 | 0/? | Not started | - |
 
 **Post-milestone (2026-08-28):** user-directed design review shipped outside any phase as v1.19.0–v1.20.0 — legend reworked into a floating framed node outside an invisible content cluster (REQUIREMENTS.md LEG-01..03 re-specified in place), queue units render as SVG pipes (SHAPE-01, quick task [260828-qbx](.planning/quick/260828-qbx-render-queue-units-as-horizontal-pipe-sh/)). Quick tasks are not tracked in the phase table above (GSD quick-mode convention).
