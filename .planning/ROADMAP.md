@@ -124,7 +124,7 @@ Full details: [milestones/v1.13-ROADMAP.md](milestones/v1.13-ROADMAP.md)
 Plans:
 **Wave 1**
 
-- [ ] 38-01-PLAN.md — WRAP: boundary/sibling ancestor wrapping + node-set invariance (WRAP-01..03)
+- [x] 38-01-PLAN.md — WRAP: boundary/sibling ancestor wrapping + node-set invariance (WRAP-01..03) ✅ 2026-08-30
 
 **Wave 2** *(blocked on Wave 1 completion)*
 

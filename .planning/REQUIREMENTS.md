@@ -14,9 +14,9 @@ Source: user review 2026-08-30 (retroactive answers to the yolo-skipped question
 
 ### WRAP — Full hierarchy wrapping for all depicted nodes
 
-- [ ] **WRAP-01**: Every depicted node on every generated view (C1, C2/C3 drill-downs, expanded) renders inside its complete chain of ancestor containers — boundary and sibling nodes included; box, system, container and component container chains all render as nested clusters around their contents.
-- [ ] **WRAP-02**: Boundary resolution keeps its v1.14 semantics for WHAT is depicted (deepest sibling-level container, deep-link true target); the wrapping is additive — ancestor containers of a boundary entry render as nested clusters around it. Entries with no in-model ancestor (fully external) stay top-level — there is nothing to wrap them in.
-- [ ] **WRAP-03**: Wrapping draws containers only — the depicted node set is unchanged from v1.14 (no extra nodes appear anywhere); locked by test.
+- [x] **WRAP-01**: Every depicted node on every generated view (C1, C2/C3 drill-downs, expanded) renders inside its complete chain of ancestor containers — boundary and sibling nodes included; box, system, container and component container chains all render as nested clusters around their contents.
+- [x] **WRAP-02**: Boundary resolution keeps its v1.14 semantics for WHAT is depicted (deepest sibling-level container, deep-link true target); the wrapping is additive — ancestor containers of a boundary entry render as nested clusters around it. Entries with no in-model ancestor (fully external) stay top-level — there is nothing to wrap them in.
+- [x] **WRAP-03**: Wrapping draws containers only — the depicted node set is unchanged from v1.14 (no extra nodes appear anywhere); locked by test.
 
 ### KEY — Granular formatting switches
 
@@ -60,9 +60,9 @@ Filled during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| WRAP-01 | Phase 38 | Pending |
-| WRAP-02 | Phase 38 | Pending |
-| WRAP-03 | Phase 38 | Pending |
+| WRAP-01 | Phase 38 | ✅ 38-01 |
+| WRAP-02 | Phase 38 | ✅ 38-01 |
+| WRAP-03 | Phase 38 | ✅ 38-01 |
 | KEY-01 | Phase 38 | Pending |
 | KEY-02 | Phase 38 | Pending |
 | KEY-03 | Phase 38 | Pending |
