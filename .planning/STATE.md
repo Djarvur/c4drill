@@ -84,7 +84,7 @@ See .planning/todos/pending/. (1 pending: add CLI flag to override edge routing 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
 | *(granular flags item superseded — in scope for v1.15)* | | | |
-| bug | CI Validate Examples asymmetry (11-nesting-context drill-down SVGs tracked in plugin trees, gitignored in skill/) | open — see 38 phase deferred-items.md | 38-06 |
+| bug | CI Validate Examples asymmetry (11-nesting-context drill-down SVGs tracked in plugin trees, gitignored in skill/) | RESOLVED 2026-08-30 — skill/ force-adds the 5 SVGs per 06-templates precedent (commit 66cd6dc); Validate Examples green | 38-06 |
 
 ## Session Continuity
 
