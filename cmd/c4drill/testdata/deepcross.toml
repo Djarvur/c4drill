@@ -1,0 +1,137 @@
+# Deep-cross fixture (quick 260831-01u, BUG-1-ROOT-COMPACT): reproduces the
+# reported root-bloat regression (55 -> 260 titles on the reporter's model,
+# root ≈ expanded). Shape per the todo card: two nested-heavy top-level
+# systems, external actors deep-linking into nested subunits (link AND
+# linkFrom), cross-container links spanning different systems, and
+# properties.expanded naming the nested-heavy systems (todo: [actors, yic]).
+# Committed golden: deepcross.dot (compact non-expanded C1 root).
+
+[properties]
+name = "Deep Cross System"
+expanded = ["actors", "yic"]
+
+# ---- External actors deep-linking into nested subunits ----
+
+[webUser]
+type = "personExternal"
+name = "Web User"
+link = [
+  { peer = "actors.identity.sessionMgr", technology = "HTTPS", description = "Manages web session" },
+]
+
+[mobileUser]
+type = "personExternal"
+name = "Mobile User"
+link = [
+  { peer = "actors.identity.tokenApi", technology = "HTTPS", description = "Requests tokens" },
+]
+
+[adminCli]
+type = "systemExternal"
+name = "Admin CLI"
+
+[[adminCli.linkFrom]]
+peer = "yic.pipeline.ingest.api"
+technology = "gRPC"
+description = "Feeds ingest metrics"
+
+[metricsScraper]
+type = "systemExternal"
+name = "Metrics Scraper"
+link = [
+  { peer = "yic.pipeline.store.warehouse", technology = "SQL", description = "Reads aggregates" },
+]
+
+# ---- System 1: actors (nested-heavy, author-expanded) ----
+
+[actors]
+type = "system"
+name = "Actors Platform"
+description = "Identity and access platform"
+
+[actors.identity]
+type = "container"
+name = "Identity Service"
+technology = "go"
+
+[actors.identity.sessionMgr]
+type = "component"
+name = "Session Manager"
+technology = "go"
+description = "Manages user sessions"
+link = [
+  { peer = "actors.identity.sessionDb" },
+]
+
+[actors.identity.sessionDb]
+type = "componentDb"
+name = "Session Store"
+technology = "redis"
+
+[actors.identity.tokenApi]
+type = "component"
+name = "Token API"
+technology = "go"
+description = "Issues access tokens"
+link = [
+  { peer = "actors.audit.ledger", description = "Appends audit events" },
+]
+
+[actors.audit]
+type = "container"
+name = "Audit Service"
+technology = "go"
+
+[actors.audit.ledger]
+type = "component"
+name = "Audit Ledger"
+technology = "go"
+
+[actors.audit.archive]
+type = "component"
+name = "Audit Archive"
+technology = "go"
+link = [
+  { peer = "yic.pipeline.ingest.api", technology = "gRPC", description = "Ships audit batches" },
+]
+
+# ---- System 2: yic (nested-heavy, author-expanded) ----
+
+[yic]
+type = "system"
+name = "YIC Pipeline"
+description = "Data ingestion and analytics"
+
+[yic.pipeline]
+type = "containerBox"
+name = "Ingest Pipeline"
+technology = "go"
+
+[yic.pipeline.ingest]
+type = "container"
+name = "Ingest Gateway"
+technology = "go"
+
+[yic.pipeline.ingest.api]
+type = "component"
+name = "Ingest API"
+technology = "go"
+description = "Accepts telemetry batches"
+link = [
+  { peer = "yic.pipeline.store.writer" },
+]
+
+[yic.pipeline.store]
+type = "container"
+name = "Store"
+technology = "go"
+
+[yic.pipeline.store.writer]
+type = "component"
+name = "Batch Writer"
+technology = "go"
+
+[yic.pipeline.store.warehouse]
+type = "componentDb"
+name = "Warehouse"
+technology = "clickhouse"

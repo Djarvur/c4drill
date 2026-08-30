@@ -2,6 +2,7 @@ package graph_test
 
 import (
 	"fmt"
+	"path/filepath"
 	"os"
 	"sort"
 	"strings"
@@ -1450,6 +1451,63 @@ func TestBuildGraph_DeepLinkTargetRendersInsideUnfoldedCluster(t *testing.T) {
 	}
 
 	assert.True(t, trueTargetEdge, "an edge must terminate at the true deep-link target")
+}
+
+// TestC1RootStaysCompactOnDeepCrossFixture pins BUG-1-ROOT-COMPACT: the
+// non-expanded root (C1) of the deepcross fixture — deep nesting, cross-system
+// links, external actors deep-linking into nested subunits, author-expanded
+// nested-heavy systems — is a COMPACT context diagram. It depicts exactly:
+// top-level units (the author-expanded systems as clusters), the expanded
+// units' direct visible subunits, external/boundary nodes, and CTX-02
+// deep-link chain paths to true targets. Never whole sibling subtrees or the
+// entire model (the reported regression: root ≈ expanded, 55 → 260 titles).
+//
+// Expected set derived by hand from testdata/deepcross.toml:
+//   - boundary: adminCli, metricsScraper, mobileUser, webUser;
+//   - actors (expanded) → identity cluster with chain leaves sessionMgr and
+//     tokenApi (deep links from webUser/mobileUser from OUTSIDE actors);
+//     audit renders as its collapsed node (its children ledger/archive are
+//     linked only from INSIDE actors — internal detail, not visible);
+//   - yic (expanded) → pipeline ⊃ ingest ⊃ api (chain from adminCli's
+//     linkFrom and actors' cross-system archive link), store ⊃ warehouse
+//     (chain from metricsScraper); writer is linked only from inside yic.
+//
+// The test parses the fixture TOML directly (precedent:
+// TestViewAncestorChainInvariant) so the pin and the committed golden share
+// one source of truth.
+func TestC1RootStaysCompactOnDeepCrossFixture(t *testing.T) {
+	t.Parallel()
+
+	m, err := parser.ParseFile(filepath.Join("..", "..", "cmd", "c4drill", "testdata", "deepcross.toml"))
+	require.NoError(t, err, "parse deepcross fixture")
+
+	v := view.GenerateC1View(m)
+	require.NotNil(t, v)
+
+	g := graph.BuildGraph(v)
+	require.NotNil(t, g)
+
+	expected := []string{
+		"adminCli", "metricsScraper", "mobileUser", "webUser",
+		"actors.audit",
+		"actors.identity.sessionMgr", "actors.identity.tokenApi",
+		"yic.pipeline.ingest.api", "yic.pipeline.store.warehouse",
+	}
+
+	assert.Equal(t, expected, collectNodeIDs(g),
+		"the non-expanded root must depict exactly the compact C1 set — no whole sibling subtrees")
+
+	// Every edge endpoint must be a depicted node (a flood or a dangling
+	// endpoint would both violate the compact contract).
+	depicted := make(map[string]bool, len(expected))
+	for _, id := range expected {
+		depicted[id] = true
+	}
+
+	for _, e := range g.Edges {
+		assert.True(t, depicted[e.Source], "edge source %s must be depicted", e.Source)
+		assert.True(t, depicted[e.Target], "edge target %s must be depicted", e.Target)
+	}
 }
 
 func TestBuildGraphDeterministicOrder(t *testing.T) {
