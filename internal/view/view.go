@@ -80,6 +80,13 @@ type Entry struct {
 	// is a sibling of the expanded unit is IsBoundary=true (render outside
 	// cluster) but IsExternal=false (keep its normal blue styling).
 	IsBoundary bool
+	// UnfoldChain is set by the view generator when a deep-link ancestor chain
+	// (CTX-02) was inserted beneath this depicted ancestor: a link target
+	// deeper than the nearest visible ancestor gained visible entries down to
+	// the TRUE target. The graph layer renders such entries as recursive
+	// clusters exactly like IsExpanded ones — deliberately a separate flag so
+	// author-expansion semantics (D-07 guard, 🔍 logic) stay untouched.
+	UnfoldChain bool
 	// ResolvedLinks contains outgoing links resolved for the current view level.
 	// When non-nil, the graph builder uses these instead of Unit.Links.
 	ResolvedLinks []model.Link

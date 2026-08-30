@@ -544,6 +544,77 @@ func TestGenerateC2View_ResolvedLinksKeepMultiplicity(t *testing.T) {
 	assert.Equal(t, "mainsystem.db", api.ResolvedLinks[1].Peer)
 }
 
+// CTX-02 in C2: a cross-subunit link whose true target lies deeper under a
+// collapsed sibling keeps the target's container chain and terminates at the
+// TRUE target — not at the deepest visible ancestor.
+func TestGenerateC2View_DeepCrossLinkTargetChain(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"mainSystem": {
+				Type: model.TypeSystem,
+				Name: "Main System",
+				Subunits: map[string]*model.Unit{
+					"api": {
+						Type: model.TypeContainer,
+						Name: "API",
+						Links: []model.Link{
+							{Peer: "mainSystem.worker.pool.runner"},
+						},
+					},
+					"worker": {
+						Type: model.TypeContainer,
+						Name: "Worker",
+						Subunits: map[string]*model.Unit{
+							"pool": {
+								Type: model.TypeContainer,
+								Name: "Pool",
+								Subunits: map[string]*model.Unit{
+									"runner": {Type: model.TypeComponent, Name: "Runner"},
+								},
+							},
+						},
+					},
+				},
+				SubunitOrder: []string{"api", "worker"},
+			},
+		},
+	}
+
+	v := view.GenerateC2View(m, "mainSystem")
+	require.NotNil(t, v)
+
+	// The api subunit's resolved link terminates at the TRUE target.
+	api := v.Units["mainSystem.api"]
+	require.NotNil(t, api)
+	require.NotNil(t, api.ResolvedLinks)
+	require.Len(t, api.ResolvedLinks, 1)
+	assert.Equal(t, "mainSystem.worker.pool.runner", api.ResolvedLinks[0].Peer)
+	assert.NotEqual(t, "mainSystem.worker", api.ResolvedLinks[0].Peer)
+
+	// The chain entries down to the target are registered and stay in scope.
+	for _, path := range []string{"mainSystem.worker", "mainSystem.worker.pool", "mainSystem.worker.pool.runner"} {
+		entry := v.Units[path]
+		require.NotNil(t, entry, "chain entry %s must exist", path)
+		assert.False(t, entry.IsBoundary, "chain entry %s stays in scope", path)
+	}
+
+	// mainSystem.worker was pre-existing (a subunit of the expanded system);
+	// pool and runner are new chain entries following the VisiblePaths
+	// registration contract so the builder renders them only via the
+	// ancestor-cluster recursion.
+	assert.True(t, v.VisiblePaths["mainSystem.worker.pool"])
+	assert.True(t, v.VisiblePaths["mainSystem.worker.pool.runner"])
+
+	// The collapsed chain-bearing ancestor is marked for unfolding.
+	worker := v.Units["mainSystem.worker"]
+	require.NotNil(t, worker)
+	assert.True(t, worker.UnfoldChain)
+	assert.False(t, worker.IsExpanded, "worker was NOT author-expanded")
+}
+
 // Tests for GenerateC3View
 
 func TestGenerateC3View_ReturnsViewWithLevelC3(t *testing.T) {
@@ -1320,6 +1391,39 @@ func expandedC1BoxModel(sshAuthLinks []model.Link) *parser.Model {
 	return m
 }
 
+// deepLinkChainModel builds the CTX-02 fixture: webApp links to
+// linuxSystem.sshAuth.sshd while linuxSystem (with nested sshAuth → sshd) is
+// NOT expanded — the deep-link target hides under a collapsed top-level
+// ancestor. TestGenerateC1View_ExternalLinkNoChain reuses it with the link
+// re-pointed at an undefined external top-level peer.
+func deepLinkChainModel() *parser.Model {
+	return &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"webApp": {
+				Type: model.TypeContainer,
+				Name: "Web App",
+				Links: []model.Link{
+					{Peer: "linuxSystem.sshAuth.sshd"},
+				},
+			},
+			"linuxSystem": {
+				Type: model.TypeSystem,
+				Name: "Linux System",
+				Subunits: map[string]*model.Unit{
+					"sshAuth": {
+						Type: model.TypeContainer,
+						Name: "SSH Auth",
+						Subunits: map[string]*model.Unit{
+							"sshd": {Type: model.TypeContainer, Name: "SSHD"},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func TestGenerateC1View_ExpandedUnitExposesVisibleSubunits(t *testing.T) {
 	t.Parallel()
 
@@ -1433,6 +1537,81 @@ func TestGenerateC1View_BoxResolutionParity(t *testing.T) {
 	// Within-cluster edge recorded (D-10); no parent-level edge (D-08)
 	assert.Equal(t, webAPIPath, sshAuth.ResolvedLinks[1].Peer)
 	assert.Nil(t, v.Units[linuxSystemPath].ResolvedLinks)
+}
+
+// CTX-02: a C1 link whose true target lies under a collapsed top-level
+// ancestor keeps the target's container chain — the ancestor chain from the
+// depicted ancestor down to the target is added as visible entries, and the
+// resolved link points at the TRUE target, not the collapsed ancestor.
+func TestGenerateC1View_DeepLinkTargetKeepsContainerChain(t *testing.T) {
+	t.Parallel()
+
+	m := deepLinkChainModel()
+
+	v := view.GenerateC1View(m)
+	require.NotNil(t, v)
+
+	// (a) the ancestor chain down to the true target is registered
+	require.Contains(t, v.Units, "linuxSystem.sshAuth")
+	require.Contains(t, v.Units, "linuxSystem.sshAuth.sshd")
+
+	// (b) chain entries are visible paths (the top-level skip contract)
+	assert.True(t, v.VisiblePaths["linuxSystem.sshAuth"])
+	assert.True(t, v.VisiblePaths["linuxSystem.sshAuth.sshd"])
+
+	// (c) chain entries are in-scope real units — no boundary/external flags
+	sshAuth := v.Units["linuxSystem.sshAuth"]
+	require.NotNil(t, sshAuth)
+	assert.False(t, sshAuth.IsBoundary)
+	assert.False(t, sshAuth.IsExternal)
+	assert.Equal(t, "SSH Auth", sshAuth.Unit.Name)
+
+	sshd := v.Units["linuxSystem.sshAuth.sshd"]
+	require.NotNil(t, sshd)
+	assert.False(t, sshd.IsBoundary)
+	assert.False(t, sshd.IsExternal)
+	assert.Equal(t, "SSHD", sshd.Unit.Name)
+
+	// (d) the resolved link points at the TRUE target
+	webApp := v.Units["webApp"]
+	require.NotNil(t, webApp)
+	require.NotNil(t, webApp.ResolvedLinks)
+	require.Len(t, webApp.ResolvedLinks, 1)
+	assert.Equal(t, "linuxSystem.sshAuth.sshd", webApp.ResolvedLinks[0].Peer)
+	assert.NotEqual(t, "linuxSystem", webApp.ResolvedLinks[0].Peer)
+
+	// (e) the collapsed depicted ancestor is marked for chain unfolding
+	linuxSystem := v.Units["linuxSystem"]
+	require.NotNil(t, linuxSystem)
+	assert.True(t, linuxSystem.UnfoldChain)
+	assert.False(t, linuxSystem.IsExpanded, "the ancestor was NOT author-expanded")
+}
+
+// CTX-02 boundary lock: links to external top-level peers keep today's
+// boundary-node behavior — no chain entries, no UnfoldChain marking.
+func TestGenerateC1View_ExternalLinkNoChain(t *testing.T) {
+	t.Parallel()
+
+	m := deepLinkChainModel()
+	m.Units["webApp"].Links = []model.Link{{Peer: "externalSys"}}
+
+	v := view.GenerateC1View(m)
+	require.NotNil(t, v)
+
+	// The external peer is added as today: a synthesized boundary node.
+	require.Contains(t, v.Units, "externalSys")
+	assert.True(t, v.Units["externalSys"].IsBoundary)
+	assert.True(t, v.Units["externalSys"].IsExternal)
+
+	// No chain entries: the nested units under the unlinked system stay hidden.
+	assert.NotContains(t, v.Units, "linuxSystem.sshAuth")
+	assert.NotContains(t, v.Units, "linuxSystem.sshAuth.sshd")
+	assert.Len(t, v.Units, 3) // webApp, linuxSystem, externalSys
+
+	// No entry gains the unfold marker.
+	for path, entry := range v.Units {
+		assert.False(t, entry.UnfoldChain, "entry %s must not gain UnfoldChain", path)
+	}
 }
 
 // TestGenerateC2C3View_EdgesFallback verifies GEDGE-01: a unit without its

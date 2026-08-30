@@ -1362,6 +1362,95 @@ func TestBuildGraph_ExpandedClusterRendersNestedSubClusters(t *testing.T) {
 		"the nested container cluster must get its explore URL assigned by the recursive walk")
 }
 
+// TestBuildGraph_DeepLinkTargetRendersInsideUnfoldedCluster pins the CTX-02
+// graph contract: a collapsed ancestor whose chain was inserted for a deep
+// link target renders as a RECURSIVE cluster (the UnfoldChain dispatch), the
+// true target renders as a real node inside its chain, and the link edge
+// terminates at that node — no dangling endpoint that graphviz would
+// materialize as an implicit top-level node.
+func TestBuildGraph_DeepLinkTargetRendersInsideUnfoldedCluster(t *testing.T) {
+	t.Parallel()
+
+	// Same minimal shape as the view-layer deepLinkChainModel (view package):
+	// webApp links to linuxSystem.sshAuth.sshd while linuxSystem is NOT
+	// author-expanded — the chain must unfold it.
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"webApp": {
+				Type: model.TypeContainer,
+				Name: "Web App",
+				Links: []model.Link{
+					{Peer: "linuxSystem.sshAuth.sshd"},
+				},
+			},
+			"linuxSystem": {
+				Type: model.TypeSystem,
+				Name: "Linux System",
+				Subunits: map[string]*model.Unit{
+					"sshAuth": {
+						Type: model.TypeContainer,
+						Name: "SSH Auth",
+						Subunits: map[string]*model.Unit{
+							"sshd": {Type: model.TypeContainer, Name: "SSHD"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC1View(m)
+	require.NotNil(t, v)
+
+	g := graph.BuildGraph(v)
+	require.NotNil(t, g)
+
+	// (i) linuxSystem must NOT render as a plain top-level node.
+	for _, node := range g.Nodes {
+		assert.NotEqual(t, "linuxSystem", node.ID,
+			"the chain-bearing collapsed ancestor must not render as a plain top-level node")
+	}
+
+	// (ii) it renders as a cluster containing the nested chain cluster with
+	// the true target inside.
+	require.Len(t, g.Clusters, 1, "linuxSystem must unfold as a cluster")
+
+	var sshAuthCluster *graph.Cluster
+
+	for _, nested := range g.Clusters[0].Clusters {
+		if nested.ID == "linuxSystem.sshAuth" {
+			sshAuthCluster = nested
+			break
+		}
+	}
+
+	require.NotNil(t, sshAuthCluster,
+		"linuxSystem cluster must contain the nested linuxSystem.sshAuth chain cluster")
+
+	sshdInside := false
+
+	for _, node := range sshAuthCluster.Nodes {
+		if node.ID == "linuxSystem.sshAuth.sshd" {
+			sshdInside = true
+		}
+	}
+
+	assert.True(t, sshdInside, "the true link target must render inside its container chain")
+
+	// (iii) some edge terminates at the TRUE target — no dangling endpoint
+	// (graphviz would materialize an implicit top-level node for it).
+	trueTargetEdge := false
+
+	for _, edge := range g.Edges {
+		if edge.Source == "linuxSystem.sshAuth.sshd" || edge.Target == "linuxSystem.sshAuth.sshd" {
+			trueTargetEdge = true
+		}
+	}
+
+	assert.True(t, trueTargetEdge, "an edge must terminate at the true deep-link target")
+}
+
 func TestBuildGraphDeterministicOrder(t *testing.T) {
 	t.Parallel()
 
