@@ -1721,3 +1721,79 @@ func TestPlainFlagOptIn(t *testing.T) {
 	assert.Contains(t, dot, "minlen",
 		"default mode must keep the author link length")
 }
+
+// =============================================================================
+// Tests for granular switches (KEY-01/KEY-02, phase 38 plan 02)
+// =============================================================================
+
+// TestPlainUnionParity is the KEY-02 lock: rendering plain.toml with --plain
+// alone and with --plain plus all four granular flags produces canonically
+// IDENTICAL DOT — --plain is the exact union of the switches.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestPlainUnionParity(t *testing.T) {
+	plainDir := generatePlainFixtureOutput(t, "dot", "--plain")
+	unionDir := generatePlainFixtureOutput(t, "dot",
+		"--plain", "--no-colors", "--no-styles", "--no-length", "--no-rank")
+
+	plain := readOutputFile(t, filepath.Join(plainDir, "plain.dot"))
+	union := readOutputFile(t, filepath.Join(unionDir, "plain.dot"))
+
+	require.Equal(t, canonical.Canonical(t, plain), canonical.Canonical(t, union),
+		"--plain must be canonically identical with and without the granular flags (KEY-02 union lock)")
+}
+
+// TestGranularFlagsE2E proves each switch suppresses exactly its own aspect
+// over the full pipeline on plain.toml (which carries color/border/style/
+// length=3/rank=reverse/rank=equal/kind), leaving the OTHER aspects intact.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestGranularFlagsE2E(t *testing.T) {
+	t.Run("no-colors suppresses colouring only", func(t *testing.T) {
+		dir := generatePlainFixtureOutput(t, "dot", "--no-colors")
+		dot := strings.ToLower(readOutputFile(t, filepath.Join(dir, "plain.dot")))
+
+		for _, hex := range []string{"#fff9c4", "#f9a825", "#1565c0", "#2e7d32"} {
+			assert.NotContains(t, dot, hex, "--no-colors must suppress author and kind colours")
+		}
+
+		// Other aspects untouched.
+		assert.Contains(t, dot, "minlen=3", "--no-colors must keep link length")
+		assert.Contains(t, dot, "dir=back", "--no-colors must keep rank=reverse")
+		assert.Contains(t, dot, "constraint=false", "--no-colors must keep rank=equal")
+	})
+
+	t.Run("no-styles suppresses styles only", func(t *testing.T) {
+		dir := generatePlainFixtureOutput(t, "dot", "--no-styles")
+		dot := readOutputFile(t, filepath.Join(dir, "plain.dot"))
+
+		assert.NotContains(t, dot, "dashed", "--no-styles must suppress node and link styles")
+
+		// Other aspects untouched.
+		assert.Contains(t, dot, "minlen=3", "--no-styles must keep link length")
+		assert.Contains(t, dot, "#1565C0", "--no-styles must keep the author link colour")
+	})
+
+	t.Run("no-length suppresses minlen only", func(t *testing.T) {
+		dir := generatePlainFixtureOutput(t, "dot", "--no-length")
+		dot := readOutputFile(t, filepath.Join(dir, "plain.dot"))
+
+		assert.NotContains(t, dot, "minlen", "--no-length must suppress link length")
+
+		// Other aspects untouched.
+		assert.Contains(t, dot, "#1565C0", "--no-length must keep the author link colour")
+		assert.Contains(t, dot, "dir=back", "--no-length must keep rank=reverse")
+	})
+
+	t.Run("no-rank suppresses ranking only", func(t *testing.T) {
+		dir := generatePlainFixtureOutput(t, "dot", "--no-rank")
+		dot := readOutputFile(t, filepath.Join(dir, "plain.dot"))
+
+		assert.NotContains(t, dot, "dir=back", "--no-rank must suppress the rank=reverse swap")
+		assert.NotContains(t, dot, "constraint=false", "--no-rank must suppress rank=equal")
+
+		// Other aspects untouched.
+		assert.Contains(t, dot, "minlen=3", "--no-rank must keep link length")
+		assert.Contains(t, dot, "#1565C0", "--no-rank must keep the author link colour")
+	})
+}

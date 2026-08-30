@@ -3741,3 +3741,321 @@ func TestEdgeEndpointsUnchangedByWrapping(t *testing.T) {
 		assert.True(t, nodeSet[e.Target], "edge target %s must be a depicted node", e.Target)
 	}
 }
+
+// ---- Phase 38 KEY-01/KEY-02: granular suppression switches ----
+//
+// --no-colors / --no-styles / --no-length / --no-rank each suppress exactly
+// one formatting aspect; --plain remains the UNION of the four (KEY-02): the
+// plain path must be identical with and without the granular flags set.
+// Guard mapping (plan-pinned): NoColors → applyUnitOverrides skips Color/
+// Border fills AND createEdge skips the author link colour AND kind-derived
+// colours; NoStyles → Style/BorderStyle + the applyCollapsedPairStyle
+// aggregate style override; NoLength → MinLen 0; NoRank → RankReverse/
+// NoConstraint false (which neutralizes all converter emission sites).
+
+// TestNoColorsSuppressesAllColouring: with NoColors, author unit Color/Border
+// fills are skipped, the author link colour is skipped, and kind-derived
+// colouring is absent — the edge falls back to the D-01 source-border default
+// and the legend drops its kind rows emergently (legendKindEntries reads the
+// final edge colours).
+func TestNoColorsSuppressesAllColouring(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"app": {
+				Type:   model.TypeSystem,
+				Name:   "App",
+				Color:  "#123456",
+				Border: "#AA0000",
+				Links: []model.Link{{
+					Peer: "db",
+					Kind: model.KindRead,
+				}},
+			},
+			"db": {Type: model.TypeDb, Name: "Database"},
+		},
+	}
+
+	v := view.GenerateC1View(m)
+	v.NoColors = true
+	g := graph.BuildGraph(v)
+
+	app := nodeByID(t, g, "app")
+	assert.Empty(t, app.Style.FillColor, "author color fill skipped under --no-colors")
+	assert.Equal(t, model.PersonBorder, app.Style.BorderColor,
+		"author border skipped — type-palette default applies")
+
+	require.Len(t, g.Edges, 1)
+	edge := g.Edges[0]
+	assert.NotEqual(t, model.LinkReadColour, edge.Color, "kind-derived colour suppressed")
+	assert.Equal(t, model.PersonBorder, edge.Color,
+		"edge falls back to the D-01 source-border default (structural colour, not decoration)")
+
+	require.NotNil(t, g.Legend, "legend survives --no-colors")
+	for _, entry := range g.Legend.Entries {
+		assert.NotEqual(t, "read", entry.Label,
+			"kind legend rows drop emergently when the kind colour is no longer drawn")
+		assert.NotEqual(t, model.LinkReadColour, entry.Color)
+	}
+}
+
+// TestNoStylesSuppressesStyleAndBorders: with NoStyles, author unit Style is
+// skipped (BorderStyle falls back to solid), the author link style falls back
+// to solid, and the applyCollapsedPairStyle aggregate style override is not
+// applied.
+func TestNoStylesSuppressesStyleAndBorders(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"app": {
+				Type:  model.TypeSystem,
+				Name:  "App",
+				Style: "dotted",
+				Links: []model.Link{{Peer: "db", Style: "dashed"}},
+			},
+			"db": {Type: model.TypeDb, Name: "Database"},
+		},
+	}
+
+	v := view.GenerateC1View(m)
+	v.NoStyles = true
+	g := graph.BuildGraph(v)
+
+	app := nodeByID(t, g, "app")
+	assert.Equal(t, "solid", app.Style.BorderStyle, "author style skipped under --no-styles")
+
+	require.Len(t, g.Edges, 1)
+	assert.Equal(t, "solid", g.Edges[0].Style, "author link style falls back to solid")
+	assert.Equal(t, "#BA4A00", g.Edges[0].Color, "colour aspects are NOT touched by --no-styles")
+	assert.Equal(t, 0, g.Edges[0].MinLen) // fixture has no length anyway
+
+	t.Run("collapsed pair keeps the default style", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type: model.TypeSystem,
+					Name: "App",
+					Subunits: map[string]*model.Unit{
+						"api": {
+							Type:  model.TypeContainer,
+							Name:  "API",
+							Links: []model.Link{{Peer: "ext", Style: "dashed"}},
+						},
+						"etl": {
+							Type:  model.TypeContainer,
+							Name:  "ETL",
+							Links: []model.Link{{Peer: "ext", Style: "dashed"}},
+						},
+					},
+					SubunitOrder: []string{"api", "etl"},
+				},
+				"ext": {Type: model.TypeSystemExternal, Name: "Ext"},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		v.NoStyles = true
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Edges, 1)
+		assert.Equal(t, "solid", g.Edges[0].Style,
+			"aggregate style override not applied under --no-styles")
+	})
+}
+
+// TestNoLengthSuppressesMinlen: with NoLength, edge.MinLen stays 0 despite
+// link.Length = 3.
+func TestNoLengthSuppressesMinlen(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"app": {
+				Type:  model.TypeSystem,
+				Name:  "App",
+				Links: []model.Link{{Peer: "db", Length: 3}},
+			},
+			"db": {Type: model.TypeDb, Name: "Database"},
+		},
+	}
+
+	v := view.GenerateC1View(m)
+	v.NoLength = true
+	g := graph.BuildGraph(v)
+
+	require.Len(t, g.Edges, 1)
+	assert.Zero(t, g.Edges[0].MinLen, "length suppressed under --no-length")
+}
+
+// TestNoRankSuppressesRanking: with NoRank, RankReverse and NoConstraint stay
+// false despite link.Rank reverse/equal — which automatically neutralizes all
+// three converter emission sites (endpoint swap, dir inversion, constraint).
+func TestNoRankSuppressesRanking(t *testing.T) {
+	t.Parallel()
+
+	t.Run("rank=reverse yields no endpoint swap", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type:  model.TypeSystem,
+					Name:  "App",
+					Links: []model.Link{{Peer: "db", Rank: model.RankReverse}},
+				},
+				"db": {Type: model.TypeDb, Name: "Database"},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		v.NoRank = true
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Edges, 1)
+		assert.False(t, g.Edges[0].RankReverse, "rank=reverse suppressed under --no-rank")
+	})
+
+	t.Run("rank=equal yields no constraint suppression", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type:  model.TypeSystem,
+					Name:  "App",
+					Links: []model.Link{{Peer: "db", Rank: model.RankEqual}},
+				},
+				"db": {Type: model.TypeDb, Name: "Database"},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		v.NoRank = true
+		g := graph.BuildGraph(v)
+
+		require.Len(t, g.Edges, 1)
+		assert.False(t, g.Edges[0].NoConstraint, "rank=equal suppressed under --no-rank")
+	})
+}
+
+// TestDefaultPathUnchangedByOptFlags: with all four granular flags false,
+// colors/styles/minlen/rank are all present exactly as without the fields —
+// the switches are strictly opt-in (BC contract).
+func TestDefaultPathUnchangedByOptFlags(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"app": {
+				Type:   model.TypeSystem,
+				Name:   "App",
+				Color:  "#08427B",
+				Border: "#AA0000",
+				Style:  "dotted",
+				Links: []model.Link{{
+					Peer:   "db",
+					Color:  "#BA4A00",
+					Style:  "dashed",
+					Length: 3,
+					Rank:   model.RankReverse,
+				}},
+			},
+			"db": {Type: model.TypeDb, Name: "Database"},
+		},
+	}
+
+	v := view.GenerateC1View(m)
+	// NoColors/NoStyles/NoLength/NoRank keep their zero values (false).
+	g := graph.BuildGraph(v)
+
+	app := nodeByID(t, g, "app")
+	assert.Equal(t, "#08427B", app.Style.FillColor, "author color applied on the default path")
+	assert.Equal(t, "#AA0000", app.Style.BorderColor, "author border applied on the default path")
+	assert.Equal(t, "dotted", app.Style.BorderStyle, "author style applied on the default path")
+
+	require.Len(t, g.Edges, 1)
+	edge := g.Edges[0]
+	assert.Equal(t, "#BA4A00", edge.Color)
+	assert.Equal(t, "dashed", edge.Style)
+	assert.Equal(t, 3, edge.MinLen)
+	assert.True(t, edge.RankReverse)
+}
+
+// TestPlainImpliesAllAspects (KEY-02, builder level): Plain=true yields the
+// same suppression as Plain + all four granular flags set — union semantics.
+// NOTE: kind-derived colours are semantic and survive plain (v1.14 contract,
+// pinned by the plain goldens), so the union lock holds precisely because the
+// granular guards defer to plain on kind colouring.
+func TestPlainImpliesAllAspects(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test", Edges: "straight"},
+		Units: map[string]*model.Unit{
+			"app": {
+				Type:   model.TypeSystem,
+				Name:   "App",
+				Color:  "#08427B",
+				Border: "#AA0000",
+				Style:  "dotted",
+				Links: []model.Link{{
+					Peer:   "db",
+					Color:  "#BA4A00",
+					Style:  "dashed",
+					Length: 3,
+					Rank:   model.RankReverse,
+					Kind:   model.KindRead,
+				}},
+			},
+			"db": {Type: model.TypeDb, Name: "Database"},
+		},
+	}
+
+	vPlain := view.GenerateC1View(m)
+	vPlain.Plain = true
+
+	vUnion := view.GenerateC1View(m)
+	vUnion.Plain = true
+	vUnion.NoColors = true
+	vUnion.NoStyles = true
+	vUnion.NoLength = true
+	vUnion.NoRank = true
+
+	gPlain := graph.BuildGraph(vPlain)
+	gUnion := graph.BuildGraph(vUnion)
+
+	assert.Equal(t, gPlain.EdgeStyle, gUnion.EdgeStyle)
+
+	appPlain := nodeByID(t, gPlain, "app")
+
+	var appUnion *graph.Node
+
+	require.Len(t, gUnion.Nodes, 2)
+	for _, node := range gUnion.Nodes {
+		if node.ID == "app" {
+			appUnion = node
+		}
+	}
+
+	require.NotNil(t, appUnion)
+	assert.Equal(t, appPlain.Style, appUnion.Style, "unit styling identical under plain and plain+switches")
+
+	require.Len(t, gPlain.Edges, 1)
+	require.Len(t, gUnion.Edges, 1)
+	assert.Equal(t, gPlain.Edges[0].Color, gUnion.Edges[0].Color, "edge colour identical (kind colour survives both)")
+	assert.Equal(t, gPlain.Edges[0].Style, gUnion.Edges[0].Style)
+	assert.Equal(t, gPlain.Edges[0].MinLen, gUnion.Edges[0].MinLen)
+	assert.Equal(t, gPlain.Edges[0].RankReverse, gUnion.Edges[0].RankReverse)
+	assert.Equal(t, gPlain.Edges[0].NoConstraint, gUnion.Edges[0].NoConstraint)
+}
