@@ -1754,33 +1754,7 @@ func TestViewAncestorChainInvariant(t *testing.T) {
 	// (collectExpandedPaths + isC2Path): C1, then a C2 view for every
 	// top-level unit with subunits and a C3 view for every nested unit with
 	// subunits, in definition order.
-	views := map[string]*view.View{"": view.GenerateC1View(m)}
-
-	var walk func(parentPath string, unit *model.Unit, depth int)
-
-	walk = func(parentPath string, unit *model.Unit, depth int) {
-		if len(unit.Subunits) == 0 {
-			return
-		}
-
-		if depth == 1 {
-			views[parentPath] = view.GenerateC2View(m, parentPath)
-		} else {
-			views[parentPath] = view.GenerateC3View(m, parentPath)
-		}
-
-		for _, subName := range subunitOrderForTest(unit) {
-			if sub := unit.Subunits[subName]; sub != nil {
-				walk(parentPath+"."+subName, sub, depth+1)
-			}
-		}
-	}
-
-	for _, name := range m.UnitOrder {
-		if unit := m.Units[name]; unit != nil {
-			walk(name, unit, 1)
-		}
-	}
+	views := enumerateNonExpandedViews(m)
 
 	require.Len(t, views, 17, "C1 + C2(mainSystem) + 15 C3 drill-downs for the 4-level fixture")
 
@@ -1792,38 +1766,81 @@ func TestViewAncestorChainInvariant(t *testing.T) {
 
 		require.NotNil(t, v, "%s view must generate", label)
 
-		// Depicted in-scope paths: every VisiblePaths entry (deep-link chains)
-		// plus every Units entry that is neither boundary nor external.
-		depicted := make(map[string]bool, len(v.Units))
+		assertAncestorChainInvariant(t, v, label)
+	}
+}
 
-		for p := range v.VisiblePaths {
+// enumerateNonExpandedViews generates the C1 view plus a C2/C3 view for every
+// unit with subunits — the non-expanded view set the CLI walks — keyed by
+// drill path ("" for C1).
+func enumerateNonExpandedViews(m *parser.Model) map[string]*view.View {
+	views := map[string]*view.View{"": view.GenerateC1View(m)}
+
+	for _, name := range m.UnitOrder {
+		if unit := m.Units[name]; unit != nil {
+			walkSubunitViews(views, m, name, unit, 1)
+		}
+	}
+
+	return views
+}
+
+// walkSubunitViews generates a C2 view for a top-level unit with subunits and
+// a C3 view for deeper ones, recursing into every subunit with children.
+func walkSubunitViews(views map[string]*view.View, m *parser.Model, parentPath string, unit *model.Unit, depth int) {
+	if len(unit.Subunits) == 0 {
+		return
+	}
+
+	if depth == 1 {
+		views[parentPath] = view.GenerateC2View(m, parentPath)
+	} else {
+		views[parentPath] = view.GenerateC3View(m, parentPath)
+	}
+
+	for _, subName := range subunitOrderForTest(unit) {
+		if sub := unit.Subunits[subName]; sub != nil {
+			walkSubunitViews(views, m, parentPath+"."+subName, sub, depth+1)
+		}
+	}
+}
+
+// assertAncestorChainInvariant pins CTX-01 on one view: every depicted
+// in-scope element must render inside each of its in-scope strict ancestors.
+func assertAncestorChainInvariant(t *testing.T, v *view.View, label string) {
+	t.Helper()
+
+	// Depicted in-scope paths: every VisiblePaths entry (deep-link chains)
+	// plus every Units entry that is neither boundary nor external.
+	depicted := make(map[string]bool, len(v.Units))
+
+	for p := range v.VisiblePaths {
+		depicted[p] = true
+	}
+
+	for p, entry := range v.Units {
+		if entry != nil && !entry.IsBoundary && !entry.IsExternal {
 			depicted[p] = true
 		}
+	}
 
-		for p, entry := range v.Units {
-			if entry != nil && !entry.IsBoundary && !entry.IsExternal {
-				depicted[p] = true
+	for p := range depicted {
+		// Walk strict ancestor prefixes shallowest-first via LastIndex
+		// segmentation (top-level paths have no dot and impose nothing).
+		for idx := strings.LastIndex(p, "."); idx > 0; idx = strings.LastIndex(p[:idx], ".") {
+			ancestor := p[:idx]
+
+			// Only prefixes strictly below the view root are required:
+			// the drilled-into root itself (and its own ancestors) is the
+			// container the view opens, not an entry of it. In C1
+			// (ExpandedUnit empty) every prefix is in scope.
+			if v.ExpandedUnit != "" && !strings.HasPrefix(ancestor, v.ExpandedUnit+".") {
+				continue
 			}
-		}
 
-		for p := range depicted {
-			// Walk strict ancestor prefixes shallowest-first via LastIndex
-			// segmentation (top-level paths have no dot and impose nothing).
-			for idx := strings.LastIndex(p, "."); idx > 0; idx = strings.LastIndex(p[:idx], ".") {
-				ancestor := p[:idx]
-
-				// Only prefixes strictly below the view root are required:
-				// the drilled-into root itself (and its own ancestors) is the
-				// container the view opens, not an entry of it. In C1
-				// (ExpandedUnit empty) every prefix is in scope.
-				if v.ExpandedUnit != "" && !strings.HasPrefix(ancestor, v.ExpandedUnit+".") {
-					continue
-				}
-
-				assert.Contains(t, v.Units, ancestor,
-					"%s view: depicted element %q must render inside its ancestor %q (CTX-01)",
-					label, p, ancestor)
-			}
+			assert.Contains(t, v.Units, ancestor,
+				"%s view: depicted element %q must render inside its ancestor %q (CTX-01)",
+				label, p, ancestor)
 		}
 	}
 }

@@ -12,6 +12,8 @@ import (
 )
 
 func TestWrapSmokeC3RendersValidDOT(t *testing.T) {
+	t.Parallel()
+
 	m, err := parser.ParseFile("../../cmd/c4drill/testdata/multilevel.toml")
 	require.NoError(t, err)
 	require.Empty(t, validator.Validate(m))

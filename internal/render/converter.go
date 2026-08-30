@@ -409,7 +409,7 @@ func createNode(
 
 // setNodeLabel builds and sets the label for a node: the HTML label by
 // default, the plain-text record label under plain (--plain, PLAIN-03).
-// BUG-2 (edge-labels-only --no-labels): node labels are NOT suppressed by
+// fix 260831-01u (edge-labels-only --no-labels): node labels are NOT suppressed by
 // --no-labels — only edge label text is.
 func setNodeLabel(cn *cgraph.Node, node *graph.Node, opts graph.RenderOpts) {
 	if node.Label == nil {
@@ -518,19 +518,20 @@ func createCluster(
 
 // setClusterLabel builds and sets the label for a cluster: the HTML label by
 // default, the plain-text record label under plain (--plain, PLAIN-03).
-// BUG-2 (edge-labels-only --no-labels): cluster labels are NOT suppressed by
+// fix 260831-01u (edge-labels-only --no-labels): cluster labels are NOT suppressed by
 // --no-labels — only edge label text is. The drill-down URL emission is
 // structural and survives both.
 func setClusterLabel(subgraph *cgraph.Graph, cluster *graph.Cluster, opts graph.RenderOpts) {
-	if cluster.Label == nil {
+	switch {
+	case cluster.Label == nil:
 		return
-	} else if opts.Plain {
+	case opts.Plain:
 		// Plain mode routes cluster labels to the record path (labels.go) —
 		// no HTML tables, content preserved, escaping via SetLabel (T-37-07).
 		if label := buildRecordLabel(cluster.Label); label != "" {
 			subgraph.SetLabel(label)
 		}
-	} else {
+	default:
 		htmlLabel := buildHTMLLabelForType(cluster.Label, cluster.Type)
 		if htmlLabel == "" {
 			return
@@ -604,24 +605,38 @@ func setClusterAttribute(subgraph *cgraph.Graph, attr, value string) error {
 	return nil
 }
 
-// createEdge creates a cgraph.Edge from a graph.Edge.
-func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge, opts graph.RenderOpts, nameCounts map[string]int) error {
-	// BUG-3 (flag-invariant edge identity): use the builder-assigned unique
-	// name verbatim — model-derived, sanitized, flag-independent — so
-	// CreateEdgeByName's find-or-create can never silently merge two builder
-	// edges whose label content was suppressed by a formatting flag
-	// (threats T-Q1-01/T-Q1-02). Hand-built graphs without a Name fall back
-	// to a uniquified "{source}_to_{target}" name; label content never
-	// contributes to edge identity.
-	edgeName := edge.Name
-	if edgeName == "" {
-		edgeName = sanitizeForName(edge.Source + "_to_" + edge.Target)
-
-		nameCounts[edgeName]++
-		if n := nameCounts[edgeName]; n > 1 {
-			edgeName = fmt.Sprintf("%s_%d", edgeName, n)
-		}
+// edgeNameFor resolves the cgraph identity for an edge: the builder-assigned
+// unique name verbatim when present, otherwise a uniquified
+// "{source}_to_{target}" fallback for hand-built graphs.
+//
+// fix 260831-01u (flag-invariant edge identity): the builder-assigned name is
+// model-derived, sanitized, and flag-independent — so CreateEdgeByName's
+// find-or-create can never silently merge two builder edges whose label
+// content was suppressed by a formatting flag (threats T-Q1-01/T-Q1-02).
+// Label content never contributes to edge identity.
+func edgeNameFor(edge *graph.Edge, nameCounts map[string]int) string {
+	name := edge.Name
+	if name != "" {
+		return name
 	}
+
+	name = sanitizeForName(edge.Source + "_to_" + edge.Target)
+
+	nameCounts[name]++
+
+	if n := nameCounts[name]; n > 1 {
+		return fmt.Sprintf("%s_%d", name, n)
+	}
+
+	return name
+}
+
+// createEdge creates a cgraph.Edge from a graph.Edge.
+func createEdge(
+	cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge,
+	opts graph.RenderOpts, nameCounts map[string]int,
+) error {
+	edgeName := edgeNameFor(edge, nameCounts)
 
 	// rank="reverse" (RANK-01): flip layout ranking by swapping the endpoints
 	// at emission while keeping the visual arrow pointed at the logical target.
@@ -640,36 +655,7 @@ func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge,
 	// Set edge label and font
 	e.SetFontName("Helvetica")
 
-	if opts.NoLabels {
-		// BUG-2 (edge-labels-only --no-labels): no edge label under
-		// --no-labels — an explicit empty label keeps the emitted DOT clean
-		// even for hand-built graphs carrying a non-nil Label
-		// (defense-in-depth; the builder already drops it). Edge labels are
-		// the ONLY thing the flag suppresses.
-		e.SetLabel("")
-	} else if edge.Label != nil {
-		// Plain mode (PLAIN-03) emits the label as plain text via SetLabel —
-		// never the HTML rectangle. SetLabel routes through the same escaping
-		// as every existing plain label (threat T-37-07).
-		if opts.Plain {
-			if plainLabel := buildEdgePlainTextLabel(edge.Label); plainLabel != "" {
-				e.SetLabel(plainLabel)
-			} else {
-				e.SetLabel("")
-			}
-		} else if htmlLabel := buildEdgeLabel(edge.Label); htmlLabel != "" {
-			// SetLabelHTML preserves HTML-ness under graphviz 13 (same
-			// agsafeset_html path nodes use — see setNodeLabel). Empty labels
-			// (no technology, no description) keep the plain SetLabel("") path:
-			// SafeSetHTML with "" omits the attribute, which would change the
-			// emitted DOT for label-less edges and break the COMPAT-01 goldens.
-			e.SetLabelHTML(htmlLabel)
-		} else {
-			e.SetLabel("")
-		}
-
-		e.SetFontSize(fontSizeEdge)
-	}
+	setEdgeLabel(e, edge, opts)
 
 	// Edge style
 	switch edge.Style {
@@ -686,6 +672,49 @@ func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge,
 	applyEdgeAttributes(e, edge)
 
 	return nil
+}
+
+// setEdgeLabel emits the edge label: an explicit empty label under --no-labels,
+// plain text under plain (PLAIN-03), the HTML rectangle otherwise. Labels with
+// no technology and no description keep the plain SetLabel("") path — see the
+// COMPAT-01 note on the HTML branch.
+func setEdgeLabel(e *cgraph.Edge, edge *graph.Edge, opts graph.RenderOpts) {
+	if opts.NoLabels {
+		// fix 260831-01u (edge-labels-only --no-labels): no edge label under
+		// --no-labels — an explicit empty label keeps the emitted DOT clean
+		// even for hand-built graphs carrying a non-nil Label
+		// (defense-in-depth; the builder already drops it). Edge labels are
+		// the ONLY thing the flag suppresses.
+		e.SetLabel("")
+
+		return
+	}
+
+	if edge.Label == nil {
+		return
+	}
+
+	// Plain mode (PLAIN-03) emits the label as plain text via SetLabel —
+	// never the HTML rectangle. SetLabel routes through the same escaping
+	// as every existing plain label (threat T-37-07).
+	if opts.Plain {
+		if plainLabel := buildEdgePlainTextLabel(edge.Label); plainLabel != "" {
+			e.SetLabel(plainLabel)
+		} else {
+			e.SetLabel("")
+		}
+	} else if htmlLabel := buildEdgeLabel(edge.Label); htmlLabel != "" {
+		// SetLabelHTML preserves HTML-ness under graphviz 13 (same
+		// agsafeset_html path nodes use — see setNodeLabel). Empty labels
+		// (no technology, no description) keep the plain SetLabel("") path:
+		// SafeSetHTML with "" omits the attribute, which would change the
+		// emitted DOT for label-less edges and break the COMPAT-01 goldens.
+		e.SetLabelHTML(htmlLabel)
+	} else {
+		e.SetLabel("")
+	}
+
+	e.SetFontSize(fontSizeEdge)
 }
 
 // setEdgeDir emits the per-edge dir attribute. Under rank="reverse" the

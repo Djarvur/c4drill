@@ -2,8 +2,8 @@ package graph_test
 
 import (
 	"fmt"
-	"path/filepath"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
@@ -1319,6 +1319,7 @@ func TestBuildGraph_ExpandedClusterRendersNestedSubClusters(t *testing.T) {
 	require.NotNil(t, authNode.Label)
 	assert.Contains(t, authNode.Label.Name, "🔍",
 		"the collapsed container node keeps its drill affordance")
+
 	for _, id := range []string{"mainSystem.auth.authApi", "mainSystem.auth.authDb"} {
 		assert.NotContains(t, collectNodeIDs(g), id,
 			"unlinked grandchildren must not flood the root")
@@ -3688,6 +3689,7 @@ func TestBoundaryEntryWrappedInAncestorChain(t *testing.T) {
 	}
 
 	require.NotNil(t, mainWrapper, "wrapper cluster for mainSystem must exist")
+
 	found := false
 
 	for _, n := range mainWrapper.Nodes {
@@ -3872,6 +3874,7 @@ func TestNoColorsSuppressesAllColouring(t *testing.T) {
 		"edge falls back to the D-01 source-border default (structural colour, not decoration)")
 
 	require.NotNil(t, g.Legend, "legend survives --no-colors")
+
 	for _, entry := range g.Legend.Entries {
 		assert.NotEqual(t, "read", entry.Label,
 			"kind legend rows drop emergently when the kind colour is no longer drawn")
@@ -3908,7 +3911,8 @@ func TestNoStylesSuppressesStyleAndBorders(t *testing.T) {
 
 	require.Len(t, g.Edges, 1)
 	assert.Equal(t, "solid", g.Edges[0].Style, "author link style falls back to solid")
-	assert.Equal(t, model.PersonBorder, g.Edges[0].Color, "colour aspects are NOT touched by --no-styles (source-border default)")
+	assert.Equal(t, model.PersonBorder, g.Edges[0].Color,
+		"colour aspects are NOT touched by --no-styles (source-border default)")
 	assert.Equal(t, 0, g.Edges[0].MinLen) // fixture has no length anyway
 
 	t.Run("collapsed pair keeps the default style", func(t *testing.T) {
@@ -4120,6 +4124,7 @@ func TestPlainImpliesAllAspects(t *testing.T) {
 	var appUnion *graph.Node
 
 	require.Len(t, gUnion.Nodes, 2)
+
 	for _, node := range gUnion.Nodes {
 		if node.ID == "app" {
 			appUnion = node
@@ -4145,7 +4150,63 @@ func TestPlainImpliesAllAspects(t *testing.T) {
 func TestSwitchCombination(t *testing.T) {
 	t.Parallel()
 
-	m := &parser.Model{
+	m := switchCombinationModel()
+
+	// --no-colors + --no-length: colour and length suppressed; style and rank
+	// still applied.
+	g := buildSwitchComboView(m, switchComboOpts{noColors: true, noLength: true})
+	assertWrappingIntact(t, g)
+
+	client := findClientNode(t, g)
+	assert.Empty(t, client.Style.FillColor, "colour aspect suppressed")
+	assert.Equal(t, "dotted", client.Style.BorderStyle, "style aspect kept")
+
+	e := findClientEdge(t, g)
+	assert.NotEqual(t, "#BA4A00", e.Color, "author link colour suppressed")
+	assert.NotEqual(t, model.LinkWriteColour, e.Color, "kind colour suppressed")
+	assert.Zero(t, e.MinLen, "length aspect suppressed")
+	assert.Equal(t, "dashed", e.Style, "style aspect kept")
+	assert.True(t, e.RankReverse, "rank aspect kept")
+
+	// --no-styles + --no-rank: style and rank suppressed; colour and length
+	// still applied.
+	g = buildSwitchComboView(m, switchComboOpts{noStyles: true, noRank: true})
+	assertWrappingIntact(t, g)
+
+	client = findClientNode(t, g)
+	assert.Equal(t, "#AA0000", client.Style.FillColor, "colour aspect kept")
+	assert.Equal(t, "solid", client.Style.BorderStyle, "style aspect suppressed")
+
+	e = findClientEdge(t, g)
+	assert.Equal(t, "#BA4A00", e.Color, "colour aspect kept")
+	assert.Equal(t, 3, e.MinLen, "length aspect kept")
+	assert.Equal(t, "solid", e.Style, "style aspect suppressed")
+	assert.False(t, e.RankReverse, "rank aspect suppressed")
+	assert.False(t, e.NoConstraint, "rank aspect suppressed")
+
+	// All four: full suppression — the granular union of everything except
+	// the plain-only label-position/properties.edges aspects.
+	g = buildSwitchComboView(m, switchComboOpts{noColors: true, noStyles: true, noLength: true, noRank: true})
+	assertWrappingIntact(t, g)
+
+	client = findClientNode(t, g)
+	assert.Empty(t, client.Style.FillColor)
+	assert.Equal(t, "solid", client.Style.BorderStyle)
+
+	e = findClientEdge(t, g)
+	assert.NotEqual(t, "#BA4A00", e.Color)
+	assert.NotEqual(t, model.LinkWriteColour, e.Color)
+	assert.Equal(t, "solid", e.Style)
+	assert.Zero(t, e.MinLen)
+	assert.False(t, e.RankReverse)
+	assert.False(t, e.NoConstraint)
+}
+
+// switchCombinationModel builds the four-level fixture whose client link
+// exercises every granular switch aspect at once (author colour, style,
+// length, rank, and a write kind).
+func switchCombinationModel() *parser.Model {
+	return &parser.Model{
 		Properties: model.Properties{Name: "Test"},
 		Units: map[string]*model.Unit{
 			"mainSystem": {
@@ -4183,118 +4244,76 @@ func TestSwitchCombination(t *testing.T) {
 			"externalSys": {Type: model.TypeSystemExternal, Name: "External Sys"},
 		},
 	}
+}
 
-	type opts struct {
-		noColors, noStyles, noLength, noRank bool
+// switchComboOpts selects the granular suppressor flags of a combination case.
+type switchComboOpts struct {
+	noColors, noStyles, noLength, noRank bool
+}
+
+// buildSwitchComboView renders the combination fixture's C3 view with the
+// given granular flag combination applied.
+func buildSwitchComboView(m *parser.Model, o switchComboOpts) *graph.Graph {
+	v := view.GenerateC3View(m, "mainSystem.storages.localStorage")
+	v.NoColors = o.noColors
+	v.NoStyles = o.noStyles
+	v.NoLength = o.noLength
+	v.NoRank = o.noRank
+
+	return graph.BuildGraph(v)
+}
+
+// findClientNode locates the styled client node of the combination fixture,
+// searching top-level nodes and every cluster.
+func findClientNode(t *testing.T, g *graph.Graph) *graph.Node {
+	t.Helper()
+
+	const clientID = "mainSystem.storages.localStorage.client"
+
+	for _, n := range g.Nodes {
+		if n.ID == clientID {
+			return n
+		}
 	}
 
-	build := func(o opts) *graph.Graph {
-		v := view.GenerateC3View(m, "mainSystem.storages.localStorage")
-		v.NoColors = o.noColors
-		v.NoStyles = o.noStyles
-		v.NoLength = o.noLength
-		v.NoRank = o.noRank
-
-		return graph.BuildGraph(v)
-	}
-
-	findClient := func(t *testing.T, g *graph.Graph) *graph.Node {
-		t.Helper()
-
-		for _, id := range collectNodeIDs(g) {
-			if id == "mainSystem.storages.localStorage.client" {
-				for _, n := range g.Nodes {
-					if n.ID == id {
-						return n
-					}
-				}
-
-				for _, c := range collectClusterTree(g.Clusters) {
-					for _, n := range c.Nodes {
-						if n.ID == id {
-							return n
-						}
-					}
-				}
+	for _, c := range collectClusterTree(g.Clusters) {
+		for _, n := range c.Nodes {
+			if n.ID == clientID {
+				return n
 			}
 		}
-
-		t.Fatal("client node not found")
-
-		return nil
 	}
 
-	findEdge := func(t *testing.T, g *graph.Graph) *graph.Edge {
-		t.Helper()
+	t.Fatalf("client node %q not found", clientID)
 
-		require.Len(t, g.Edges, 1)
-		require.Equal(t, "mainSystem.storages.localStorage.client", g.Edges[0].Source)
+	return nil
+}
 
-		return g.Edges[0]
-	}
+// findClientEdge returns the single drawn edge of a combination graph and
+// pins its source endpoint.
+func findClientEdge(t *testing.T, g *graph.Graph) *graph.Edge {
+	t.Helper()
 
-	assertWrappingIntact := func(t *testing.T, g *graph.Graph) {
-		t.Helper()
+	require.Len(t, g.Edges, 1)
+	require.Equal(t, "mainSystem.storages.localStorage.client", g.Edges[0].Source)
 
-		found := false
+	return g.Edges[0]
+}
 
-		for _, c := range collectClusterTree(g.Clusters) {
-			if c.ID == "wrap_mainSystem.storages" {
-				found = true
-			}
+// assertWrappingIntact pins that the 38-01 wrapper-cluster nesting survives a
+// flag combination.
+func assertWrappingIntact(t *testing.T, g *graph.Graph) {
+	t.Helper()
+
+	found := false
+
+	for _, c := range collectClusterTree(g.Clusters) {
+		if c.ID == "wrap_mainSystem.storages" {
+			found = true
 		}
-
-		assert.True(t, found, "wrapper-cluster nesting from 38-01 must stay intact under flag combinations")
 	}
 
-	// --no-colors + --no-length: colour and length suppressed; style and rank
-	// still applied.
-	g := build(opts{noColors: true, noLength: true})
-	assertWrappingIntact(t, g)
-
-	client := findClient(t, g)
-	assert.Empty(t, client.Style.FillColor, "colour aspect suppressed")
-	assert.Equal(t, "dotted", client.Style.BorderStyle, "style aspect kept")
-
-	e := findEdge(t, g)
-	assert.NotEqual(t, "#BA4A00", e.Color, "author link colour suppressed")
-	assert.NotEqual(t, model.LinkWriteColour, e.Color, "kind colour suppressed")
-	assert.Zero(t, e.MinLen, "length aspect suppressed")
-	assert.Equal(t, "dashed", e.Style, "style aspect kept")
-	assert.True(t, e.RankReverse, "rank aspect kept")
-
-	// --no-styles + --no-rank: style and rank suppressed; colour and length
-	// still applied.
-	g = build(opts{noStyles: true, noRank: true})
-	assertWrappingIntact(t, g)
-
-	client = findClient(t, g)
-	assert.Equal(t, "#AA0000", client.Style.FillColor, "colour aspect kept")
-	assert.Equal(t, "solid", client.Style.BorderStyle, "style aspect suppressed")
-
-	e = findEdge(t, g)
-	assert.Equal(t, "#BA4A00", e.Color, "colour aspect kept")
-	assert.Equal(t, 3, e.MinLen, "length aspect kept")
-	assert.Equal(t, "solid", e.Style, "style aspect suppressed")
-	assert.False(t, e.RankReverse, "rank aspect suppressed")
-	assert.False(t, e.NoConstraint, "rank aspect suppressed")
-
-	// All four: full suppression — the granular union of everything except
-	// the plain-only label-position/properties.edges aspects.
-	g = build(opts{noColors: true, noStyles: true, noLength: true, noRank: true})
-	assertWrappingIntact(t, g)
-
-	client = findClient(t, g)
-	assert.Empty(t, client.Style.FillColor)
-	assert.Equal(t, "solid", client.Style.BorderStyle)
-
-	e = findEdge(t, g)
-	assert.NotEqual(t, "#BA4A00", e.Color)
-	assert.NotEqual(t, model.LinkWriteColour, e.Color)
-	assert.Equal(t, "solid", e.Style)
-	assert.Zero(t, e.MinLen)
-	assert.False(t, e.RankReverse)
-	assert.False(t, e.NoConstraint)
+	assert.True(t, found, "wrapper-cluster nesting from 38-01 must stay intact under flag combinations")
 }
 
 // ---- quick 260831-01u BUG-2: --no-labels suppresses EDGE labels only ----

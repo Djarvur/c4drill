@@ -88,20 +88,7 @@ func buildBoundaryViewGraph(v *view.View, g *Graph) {
 	wrappers := make(map[string]*Cluster)
 	roots := make([]*Cluster, 0)
 
-	// Build the expanded unit's ancestor skeleton: one wrapper per proper
-	// prefix of the ExpandedUnit path, outermost first.
-	expandedParts := strings.Split(v.ExpandedUnit, ".")
-	for i := 1; i < len(expandedParts); i++ {
-		ensureWrapperCluster(strings.Join(expandedParts[:i], "."), v, boundaryCluster, wrappers, &roots)
-	}
-
-	// Nest the expanded unit's own boundary cluster innermost, under its
-	// immediate wrapper (unchanged single top cluster for C2 views, whose
-	// ExpandedUnit has no proper prefixes).
-	if len(expandedParts) > 1 {
-		parent := wrappers[strings.Join(expandedParts[:len(expandedParts)-1], ".")]
-		parent.Clusters = append(parent.Clusters, boundaryCluster)
-	}
+	buildExpandedSkeleton(v, boundaryCluster, wrappers, &roots)
 
 	// Build nodes and clusters in definition order
 	for _, key := range v.UnitOrder {
@@ -120,53 +107,12 @@ func buildBoundaryViewGraph(v *view.View, g *Graph) {
 		// containers/systems are IsExternal=false but still need wrapping
 		// when they're boundary nodes.
 		if entry.IsBoundary || entry.IsExternal {
-			node := buildNode(entry, renderOptsFromView(v))
-
-			// WRAP-01: a fully external entry (no dotted path, hence no
-			// in-model ancestor) stays top-level exactly as before.
-			entryParts := strings.Split(entry.FullPath, ".")
-			if len(entryParts) == 1 {
-				g.Nodes = append(g.Nodes, node)
-
-				continue
-			}
-
-			// WRAP-01: wrap the boundary node in its complete ancestor chain.
-			// A prefix equal to the ExpandedUnit maps to the expanded unit's
-			// own boundary cluster — that cluster IS the depiction of that
-			// ancestor, so the chain merges with the skeleton instead of
-			// creating a duplicate.
-			inner := boundaryCluster
-
-			for i := 1; i < len(entryParts); i++ {
-				prefix := strings.Join(entryParts[:i], ".")
-				if prefix == v.ExpandedUnit {
-					inner = boundaryCluster
-
-					continue
-				}
-
-				inner = ensureWrapperCluster(prefix, v, boundaryCluster, wrappers, &roots)
-			}
-
-			inner.Nodes = append(inner.Nodes, node)
+			wrapBoundaryNode(g, entry, v, boundaryCluster, wrappers, &roots)
 
 			continue
 		}
 
-		// Internal nodes go inside the boundary cluster. D-07 (same guard as
-		// the C1 branch): expansion only takes effect when there are subunits
-		// to show — an expanded-but-empty unit renders as a plain node.
-		// CTX-02: UnfoldChain entries (collapsed ancestors with an inserted
-		// deep-link chain) unfold the same way.
-		if (entry.IsExpanded || entry.UnfoldChain) && len(entry.Unit.Subunits) > 0 {
-			cluster := buildCluster(entry, v, renderOptsFromView(v))
-			boundaryCluster.Clusters = append(boundaryCluster.Clusters, cluster)
-		} else {
-			node := buildNode(entry, renderOptsFromView(v))
-			node.IsInCluster = true
-			boundaryCluster.Nodes = append(boundaryCluster.Nodes, node)
-		}
+		placeInternalEntry(boundaryCluster, entry, v)
 	}
 
 	if len(roots) > 0 {
@@ -174,6 +120,82 @@ func buildBoundaryViewGraph(v *view.View, g *Graph) {
 	} else {
 		g.Clusters = append(g.Clusters, boundaryCluster)
 	}
+}
+
+// buildExpandedSkeleton creates the expanded unit's ancestor skeleton: one
+// wrapper per proper prefix of the ExpandedUnit path, outermost first, then
+// nests the expanded unit's own boundary cluster innermost, under its
+// immediate wrapper (unchanged single top cluster for C2 views, whose
+// ExpandedUnit has no proper prefixes).
+func buildExpandedSkeleton(
+	v *view.View, boundaryCluster *Cluster,
+	wrappers map[string]*Cluster, roots *[]*Cluster,
+) {
+	expandedParts := strings.Split(v.ExpandedUnit, ".")
+	for i := 1; i < len(expandedParts); i++ {
+		ensureWrapperCluster(strings.Join(expandedParts[:i], "."), v, boundaryCluster, wrappers, roots)
+	}
+
+	if len(expandedParts) > 1 {
+		parent := wrappers[strings.Join(expandedParts[:len(expandedParts)-1], ".")]
+		parent.Clusters = append(parent.Clusters, boundaryCluster)
+	}
+}
+
+// wrapBoundaryNode wraps a boundary/external entry's node in its complete
+// ancestor chain (WRAP-01) and appends it to the graph or innermost wrapper.
+func wrapBoundaryNode(
+	g *Graph, entry *view.Entry, v *view.View, boundaryCluster *Cluster,
+	wrappers map[string]*Cluster, roots *[]*Cluster,
+) {
+	node := buildNode(entry, renderOptsFromView(v))
+
+	// WRAP-01: a fully external entry (no dotted path, hence no
+	// in-model ancestor) stays top-level exactly as before.
+	entryParts := strings.Split(entry.FullPath, ".")
+	if len(entryParts) == 1 {
+		g.Nodes = append(g.Nodes, node)
+
+		return
+	}
+
+	// WRAP-01: wrap the boundary node in its complete ancestor chain.
+	// A prefix equal to the ExpandedUnit maps to the expanded unit's
+	// own boundary cluster — that cluster IS the depiction of that
+	// ancestor, so the chain merges with the skeleton instead of
+	// creating a duplicate.
+	inner := boundaryCluster
+
+	for i := 1; i < len(entryParts); i++ {
+		prefix := strings.Join(entryParts[:i], ".")
+		if prefix == v.ExpandedUnit {
+			inner = boundaryCluster
+
+			continue
+		}
+
+		inner = ensureWrapperCluster(prefix, v, boundaryCluster, wrappers, roots)
+	}
+
+	inner.Nodes = append(inner.Nodes, node)
+}
+
+// placeInternalEntry places an internal (non-boundary) entry inside the
+// boundary cluster. D-07 (same guard as the C1 branch): expansion only takes
+// effect when there are subunits to show — an expanded-but-empty unit renders
+// as a plain node. CTX-02: UnfoldChain entries (collapsed ancestors with an
+// inserted deep-link chain) unfold the same way.
+func placeInternalEntry(boundaryCluster *Cluster, entry *view.Entry, v *view.View) {
+	if (entry.IsExpanded || entry.UnfoldChain) && len(entry.Unit.Subunits) > 0 {
+		cluster := buildCluster(entry, v, renderOptsFromView(v))
+		boundaryCluster.Clusters = append(boundaryCluster.Clusters, cluster)
+
+		return
+	}
+
+	node := buildNode(entry, renderOptsFromView(v))
+	node.IsInCluster = true
+	boundaryCluster.Nodes = append(boundaryCluster.Nodes, node)
 }
 
 // ensureWrapperCluster returns the wrapper cluster for a dotted ancestor path,
@@ -194,7 +216,7 @@ func ensureWrapperCluster(
 		return existing
 	}
 
-	// BUG-2 (edge-labels-only --no-labels): wrapper clusters are label
+	// fix 260831-01u (edge-labels-only --no-labels): wrapper clusters are label
 	// carriers and KEEP their label under --no-labels — only edge label text
 	// is suppressed (supersedes the phase-38 LBL-01 all-labels pin).
 	label := wrapperLabel(path, v)
@@ -253,7 +275,7 @@ func wrapperLabel(path string, v *view.View) *Label {
 // in DOT. Nil-map reads are safe, so views without VisiblePaths (C2/C3,
 // expanded, hand-built) are unaffected.
 //
-// BUG-1-ROOT-COMPACT: expanded and chain-bearing (UnfoldChain) entries render
+// fix 260831-01u (root-compact): expanded and chain-bearing (UnfoldChain) entries render
 // EXCLUSIVELY the view's visible paths beneath them — the author-expanded
 // unit's direct visible subunits and CTX-02 deep-link chain entries. The
 // recursive whole-subtree build (buildCluster) is what flooded the non-
@@ -297,7 +319,7 @@ func buildVisibleCluster(entry *view.Entry, v *view.View, opts RenderOpts) *Clus
 		return buildCluster(entry, v, opts)
 	}
 
-	cluster := buildClusterShell(entry, v, opts)
+	cluster := buildClusterShell(entry, opts)
 
 	for _, childEntry := range children {
 		if len(visibleChildren(childEntry.FullPath, v)) > 0 {
@@ -349,7 +371,7 @@ func buildBoundaryCluster(v *view.View) *Cluster {
 	var style *NodeStyle
 
 	if unit != nil {
-		// BUG-2 (edge-labels-only --no-labels): the boundary cluster keeps its
+		// fix 260831-01u (edge-labels-only --no-labels): the boundary cluster keeps its
 		// label — only edge label text is suppressed.
 		label = &Label{
 			Name:        unit.Name,
@@ -461,7 +483,7 @@ func buildNestedCluster(entry *view.Entry, path string, v *view.View) *Cluster {
 
 	applyUnitOverrides(style, entry.Unit, renderOptsFromView(v))
 
-	// BUG-2 (edge-labels-only --no-labels): expanded-unit clusters keep their
+	// fix 260831-01u (edge-labels-only --no-labels): expanded-unit clusters keep their
 	// label — only edge label text is suppressed.
 	cluster := &Cluster{
 		ID:         path,
@@ -865,7 +887,7 @@ func luminance(hex string) float64 {
 // full subtree here; the C1 root renders through buildVisibleCluster instead
 // (BUG-1-ROOT-COMPACT).
 func buildCluster(entry *view.Entry, v *view.View, opts RenderOpts) *Cluster {
-	cluster := buildClusterShell(entry, v, opts)
+	cluster := buildClusterShell(entry, opts)
 
 	// Process children in definition order (use SubunitOrder if available),
 	// dispatching subunit-containers to nested clusters (CTX-03) and leaves to
@@ -915,9 +937,9 @@ func buildCluster(entry *view.Entry, v *view.View, opts RenderOpts) *Cluster {
 // buildClusterShell allocates the cluster shell shared by the recursive
 // (buildCluster) and visible-only (buildVisibleCluster) expanded-cluster
 // builders: content-derived/level style, unit overrides, and identity fields.
-// BUG-2 (edge-labels-only --no-labels): expanded-unit clusters keep their
+// fix 260831-01u (edge-labels-only --no-labels): expanded-unit clusters keep their
 // label — only edge label text is suppressed.
-func buildClusterShell(entry *view.Entry, v *view.View, opts RenderOpts) *Cluster {
+func buildClusterShell(entry *view.Entry, opts RenderOpts) *Cluster {
 	// Boxes use content-based styling (border colour derived from subunits)
 	var style *NodeStyle
 	if IsBoxType(entry.Unit.Type) {
@@ -977,7 +999,7 @@ func buildEdges(v *view.View) []*Edge {
 	edges := make([]*Edge, 0)
 	seen := make(map[string]bool) // Track processed links
 
-	// BUG-3 (flag-invariant edge identity): per-(source, target) sequence
+	// fix 260831-01u (flag-invariant edge identity): per-(source, target) sequence
 	// counters over the PRE-dedup link walk — every drawn edge gets a unique
 	// cgraph name "{source}_to_{target}_{n}" so the renderer can never merge
 	// two builder edges, whichever flags suppressed which attributes.
@@ -1314,7 +1336,7 @@ func processOutgoingLinks(
 
 		edge := createEdge(path, link.Peer, link, sourceEntry, penWidth, renderOptsFromView(v))
 
-		// BUG-3: unique, flag-independent cgraph identity from the pre-dedup
+		// fix 260831-01u (flag-invariant edge identity): unique, flag-independent cgraph identity from the pre-dedup
 		// walk — every builder Edge maps to its own drawn edge.
 		edge.Name = assignEdgeName(nameCounters, path, link.Peer)
 
@@ -1369,7 +1391,7 @@ func processIncomingLinks(
 		sourceEntry := v.Units[link.Peer] // Source is link.Peer for incoming links
 		edge := createEdge(link.Peer, path, link, sourceEntry, penWidth, renderOptsFromView(v))
 
-		// BUG-3: unique, flag-independent cgraph identity from the pre-dedup
+		// fix 260831-01u (flag-invariant edge identity): unique, flag-independent cgraph identity from the pre-dedup
 		// walk — every builder Edge maps to its own drawn edge.
 		edge.Name = assignEdgeName(nameCounters, link.Peer, path)
 
@@ -1439,6 +1461,26 @@ func kindColour(kind model.LinkKind) string {
 	}
 }
 
+// resolveEdgeColour determines color: explicit override -> kind colour ->
+// source border color (D-01, D-03, KIND-01, KIND-02). KEY-01: --no-colors
+// suppresses the author colour AND the kind colour; the D-01 source-border
+// default is structural and stays. KEY-02 union lock: plain retains kind
+// colouring, so NoColors defers to plain there. Returns "" when no rule
+// produces a colour (the edge keeps its zero value).
+func resolveEdgeColour(link model.Link, linkColor string, sourceEntry *view.Entry, opts RenderOpts) string {
+	switch {
+	case linkColor != "":
+		return linkColor
+	case opts.NoColors && !opts.Plain:
+		// Kind colours are suppressed — fall through to the structural D-01
+		// source-border default.
+	case kindColour(link.Kind) != "":
+		return kindColour(link.Kind)
+	}
+
+	return sourceBorderColour(sourceEntry)
+}
+
 // createEdge creates an edge from a link with defaults applied.
 // Per D-01: Edge color comes from source unit's border color.
 // Per D-03: If link.Color is set, it overrides the source border color.
@@ -1450,7 +1492,9 @@ func kindColour(kind model.LinkKind) string {
 // colour falls through to the kind/source-border defaults (kind colours stay),
 // style falls back to solid, the label position to middle, and the
 // length/rank hints are ignored entirely.
-func createEdge(source, target string, link model.Link, sourceEntry *view.Entry, penWidth float64, opts RenderOpts) *Edge {
+func createEdge(
+	source, target string, link model.Link, sourceEntry *view.Entry, penWidth float64, opts RenderOpts,
+) *Edge {
 	linkColor := link.Color
 	linkStyle := link.Style
 	labelPosition := string(link.LabelPosition)
@@ -1475,7 +1519,7 @@ func createEdge(source, target string, link model.Link, sourceEntry *view.Entry,
 		PenWidth:  penWidth,
 	}
 
-	// BUG-2 (edge-labels-only --no-labels): the edge label is the ONE thing
+	// fix 260831-01u (edge-labels-only --no-labels): the edge label is the ONE thing
 	// --no-labels suppresses — the builder drops the Label entirely so the
 	// converter emits none. Node/cluster/legend labels are unaffected.
 	if !opts.NoLabels {
@@ -1495,26 +1539,7 @@ func createEdge(source, target string, link model.Link, sourceEntry *view.Entry,
 		edge.Label.Position = "middle"
 	}
 
-	// Determine color: explicit override -> kind colour -> source border color
-	// (D-01, D-03, KIND-01, KIND-02). KEY-01: --no-colors suppresses the
-	// author colour AND the kind colour; the D-01 source-border default is
-	// structural and stays. KEY-02 union lock: plain retains kind colouring,
-	// so NoColors defers to plain there.
-	kindColoursSuppressed := opts.NoColors && !opts.Plain
-
-	if linkColor != "" {
-		edge.Color = linkColor
-	} else if !kindColoursSuppressed {
-		if colour := kindColour(link.Kind); colour != "" {
-			edge.Color = colour
-		} else if sourceEntry != nil {
-			style := GetStyleForType(sourceEntry.Unit.Type, sourceEntry.IsExternal)
-			edge.Color = style.BorderColor
-		}
-	} else if sourceEntry != nil {
-		style := GetStyleForType(sourceEntry.Unit.Type, sourceEntry.IsExternal)
-		edge.Color = style.BorderColor
-	}
+	edge.Color = resolveEdgeColour(link, linkColor, sourceEntry, opts)
 
 	// Copy length to MinLen (D-01: length > 0 sets minlen attribute).
 	// PLAIN-02: length ignored under plain — no minlen. KEY-01: --no-length

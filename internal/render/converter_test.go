@@ -966,8 +966,20 @@ func TestConverter_PlainEdgeLabelsArePlainText(t *testing.T) {
 		Direction: "TB",
 		Opts:      graph.RenderOpts{Plain: true},
 		Nodes: []*graph.Node{
-			{ID: "client", Label: &graph.Label{Name: "Client"}, Shape: graph.ShapeRecord, Type: model.TypeSystem, Style: &graph.NodeStyle{}},
-			{ID: "server", Label: &graph.Label{Name: "Server"}, Shape: graph.ShapeRecord, Type: model.TypeSystem, Style: &graph.NodeStyle{}},
+			{
+				ID:    "client",
+				Label: &graph.Label{Name: "Client"},
+				Shape: graph.ShapeRecord,
+				Type:  model.TypeSystem,
+				Style: &graph.NodeStyle{},
+			},
+			{
+				ID:    "server",
+				Label: &graph.Label{Name: "Server"},
+				Shape: graph.ShapeRecord,
+				Type:  model.TypeSystem,
+				Style: &graph.NodeStyle{},
+			},
 		},
 		Edges: []*graph.Edge{
 			{
@@ -1048,8 +1060,20 @@ func TestConverter_PlainKeepsLegendAndKindColour(t *testing.T) {
 		Direction: "TB",
 		Opts:      graph.RenderOpts{Plain: true},
 		Nodes: []*graph.Node{
-			{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeRecord, Type: model.TypeSystem, Style: &graph.NodeStyle{}},
-			{ID: "b", Label: &graph.Label{Name: "B"}, Shape: graph.ShapeRecord, Type: model.TypeSystem, Style: &graph.NodeStyle{}},
+			{
+				ID:    "a",
+				Label: &graph.Label{Name: "A"},
+				Shape: graph.ShapeRecord,
+				Type:  model.TypeSystem,
+				Style: &graph.NodeStyle{},
+			},
+			{
+				ID:    "b",
+				Label: &graph.Label{Name: "B"},
+				Shape: graph.ShapeRecord,
+				Type:  model.TypeSystem,
+				Style: &graph.NodeStyle{},
+			},
 		},
 		Edges: []*graph.Edge{
 			{Source: "a", Target: "b", Color: "#3C7FC0"},
@@ -1086,14 +1110,24 @@ func TestNoLabelsDOTEmitsEdgeLabelSuppressionOnly(t *testing.T) {
 		Opts:      graph.RenderOpts{NoLabels: true},
 		Nodes: []*graph.Node{
 			{
-				ID:           "order_sys",
-				Label:        &graph.Label{Name: "Order Service", Technology: "Kubernetes v1.29", Description: "Handles order processing"},
+				ID: "order_sys",
+				Label: &graph.Label{
+					Name:        "Order Service",
+					Technology:  "Kubernetes v1.29",
+					Description: "Handles order processing",
+				},
 				Shape:        graph.ShapeRecord,
 				Type:         model.TypeSystem,
 				Style:        &graph.NodeStyle{},
 				ReferenceURL: "https://docs.example.com",
 			},
-			{ID: "client", Label: &graph.Label{Name: "Client"}, Shape: graph.ShapeRecord, Type: model.TypeSystem, Style: &graph.NodeStyle{}},
+			{
+				ID:    "client",
+				Label: &graph.Label{Name: "Client"},
+				Shape: graph.ShapeRecord,
+				Type:  model.TypeSystem,
+				Style: &graph.NodeStyle{},
+			},
 		},
 		Clusters: []*graph.Cluster{
 			{
@@ -1137,7 +1171,7 @@ func TestNoLabelsDOTEmitsEdgeLabelSuppressionOnly(t *testing.T) {
 	assert.NotContains(t, dot, "streams order events", "edge description text must be suppressed")
 
 	// Node and cluster labels SURVIVE at full fidelity (quick 260831-01u
-	// BUG-2 — edge labels are the only suppression).
+	// — edge labels are the only suppression).
 	assert.Contains(t, dot, "Order Service", "node name text survives")
 	assert.Contains(t, dot, "Kubernetes", "node technology text survives")
 	assert.Contains(t, dot, "Order Context", "cluster name text survives")
@@ -1222,21 +1256,24 @@ func edgeInvariantModel() *parser.Model {
 // dotEdgeMultiset extracts the ordered endpoint-pair multiset of every edge
 // statement in a DOT render, plus the multiset of emitted penwidth values
 // (multiplicity thickness). Flags must change NEITHER.
-func dotEdgeMultiset(t *testing.T, dot string) (pairs, penwidths []string) {
+func dotEdgeMultiset(t *testing.T, dot string) ([]string, []string) {
 	t.Helper()
 
 	pairRe := regexp.MustCompile(`(?m)^\s*("[\w.]+"|[\w]+)\s*->\s*("[\w.]+"|[\w]+)\s+\[`)
 	penRe := regexp.MustCompile(`penwidth=([\d.]+)`)
 
-	pairs = make([]string, 0)
-	for _, m := range pairRe.FindAllStringSubmatch(dot, -1) {
+	pairMatches := pairRe.FindAllStringSubmatch(dot, -1)
+
+	pairs := make([]string, 0, len(pairMatches))
+	for _, m := range pairMatches {
 		pairs = append(pairs, strings.Trim(m[1], `"`)+"->"+strings.Trim(m[2], `"`))
 	}
 
 	sort.Strings(pairs)
 
 	values := penRe.FindAllStringSubmatch(dot, -1)
-	penwidths = make([]string, 0, len(values))
+
+	penwidths := make([]string, 0, len(values))
 	for _, m := range values {
 		penwidths = append(penwidths, m[1])
 	}
@@ -1246,30 +1283,22 @@ func dotEdgeMultiset(t *testing.T, dot string) (pairs, penwidths []string) {
 	return pairs, penwidths
 }
 
-// TestEdgeTopologyFlagInvariant pins the BUG-3 invariant: formatting flags
-// (--no-labels, --no-colors, --no-styles, --plain, and compositions) never
-// change the emitted edge-statement multiset (count + ordered endpoint pairs)
-// or the penwidth multiplicity display — on the C1 view AND the --expanded
-// view. Only styling may differ.
-//
-//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
-func TestEdgeTopologyFlagInvariant(t *testing.T) {
-	flagSets := []struct {
-		name string
-		set  func(v *view.View)
-	}{
-		{"no flags", func(v *view.View) {}},
-		{"--no-labels", func(v *view.View) { v.NoLabels = true }},
-		{"--no-colors", func(v *view.View) { v.NoColors = true }},
-		{"--no-styles", func(v *view.View) { v.NoStyles = true }},
-		{"--plain", func(v *view.View) { v.Plain = true }},
-		{"--no-labels + --no-colors", func(v *view.View) { v.NoLabels = true; v.NoColors = true }},
-	}
+// invariantGeneration selects the graph builder (view generation) under test.
+type invariantGeneration struct {
+	name  string
+	build func(v *view.View) (*graph.Graph, error)
+}
 
-	for _, gen := range []struct {
-		name  string
-		build func(v *view.View) (*graph.Graph, error)
-	}{
+// invariantFlagSet applies one formatting flag combination to a view.
+type invariantFlagSet struct {
+	name string
+	set  func(v *view.View)
+}
+
+// edgeInvariantGenerations enumerates the two view generations the edge
+// topology invariance is pinned on: the resolved C1 view and --expanded.
+func edgeInvariantGenerations() []invariantGeneration {
+	return []invariantGeneration{
 		{
 			name: "C1 view",
 			build: func(v *view.View) (*graph.Graph, error) {
@@ -1282,52 +1311,88 @@ func TestEdgeTopologyFlagInvariant(t *testing.T) {
 				return graph.BuildExpandedGraph(v), nil
 			},
 		},
-	} {
+	}
+}
+
+// edgeInvariantFlagSets enumerates the formatting flags (and compositions)
+// that must never change edge topology.
+func edgeInvariantFlagSets() []invariantFlagSet {
+	return []invariantFlagSet{
+		{name: "no flags", set: func(_ *view.View) {}},
+		{name: "--no-labels", set: func(v *view.View) { v.NoLabels = true }},
+		{name: "--no-colors", set: func(v *view.View) { v.NoColors = true }},
+		{name: "--no-styles", set: func(v *view.View) { v.NoStyles = true }},
+		{name: "--plain", set: func(v *view.View) { v.Plain = true }},
+		{name: "--no-labels + --no-colors", set: func(v *view.View) { v.NoLabels = true; v.NoColors = true }},
+	}
+}
+
+// renderInvariantCase renders the edge-invariant model for one
+// (generation, flag-set) matrix point and returns the emitted endpoint-pair
+// and penwidth multisets.
+func renderInvariantCase(t *testing.T, gen invariantGeneration, fs invariantFlagSet) ([]string, []string) {
+	t.Helper()
+
+	m := edgeInvariantModel()
+	v := view.GenerateExpandedView(m)
+	v.ShowLegend = false
+
+	// Recreate the view for the generation under test —
+	// flag application must not leak across cases.
+	if gen.name == "C1 view" {
+		v = view.GenerateC1View(m)
+		v.ShowLegend = false
+	}
+
+	fs.set(v)
+
+	g, err := gen.build(v)
+	require.NoError(t, err)
+
+	out, err := render.RenderDOT(g)
+	require.NoError(t, err)
+
+	pairs, penwidths := dotEdgeMultiset(t, string(out))
+
+	// The canonical merge semantics decide the exact counts:
+	// expanded mode draws every parallel link separately
+	// (COMPAT-02 v1.7 semantics — including the mirror
+	// linkFrom, 6 edges), while the resolved C1 view
+	// collapses the pair and dedupes the mirror (D-01/WR-02,
+	// 1 edge). The same-description collapse on the pre-fix
+	// converter broke the expanded count (6 -> 5) and
+	// --no-labels collapsed it further.
+	wantCount := 6
+	if gen.name == "C1 view" {
+		wantCount = 1
+	}
+
+	require.Len(t, pairs, wantCount,
+		"%s: canonical merge semantics must draw %d edges (got %v)", fs.name, wantCount, pairs)
+
+	return pairs, penwidths
+}
+
+// TestEdgeTopologyFlagInvariant pins the BUG-3 invariant: formatting flags
+// (--no-labels, --no-colors, --no-styles, --plain, and compositions) never
+// change the emitted edge-statement multiset (count + ordered endpoint pairs)
+// or the penwidth multiplicity display — on the C1 view AND the --expanded
+// view. Only styling may differ.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestEdgeTopologyFlagInvariant(t *testing.T) {
+	for _, gen := range edgeInvariantGenerations() {
 		t.Run(gen.name, func(t *testing.T) {
 			var baselinePairs, baselinePenwidths []string
 
-			for _, fs := range flagSets {
+			for _, fs := range edgeInvariantFlagSets() {
 				t.Run(fs.name, func(t *testing.T) {
-					m := edgeInvariantModel()
-					v := view.GenerateExpandedView(m)
-					v.ShowLegend = false
-
-					// Recreate the view for the generation under test —
-					// flag application must not leak across cases.
-					if gen.name == "C1 view" {
-						v = view.GenerateC1View(m)
-						v.ShowLegend = false
-					}
-
-					fs.set(v)
-
-					g, err := gen.build(v)
-					require.NoError(t, err)
-
-					out, err := render.RenderDOT(g)
-					require.NoError(t, err)
-
-					pairs, penwidths := dotEdgeMultiset(t, string(out))
-
-					// The canonical merge semantics decide the exact counts:
-					// expanded mode draws every parallel link separately
-					// (COMPAT-02 v1.7 semantics — including the mirror
-					// linkFrom, 6 edges), while the resolved C1 view
-					// collapses the pair and dedupes the mirror (D-01/WR-02,
-					// 1 edge). The same-description collapse on the pre-fix
-					// converter broke the expanded count (6 -> 5) and
-					// --no-labels collapsed it further.
-					wantCount := 6
-					if gen.name == "C1 view" {
-						wantCount = 1
-					}
-
-					require.Len(t, pairs, wantCount,
-						"%s: canonical merge semantics must draw %d edges (got %v)", fs.name, wantCount, pairs)
+					pairs, penwidths := renderInvariantCase(t, gen, fs)
 
 					if baselinePairs == nil {
 						baselinePairs, baselinePenwidths = pairs, penwidths
 						require.NotEmpty(t, pairs, "the render must draw edges")
+
 						return
 					}
 

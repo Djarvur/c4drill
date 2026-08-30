@@ -476,7 +476,7 @@ func TestIntegrationC1ViewNoNestedBoundaryPollution(t *testing.T) {
 		assert.False(t, entry.IsExternal, "chain entry %s stays in scope", chainPath)
 	}
 
-	// BUG-1-ROOT-COMPACT: the internal sshd -> nss link produces no chain
+	// fix 260831-01u (root-compact): the internal sshd -> nss link produces no chain
 	// entry and no boundary edge — nss stays hidden.
 	assert.Nil(t, v.Units["linuxSystem.sshAuth.nss"],
 		"internal links must not chain their targets into the root")

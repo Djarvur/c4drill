@@ -313,7 +313,7 @@ func resolveBoundaryLink(
 	// every authored link is resolved from its own unit elsewhere in this scan.
 	// Letting a mirror drive boundary resolution would re-reveal the original
 	// SOURCE side's subtree through its cross-system mirror (part of the
-	// BUG-1-ROOT-COMPACT root flood).
+	// fix 260831-01u (root-compact) root flood).
 	if link.Mirror {
 		return model.Link{}, false
 	}
@@ -335,7 +335,7 @@ func resolveBoundaryLink(
 		return model.Link{}, false
 	}
 
-	// BUG-1-ROOT-COMPACT guard (a): the link stays inside the peer's depicted
+	// fix 260831-01u (root-compact) guard (a): the link stays inside the peer's depicted
 	// subtree — the source resolves to a strict descendant of the peer's
 	// visible ancestor. That is internal detail at C1: no boundary edge and no
 	// deep-link chain (chaining these is what flooded the root — every nested
@@ -368,7 +368,7 @@ func resolveBoundaryLink(
 	// CTX-02: when the peer is a real model path strictly under the resolved
 	// depicted ancestor, register the ancestor chain as visible entries and
 	// point the edge at the TRUE target instead of the collapsed ancestor.
-	// BUG-1-ROOT-COMPACT guard (b): chains unfold only for genuine deep links
+	// fix 260831-01u (root-compact) guard (b): chains unfold only for genuine deep links
 	// — the source lives OUTSIDE the peer's top-level system. Links inside one
 	// top-level system resolve at the visible-container level and their true
 	// targets stay collapsed (cross-system links keep the CTX-02 contract).
