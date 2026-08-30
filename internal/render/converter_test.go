@@ -883,3 +883,184 @@ func TestLegendRendering(t *testing.T) {
 		assert.NotContains(t, out, "__c4drill_legend", "no legend node without legend")
 	})
 }
+
+// --- Plain label tests (37-04, PLAIN-03) ---
+//
+// The graphs in Tests 1-3 deliberately carry NO Title and NO legend: with no
+// nav/title the graph label table is absent, so any HTML table marker in the
+// emitted DOT can only come from a node/cluster/edge label. That makes the
+// whole-DOT "<table" assertion precise.
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestConverter_PlainNodeLabelsArePlainText(t *testing.T) {
+	g := &graph.Graph{
+		Direction: "TB",
+		Plain:     true,
+		Nodes: []*graph.Node{
+			{
+				ID:    "plain_sys",
+				Label: &graph.Label{Name: "Order Service", Technology: "Kubernetes v1.29", Description: "Handles order processing"},
+				Shape: graph.ShapeRecord,
+				Type:  model.TypeSystem,
+				Style: &graph.NodeStyle{},
+			},
+		},
+	}
+
+	output, err := render.RenderDOT(g)
+	require.NoError(t, err)
+
+	dot := string(output)
+	assert.NotContains(t, strings.ToLower(dot), "<table",
+		"plain node labels must not emit HTML table formatting")
+	assert.Contains(t, dot, "Order Service", "name content preserved under plain")
+	assert.Contains(t, dot, "Kubernetes v1.29", "technology content preserved under plain")
+	assert.Contains(t, dot, "Handles order processing", "description content preserved under plain")
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestConverter_PlainClusterLabelsArePlainText(t *testing.T) {
+	g := &graph.Graph{
+		Direction: "TB",
+		Plain:     true,
+		Clusters: []*graph.Cluster{
+			{
+				ID:         "orders",
+				Label:      &graph.Label{Name: "Order Context", Technology: "Event Sourcing", Description: "orders live here"},
+				Type:       model.TypeContainer,
+				ExploreURL: "diagram/orders.svg",
+				Nodes: []*graph.Node{
+					{
+						ID:          "orders.api",
+						Label:       &graph.Label{Name: "API"},
+						Shape:       graph.ShapeRecord,
+						Type:        model.TypeContainer,
+						IsInCluster: true,
+						Style:       &graph.NodeStyle{},
+					},
+				},
+				Style: &graph.NodeStyle{},
+			},
+		},
+	}
+
+	output, err := render.RenderDOT(g)
+	require.NoError(t, err)
+
+	dot := string(output)
+	assert.NotContains(t, strings.ToLower(dot), "<table",
+		"plain cluster labels must not emit HTML table formatting")
+	assert.Contains(t, dot, "Order Context", "cluster name content preserved under plain")
+	assert.Contains(t, dot, "Event Sourcing", "cluster technology content preserved under plain")
+	assert.Contains(t, dot, "orders live here", "cluster description content preserved under plain")
+	assert.Contains(t, dot, "diagram/orders.svg",
+		"cluster drill-down URL is a structural affordance and must survive plain mode")
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestConverter_PlainEdgeLabelsArePlainText(t *testing.T) {
+	g := &graph.Graph{
+		Direction: "TB",
+		Plain:     true,
+		Nodes: []*graph.Node{
+			{ID: "client", Label: &graph.Label{Name: "Client"}, Shape: graph.ShapeRecord, Type: model.TypeSystem, Style: &graph.NodeStyle{}},
+			{ID: "server", Label: &graph.Label{Name: "Server"}, Shape: graph.ShapeRecord, Type: model.TypeSystem, Style: &graph.NodeStyle{}},
+		},
+		Edges: []*graph.Edge{
+			{
+				Source: "client",
+				Target: "server",
+				Label:  &graph.EdgeLabel{Technology: "gRPC", Description: "streams order events downstream"},
+			},
+		},
+	}
+
+	output, err := render.RenderDOT(g)
+	require.NoError(t, err)
+
+	dot := string(output)
+	assert.NotContains(t, strings.ToLower(dot), "<table",
+		"plain edge labels must not emit the HTML rectangle")
+	assert.Contains(t, dot, "gRPC", "edge technology content preserved under plain")
+	assert.Contains(t, dot, "streams order events downstream", "edge description content preserved under plain")
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestConverter_NonPlainLabelsUnchanged(t *testing.T) {
+	// Locks the default path: with Plain=false the same label content still
+	// routes through the HTML table builders at all three sites.
+	g := &graph.Graph{
+		Direction: "TB",
+		Plain:     false,
+		Nodes: []*graph.Node{
+			{
+				ID:    "styled_sys",
+				Label: &graph.Label{Name: "Styled Sys", Technology: "Kotlin", Description: "html table label"},
+				Shape: graph.ShapeRecord,
+				Type:  model.TypeSystem,
+				Style: &graph.NodeStyle{},
+			},
+		},
+		Clusters: []*graph.Cluster{
+			{
+				ID:    "styled_cluster",
+				Label: &graph.Label{Name: "Styled Context", Technology: "Go", Description: "expanded container"},
+				Type:  model.TypeContainer,
+				Nodes: []*graph.Node{
+					{
+						ID:          "styled_cluster.api",
+						Label:       &graph.Label{Name: "API"},
+						Shape:       graph.ShapeRecord,
+						Type:        model.TypeContainer,
+						IsInCluster: true,
+						Style:       &graph.NodeStyle{},
+					},
+				},
+				Style: &graph.NodeStyle{},
+			},
+		},
+		Edges: []*graph.Edge{
+			{
+				Source: "styled_sys",
+				Target: "styled_cluster.api",
+				Label:  &graph.EdgeLabel{Technology: "HTTP", Description: "sends requests to the api"},
+			},
+		},
+	}
+
+	output, err := render.RenderDOT(g)
+	require.NoError(t, err)
+
+	dot := string(output)
+	assert.Contains(t, strings.ToLower(dot), "<table",
+		"default (non-plain) labels must keep the HTML table path")
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestConverter_PlainKeepsLegendAndKindColour(t *testing.T) {
+	// Semantic surface survives plain mode: the legend (an HTML table by
+	// design) and the kind-derived edge colour (arrives from the builder in
+	// edge.Color) must still be present in the emitted DOT.
+	g := &graph.Graph{
+		Direction: "TB",
+		Plain:     true,
+		Nodes: []*graph.Node{
+			{ID: "a", Label: &graph.Label{Name: "A"}, Shape: graph.ShapeRecord, Type: model.TypeSystem, Style: &graph.NodeStyle{}},
+			{ID: "b", Label: &graph.Label{Name: "B"}, Shape: graph.ShapeRecord, Type: model.TypeSystem, Style: &graph.NodeStyle{}},
+		},
+		Edges: []*graph.Edge{
+			{Source: "a", Target: "b", Color: "#3C7FC0"},
+		},
+		Legend: &graph.Legend{
+			Entries: []graph.LegendEntry{{Label: "container", Color: "#3C7FC0"}},
+		},
+	}
+
+	output, err := render.RenderDOT(g)
+	require.NoError(t, err)
+
+	dot := string(output)
+	assert.Contains(t, dot, "__c4drill_legend", "legend node survives plain mode")
+	assert.Contains(t, dot, `COLOR="#3C7FC0">container`, "legend statement present under plain")
+	assert.Contains(t, dot, "#3C7FC0", "kind-derived edge colour survives plain mode")
+}
