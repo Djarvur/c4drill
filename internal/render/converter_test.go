@@ -1123,10 +1123,14 @@ func TestNoLabelsDOTEmitsNoLabelMarkup(t *testing.T) {
 	require.NoError(t, err)
 
 	dot := string(output)
-	lower := strings.ToLower(dot)
 
-	// No label TEXT anywhere: neither HTML tables nor record/edge text.
-	assert.NotContains(t, lower, "<table", "no HTML-table element labels under NoLabels")
+	// No element label TEXT anywhere. The legend (sanctioned HTML) is the
+	// ONLY label=<...> HTML label in this graph (no nav/title here); the
+	// count-based check is robust to the engine's HTML case canonicalization.
+	assert.Equal(t, 1, strings.Count(dot, "label=<"),
+		"only the legend may carry an HTML label under NoLabels")
+	assert.NotContains(t, dot, "<table",
+		"no element-level lowercase HTML tables (sanctioned markup is uppercase)")
 	assert.NotContains(t, dot, "Order Service", "node name text must be suppressed")
 	assert.NotContains(t, dot, "Kubernetes", "node technology text must be suppressed")
 	assert.NotContains(t, dot, "Order Context", "cluster name text must be suppressed")

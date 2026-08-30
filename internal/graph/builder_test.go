@@ -4241,17 +4241,21 @@ func noLabelsModel() *parser.Model {
 				Technology:  "Go",
 				Description: "the main app",
 				Reference:   "https://docs.example.com/app",
-				Expanded:    []string{"app"},
-				Subunits: map[string]*model.Unit{
-					"api": {Type: model.TypeContainer, Name: "API", Technology: "REST"},
-				},
-				SubunitOrder: []string{"api"},
 				Links: []model.Link{{
 					Peer:        "db",
 					Technology:  "SQL",
 					Description: "reads rows",
 					Kind:        model.KindRead,
 				}},
+			},
+			"svc": {
+				Type:     model.TypeBox,
+				Name:     "Service Context",
+				Expanded: []string{"svc"},
+				Subunits: map[string]*model.Unit{
+					"api": {Type: model.TypeContainer, Name: "API", Technology: "REST"},
+				},
+				SubunitOrder: []string{"api"},
 			},
 			"db": {Type: model.TypeDb, Name: "Database", Technology: "Postgres"},
 		},
@@ -4278,7 +4282,7 @@ func TestNoLabelsNodesAreBareShapes(t *testing.T) {
 
 	for _, c := range collectClusterTree(g.Clusters) {
 		for _, n := range c.Nodes {
-			if n.ID == "app.api" {
+			if n.ID == "svc.api" {
 				api = n
 			}
 		}
@@ -4375,7 +4379,7 @@ func TestNoLabelsOptInDefaultPathUntouched(t *testing.T) {
 
 	app := nodeByID(t, g, "app")
 	require.NotNil(t, app.Label)
-	assert.Equal(t, "Application", app.Label.Name, "default path keeps label content")
+	assert.Equal(t, "Application 📖", app.Label.Name, "default path keeps label content (incl. glyph)")
 	require.NotNil(t, g.Edges[0].Label)
 	assert.Equal(t, "reads rows", g.Edges[0].Label.Description)
 }
