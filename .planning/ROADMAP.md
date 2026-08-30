@@ -103,7 +103,16 @@ Full details: [milestones/v1.13-ROADMAP.md](milestones/v1.13-ROADMAP.md)
   4. `--plain` uniformly strips custom formatting, keeps semantics: `c4drill --plain` renders every generated file — the context diagram and all drill-down views, in svg/html/dot — with unit `color`/`style`/`border` fallen back to type-palette defaults, link `color`/`style` at defaults, `length`/`rank` ignored (default spacing, forward ranking), `properties.edges` ignored, and labels as plain text preserving name/technology/description content — while kind-derived edge colours and the legend remain. *(PLAIN-01, PLAIN-02, PLAIN-03, PLAIN-04)*
   5. Nothing else changed, documented, released: without `--plain`, models that do not exercise the new nesting-context scenarios render unchanged (canonicalDOT goldens re-baselined only for documented CTX deltas; full test suite green); README.adoc documents both features (what is ignored, what deliberately stays), skill/SKILL.md and all plugin copies are synced, example fixtures demonstrate both features and render cleanly through the full pipeline; the milestone tags product release **v1.21.0**. *(BC-01, DOC-01, DOC-02, DOC-03, REL-01)*
 
-**Plans**: TBD (plan-phase determines; precedent: v1.11 = 4 plans, v1.12 = 9, v1.13 = 6 — expect mid single digits)
+**Plans**: 7 plans in 5 waves
+
+Plans:
+- [ ] 37-01-PLAN.md — CTX-03: recursive clusters in buildCluster (expanded units render nested clusters, not flat lists)
+- [ ] 37-02-PLAN.md — CTX-02: deep-link ancestor-chain entries in C1/C2/C3 view resolution (true-target edges)
+- [ ] 37-03-PLAN.md — PLAIN-01/02: --plain flag threading (View.Plain → Graph.Plain) + builder-level formatting suppression
+- [ ] 37-04-PLAN.md — PLAIN-03/04: plain-text labels in the renderer + E2E --plain goldens and uniformity across all outputs
+- [ ] 37-05-PLAN.md — CTX-01 invariant + ONE consolidated golden re-baseline (BC-01) + visual checkpoint
+- [ ] 37-06-PLAN.md — DOC-01..03: README, skill sync (3 byte-identical copies), example fixtures
+- [ ] 37-07-PLAN.md — REL-01: tag and ship product release v1.21.0
 
 **Notes** (from milestone context — phase research/codebase scan must pin exact gaps):
 - **Why one phase:** CTX (view semantics: `internal/view/scope.go` — GenerateC1View, visible subunits, boundary resolution; `internal/graph` cluster building) and PLAIN (CLI flag in `cmd/c4drill`, applied through the render pipeline) are largely disjoint in code but share canonicalDOT goldens and the same emission points; splitting would force cross-phase golden churn (single-phase precedent: v1.11, v1.12, v1.13 — STATE.md decision carry-forward).
@@ -128,6 +137,6 @@ Full details: [milestones/v1.13-ROADMAP.md](milestones/v1.13-ROADMAP.md)
 | 34. Label formatting fixes | v1.11 | 4/4 | Complete | 2026-08-10 |
 | 35. C4D DSL alternative | v1.12 | 9/9 | Complete | 2026-08-14 |
 | 36. Edge Semantics and Legend | v1.13 | 6/6 | Complete | 2026-08-28 |
-| 37. Nesting Context and Plain Rendering | v1.14 | 0/TBD | Not started | - |
+| 37. Nesting Context and Plain Rendering | v1.14 | 0/7 | Not started | - |
 
 **Post-milestone (2026-08-28):** user-directed design review shipped outside any phase as v1.19.0–v1.20.0 — legend reworked into a floating framed node outside an invisible content cluster (REQUIREMENTS.md LEG-01..03 re-specified in place), queue units render as SVG pipes (SHAPE-01, quick task [260828-qbx](.planning/quick/260828-qbx-render-queue-units-as-horizontal-pipe-sh/)). Quick tasks are not tracked in the phase table above (GSD quick-mode convention).

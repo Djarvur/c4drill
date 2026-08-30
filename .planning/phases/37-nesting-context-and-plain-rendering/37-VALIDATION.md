@@ -38,14 +38,14 @@ created: 2026-08-30
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 37-01-xx | 01 | 1 | CTX-03 | — | N/A | unit (graph) | `go test ./internal/graph/...` | ❌ W0 (new tests in builder_test.go) | ⬜ pending |
-| 37-0x-xx | 0x | 1 | CTX-02 | — | N/A | unit (view) | `go test ./internal/view/...` | ❌ W0 (new tests in scope_test.go) | ⬜ pending |
-| 37-0x-xx | 0x | 1 | CTX-01 | — | N/A | unit + E2E | `go test ./internal/view/... ./cmd/c4drill/...` | ❌ W0 | ⬜ pending |
-| 37-0x-xx | 0x | 2 | PLAIN-01/02 | — | N/A | unit (graph+render) | `go test ./internal/graph/... ./internal/render/...` | ❌ W0 | ⬜ pending |
-| 37-0x-xx | 0x | 2 | PLAIN-03/04 | — | N/A | unit + E2E golden | `go test ./internal/render/... ./cmd/c4drill/...` | ❌ W0 | ⬜ pending |
-| 37-0x-xx | 0x | 2 | BC-01 | — | N/A | canonicalDOT goldens | `go test ./...` | ✅ (existing goldens) | ⬜ pending |
-| 37-0x-xx | 0x | 3 | DOC-01..03 | — | N/A | CI parity + render | `.github/workflows/validate-skill-examples.yml` (diff -r ×2, example renders) | ✅ | ⬜ pending |
-| 37-0x-xx | 0x | 3 | REL-01 | — | N/A | release tag | `git tag v1.21.0` + release workflow | ✅ | ⬜ pending |
+| 37-01-01..03 | 01 | 1 | CTX-03 | T-37-01 | N/A | unit (graph, TDD RED→GREEN) | `go test ./internal/graph/ -run 'TestBuildGraph_ExpandedClusterRendersNestedSubClusters' -v` | ❌ W0 (new test in builder_test.go) | ⬜ pending |
+| 37-02-01..03 | 02 | 1 | CTX-02 | T-37-03 | N/A | unit (view, TDD) | `go test ./internal/view/ -run 'DeepLink|DeepCrossLink' -v` | ❌ W0 (new tests in scope_test.go) | ⬜ pending |
+| 37-05-01 | 05 | 4 | CTX-01 | T-37-10 | N/A | invariant unit + E2E goldens | `go test ./internal/view/ -run 'TestViewAncestorChainInvariant' -v` | ❌ W0 (new test in scope_test.go) | ⬜ pending |
+| 37-03-01..03 | 03 | 2 | PLAIN-01/02 | T-37-05 | N/A | unit (graph, TDD) | `go test ./internal/graph/ -run 'Plain' -v` | ❌ W0 (new tests in builder_test.go) | ⬜ pending |
+| 37-04-01..03 | 04 | 3 | PLAIN-03/04 | T-37-07 | N/A | unit + E2E golden (TDD + canonical) | `go test ./internal/render/ -run 'Plain' -v && go test ./cmd/c4drill/ -run 'Plain' -v` | ❌ W0 (converter_test.go, root_test.go, plain.dot goldens) | ⬜ pending |
+| 37-05-02 | 05 | 4 | BC-01 | T-37-09 | N/A | canonicalDOT goldens | `go test ./...` | ✅ (existing goldens re-baselined once, here) | ⬜ pending |
+| 37-06-01..03 | 06 | 4 | DOC-01..03 | T-37-11 | N/A | CI parity + render | `diff -r skill plugins/c4drill/skills/c4drill-toml && diff -r skill plugins/c4drill/opencode/skills/c4drill-toml` + example renders | ✅ (workflow exists) | ⬜ pending |
+| 37-07-01..02 | 07 | 5 | REL-01 | T-37-13 | N/A | release tag | `git tag v1.21.0` + `gh release view v1.21.0` | ✅ (release.yml exists) | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
