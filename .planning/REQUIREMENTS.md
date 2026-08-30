@@ -34,9 +34,9 @@ Source: user request 2026-08-30. Clarifying questions were auto-skipped (yolo mo
 
 ### DOC — Documentation and skills
 
-- [ ] **DOC-01**: README.adoc documents the nesting-context behavior and the `--plain` key — what is ignored and what deliberately stays.
-- [ ] **DOC-02**: skill/SKILL.md and all plugin copies are synced with the same surface.
-- [ ] **DOC-03**: Skill/example fixtures demonstrate both features and render cleanly through the full pipeline.
+- [x] **DOC-01**: README.adoc documents the nesting-context behavior and the `--plain` key — what is ignored and what deliberately stays.
+- [x] **DOC-02**: skill/SKILL.md and all plugin copies are synced with the same surface.
+- [x] **DOC-03**: Skill/example fixtures demonstrate both features and render cleanly through the full pipeline.
 
 ### REL — Release
 
@@ -66,9 +66,9 @@ Source: user request 2026-08-30. Clarifying questions were auto-skipped (yolo mo
 | PLAIN-03 | Phase 37 | Complete |
 | PLAIN-04 | Phase 37 | Complete |
 | BC-01 | Phase 37 | Complete |
-| DOC-01 | Phase 37 | Pending |
-| DOC-02 | Phase 37 | Pending |
-| DOC-03 | Phase 37 | Pending |
+| DOC-01 | Phase 37 | Complete |
+| DOC-02 | Phase 37 | Complete |
+| DOC-03 | Phase 37 | Complete |
 | REL-01 | Phase 37 | Pending |
 
 **Coverage:**
