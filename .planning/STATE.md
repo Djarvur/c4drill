@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.14
 milestone_name: Nesting Context and Plain Rendering
 status: executing
-last_updated: "2026-08-30T12:27:30.719Z"
-last_activity: 2026-08-30 -- Phase 37 planning complete
+last_updated: "2026-08-30T12:46:50.500Z"
+last_activity: 2026-08-30
 progress:
   total_phases: 2
   completed_phases: 0
   total_plans: 7
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-30)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** Phase 37 — Nesting Context and Plain Rendering (milestone v1.14, release tag v1.21.0)
+**Current focus:** Phase 37 — nesting-context-and-plain-rendering
 
 ## Current Position
 
-Phase: 37 (Nesting Context and Plain Rendering) — only phase of v1.14
-Plan: — (not yet planned)
+Phase: 37 (nesting-context-and-plain-rendering) — EXECUTING
+Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-08-30 -- Phase 37 planning complete
+Last activity: 2026-08-30
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 14%
 
 ## Performance Metrics
 
@@ -43,6 +43,7 @@ Progress: [░░░░░░░░░░] 0%
 | 34 (v1.11) | 4 done | TDD RED→GREEN; 28 commits |
 | 35 (v1.12) | 9 done | 25 tasks; grammar/emitter plans 42–53 min |
 | 36 (v1.13) | 6 done | 20/20 requirements; release v1.18.0 |
+| Phase 37 P01 | 13min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -85,10 +86,14 @@ See MILESTONES.md post-milestone section (260828-qbx queue pipes, 260828-tgf pip
 
 ## Session Continuity
 
-Last session: 2026-08-30
-Stopped at: ROADMAP.md created for v1.14 (Phase 37, 11/11 requirements); REQUIREMENTS.md traceability filled
+Last session: 2026-08-30T12:46:13.439Z
+Stopped at: Completed 37-01-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
 
 - Plan the phase with `/gsd:plan-phase 37`
+
+## Decisions
+
+- [Phase ?]: CTX-03 landed with zero golden deltas — Expanded-mode baselines stayed green: GenerateExpandedView sets IsExpanded=HasSubunits (buildNestedCluster path untouched, magnifier guard inert) and no test reads the committed cmd .dot/.svg artifacts; 37-05 re-baseline scope must be re-assessed

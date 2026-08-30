@@ -19,7 +19,7 @@ Source: user request 2026-08-30. Clarifying questions were auto-skipped (yolo mo
 
 - [ ] **CTX-01**: Every depicted element on a non-expanded generated diagram renders inside its complete chain of ancestor containers — all intermediate containers render as nested containers around it, so no element ever appears outside its hierarchy.
 - [ ] **CTX-02**: A link whose target is a deeply nested unit keeps the target's context: the target renders within its container chain and the edge terminates at the target inside those containers, instead of silently collapsing to an anonymous top-level ancestor.
-- [ ] **CTX-03**: Expanded units render depicted nested elements through their intermediate containers (nested clusters, not flat lists), so the nesting picture on a non-expanded scheme matches the drill-down views — end-to-end recognizability across all diagram levels.
+- [x] **CTX-03**: Expanded units render depicted nested elements through their intermediate containers (nested clusters, not flat lists), so the nesting picture on a non-expanded scheme matches the drill-down views — end-to-end recognizability across all diagram levels.
 
 ### PLAIN — Formatting-ignoring generation key
 
@@ -60,7 +60,7 @@ Source: user request 2026-08-30. Clarifying questions were auto-skipped (yolo mo
 |-------------|-------|--------|
 | CTX-01 | Phase 37 | Pending |
 | CTX-02 | Phase 37 | Pending |
-| CTX-03 | Phase 37 | Pending |
+| CTX-03 | Phase 37 | Complete |
 | PLAIN-01 | Phase 37 | Pending |
 | PLAIN-02 | Phase 37 | Pending |
 | PLAIN-03 | Phase 37 | Pending |
