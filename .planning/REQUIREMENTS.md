@@ -1,77 +1,46 @@
-# Requirements: v1.13 Edge Semantics and Legend
+# Requirements: v1.14 Nesting Context and Plain Rendering
 
 **Status:** Active
-**Milestone:** v1.13 Edge Semantics and Legend (product release tag: v1.18.0)
-**Last updated:** 2026-08-28
+**Milestone:** v1.14 Nesting Context and Plain Rendering (product release tag: v1.21.0)
+**Last updated:** 2026-08-30
 
-Generated diagrams must have trustworthy colour semantics. Six user-reported problems define this milestone: custom unit colours are silently dropped at render; the global edge style (`properties.edges`) is ignored by C2/C3 drill-down diagrams; reversing an edge's layout ranking requires an unclear `"<-"` + `arrow = "reverse"` combination; edges cannot be coloured by data-flow kind (read/write); collapsed edges lose kind identity; and diagrams carry no legend explaining the colour conventions.
+Two user-reported improvements define this milestone. First, non-expanded diagrams lose nesting context: a depicted element can appear without the containers it lives in, breaking the mental map as the reader moves between diagram levels. Second, there is no way to render a model ignoring author-custom formatting — for canonical default-styled output (diffing structure, consistent publishing).
 
-Source: user request 2026-08-28 + codebase scan (root causes pre-confirmed):
-- `Unit.Color/Style/Border` and `Properties.Color/Style/Border` are parsed but have zero render-side reads — `buildNode`/`buildCluster` style exclusively via type palettes (`internal/graph/shapes.go`).
-- `properties.edges` reaches C1/expanded views; C2 (`view/scope.go:377`) and C3 (`view/scope.go:470`) copy only the drilled-into unit's own `Unit.Edges` — no global fallback. `"square"` is documented but unimplemented in `configureGraphSettings`.
-- `rank = "forward"/"reverse"` parse and round-trip but are consumed nowhere; only `rank = "equal"` → `constraint=false` works.
-- `graph.Graph.Legend` placeholder struct exists, never populated or rendered.
+Source: user request 2026-08-30. Clarifying questions were auto-skipped (yolo mode); scope below is the orchestrator's best-judgment reading, to be confirmed against the codebase in phase research:
+
+- On non-expanded views, where deep units get depicted today (C1 expanded clusters and their visible subunits, boundary/link resolution in `internal/view/scope.go`), intermediate containers may not render — the phase scan must pin the exact gaps.
+- Formatting inputs to ignore under `--plain`: unit `color`/`style`/`border`, link `color`/`style`/`length`/`rank`, `properties.edges`, custom label formatting (`labels.go` HTML rectangles, `labelPosition`).
 
 ---
 
-## v1.13 Requirements
+## v1.14 Requirements
 
-### COLOR — Unit styling fix
+### CTX — Nesting context on non-expanded views
 
-- [ ] **COLOR-01**: A unit's explicit `color` actually renders — node background/font/border colours reflect author-specified `Unit.Color` for plain nodes AND expanded-unit clusters (via `FillColor`/`FontColor`/`Color` overrides at `buildNode`/`buildCluster`, emitted through `applyNodeStyle`/`applyClusterStyle`). Unset fields keep the type-palette defaults.
-- [ ] **COLOR-02**: The sibling parsed-but-dead unit fields `style` and `border` render too (same override mechanism), so the full documented unit styling triple (`color`/`style`/`border`) works in one fix.
+- [ ] **CTX-01**: Every depicted element on a non-expanded generated diagram renders inside its complete chain of ancestor containers — all intermediate containers render as nested containers around it, so no element ever appears outside its hierarchy.
+- [ ] **CTX-02**: A link whose target is a deeply nested unit keeps the target's context: the target renders within its container chain and the edge terminates at the target inside those containers, instead of silently collapsing to an anonymous top-level ancestor.
+- [ ] **CTX-03**: Expanded units render depicted nested elements through their intermediate containers (nested clusters, not flat lists), so the nesting picture on a non-expanded scheme matches the drill-down views — end-to-end recognizability across all diagram levels.
 
-### GEDGE — Global edge style
+### PLAIN — Formatting-ignoring generation key
 
-- [ ] **GEDGE-01**: Every diagram generation respects `properties.edges`: C2 and C3 views fall back to the global setting when the drilled-into unit does not set its own `edges`; per-unit values keep winning where present. Disabling splines globally disables them on every generated diagram.
-- [ ] **GEDGE-02**: The documented value set and implementation agree — `square` either maps to a real GraphViz splines mode (`ortho`) or is removed from the docs; no documented value silently no-ops.
-
-### RANK — Convenient rank reversal
-
-- [ ] **RANK-01**: `rank = "reverse"` on a link reverses the edge's layout ranking with that single option — same visual arrow direction, opposite vertical ordering (emit swapped endpoints with `dir=back`). It replaces the `"<-"` + `arrow = "reverse"` idiom; `rank = "forward"` is the explicit default; `rank = "equal"` keeps its existing `constraint=false` behavior.
-- [ ] **RANK-02**: `rank = "reverse"` works in collapsed and expanded views and survives edge resolution (view copiers carry Rank; collapsed copies keep it).
-
-### KIND — Edge kinds
-
-- [ ] **KIND-01**: Links accept `kind = "read" | "write" | "read-write"` with kind-derived colours: read = green, write = red, read-write = a blend colour distinct from both. The kind colour applies when the link sets no explicit `color`.
-- [ ] **KIND-02**: An explicit `color` overrides the kind colour (kind is recorded and round-trips, but does not colour the edge).
-- [ ] **KIND-03**: `kind` works in both formats — TOML and C4D (grammar `OptionKey` + `applyEdgeOption` + emitters + reserved-word suggestions) — and round-trips through `convert`/`fmt` canonically, including `${param}` substitution inside templates.
-
-### AGG — Collapsed-edge kind semantics
-
-- [ ] **AGG-01**: When edges collapse to a visible ancestor, the collapsed edge's colour derives from the constituent kinds: all read → read colour, all write → write colour, mixed → read-write colour.
-- [ ] **AGG-02**: The collapsed edge's line style follows precedence: all constituents share one style → that style; otherwise any solid → solid; otherwise any dashed → dashed; otherwise dotted.
-- [ ] **AGG-03**: If the constituent edges carry explicit custom colours (not kind-derived), kind colouring is suppressed on the collapsed edge and the default edge colour is used.
-
-### LEG — Legend
-
-- [ ] **LEG-01**: Every generated diagram includes a legend in the upper-right corner — a framed, titled ("legend") floating node that dot packs beside the main component — controlled by a single global setting (properties-level) that defaults to **enabled**; authors can disable it for the whole model.
-- [ ] **LEG-02**: The legend explains only the colour conventions the diagram actually uses — one row per entity kind present (person, system, container, component, plus level-qualified "system db" / "container db" / "component db" and "system queue" / "container queue" / "component queue" for the kinds that exist at several levels) and one row per external entity kind — as coloured text samples; a convention absent from the view is not listed.
-- [ ] **LEG-03**: Authors can add custom legend lines (label + colour) in both formats; custom lines render after the defaults.
+- [ ] **PLAIN-01**: `c4drill --plain` renders every generated diagram with explicit unit formatting ignored: `color`/`style`/`border` on any unit (including expanded-unit clusters) fall back to the type-palette defaults.
+- [ ] **PLAIN-02**: `--plain` ignores explicit edge formatting: link `color` and `style` fall back to defaults; `length` and `rank` are ignored (default spacing, forward ranking); global `properties.edges` is ignored. Kind-derived edge colours and the legend are kept — they derive from semantic `kind`, not custom formatting.
+- [ ] **PLAIN-03**: `--plain` simplifies label formatting: labels render as plain text (no custom HTML-rectangle formatting); label text content (name, technology, description) is preserved.
+- [ ] **PLAIN-04**: `--plain` applies uniformly to every generated output file — the context diagram and all drill-down views, in all formats (svg/html/dot).
 
 ### BC — Backward compatibility
 
-- [ ] **BC-01**: Models that use none of the new features render unchanged **except** for the default-on legend (accepted, user-mandated default) — canonicalDOT goldens re-baselined only for the legend block and any documented deltas; full suite stays green.
+- [ ] **BC-01**: Without `--plain`, models that do not exercise the new nesting-context scenarios render unchanged; canonicalDOT goldens are re-baselined only for documented CTX deltas; the full test suite stays green.
 
 ### DOC — Documentation and skills
 
-- [ ] **DOC-01**: README.adoc documents unit styling (now actually working), the global edge style fallback, the `rank = "reverse"` idiom (replacing the old dance), link `kind` colours, and the legend setting with custom lines.
+- [ ] **DOC-01**: README.adoc documents the nesting-context behavior and the `--plain` key — what is ignored and what deliberately stays.
 - [ ] **DOC-02**: skill/SKILL.md and all plugin copies are synced with the same surface.
-- [ ] **DOC-03**: Skill/example fixtures demonstrate the new features (both formats where applicable) and render cleanly through the full pipeline.
+- [ ] **DOC-03**: Skill/example fixtures demonstrate both features and render cleanly through the full pipeline.
 
 ### REL — Release
 
-- [ ] **REL-01**: Milestone ships as product release **v1.18.0** (git tag; CI release workflow builds artifacts and creates the GitHub release).
-
----
-
-## Post-Milestone Requirements (2026-08-28 design review)
-
-User-directed review of the freshly shipped legend, plus a queue shape request. Shipped outside any GSD phase — direct fixes (v1.19.0–v1.19.2) and quick task 260828-qbx (v1.20.0). LEG-01..03 above were re-specified in place to describe the shipped result.
-
-### SHAPE — Queue pipe
-
-- [ ] **SHAPE-01**: Queue-type units render as a horizontal cylinder ("pipe") in SVG and HTML output — a post-processed outline inscribed in the node's box bbox (edge anchors unchanged), with fill/stroke/dasharray preserved from the replaced box outline. The ╟╢ icon and the `═╦╩═╦═══` label art are removed. DOT keeps plain boxes: GraphViz cannot rotate `shape=cylinder` (`orientation` affects only polygon-based shapes) and `shape=tape` is unavailable in the pinned build, so the pipe is drawn by SVG post-processing (`internal/render/pipe.go`); DOT is a secondary format.
+- [ ] **REL-01**: Milestone ships as product release **v1.21.0** (git tag; CI release workflow builds artifacts and creates the GitHub release).
 
 ---
 
@@ -79,39 +48,24 @@ User-directed review of the freshly shipped legend, plus a queue shape request. 
 
 | Feature | Reason |
 |---------|--------|
-| Per-edge custom kind palettes / themeable kind colours | One default palette keeps the legend honest; custom `color` already covers one-off needs |
-| Legend positioning controls (corner choice, manual placement) | The legend auto-packs upper-right beside the invisible content cluster (post-milestone rework); no configurability beyond on/off |
-| Manual positioning / rank=same subgraph authoring | Violates the auto-layout design decision (PROJECT.md) |
-| `rank = "forward"` doing anything beyond the default | Forward is the natural direction; the option exists for symmetry/explicitness only |
-| Custom unit iconography/fonts | Not requested |
-| `properties.color/style/border` (page-level styling) | Parsed-but-dead today; not part of the reported defect — deferred until asked for |
+| Granular per-aspect ignore flags (`--no-colors`, `--no-ranks`, …) | One `--plain` key covers the stated need; add granular flags when actually asked for |
+| Properties-level ignore keys embedded in the model file | CLI-only keeps the model format lean; the dual-format (TOML + C4D grammar) surface is disproportionate |
+| Stripping kind-derived colours or the legend in plain mode | Kind is semantic data-flow information, not custom formatting |
+| Restructuring collapsed (non-depicted) subtrees | CTX shows container chains only for DEPICTED elements; collapsed units stay collapsed |
+| Manual positioning / layout overrides | Violates the auto-layout design decision (PROJECT.md) |
 
 ## Traceability
 
-All 20 v1.13 requirements mapped to Phase 36 (single-phase milestone, v1.11/v1.12 precedent — shared packages and goldens); Phase 36 shipped 2026-08-28 as release v1.18.0. Post-milestone SHAPE-01 shipped via quick task 260828-qbx (v1.20.0).
+Filled during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| COLOR-01 | Phase 36 | Shipped |
-| COLOR-02 | Phase 36 | Shipped |
-| GEDGE-01 | Phase 36 | Shipped |
-| GEDGE-02 | Phase 36 | Shipped |
-| RANK-01 | Phase 36 | Shipped |
-| RANK-02 | Phase 36 | Shipped |
-| KIND-01 | Phase 36 | Shipped |
-| KIND-02 | Phase 36 | Shipped |
-| KIND-03 | Phase 36 | Shipped |
-| AGG-01 | Phase 36 | Shipped |
-| AGG-02 | Phase 36 | Shipped |
-| AGG-03 | Phase 36 | Shipped |
-| LEG-01 | Phase 36 + post-milestone rework | Shipped |
-| LEG-02 | Phase 36 + post-milestone rework | Shipped |
-| LEG-03 | Phase 36 + post-milestone rework | Shipped |
-| BC-01 | Phase 36 | Shipped |
-| DOC-01 | Phase 36 | Shipped |
-| DOC-02 | Phase 36 | Shipped |
-| DOC-03 | Phase 36 | Shipped |
-| REL-01 | Phase 36 | Shipped |
-| SHAPE-01 | Quick 260828-qbx | Shipped |
+| (pending roadmap) | | |
 
-**Coverage:** 20/20 v1.13 ✓ + 1 post-milestone (no orphans, no duplicates)
+**Coverage:**
+- v1 requirements: 11 total
+- Mapped to phases: 0
+- Unmapped: 11 ⚠️
+
+---
+*Requirements defined: 2026-08-30*
