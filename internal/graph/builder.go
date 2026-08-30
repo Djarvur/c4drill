@@ -13,7 +13,9 @@ import (
 // BuildGraph constructs a graph structure from a view.
 // The graph contains nodes, edges, and clusters ready for DOT rendering.
 // For C2/C3 views, internal nodes are wrapped in a boundary cluster representing
-// the expanded system/container. External boundary nodes remain at the top level.
+// the expanded system/container; boundary/sibling entries and the expanded unit
+// render inside their complete ancestor wrapper chains (WRAP-01/02). Fully
+// external boundary nodes remain at the top level.
 func BuildGraph(v *view.View) *Graph {
 	if v == nil {
 		return nil
@@ -53,13 +55,39 @@ func BuildGraph(v *view.View) *Graph {
 	return g
 }
 
-// buildBoundaryViewGraph renders C2/C3 views: boundary/external nodes go at
-// top level — outside the expanded unit's cluster — while internal nodes are
-// wrapped in the boundary cluster. VisiblePaths entries (CTX-02 deep-link
-// chain entries) are skipped as standalone nodes — the ancestor-cluster
-// recursion renders them at their proper depth (mirrors buildC1ViewGraph).
+// buildBoundaryViewGraph renders C2/C3 views with the v1.15 wrapping rule
+// (WRAP-01/02): nothing depicted hangs in the air. The expanded unit renders
+// inside its complete ancestor wrapper skeleton (root → parent), and every
+// boundary/sibling entry with an in-model ancestor is wrapped in ITS ancestor
+// chain, merging into already-present wrapper clusters by path. Only fully
+// external entries (no in-model ancestor, single-segment path) stay at top
+// level. VisiblePaths entries (CTX-02 deep-link chain entries) are skipped as
+// standalone nodes — the ancestor-cluster recursion renders them at their
+// proper depth (mirrors buildC1ViewGraph).
 func buildBoundaryViewGraph(v *view.View, g *Graph) {
 	boundaryCluster := buildBoundaryCluster(v)
+
+	// Ancestor wrapper-cluster registry (WRAP-01/02): keyed by dotted path so
+	// a wrapper cluster for path P exists at most once per graph and boundary
+	// chains MERGE into the expanded unit's skeleton. roots collects root-level
+	// wrapper clusters in deterministic creation order (skeleton first).
+	wrappers := make(map[string]*Cluster)
+	roots := make([]*Cluster, 0)
+
+	// Build the expanded unit's ancestor skeleton: one wrapper per proper
+	// prefix of the ExpandedUnit path, outermost first.
+	expandedParts := strings.Split(v.ExpandedUnit, ".")
+	for i := 1; i < len(expandedParts); i++ {
+		ensureWrapperCluster(strings.Join(expandedParts[:i], "."), v, boundaryCluster, wrappers, &roots)
+	}
+
+	// Nest the expanded unit's own boundary cluster innermost, under its
+	// immediate wrapper (unchanged single top cluster for C2 views, whose
+	// ExpandedUnit has no proper prefixes).
+	if len(expandedParts) > 1 {
+		parent := wrappers[strings.Join(expandedParts[:len(expandedParts)-1], ".")]
+		parent.Clusters = append(parent.Clusters, boundaryCluster)
+	}
 
 	// Build nodes and clusters in definition order
 	for _, key := range v.UnitOrder {
@@ -75,11 +103,39 @@ func buildBoundaryViewGraph(v *view.View, g *Graph) {
 		// IsBoundary covers both genuinely external units (actors, external
 		// systems) and sibling containers resolved as boundary nodes.
 		// IsExternal alone is not sufficient because regular
-		// containers/systems are IsExternal=false but still need top-level
-		// placement when they're boundary nodes.
+		// containers/systems are IsExternal=false but still need wrapping
+		// when they're boundary nodes.
 		if entry.IsBoundary || entry.IsExternal {
 			node := buildNode(entry, v.Plain)
-			g.Nodes = append(g.Nodes, node)
+
+			// WRAP-01: a fully external entry (no dotted path, hence no
+			// in-model ancestor) stays top-level exactly as before.
+			entryParts := strings.Split(entry.FullPath, ".")
+			if len(entryParts) == 1 {
+				g.Nodes = append(g.Nodes, node)
+
+				continue
+			}
+
+			// WRAP-01: wrap the boundary node in its complete ancestor chain.
+			// A prefix equal to the ExpandedUnit maps to the expanded unit's
+			// own boundary cluster — that cluster IS the depiction of that
+			// ancestor, so the chain merges with the skeleton instead of
+			// creating a duplicate.
+			inner := boundaryCluster
+
+			for i := 1; i < len(entryParts); i++ {
+				prefix := strings.Join(entryParts[:i], ".")
+				if prefix == v.ExpandedUnit {
+					inner = boundaryCluster
+
+					continue
+				}
+
+				inner = ensureWrapperCluster(prefix, v, boundaryCluster, wrappers, &roots)
+			}
+
+			inner.Nodes = append(inner.Nodes, node)
 
 			continue
 		}
@@ -99,7 +155,77 @@ func buildBoundaryViewGraph(v *view.View, g *Graph) {
 		}
 	}
 
-	g.Clusters = append(g.Clusters, boundaryCluster)
+	if len(roots) > 0 {
+		g.Clusters = append(g.Clusters, roots...)
+	} else {
+		g.Clusters = append(g.Clusters, boundaryCluster)
+	}
+}
+
+// ensureWrapperCluster returns the wrapper cluster for a dotted ancestor path,
+// creating it (and any missing ancestors of it) on first use. A wrapper's
+// parent is its own prefix wrapper; a prefix equal to the ExpandedUnit maps to
+// the expanded unit's boundary cluster; a single-segment path becomes a
+// root-level wrapper. Wrapper IDs are namespaced with the "wrap_" prefix
+// (T-38-01) so author unit names can never collide with or shadow existing
+// cluster/node IDs; wrappers carry pretty names from view.AncestorNames and NO
+// drill affordance — affordances stay on the expanded unit's own cluster
+// subtree. Node IDs, edge endpoints, and dedup keys are untouched: wrappers
+// are cluster structure only (WRAP-03).
+func ensureWrapperCluster(
+	path string, v *view.View, boundaryCluster *Cluster,
+	wrappers map[string]*Cluster, roots *[]*Cluster,
+) *Cluster {
+	if existing, ok := wrappers[path]; ok {
+		return existing
+	}
+
+	cluster := &Cluster{
+		ID:       "wrap_" + path,
+		Label:    wrapperLabel(path, v),
+		Nodes:    make([]*Node, 0),
+		Clusters: make([]*Cluster, 0),
+	}
+
+	wrappers[path] = cluster
+
+	parts := strings.Split(path, ".")
+
+	if len(parts) == 1 {
+		*roots = append(*roots, cluster)
+
+		return cluster
+	}
+
+	prefix := strings.Join(parts[:len(parts)-1], ".")
+
+	var parent *Cluster
+
+	if prefix == v.ExpandedUnit {
+		parent = boundaryCluster
+	} else {
+		parent = ensureWrapperCluster(prefix, v, boundaryCluster, wrappers, roots)
+	}
+
+	parent.Clusters = append(parent.Clusters, cluster)
+
+	return cluster
+}
+
+// wrapperLabel builds a wrapper cluster's label from the view's ancestor-name
+// map (pretty display names); the raw path segment is the fallback. No icon,
+// technology, or description: ancestors are depicted as containers only.
+func wrapperLabel(path string, v *view.View) *Label {
+	name := path
+	if idx := strings.LastIndex(name, "."); idx >= 0 {
+		name = name[idx+1:]
+	}
+
+	if pretty, ok := v.AncestorNames[path]; ok && pretty != "" {
+		name = pretty
+	}
+
+	return &Label{Name: name}
 }
 
 // buildC1ViewGraph renders the C1 view: nodes and clusters in definition
