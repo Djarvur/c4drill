@@ -568,14 +568,25 @@ hierarchy (v1.21):
   nested containers as clusters (with the 🔍 drill-down marker and
   explore link), not as a flat list of names.
 
-Two deliberate boundaries: sibling and external boundary nodes stay at
-the top level of the view (they are outside the depicted subtree), and
-collapsed subtrees are not restructured — chains unfold only for the
-elements a view actually depicts.
+==== Ancestor Wrapping (v1.22)
+
+v1.22 reverses one v1.21 boundary: every node a view depicts — regular,
+boundary, or expanded — now renders *inside its full ancestor-container
+chain*, not at the top level. When the depicted element's ancestors are
+not otherwise part of the view, the generator synthesises wrapper
+clusters for them, labelled with the container's pretty name. Wrappers
+are pure structure: they carry no 🔍 drill-down glyph and no explore
+link, and they exist only where an element in the view needs them.
+
+The one remaining top-level rule: units *fully external* to the depicted
+subtree — with no ancestor relationship to anything shown — still render
+at the top level. Collapsed subtrees are likewise not restructured;
+chains unfold only for the elements a view actually depicts.
 
 See `skill/examples/11-nesting-context.toml` for a runnable three-level
 example with a deep-link target and an expanded unit containing a
-container.
+container, and `skill/examples/13-wrapping.toml` for boundary and
+sibling entries rendered inside their ancestor chains.
 
 === Links (Relationships)
 
@@ -1228,6 +1239,11 @@ Flags:
   -f, --format string       Output format (dot|svg|html) (default "svg")
   -h, --help                help for c4drill
       --label-ratio float   Width:height ratio for unit labels (default: 1.6, credit card proportions)
+      --no-colors           Suppress colouring only: author unit/link colors and kind-derived edge colours
+      --no-labels           Suppress all element label text: shape-only nodes/edges/clusters so layout re-flows (legend stays)
+      --no-length           Suppress link spacing only: link length no longer sets minlen
+      --no-rank             Suppress ranking hints only: link rank reverse/equal ignored
+      --no-styles           Suppress line styles only: author unit/link style overrides
   -o, --output string       Output directory (default: same as input file)
       --plain               Ignore author-custom formatting: default unit/edge styling, spacing and ranking, plain-text labels
   -v, --version             version for c4drill
@@ -1264,6 +1280,49 @@ Flags:
   ----
 
   `convert` and `fmt` are unaffected by the flag.
+* *Granular suppression switches* (v1.22) turn off one formatting
+  concern each, without the all-or-nothing `--plain` scope. They
+  compose freely with each other, with `--plain`, and with
+  `--expanded`:
+
+  ** `--no-colors` — suppresses author unit/link colours *and*
+     kind-derived edge colours (`link kind`). Pinned boundary: the
+     D-01 default source-border edge colour is structural and stays.
+     When the kind-derived colours are used on their own (no author
+     colours), `--no-colors` suppresses them too. The legend keeps its
+     rows but loses its colour swatches.
+  ** `--no-styles` — suppresses author line-style overrides; edges
+     fall back to the default style.
+  ** `--no-length` — link `length` no longer sets graphviz `minlen`;
+     default spacing applies.
+  ** `--no-rank` — link `rank` (`reverse`/`equal`) is ignored; edges
+     rank forward with no endpoint swap or constraint suppression.
+  ** `--no-labels` — all *element* label text is suppressed at the
+     graph layer: nodes render as bare shapes, edges and clusters
+     (wrapper and boundary included) carry no label, so dot lays out
+     without label geometry. Colour/style semantics, cluster
+     structure, and explore/reference URL attributes survive. The 🔍
+     and 📖 glyphs are label content and go too. Pinned boundaries:
+     the legend *stays* (it is metadata governed by
+     `properties.legend`, not an element label), and it applies to
+     all generations including `--expanded`.
+
+  Composition notes:
+
+  ** `--plain` remains the exact union of everything the granular
+     switches (plus plain-text labels) turn off; a `--plain` render is
+     identical to applying all concerns at once. In particular the
+     pinned interaction: under `--plain` alone, kind-derived colours
+     survive (semantic, v1.21 behaviour), so `--plain --no-colors` is
+     what removes them.
+  ** `properties.edges` (spline routing) is tied to `--plain` only —
+     no granular switch touches it.
+
+  [source,bash]
+  ----
+  c4drill skill/examples/13-wrapping.toml --no-colors --no-rank
+  c4drill skill/examples/13-wrapping.toml --no-labels --expanded
+  ----
 * `--label-ratio` overrides the width:height ratio used to size unit
   labels (default 1.6 — credit-card proportions). Higher values produce
   wider, shorter labels; lower values produce narrower, taller ones.
