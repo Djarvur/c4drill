@@ -126,6 +126,10 @@ type Cluster struct {
 	Type model.UnitType
 	// IsExternal indicates if this cluster represents an external unit.
 	IsExternal bool
+	// ExploreURL is the relative drill-down path for a collapsed container
+	// cluster (CTX-03) — the cluster-side analog of Node.ExploreURL. Empty for
+	// expanded or leaf clusters.
+	ExploreURL string
 }
 
 // Label represents a node label with multiple parts.

@@ -1239,6 +1239,129 @@ func TestBuildExpandedGraphBaselineDOT(t *testing.T) {
 		"expanded DOT must match the committed golden baseline semantically (COMPAT-02)")
 }
 
+// TestBuildGraph_ExpandedClusterRendersNestedSubClusters pins CTX-03: a child
+// unit that itself has subunits renders as a NESTED sub-cluster inside an
+// expanded cluster — not as a flat collapsed node — and its own children
+// unfold recursively (containers as clusters, leaves as nodes). The nested
+// container cluster keeps the drill affordance: 🔍 on its label (the parent is
+// author-expanded, the nested container is not) and an ExploreURL assigned by
+// BuildGraphWithPath's recursive walk.
+func TestBuildGraph_ExpandedClusterRendersNestedSubClusters(t *testing.T) {
+	t.Parallel()
+
+	// Setup mirrors TestBuildGraphClusters (C1 self-referencing expansion):
+	// mainSystem is author-expanded, so its direct children render inside the
+	// mainSystem cluster. Child auth is a container WITH subunits (the CTX-03
+	// subject); auditLog is a leaf child (leaf dispatch must not change).
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"mainSystem": {
+				Type:         model.TypeSystem,
+				Name:         "Main System",
+				Expanded:     []string{"mainSystem"},
+				SubunitOrder: []string{"auth", "auditLog"},
+				Subunits: map[string]*model.Unit{
+					"auth": {
+						Type:         model.TypeContainer,
+						Name:         "Auth",
+						SubunitOrder: []string{"authApi", "authDb"},
+						Subunits: map[string]*model.Unit{
+							"authApi": {Type: model.TypeComponent, Name: "Auth API"},
+							"authDb":  {Type: model.TypeComponent, Name: "Auth DB"},
+						},
+					},
+					"auditLog": {Type: model.TypeComponent, Name: "Audit Log"},
+				},
+			},
+		},
+	}
+
+	v := view.GenerateC1View(m)
+	require.NotNil(t, v)
+
+	g := graph.BuildGraph(v)
+
+	// mainSystem (expanded, has subunits) renders as a cluster.
+	require.Len(t, g.Clusters, 1)
+	mainCluster := g.Clusters[0]
+	require.Equal(t, "mainSystem", mainCluster.ID)
+
+	// CTX-03: the auth subunit-container renders as a NESTED cluster inside
+	// the mainSystem cluster (walk by ID).
+	var authCluster *graph.Cluster
+
+	for _, nested := range mainCluster.Clusters {
+		if nested.ID == "mainSystem.auth" {
+			authCluster = nested
+			break
+		}
+	}
+
+	require.NotNil(t, authCluster,
+		"expanded mainSystem cluster must contain a NESTED cluster for the auth container (CTX-03)")
+
+	// Grandchildren render inside the nested auth cluster: leaf grandchildren
+	// authApi and authDb unfold into it.
+	authNodeIDs := make(map[string]bool, len(authCluster.Nodes))
+	for _, node := range authCluster.Nodes {
+		authNodeIDs[node.ID] = true
+	}
+
+	assert.True(t, authNodeIDs["mainSystem.auth.authApi"],
+		"authApi leaf grandchild must render inside the nested auth cluster")
+	assert.True(t, authNodeIDs["mainSystem.auth.authDb"],
+		"authDb leaf grandchild must render inside the nested auth cluster")
+
+	// The old flat behaviour appended a node FOR auth itself inside the
+	// mainSystem cluster — that must be gone.
+	for _, node := range mainCluster.Nodes {
+		assert.NotEqual(t, "mainSystem.auth", node.ID,
+			"auth must NOT render as a flat node inside the mainSystem cluster (old flat behaviour)")
+	}
+
+	// Leaf dispatch unchanged: auditLog is a direct node of the mainSystem
+	// cluster.
+	auditLogFound := false
+
+	for _, node := range mainCluster.Nodes {
+		if node.ID == "mainSystem.auditLog" {
+			auditLogFound = true
+		}
+	}
+
+	assert.True(t, auditLogFound,
+		"auditLog leaf child must render as a direct node of the mainSystem cluster")
+
+	// Drill affordance on labels: the non-expanded nested auth container's
+	// cluster label carries 🔍 (same guard buildNode applies); the
+	// author-expanded mainSystem cluster label does not.
+	require.NotNil(t, authCluster.Label)
+	assert.Contains(t, authCluster.Label.Name, "🔍",
+		"non-expanded nested container cluster label must carry the 🔍 affordance")
+	require.NotNil(t, mainCluster.Label)
+	assert.NotContains(t, mainCluster.Label.Name, "🔍",
+		"the author-expanded mainSystem cluster label must NOT carry 🔍")
+
+	// Drill affordance URL: BuildGraphWithPath's walk must REACH nested
+	// clusters and assign the auth cluster its explore URL.
+	gWithPath := graph.BuildGraphWithPath(v, "", "diagram", "svg")
+	require.Len(t, gWithPath.Clusters, 1)
+
+	var authClusterWithPath *graph.Cluster
+
+	for _, nested := range gWithPath.Clusters[0].Clusters {
+		if nested.ID == "mainSystem.auth" {
+			authClusterWithPath = nested
+			break
+		}
+	}
+
+	require.NotNil(t, authClusterWithPath, "nested auth cluster exists after BuildGraphWithPath")
+	assert.Equal(t, graph.ComputeExploreURL("", "mainSystem.auth", "diagram", "svg"), authClusterWithPath.ExploreURL,
+		"the nested container cluster must get its explore URL assigned by the recursive walk")
+}
+
 func TestBuildGraphDeterministicOrder(t *testing.T) {
 	t.Parallel()
 
