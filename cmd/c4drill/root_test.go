@@ -1949,6 +1949,35 @@ func generateFixtureOutput(t *testing.T, fixture, format string, extraArgs ...st
 	return dir
 }
 
+// TestNoLabelsC1Golden locks the --no-labels C1 output against the committed
+// testdata/nolabels.dot golden (order-insensitive canonical comparison, DI-1).
+// Additive golden from phase 38 plan 04 — no existing golden is re-baselined.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestNoLabelsC1Golden(t *testing.T) {
+	dir := generatePlainFixtureOutput(t, "dot", "--no-labels")
+
+	got := readOutputFile(t, filepath.Join(dir, "plain.dot"))
+	expected := readOutputFile(t, filepath.Join("testdata", "nolabels.dot"))
+
+	require.Equal(t, canonical.Canonical(t, expected), canonical.Canonical(t, got),
+		"--no-labels C1 output must match the committed nolabels.dot golden (canonical, DI-1)")
+}
+
+// TestNoLabelsExpandedGolden locks --no-labels x --expanded against the
+// committed testdata/nolabels.expanded.dot golden.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestNoLabelsExpandedGolden(t *testing.T) {
+	dir := generatePlainFixtureOutput(t, "dot", "--no-labels", "--expanded")
+
+	got := readOutputFile(t, filepath.Join(dir, "plain.expanded.dot"))
+	expected := readOutputFile(t, filepath.Join("testdata", "nolabels.expanded.dot"))
+
+	require.Equal(t, canonical.Canonical(t, expected), canonical.Canonical(t, got),
+		"--no-labels --expanded output must match the committed nolabels.expanded.dot golden (canonical, DI-1)")
+}
+
 // TestKeyComposition is the KEY-03 E2E matrix: for every granular switch and
 // --no-labels × every generation (C1, a drill-down, --expanded) × every format
 // (dot/svg/html), output is generated non-empty and the switch's suppression is

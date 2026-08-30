@@ -1,0 +1,83 @@
+digraph "" {
+	graph [bb="0,0,156.11,276.8",
+		fontname=Helvetica,
+		fontsize=14,
+		label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0" ALIGN="CENTER"><TR><TD COLSPAN="1" ALIGN="CENTER"><FONT POINT-SIZE="14">Plain Mode Fixture</FONT></TD></TR></TABLE>>,
+		labelloc=t,
+		lheight=0.23,
+		lp="78.057,264.4",
+		lwidth=1.62,
+		rankdir=TB,
+		splines=false
+	];
+	node [color=black,
+		fillcolor=lightgrey,
+		fontcolor=black,
+		fontname=Helvetica,
+		label="\N",
+		shape=ellipse
+	];
+	edge [color=black,
+		constraint=true,
+		dir=forward,
+		fontcolor=black,
+		fontname=Helvetica,
+		label="\E",
+		minlen=1,
+		penwidth=1.0
+	];
+	subgraph cluster___content {
+		graph [bb="8,8,94,241",
+			label="",
+			style=invis
+		];
+		subgraph cluster_orders {
+			graph [bb="16,181,86,233",
+				color="#073B6F",
+				fontcolor="#073B6F",
+				fontname=Helvetica,
+				label="",
+				style="rounded,dashed"
+			];
+			"orders.api"	[color="#073B6F",
+				fontcolor="#073B6F",
+				height=0.5,
+				label="",
+				pos="51,207",
+				shape=box,
+				style=rounded,
+				width=0.75];
+		}
+		admin	[color="#F9A825",
+			fillcolor="#FFF9C4",
+			fontcolor="#073B6F",
+			height=0.5,
+			label="",
+			pos="51,34",
+			shape=box,
+			style="rounded,filled",
+			width=0.75];
+		"orders.api" -> admin	[key="admin_to_orders.api",
+			color="#1565C0",
+			dir=back,
+			fontcolor="#1565C0",
+			label="",
+			minlen=3,
+			penwidth=1,
+			pos="s,46.661,188.81 45.783,177.66 43.486,141.86 43.77,82.42 46.634,52.464",
+			style=dashed];
+		"orders.api" -> admin	[key="orders.api_to_admin",
+			color="#2E7D32",
+			constraint=false,
+			fontcolor="#2E7D32",
+			label="",
+			penwidth=1,
+			pos="e,55.366,52.464 55.339,188.81 58.219,159.04 58.519,99.62 56.238,63.677",
+			style=solid];
+	}
+	__c4drill_legend	[height=1.25,
+		label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" COLOR="#666666"><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#666666"><B>legend</B></FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#073B6F">person</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#073B6F">system</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#073B6F">box</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#2E7D32">read</FONT></TD></TR></TABLE>>,
+		pos="129,207",
+		shape=plaintext,
+		width=0.75315];
+}
