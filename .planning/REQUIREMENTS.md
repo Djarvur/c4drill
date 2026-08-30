@@ -40,7 +40,7 @@ Source: user request 2026-08-30. Clarifying questions were auto-skipped (yolo mo
 
 ### REL — Release
 
-- [ ] **REL-01**: Milestone ships as product release **v1.21.0** (git tag; CI release workflow builds artifacts and creates the GitHub release).
+- [x] **REL-01**: Milestone ships as product release **v1.21.0** (git tag; CI release workflow builds artifacts and creates the GitHub release).
 
 ---
 
@@ -69,7 +69,7 @@ Source: user request 2026-08-30. Clarifying questions were auto-skipped (yolo mo
 | DOC-01 | Phase 37 | Complete |
 | DOC-02 | Phase 37 | Complete |
 | DOC-03 | Phase 37 | Complete |
-| REL-01 | Phase 37 | Pending |
+| REL-01 | Phase 37 | Complete |
 
 **Coverage:**
 - v1 requirements: 11 total

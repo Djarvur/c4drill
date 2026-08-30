@@ -84,7 +84,7 @@ Full details: [milestones/v1.13-ROADMAP.md](milestones/v1.13-ROADMAP.md)
 
 **Milestone Goal:** Non-expanded diagrams preserve the full nesting context — every depicted element renders inside its complete chain of ancestor containers, deep-link targets keep their container context, and expanded units show nested clusters rather than flat lists, so the nesting picture is recognizable across all generated views — and a `--plain` CLI generation key renders every diagram with author-custom formatting ignored, for canonical default-styled output. Ships as product release **v1.21.0**.
 
-- [ ] **Phase 37: Nesting Context and Plain Rendering** - Full ancestor chains on all non-expanded views, `--plain` formatting-ignoring generation key, backward-compat goldens, docs + release v1.21.0
+- [x] **Phase 37: Nesting Context and Plain Rendering** - Full ancestor chains on all non-expanded views, `--plain` formatting-ignoring generation key, backward-compat goldens, docs + release v1.21.0 (completed 2026-08-30)
 
 ## Phase Details
 
@@ -129,7 +129,7 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [ ] 37-07-PLAN.md — REL-01: tag and ship product release v1.21.0
+- [x] 37-07-PLAN.md — REL-01: tag and ship product release v1.21.0
 
 **Notes** (from milestone context — phase research/codebase scan must pin exact gaps):
 
@@ -155,6 +155,6 @@ Plans:
 | 34. Label formatting fixes | v1.11 | 4/4 | Complete | 2026-08-10 |
 | 35. C4D DSL alternative | v1.12 | 9/9 | Complete | 2026-08-14 |
 | 36. Edge Semantics and Legend | v1.13 | 6/6 | Complete | 2026-08-28 |
-| 37. Nesting Context and Plain Rendering | v1.14 | 6/7 | In Progress|  |
+| 37. Nesting Context and Plain Rendering | v1.14 | 7/7 | Complete   | 2026-08-30 |
 
 **Post-milestone (2026-08-28):** user-directed design review shipped outside any phase as v1.19.0–v1.20.0 — legend reworked into a floating framed node outside an invisible content cluster (REQUIREMENTS.md LEG-01..03 re-specified in place), queue units render as SVG pipes (SHAPE-01, quick task [260828-qbx](.planning/quick/260828-qbx-render-queue-units-as-horizontal-pipe-sh/)). Quick tasks are not tracked in the phase table above (GSD quick-mode convention).
