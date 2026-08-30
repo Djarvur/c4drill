@@ -552,6 +552,31 @@ type = "component"
 name = "Business Services"
 ----
 
+=== Nesting Context in Rendered Diagrams
+
+Diagrams keep container context — elements never float free of their
+hierarchy (v1.21):
+
+* *Full ancestor chains* — every element depicted on a non-expanded view
+  renders inside its complete ancestor-container chain. If a view shows a
+  component three levels deep, the viewer sees it nested in its parent
+  container inside its parent system, not as a flat top-level node.
+* *Deep links keep their target* — a link aimed at a deeply nested unit
+  terminates at the true target *inside* its ancestor chain, not at a
+  collapsed stand-in at the top level.
+* *Expanded units show nested clusters* — an expanded unit renders its
+  nested containers as clusters (with the 🔍 drill-down marker and
+  explore link), not as a flat list of names.
+
+Two deliberate boundaries: sibling and external boundary nodes stay at
+the top level of the view (they are outside the depicted subtree), and
+collapsed subtrees are not restructured — chains unfold only for the
+elements a view actually depicts.
+
+See `skill/examples/11-nesting-context.toml` for a runnable three-level
+example with a deep-link target and an expanded unit containing a
+container.
+
 === Links (Relationships)
 
 Define relationships between units using `[[link]]` (outgoing) or
@@ -1204,6 +1229,7 @@ Flags:
   -h, --help                help for c4drill
       --label-ratio float   Width:height ratio for unit labels (default: 1.6, credit card proportions)
   -o, --output string       Output directory (default: same as input file)
+      --plain               Ignore author-custom formatting: default unit/edge styling, spacing and ranking, plain-text labels
   -v, --version             version for c4drill
 ----
 
@@ -1211,6 +1237,33 @@ Flags:
   level), instead of the per-level drill-down set. The file is named
   `++{basename}++.expanded.++{format}++` and contains no drill-down
   links.
+* `--plain` (v1.21) renders with author-custom formatting *ignored* —
+  a neutral, type-palette look for reviews and diffs. It is a CLI-only
+  flag: the model file gains no new keys, and it composes with
+  `--expanded`. What is ignored:
+
+  ** Unit `color`/`style`/`border` (including on expanded-unit
+     clusters) — units fall back to the C4 type palette.
+  ** Link `color`/`style` — edges keep only kind-derived colours or
+     the default.
+  ** Link `length` and `rank` — default spacing and forward ranking
+     (no endpoint swap, no constraint suppression).
+  ** `properties.edges` — default spline routing.
+  ** Custom label formatting — labels render as plain text; the
+     name/technology/description content is preserved.
+
+  What deliberately stays: kind-derived edge colours (semantic, from
+  `link kind`) and the legend (including custom legend lines), queue
+  SVG pipe shapes, the 🔍/📖 glyphs and their explore links, and
+  collapsed subtrees stay collapsed.
+
+  [source,bash]
+  ----
+  c4drill skill/examples/12-plain.toml --plain        # neutral look
+  c4drill skill/examples/12-plain.toml --plain --expanded
+  ----
+
+  `convert` and `fmt` are unaffected by the flag.
 * `--label-ratio` overrides the width:height ratio used to size unit
   labels (default 1.6 — credit-card proportions). Higher values produce
   wider, shorter labels; lower values produce narrower, taller ones.
