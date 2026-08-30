@@ -121,13 +121,29 @@ Full details: [milestones/v1.13-ROADMAP.md](milestones/v1.13-ROADMAP.md)
   5. Only the documented deltas, then shipped: without the new keys, output changes ONLY for the documented WRAP boundary-wrapping deltas (real golden re-baselining expected for models with cross-container links; KEY/LBL are opt-in with zero default-path change; full suite green); README.adoc documents wrapping + every key, skill/SKILL.md and all plugin copies are synced (CI `diff -r` parity), example fixtures demonstrate wrapping and the new keys and render cleanly; the milestone tags product release **v1.22.0**. *(BC-01, DOC-01, DOC-02, DOC-03, REL-01)*
 
 **Plans**: 6 plans (38-01..38-06)
-
 Plans:
+**Wave 1**
+
 - [ ] 38-01-PLAN.md — WRAP: boundary/sibling ancestor wrapping + node-set invariance (WRAP-01..03)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 38-02-PLAN.md — KEY: granular switches --no-colors/--no-styles/--no-length/--no-rank (KEY-01, KEY-02)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 38-03-PLAN.md — LBL: --no-labels label suppression (LBL-01..03)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 38-04-PLAN.md — composition matrix E2E + consolidated golden re-baseline (KEY-03, BC-01)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 38-05-PLAN.md — docs, skill 3-copy sync, examples (DOC-01..03)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
 - [ ] 38-06-PLAN.md — release v1.22.0 (REL-01)
 
 **Notes** (from milestone context — phase research/codebase scan must pin exact gaps):
