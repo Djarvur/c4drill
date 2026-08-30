@@ -39,13 +39,13 @@ created: 2026-08-30
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | 37-01-01..03 | 01 | 1 | CTX-03 | T-37-01 | N/A | unit (graph, TDD RED→GREEN) | `go test ./internal/graph/ -run 'TestBuildGraph_ExpandedClusterRendersNestedSubClusters' -v` | ❌ W0 (new test in builder_test.go) | ⬜ pending |
-| 37-02-01..03 | 02 | 1 | CTX-02 | T-37-03 | N/A | unit (view, TDD) | `go test ./internal/view/ -run 'DeepLink|DeepCrossLink' -v` | ❌ W0 (new tests in scope_test.go) | ⬜ pending |
-| 37-05-01 | 05 | 4 | CTX-01 | T-37-10 | N/A | invariant unit + E2E goldens | `go test ./internal/view/ -run 'TestViewAncestorChainInvariant' -v` | ❌ W0 (new test in scope_test.go) | ⬜ pending |
-| 37-03-01..03 | 03 | 2 | PLAIN-01/02 | T-37-05 | N/A | unit (graph, TDD) | `go test ./internal/graph/ -run 'Plain' -v` | ❌ W0 (new tests in builder_test.go) | ⬜ pending |
-| 37-04-01..03 | 04 | 3 | PLAIN-03/04 | T-37-07 | N/A | unit + E2E golden (TDD + canonical) | `go test ./internal/render/ -run 'Plain' -v && go test ./cmd/c4drill/ -run 'Plain' -v` | ❌ W0 (converter_test.go, root_test.go, plain.dot goldens) | ⬜ pending |
-| 37-05-02 | 05 | 4 | BC-01 | T-37-09 | N/A | canonicalDOT goldens | `go test ./...` | ✅ (existing goldens re-baselined once, here) | ⬜ pending |
-| 37-06-01..03 | 06 | 4 | DOC-01..03 | T-37-11 | N/A | CI parity + render | `diff -r skill plugins/c4drill/skills/c4drill-toml && diff -r skill plugins/c4drill/opencode/skills/c4drill-toml` + example renders | ✅ (workflow exists) | ⬜ pending |
-| 37-07-01..02 | 07 | 5 | REL-01 | T-37-13 | N/A | release tag | `git tag v1.21.0` + `gh release view v1.21.0` | ✅ (release.yml exists) | ⬜ pending |
+| 37-02-01..03 | 02 | 2 | CTX-02 | T-37-03 | N/A | unit (view+graph, TDD) | `go test ./internal/view/ -run 'DeepLink|DeepCrossLink' -v && go test ./internal/graph/ -run 'TestBuildGraph_DeepLinkTargetRendersInsideUnfoldedCluster' -v` | ❌ W0 (new tests in scope_test.go + builder_test.go) | ⬜ pending |
+| 37-03-01..03 | 03 | 3 | PLAIN-01/02 | T-37-05 | N/A | unit (graph, TDD) | `go test ./internal/graph/ -run 'Plain' -v` | ❌ W0 (new tests in builder_test.go) | ⬜ pending |
+| 37-04-01..03 | 04 | 4 | PLAIN-03/04 | T-37-07 | N/A | unit + E2E golden (TDD + canonical) | `go test ./internal/render/ -run 'Plain' -v && go test ./cmd/c4drill/ -run 'Plain' -v` | ❌ W0 (converter_test.go, root_test.go, plain.dot goldens) | ⬜ pending |
+| 37-05-01 | 05 | 5 | CTX-01 | T-37-10 | N/A | invariant unit + E2E goldens | `go test ./internal/view/ -run 'TestViewAncestorChainInvariant' -v` | ❌ W0 (new test in scope_test.go) | ⬜ pending |
+| 37-05-02 | 05 | 5 | BC-01 | T-37-09 | N/A | canonicalDOT goldens | `go test ./...` | ✅ (existing goldens re-baselined once, here) | ⬜ pending |
+| 37-06-01..03 | 06 | 5 | DOC-01..03 | T-37-11 | N/A | CI parity + render | `diff -r skill plugins/c4drill/skills/c4drill-toml && diff -r skill plugins/c4drill/opencode/skills/c4drill-toml` + example renders | ✅ (workflow exists) | ⬜ pending |
+| 37-07-01..02 | 07 | 6 | REL-01 | T-37-13 | N/A | release tag | `git tag v1.21.0` + `gh release view v1.21.0` | ✅ (release.yml exists) | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
