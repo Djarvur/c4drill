@@ -39,6 +39,28 @@ func buildHTMLLabelForType(label *graph.Label, t model.UnitType) string {
 	}
 }
 
+// buildEdgePlainTextLabel renders an edge label as plain text for plain mode
+// (PLAIN-03): the [Technology] bracket convention plus the description — the
+// same content the HTML rectangle carries, without the HTML. Empty when the
+// label carries neither field, mirroring buildEdgeLabel's empty contract.
+func buildEdgePlainTextLabel(label *graph.EdgeLabel) string {
+	if label == nil {
+		return ""
+	}
+
+	var parts []string
+
+	if label.Technology != "" {
+		parts = append(parts, "["+label.Technology+"]")
+	}
+
+	if label.Description != "" {
+		parts = append(parts, label.Description)
+	}
+
+	return strings.Join(parts, " ")
+}
+
 const (
 	// Border style constants.
 	borderStyleDashed = "dashed"
@@ -139,19 +161,19 @@ func buildCgraph(
 	}
 
 	// Create top-level nodes (not in clusters)
-	if err := createTopLevelNodes(content, g.Nodes, nodeMap); err != nil {
+	if err := createTopLevelNodes(content, g.Nodes, nodeMap, g.Plain); err != nil {
 		return nil, err
 	}
 
 	// Create clusters with their nodes
 	for _, cluster := range g.Clusters {
-		if err := createCluster(content, cluster, nodeMap); err != nil {
+		if err := createCluster(content, cluster, nodeMap, g.Plain); err != nil {
 			return nil, fmt.Errorf("create cluster %s: %w", cluster.ID, err)
 		}
 	}
 
 	// Create edges
-	if err := createEdges(cg, g.Edges, nodeMap); err != nil {
+	if err := createEdges(cg, g.Edges, nodeMap, g.Plain); err != nil {
 		return nil, err
 	}
 
@@ -188,13 +210,14 @@ func createTopLevelNodes(
 	cg *cgraph.Graph,
 	nodes []*graph.Node,
 	nodeMap map[string]*cgraph.Node,
+	plain bool,
 ) error {
 	for _, node := range nodes {
 		if node.IsInCluster {
 			continue // Will be created inside cluster
 		}
 
-		cn, err := createNode(cg, node)
+		cn, err := createNode(cg, node, plain)
 		if err != nil {
 			return fmt.Errorf("create node %s: %w", node.ID, err)
 		}
@@ -206,7 +229,7 @@ func createTopLevelNodes(
 }
 
 // createEdges creates all edges from the edge list.
-func createEdges(cg *cgraph.Graph, edges []*graph.Edge, nodeMap map[string]*cgraph.Node) error {
+func createEdges(cg *cgraph.Graph, edges []*graph.Edge, nodeMap map[string]*cgraph.Node, plain bool) error {
 	for _, edge := range edges {
 		source := nodeMap[edge.Source]
 		target := nodeMap[edge.Target]
@@ -215,7 +238,7 @@ func createEdges(cg *cgraph.Graph, edges []*graph.Edge, nodeMap map[string]*cgra
 			continue // Skip edges with missing endpoints
 		}
 
-		if err := createEdge(cg, source, target, edge); err != nil {
+		if err := createEdge(cg, source, target, edge, plain); err != nil {
 			return fmt.Errorf("create edge %s->%s: %w", edge.Source, edge.Target, err)
 		}
 	}
@@ -324,6 +347,7 @@ func configureGraphSettings(cg *cgraph.Graph, g *graph.Graph) error {
 func createNode(
 	cg *cgraph.Graph,
 	node *graph.Node,
+	plain bool,
 ) (*cgraph.Node, error) {
 	cn, err := cg.CreateNodeByName(node.ID)
 	if err != nil {
@@ -340,8 +364,8 @@ func createNode(
 		cn.SetShape(cgraph.BoxShape)
 	}
 
-	// Build and set HTML label
-	setNodeLabel(cn, node)
+	// Build and set label (HTML by default, plain text under --plain)
+	setNodeLabel(cn, node, plain)
 
 	// Apply style (queue nodes drop "rounded", see applyNodeStyle)
 	applyNodeStyle(cn, node)
@@ -378,9 +402,22 @@ func createNode(
 	return cn, nil
 }
 
-// setNodeLabel builds and sets the HTML label for a node.
-func setNodeLabel(cn *cgraph.Node, node *graph.Node) {
+// setNodeLabel builds and sets the label for a node: the HTML label by
+// default, the plain-text record label under plain (--plain, PLAIN-03).
+func setNodeLabel(cn *cgraph.Node, node *graph.Node, plain bool) {
 	if node.Label == nil {
+		return
+	}
+
+	if plain {
+		// Plain mode routes labels to the record path (labels.go): no HTML
+		// tables, name/technology/description content preserved. SetLabel
+		// stores a true plain string — graphviz escapes it — so author text
+		// can never inject DOT/HTML markup (threat T-37-07).
+		if label := buildRecordLabel(node.Label); label != "" {
+			cn.SetLabel(label)
+		}
+
 		return
 	}
 
@@ -436,6 +473,7 @@ func createCluster(
 	parent *cgraph.Graph,
 	cluster *graph.Cluster,
 	nodeMap map[string]*cgraph.Node,
+	plain bool,
 ) error {
 	// Name must start with "cluster_" for GraphViz to render as cluster
 	subgraph, err := parent.CreateSubGraphByName("cluster_" + cluster.ID)
@@ -444,7 +482,7 @@ func createCluster(
 	}
 
 	// Set cluster label
-	setClusterLabel(subgraph, cluster)
+	setClusterLabel(subgraph, cluster, plain)
 
 	// Apply style
 	if err := applyClusterStyle(subgraph, cluster.Style); err != nil {
@@ -453,7 +491,7 @@ func createCluster(
 
 	// Create nodes inside cluster
 	for _, node := range cluster.Nodes {
-		cn, err := createNode(subgraph, node)
+		cn, err := createNode(subgraph, node, plain)
 		if err != nil {
 			return fmt.Errorf("create node %s in cluster: %w", node.ID, err)
 		}
@@ -463,7 +501,7 @@ func createCluster(
 
 	// Create nested clusters recursively
 	for _, nestedCluster := range cluster.Clusters {
-		if err := createCluster(subgraph, nestedCluster, nodeMap); err != nil {
+		if err := createCluster(subgraph, nestedCluster, nodeMap, plain); err != nil {
 			return fmt.Errorf("create nested cluster %s: %w", nestedCluster.ID, err)
 		}
 	}
@@ -471,24 +509,35 @@ func createCluster(
 	return nil
 }
 
-// setClusterLabel builds and sets the HTML label for a cluster.
-func setClusterLabel(subgraph *cgraph.Graph, cluster *graph.Cluster) {
+// setClusterLabel builds and sets the label for a cluster: the HTML label by
+// default, the plain-text record label under plain (--plain, PLAIN-03). The
+// drill-down URL emission is structural and survives plain mode.
+func setClusterLabel(subgraph *cgraph.Graph, cluster *graph.Cluster, plain bool) {
 	if cluster.Label == nil {
 		return
 	}
 
-	htmlLabel := buildHTMLLabelForType(cluster.Label, cluster.Type)
-	if htmlLabel == "" {
-		return
-	}
+	if plain {
+		// Plain mode routes cluster labels to the record path (labels.go) —
+		// no HTML tables, content preserved, escaping via SetLabel (T-37-07).
+		if label := buildRecordLabel(cluster.Label); label != "" {
+			subgraph.SetLabel(label)
+		}
+	} else {
+		htmlLabel := buildHTMLLabelForType(cluster.Label, cluster.Type)
+		if htmlLabel == "" {
+			return
+		}
 
-	subgraph.SetLabelHTML(htmlLabel)
+		subgraph.SetLabelHTML(htmlLabel)
+	}
 
 	// CTX-03: a collapsed container cluster carries its drill-down URL as the
 	// subgraph URL attribute — the cluster-side analog of the node's SetURL
 	// (GraphViz supports URL on clusters, so clicking the cluster frame drills
 	// in). SafeSet errors are ignored, matching the best-effort treatment in
-	// applyNodeStyle.
+	// applyNodeStyle. The URL is a structural affordance: emitted under plain
+	// too.
 	if cluster.ExploreURL != "" {
 		_ = subgraph.SafeSet("URL", cluster.ExploreURL, "")
 	}
@@ -549,7 +598,7 @@ func setClusterAttribute(subgraph *cgraph.Graph, attr, value string) error {
 }
 
 // createEdge creates a cgraph.Edge from a graph.Edge.
-func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge) error {
+func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge, plain bool) error {
 	// Include description in edge name to allow multiple edges between same nodes
 	edgeName := edge.Source + "_to_" + edge.Target
 	if edge.Label != nil && edge.Label.Description != "" {
@@ -574,12 +623,21 @@ func createEdge(cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge)
 	e.SetFontName("Helvetica")
 
 	if edge.Label != nil {
-		// SetLabelHTML preserves HTML-ness under graphviz 13 (same
-		// agsafeset_html path nodes use — see setNodeLabel). Empty labels
-		// (no technology, no description) keep the plain SetLabel("") path:
-		// SafeSetHTML with "" omits the attribute, which would change the
-		// emitted DOT for label-less edges and break the COMPAT-01 goldens.
-		if htmlLabel := buildEdgeLabel(edge.Label); htmlLabel != "" {
+		// Plain mode (PLAIN-03) emits the label as plain text via SetLabel —
+		// never the HTML rectangle. SetLabel routes through the same escaping
+		// as every existing plain label (threat T-37-07).
+		if plain {
+			if plainLabel := buildEdgePlainTextLabel(edge.Label); plainLabel != "" {
+				e.SetLabel(plainLabel)
+			} else {
+				e.SetLabel("")
+			}
+		} else if htmlLabel := buildEdgeLabel(edge.Label); htmlLabel != "" {
+			// SetLabelHTML preserves HTML-ness under graphviz 13 (same
+			// agsafeset_html path nodes use — see setNodeLabel). Empty labels
+			// (no technology, no description) keep the plain SetLabel("") path:
+			// SafeSetHTML with "" omits the attribute, which would change the
+			// emitted DOT for label-less edges and break the COMPAT-01 goldens.
 			e.SetLabelHTML(htmlLabel)
 		} else {
 			e.SetLabel("")
