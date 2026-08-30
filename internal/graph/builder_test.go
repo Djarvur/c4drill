@@ -4218,3 +4218,164 @@ func TestSwitchCombination(t *testing.T) {
 	assert.False(t, e.RankReverse)
 	assert.False(t, e.NoConstraint)
 }
+
+// ---- Phase 38 LBL-01..03: --no-labels graph-layer label suppression ----
+//
+// Suppression happens at the GRAPH layer: under NoLabels the builder drops
+// label CONTENT before emission (nodes keep their ShapeForType default shape
+// with no label, edges keep no Label, clusters keep IDs/structure with no
+// label). The legend is metadata governed by properties.legend, NOT an element
+// label — it stays (LBL-03, planner pin). ExploreURL/ReferenceURL attributes
+// are structural and survive.
+
+// noLabelsModel builds a model with named/tech/description units, a collapsed
+// expanded box, a referenced unit and a kind link — everything --no-labels
+// must silence.
+func noLabelsModel() *parser.Model {
+	return &parser.Model{
+		Properties: model.Properties{Name: "Test"},
+		Units: map[string]*model.Unit{
+			"app": {
+				Type:        model.TypeSystem,
+				Name:        "Application",
+				Technology:  "Go",
+				Description: "the main app",
+				Reference:   "https://docs.example.com/app",
+				Expanded:    []string{"app"},
+				Subunits: map[string]*model.Unit{
+					"api": {Type: model.TypeContainer, Name: "API", Technology: "REST"},
+				},
+				SubunitOrder: []string{"api"},
+				Links: []model.Link{{
+					Peer:        "db",
+					Technology:  "SQL",
+					Description: "reads rows",
+					Kind:        model.KindRead,
+				}},
+			},
+			"db": {Type: model.TypeDb, Name: "Database", Technology: "Postgres"},
+		},
+	}
+}
+
+func TestNoLabelsNodesAreBareShapes(t *testing.T) {
+	t.Parallel()
+
+	v := view.GenerateC1View(noLabelsModel())
+	v.NoLabels = true
+	g := graph.BuildGraph(v)
+
+	app := nodeByID(t, g, "app")
+	assert.Nil(t, app.Label, "node label content must be dropped under NoLabels")
+	assert.Equal(t, graph.ShapeForType(model.TypeSystem), app.Shape,
+		"the unit's plain default shape (ShapeForType) is retained")
+	assert.Equal(t, "app", app.ID, "node ID retained")
+	assert.Equal(t, "https://docs.example.com/app", app.ReferenceURL,
+		"reference URL is structural and survives labels-off")
+
+	// Cluster-resident leaf nodes are bare too.
+	var api *graph.Node
+
+	for _, c := range collectClusterTree(g.Clusters) {
+		for _, n := range c.Nodes {
+			if n.ID == "app.api" {
+				api = n
+			}
+		}
+	}
+
+	require.NotNil(t, api, "expanded child node present")
+	assert.Nil(t, api.Label, "cluster child node label dropped under NoLabels")
+	assert.Equal(t, graph.ShapeForType(model.TypeContainer), api.Shape)
+}
+
+func TestNoLabelsEdgesHaveNoLabel(t *testing.T) {
+	t.Parallel()
+
+	v := view.GenerateC1View(noLabelsModel())
+	v.NoLabels = true
+	g := graph.BuildGraph(v)
+
+	require.Len(t, g.Edges, 1)
+	assert.Nil(t, g.Edges[0].Label, "edge label must be nil under NoLabels")
+	assert.Equal(t, model.LinkReadColour, g.Edges[0].Color,
+		"colour is not a label — kind colour semantics untouched")
+}
+
+func TestNoLabelsClustersUnlabelled(t *testing.T) {
+	t.Parallel()
+
+	m := wrapTestMultilevelModel(t)
+
+	v := view.GenerateC3View(m, "mainSystem.storages.localStorage")
+	v.NoLabels = true
+	g := graph.BuildGraph(v)
+
+	clusters := collectClusterTree(g.Clusters)
+	require.NotEmpty(t, clusters, "cluster structure retained")
+
+	for _, c := range clusters {
+		assert.Nil(t, c.Label,
+			"cluster %s label content dropped under NoLabels", c.ID)
+
+		for _, n := range c.Nodes {
+			assert.Nil(t, n.Label,
+				"node %s label content dropped under NoLabels", n.ID)
+		}
+	}
+
+	// Structure — including the 38-01 wrapper clusters — survives.
+	foundBoundary, foundWrapMain, foundWrapStorages := false, false, false
+
+	for _, c := range clusters {
+		switch c.ID {
+		case "mainSystem.storages.localStorage":
+			foundBoundary = true
+		case "wrap_mainSystem":
+			foundWrapMain = true
+		case "wrap_mainSystem.storages":
+			foundWrapStorages = true
+		}
+	}
+
+	assert.True(t, foundBoundary, "expanded unit's boundary cluster retained")
+	assert.True(t, foundWrapMain, "wrapper cluster retained (structure only)")
+	assert.True(t, foundWrapStorages, "nested wrapper cluster retained")
+}
+
+func TestNoLabelsLegendStays(t *testing.T) {
+	t.Parallel()
+
+	v := view.GenerateC1View(noLabelsModel())
+	v.NoLabels = true
+	g := graph.BuildGraph(v)
+
+	require.NotNil(t, g.Legend, "legend is metadata, not an element label — it STAYS (LBL-03)")
+	assert.NotEmpty(t, g.Legend.Entries)
+}
+
+func TestNoLabelsCopiedFromView(t *testing.T) {
+	t.Parallel()
+
+	v := view.GenerateC1View(noLabelsModel())
+	v.NoLabels = true
+
+	assert.True(t, graph.BuildGraph(v).Opts.NoLabels, "BuildGraph copies View.NoLabels")
+	assert.True(t, graph.BuildExpandedGraph(v).Opts.NoLabels,
+		"BuildExpandedGraph copies View.NoLabels too (--no-labels x --expanded, LBL-02)")
+}
+
+func TestNoLabelsOptInDefaultPathUntouched(t *testing.T) {
+	t.Parallel()
+
+	v := view.GenerateC1View(noLabelsModel())
+	g := graph.BuildGraph(v)
+
+	assert.False(t, g.Opts.NoLabels, "default path leaves Opts.NoLabels false")
+
+	app := nodeByID(t, g, "app")
+	require.NotNil(t, app.Label)
+	assert.Equal(t, "Application", app.Label.Name, "default path keeps label content")
+	require.NotNil(t, g.Edges[0].Label)
+	assert.Equal(t, "reads rows", g.Edges[0].Label.Description)
+}

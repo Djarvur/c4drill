@@ -1064,3 +1064,107 @@ func TestConverter_PlainKeepsLegendAndKindColour(t *testing.T) {
 	assert.Contains(t, dot, `COLOR="#3C7FC0">container`, "legend statement present under plain")
 	assert.Contains(t, dot, "#3C7FC0", "kind-derived edge colour survives plain mode")
 }
+
+// ---- Phase 38 LBL-01..03: --no-labels converter-side suppression ----
+
+// TestNoLabelsDOTEmitsNoLabelMarkup locks LBL-01 at the emission layer: with
+// Opts.NoLabels the converter emits empty label= attributes — no HTML table
+// node/edge labels, no record-label text — while structural attributes (node
+// URLs, cluster URLs) and the LEGEND (metadata, exempt) survive.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestNoLabelsDOTEmitsNoLabelMarkup(t *testing.T) {
+	g := &graph.Graph{
+		Direction: "TB",
+		Opts:      graph.RenderOpts{NoLabels: true},
+		Nodes: []*graph.Node{
+			{
+				ID:           "order_sys",
+				Label:        &graph.Label{Name: "Order Service", Technology: "Kubernetes v1.29", Description: "Handles order processing"},
+				Shape:        graph.ShapeRecord,
+				Type:         model.TypeSystem,
+				Style:        &graph.NodeStyle{},
+				ReferenceURL: "https://docs.example.com",
+			},
+			{ID: "client", Label: &graph.Label{Name: "Client"}, Shape: graph.ShapeRecord, Type: model.TypeSystem, Style: &graph.NodeStyle{}},
+		},
+		Clusters: []*graph.Cluster{
+			{
+				ID:         "orders",
+				Label:      &graph.Label{Name: "Order Context", Technology: "Event Sourcing", Description: "orders live here"},
+				Type:       model.TypeContainer,
+				ExploreURL: "diagram/orders.svg",
+				Nodes: []*graph.Node{
+					{
+						ID:          "orders.api",
+						Label:       &graph.Label{Name: "API"},
+						Shape:       graph.ShapeRecord,
+						Type:        model.TypeContainer,
+						IsInCluster: true,
+						Style:       &graph.NodeStyle{},
+					},
+				},
+				Style: &graph.NodeStyle{},
+			},
+		},
+		Edges: []*graph.Edge{
+			{
+				Source: "client",
+				Target: "order_sys",
+				Label:  &graph.EdgeLabel{Technology: "gRPC", Description: "streams order events downstream"},
+			},
+		},
+		Legend: &graph.Legend{
+			Entries: []graph.LegendEntry{{Label: "container", Color: "#3C7FC0"}},
+		},
+	}
+
+	output, err := render.RenderDOT(g)
+	require.NoError(t, err)
+
+	dot := string(output)
+	lower := strings.ToLower(dot)
+
+	// No label TEXT anywhere: neither HTML tables nor record/edge text.
+	assert.NotContains(t, lower, "<table", "no HTML-table element labels under NoLabels")
+	assert.NotContains(t, dot, "Order Service", "node name text must be suppressed")
+	assert.NotContains(t, dot, "Kubernetes", "node technology text must be suppressed")
+	assert.NotContains(t, dot, "Order Context", "cluster name text must be suppressed")
+	assert.NotContains(t, dot, "gRPC", "edge technology text must be suppressed")
+	assert.NotContains(t, dot, "streams order events", "edge description text must be suppressed")
+
+	// Structural attributes survive.
+	assert.Contains(t, dot, "https://docs.example.com", "node URL is structural and survives")
+	assert.Contains(t, dot, "diagram/orders.svg", "cluster URL is structural and survives")
+
+	// Legend is metadata — exempt (LBL-03 planner pin).
+	assert.Contains(t, dot, "__c4drill_legend", "legend survives --no-labels")
+	assert.Contains(t, dot, `COLOR="#3C7FC0">container`, "legend statement present under NoLabels")
+}
+
+// TestNoLabelsOptInConverterDefaultUnchanged locks the default emission path:
+// with Opts.NoLabels false the same content still routes through the HTML
+// table builders.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestNoLabelsOptInConverterDefaultUnchanged(t *testing.T) {
+	g := &graph.Graph{
+		Direction: "TB",
+		Opts:      graph.RenderOpts{},
+		Nodes: []*graph.Node{
+			{
+				ID:    "plain_sys",
+				Label: &graph.Label{Name: "Order Service", Technology: "Kubernetes v1.29", Description: "Handles order processing"},
+				Shape: graph.ShapeRecord,
+				Type:  model.TypeSystem,
+				Style: &graph.NodeStyle{},
+			},
+		},
+	}
+
+	output, err := render.RenderDOT(g)
+	require.NoError(t, err)
+
+	assert.Contains(t, strings.ToLower(string(output)), "<table",
+		"default path must keep the HTML label route (opt-in proven)")
+}

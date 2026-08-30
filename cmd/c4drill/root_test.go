@@ -1823,3 +1823,107 @@ name = "DB"
 		assert.Contains(t, dot, "#1565C0", "--no-rank must keep the author link colour")
 	})
 }
+
+// =============================================================================
+// Tests for --no-labels (LBL-01..03, phase 38 plan 03)
+// =============================================================================
+
+// TestNoLabelsAllGenerationsAndFormats proves LBL-02: --no-labels applies to
+// the C1 context diagram, every drill-down, and the --expanded generation,
+// across dot/svg/html formats. Element labels are silenced at the graph layer
+// (no HTML tables, no label text) while the legend — metadata, LBL-03 pin —
+// stays.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestNoLabelsAllGenerationsAndFormats(t *testing.T) {
+	t.Run("dot: C1 and drill-downs carry no label text", func(t *testing.T) {
+		dir := generatePlainFixtureOutput(t, "dot", "--no-labels")
+
+		dotFiles := make([]string, 0)
+		for _, f := range collectGeneratedFiles(t, dir) {
+			if strings.HasSuffix(f, ".dot") {
+				dotFiles = append(dotFiles, f)
+			}
+		}
+		require.Len(t, dotFiles, 2, "C1 plus the orders drill-down must be generated")
+
+		for _, f := range dotFiles {
+			dot := readOutputFile(t, f)
+			lower := strings.ToLower(dot)
+			name := filepath.Base(f)
+
+			assert.NotContains(t, lower, "<table", "%s: no HTML-table element labels", name)
+			assert.NotContains(t, dot, "<b>", "%s: no bold name rows", name)
+			assert.NotContains(t, dot, "Order API", "%s: node name text suppressed", name)
+			assert.NotContains(t, dot, "Order Context", "%s: cluster name text suppressed", name)
+			assert.NotContains(t, dot, "[HTTPS]", "%s: edge label text suppressed", name)
+			assert.NotContains(t, dot, "Streams order events", "%s: edge description text suppressed", name)
+
+			// The legend (and the nav/title graph label) are the only HTML labels.
+			assert.Equal(t, 2, strings.Count(dot, "label=<"),
+				"%s: only the graph label and the legend may carry HTML labels", name)
+			assert.Contains(t, dot, "__c4drill_legend", "%s: legend stays under --no-labels (LBL-03)", name)
+		}
+	})
+
+	t.Run("expanded generation honours the flag", func(t *testing.T) {
+		dir := generatePlainFixtureOutput(t, "dot", "--no-labels", "--expanded")
+		dot := readOutputFile(t, filepath.Join(dir, "plain.expanded.dot"))
+
+		assert.NotContains(t, strings.ToLower(dot), "<table",
+			"expanded generation must suppress element labels too (LBL-01)")
+		assert.NotContains(t, dot, "Order API", "expanded node text suppressed")
+		assert.Contains(t, dot, "__c4drill_legend", "expanded legend stays")
+	})
+
+	t.Run("svg and html formats generate non-empty", func(t *testing.T) {
+		for _, format := range []string{"svg", "html"} {
+			dir := generatePlainFixtureOutput(t, format, "--no-labels")
+
+			for _, f := range collectGeneratedFiles(t, dir) {
+				info, err := os.Stat(f)
+				require.NoError(t, err, "stat %s", f)
+				assert.Greater(t, info.Size(), int64(0), "%s must be non-empty", f)
+			}
+		}
+	})
+}
+
+// TestNoLabelsComposesWithPlainAndSwitches proves LBL-02 composition: the
+// flag unions with --plain and the granular switches without error, and the
+// composed output still carries no element labels.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestNoLabelsComposesWithPlainAndSwitches(t *testing.T) {
+	for _, extraArgs := range [][]string{
+		{"--plain", "--no-labels"},
+		{"--no-colors", "--no-labels"},
+		{"--plain", "--no-colors", "--no-styles", "--no-length", "--no-rank", "--no-labels"},
+	} {
+		args := append([]string(nil), extraArgs...)
+		label := strings.Join(args, " ")
+
+		t.Run(label, func(t *testing.T) {
+			dir := generatePlainFixtureOutput(t, "dot", args...)
+			dot := readOutputFile(t, filepath.Join(dir, "plain.dot"))
+
+			assert.NotContains(t, strings.ToLower(dot), "<table",
+				"%s: element labels suppressed in composition", label)
+			assert.Contains(t, dot, "__c4drill_legend", "%s: legend still present", label)
+		})
+	}
+}
+
+// TestNoLabelsOptIn proves the flag is opt-in: without it the same fixture
+// still renders HTML labels with full text.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestNoLabelsOptIn(t *testing.T) {
+	dir := generatePlainFixtureOutput(t, "dot")
+
+	dot := readOutputFile(t, filepath.Join(dir, "plain.dot"))
+
+	assert.Contains(t, strings.ToLower(dot), "<table",
+		"default mode must keep the HTML label path (opt-in proven)")
+	assert.Contains(t, dot, "Order API", "default mode must keep node label text")
+}
