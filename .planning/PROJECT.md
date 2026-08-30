@@ -70,7 +70,23 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - ✓ LABEL-02 (word-boundary-only breaking): `wrapText` over-budget branch emits the whole word unsplit on its own line; `splitLongWord` deleted (0 references); no character-level fallback anywhere (D-05).
 - ✓ COMPAT-01 (no regression): unit labels byte-identical absent over-budget words; all canonicalDOT goldens (COMPAT-02, REF-05, DI-1) pass unchanged; `go test ./...` green (12/12 packages).
 
-## Current Milestone: v1.13 Edge Semantics and Legend — COMPLETE (2026-08-28)
+## Current Milestone: v1.14 Nesting Context and Plain Rendering
+
+**Goal:** Non-expanded diagrams preserve full nesting context — every depicted element renders inside its complete chain of ancestor containers, so nothing floats outside its hierarchy and the nesting picture is recognizable across all generated views — and a `--plain` CLI generation key renders diagrams with author-custom formatting ignored.
+
+**Target features:**
+
+- **Nesting context chains** — on every non-expanded generated diagram, a depicted element is surrounded by all its ancestor containers as nested containers. Deep link targets keep their container context instead of silently collapsing to an anonymous top-level ancestor; expanded units render depicted nested elements through intermediate containers (nested clusters, not flat lists).
+- **Plain rendering key** — `--plain` CLI flag renders every generated diagram ignoring author-custom formatting: explicit unit `color`/`style`/`border` fall back to the type palette; explicit link `color`/`style` fall back to defaults; link `length` and `rank` are ignored (default layout); custom label formatting is simplified (content preserved); `properties.edges` is ignored. Kind-derived edge colours and the legend stay — they are semantic, not custom formatting.
+
+**Key context:**
+- Clarifying questions were auto-skipped (yolo mode); the scope above is the orchestrator's best-judgment reading of the user request 2026-08-30. The two mechanisms where nesting context is lost today — C1 deep-link target collapse and one-level expanded rendering — are the primary fix targets; phase research/codebase scan must confirm exact fix points in `internal/view/scope.go` (GenerateC1View, visible subunits, boundary resolution) and `internal/graph`.
+- CTX changes alter output only for models exercising the affected scenarios (deep nesting, deep links); flat models must render unchanged.
+- `--plain` is CLI-only; properties-level keys and granular per-aspect flags are deferred (Out of Scope).
+
+**Status:** Active — milestone started 2026-08-30.
+
+## Previous Milestone: v1.13 Edge Semantics and Legend — COMPLETE (2026-08-28)
 
 **Goal:** Make edge/colour semantics trustworthy and expressive — fix silently-dropped custom unit colours, make the global edge style apply to every generated diagram, give edge direction/ranking a single clear knob (`rank = "reverse"`), introduce edge kinds (`read`/`write`/`read-write`) with kind-derived colours that survive collapse aggregation, and add a default-on upper-right legend showing the colour semantics plus author-defined lines.
 
@@ -290,4 +306,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-28 — v1.13 Edge Semantics and Legend shipped as v1.18.0*
+*Last updated: 2026-08-30 — milestone v1.14 Nesting Context and Plain Rendering started*

@@ -1,12 +1,12 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.13
-milestone_name: Edge Semantics and Legend
-status: complete
-last_updated: "2026-08-28T16:45:00.000Z"
-last_activity: 2026-08-28
+milestone: v1.14
+milestone_name: Nesting Context and Plain Rendering
+status: planning
+last_updated: "2026-08-30T10:35:40.667Z"
+last_activity: 2026-08-30
 progress:
-  total_phases: 1
+  total_phases: 0
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -24,12 +24,10 @@ See: .planning/PROJECT.md (updated 2026-08-28)
 
 ## Current Position
 
-Phase: Milestone v1.13 complete; post-milestone quick tasks done
-Plan: — of — in current phase (nothing planned)
-Status: Ready to plan the next milestone (`/gsd:new-milestone`)
-Last activity: 2026-08-28 — pipe follow-up v1.20.3: long descriptions grow the pipe wider, not taller (margin-based cap clearance, ratio wrapping restored)
-
-Progress: [░░░░░░░░░░] 0%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-08-30 — Milestone v1.14 started
 
 ## Performance Metrics
 
