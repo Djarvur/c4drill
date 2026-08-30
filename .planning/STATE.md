@@ -66,7 +66,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-See .planning/todos/pending/.
+See .planning/todos/pending/. (1 pending: fix --no-labels to suppress only edge labels — 2026-08-30)
 
 ### Blockers/Concerns
 
