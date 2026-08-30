@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-08-30)
 ## Current Position
 
 Phase: 38 (hierarchy-wrapping-and-granular-keys) — EXECUTING
-Plan: 5 of 6
-Status: 38-04 complete — KEY-03/BC-01 done, census-empty re-baseline verified, nolabels goldens committed
-Last activity: 2026-08-30 -- Plan 38-04 executed (commits 11b15e1, 719388e, e42d278)
+Plan: 6 of 6
+Status: 38-05 complete — DOC-01..03 done, docs + 3-copy skill sync + 13-wrapping fixture landed; next: 38-06 release
+Last activity: 2026-08-30 -- Plan 38-05 executed (commits 5d5580d, a3dd132, d932a73)
 
-Progress: [██████░░░░] 60%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -40,7 +40,7 @@ Progress: [██████░░░░] 60%
 
 | Phase | Plans | Notes |
 |-------|-------|-------|
-| 38 | 38-01: 3 tasks, ~35m. 38-02: 3 tasks, ~30m. 38-03: 3 tasks, ~30m. 38-04: 3 tasks, ~35m | TDD RED→GREEN per plan; 38-04 = matrix + goldens + visual checkpoint |
+| 38 | 38-01: 3 tasks, ~35m. 38-02: 3 tasks, ~30m. 38-03: 3 tasks, ~30m. 38-04: 3 tasks, ~35m. 38-05: 2 tasks, ~30m | TDD RED→GREEN per plan; 38-04 = matrix + goldens + visual checkpoint; 38-05 = docs + sync + fixture |
 
 ## Accumulated Context
 
@@ -60,6 +60,7 @@ Recent decisions affecting current work:
 - [38-03]: --no-labels suppresses at the GRAPH layer (builder drops Label content; converter empty-label emission is defense-in-depth); legend stays per LBL-03 pin; census stays EMPTY for 38-04.
 - [38-04]: BC-01 re-baseline verified as NO-OP — zero committed-golden hunks (goldens cover C1/expanded only; WRAP is C2/C3-only; switches opt-in); additive nolabels.dot/nolabels.expanded.dot goldens committed and canonically pinned.
 - [38-04]: KEY-03 matrix locked E2E: every switch × C1/drill-down/--expanded × dot/svg/html + --plain/--no-colors compositions; structural dot markers asserted on RAW dot (uppercase sanctioned markup), hexes lowercased.
+- [38-05]: docs use the real release tag v1.22 (git tag convention; "v1.15" is GSD milestone numbering only); 13-wrapping.toml ships without a .c4d twin per the 12-plain precedent, expectedExampleTwins manifest untouched.
 
 ### Pending Todos
 
@@ -78,6 +79,6 @@ See .planning/todos/pending/.
 
 ## Session Continuity
 
-Last session: 2026-08-30 (plan 38-04 execution)
-Stopped at: Plan 38-04 complete — next: 38-05
-Resume file: .planning/phases/38-hierarchy-wrapping-and-granular-keys/38-04-SUMMARY.md
+Last session: 2026-08-30 (plan 38-05 execution)
+Stopped at: Plan 38-05 complete — next: 38-06 (release v1.22.0)
+Resume file: .planning/phases/38-hierarchy-wrapping-and-granular-keys/38-05-SUMMARY.md

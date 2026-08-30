@@ -36,9 +36,9 @@ Source: user review 2026-08-30 (retroactive answers to the yolo-skipped question
 
 ### DOC — Documentation and skills
 
-- [ ] **DOC-01**: README.adoc documents boundary wrapping and every new key (per-aspect meaning, composition, legend behavior under labels-off).
-- [ ] **DOC-02**: skill/SKILL.md and all plugin copies are synced (CI `diff -r` parity).
-- [ ] **DOC-03**: Skill/example fixtures demonstrate the wrapping and the new keys; render cleanly through the full pipeline.
+- [x] **DOC-01**: README.adoc documents boundary wrapping and every new key (per-aspect meaning, composition, legend behavior under labels-off).
+- [x] **DOC-02**: skill/SKILL.md and all plugin copies are synced (CI `diff -r` parity).
+- [x] **DOC-03**: Skill/example fixtures demonstrate the wrapping and the new keys; render cleanly through the full pipeline.
 
 ### REL — Release
 
@@ -70,9 +70,9 @@ Filled during roadmap creation.
 | LBL-02 | Phase 38 | Complete |
 | LBL-03 | Phase 38 | Complete |
 | BC-01 | Phase 38 | Complete |
-| DOC-01 | Phase 38 | Pending |
-| DOC-02 | Phase 38 | Pending |
-| DOC-03 | Phase 38 | Pending |
+| DOC-01 | Phase 38 | ✅ 38-05 |
+| DOC-02 | Phase 38 | ✅ 38-05 |
+| DOC-03 | Phase 38 | ✅ 38-05 |
 | REL-01 | Phase 38 | Pending |
 
 **Coverage:**
