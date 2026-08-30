@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-08-30)
 ## Current Position
 
 Phase: 38 (hierarchy-wrapping-and-granular-keys) — EXECUTING
-Plan: 4 of 6
-Status: 38-03 complete — --no-labels landed, LBL-01/02/03 done, census EMPTY
-Last activity: 2026-08-30 -- Plan 38-03 executed (commits bdff1c0, 4936563, 0fbafd1)
+Plan: 5 of 6
+Status: 38-04 complete — KEY-03/BC-01 done, census-empty re-baseline verified, nolabels goldens committed
+Last activity: 2026-08-30 -- Plan 38-04 executed (commits 11b15e1, 719388e, e42d278)
 
-Progress: [█████░░░░░] 50%
+Progress: [██████░░░░] 60%
 
 ## Performance Metrics
 
@@ -40,7 +40,7 @@ Progress: [█████░░░░░] 50%
 
 | Phase | Plans | Notes |
 |-------|-------|-------|
-| 38 | 38-01: 3 tasks, ~35m. 38-02: 3 tasks, ~30m. 38-03: 3 tasks, ~30m | TDD RED→GREEN per plan |
+| 38 | 38-01: 3 tasks, ~35m. 38-02: 3 tasks, ~30m. 38-03: 3 tasks, ~30m. 38-04: 3 tasks, ~35m | TDD RED→GREEN per plan; 38-04 = matrix + goldens + visual checkpoint |
 
 ## Accumulated Context
 
@@ -58,6 +58,8 @@ Recent decisions affecting current work:
 - [38-02]: D-01 source-border default edge colour is structural and survives --no-colors; converter plain call-tree unchanged (only buildCgraph reads g.Opts.Plain).
 - [38-01]: committed goldens cover C1/expanded only and cmd E2E asserts C2/C3 via contains-checks → 38-04 golden re-baseline is EMPTY (see 38-01-SUMMARY census).
 - [38-03]: --no-labels suppresses at the GRAPH layer (builder drops Label content; converter empty-label emission is defense-in-depth); legend stays per LBL-03 pin; census stays EMPTY for 38-04.
+- [38-04]: BC-01 re-baseline verified as NO-OP — zero committed-golden hunks (goldens cover C1/expanded only; WRAP is C2/C3-only; switches opt-in); additive nolabels.dot/nolabels.expanded.dot goldens committed and canonically pinned.
+- [38-04]: KEY-03 matrix locked E2E: every switch × C1/drill-down/--expanded × dot/svg/html + --plain/--no-colors compositions; structural dot markers asserted on RAW dot (uppercase sanctioned markup), hexes lowercased.
 
 ### Pending Todos
 
@@ -76,6 +78,6 @@ See .planning/todos/pending/.
 
 ## Session Continuity
 
-Last session: 2026-08-30T16:01:48.886Z
-Stopped at: Plan 38-03 complete — next: 38-04
-Resume file: .planning/phases/38-hierarchy-wrapping-and-granular-keys/38-03-SUMMARY.md
+Last session: 2026-08-30 (plan 38-04 execution)
+Stopped at: Plan 38-04 complete — next: 38-05
+Resume file: .planning/phases/38-hierarchy-wrapping-and-granular-keys/38-04-SUMMARY.md

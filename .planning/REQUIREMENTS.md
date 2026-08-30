@@ -22,7 +22,7 @@ Source: user review 2026-08-30 (retroactive answers to the yolo-skipped question
 
 - [x] **KEY-01**: Individual CLI switches exist, each independently suppressing one author-custom formatting aspect with defaults restored: colours (unit `color`/`border` fills + link `color`), styles (unit/link line and border styles), lengths (link `length`), ranks (link `rank`). Unset switch = exactly current behavior.
 - [x] **KEY-02**: `--plain` renders identically to v1.14 — the union of all granular switches (locked by existing plain goldens staying green).
-- [ ] **KEY-03**: Every switch composes with every generation (C1, all drill-downs, `--expanded`) and format (dot/svg/html). Kind-derived colours and the legend follow the v1.14 semantic-vs-custom boundary unless the colours switch explicitly covers them (planner pins; documented either way).
+- [x] **KEY-03**: Every switch composes with every generation (C1, all drill-downs, `--expanded`) and format (dot/svg/html). Kind-derived colours and the legend follow the v1.14 semantic-vs-custom boundary unless the colours switch explicitly covers them (planner pins; documented either way).
 
 ### LBL — Label suppression key
 
@@ -32,7 +32,7 @@ Source: user review 2026-08-30 (retroactive answers to the yolo-skipped question
 
 ### BC — Backward compatibility
 
-- [ ] **BC-01**: Without the new keys, output changes ONLY for the documented WRAP deltas (boundary wrapping — real re-baselining expected this time); KEY/LBL switches are opt-in with zero default-path change; the full suite stays green.
+- [x] **BC-01**: Without the new keys, output changes ONLY for the documented WRAP deltas (boundary wrapping — real re-baselining expected this time); KEY/LBL switches are opt-in with zero default-path change; the full suite stays green.
 
 ### DOC — Documentation and skills
 
@@ -65,11 +65,11 @@ Filled during roadmap creation.
 | WRAP-03 | Phase 38 | ✅ 38-01 |
 | KEY-01 | Phase 38 | Complete |
 | KEY-02 | Phase 38 | Complete |
-| KEY-03 | Phase 38 | Pending |
+| KEY-03 | Phase 38 | Complete |
 | LBL-01 | Phase 38 | Complete |
 | LBL-02 | Phase 38 | Complete |
 | LBL-03 | Phase 38 | Complete |
-| BC-01 | Phase 38 | Pending |
+| BC-01 | Phase 38 | Complete |
 | DOC-01 | Phase 38 | Pending |
 | DOC-02 | Phase 38 | Pending |
 | DOC-03 | Phase 38 | Pending |
