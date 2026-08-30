@@ -2,13 +2,16 @@ package render_test
 
 import (
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
 
 	"github.com/Djarvur/c4drill/internal/graph"
 	"github.com/Djarvur/c4drill/internal/model"
+	"github.com/Djarvur/c4drill/internal/parser"
 	"github.com/Djarvur/c4drill/internal/render"
 	"github.com/Djarvur/c4drill/internal/testutil/canonical"
+	"github.com/Djarvur/c4drill/internal/view"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -1072,10 +1075,11 @@ func TestConverter_PlainKeepsLegendAndKindColour(t *testing.T) {
 // node/edge labels, no record-label text — while structural attributes (node
 // URLs, cluster URLs) and the LEGEND (metadata, exempt) survive.
 //
-//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 // TestNoLabelsDOTEmitsEdgeLabelSuppressionOnly: under NoLabels the converter
 // suppresses ONLY edge label text — the edge emits label="" while node and
 // cluster labels render at full HTML fidelity and the legend stays.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestNoLabelsDOTEmitsEdgeLabelSuppressionOnly(t *testing.T) {
 	g := &graph.Graph{
 		Direction: "TB",
@@ -1172,4 +1176,165 @@ func TestNoLabelsOptInConverterDefaultUnchanged(t *testing.T) {
 
 	assert.Contains(t, strings.ToLower(string(output)), "<table",
 		"default path must keep the HTML label route (opt-in proven)")
+}
+
+// ---- quick 260831-01u BUG-3: flag-invariant edge identity ----
+
+// edgeInvariantModel builds a model whose (client -> backend) pair carries:
+//
+//	(a) two links differing in technology AND description,
+//	(b) two links with the SAME description and different technology,
+//	(c) two kind-coloured links (read vs write),
+//
+// plus (d) a validator-style mirror linkFrom on backend (Mirror flag), the
+// synthetic duplicate of an outgoing link. In --expanded mode every parallel
+// link renders separately (COMPAT-02), so the pair exercises drawn-edge
+// identity: on the pre-fix converter the cgraph edge NAME was derived from the
+// flag-suppressible label description, and CreateEdgeByName is find-or-create
+// — same-description parallel edges collapsed into one drawn edge, and under
+// --no-labels ALL parallel edges collapsed to src_to_dst.
+func edgeInvariantModel() *parser.Model {
+	return &parser.Model{
+		Properties: model.Properties{Name: "Edge Invariant"},
+		Units: map[string]*model.Unit{
+			"client": {
+				Type: model.TypeContainer,
+				Name: "Client",
+				Links: []model.Link{
+					{Peer: "backend", Technology: "gRPC", Description: "commands"},
+					{Peer: "backend", Technology: "HTTP", Description: "queries"},
+					{Peer: "backend", Technology: "HTTP", Description: "commands"},
+					{Peer: "backend", Technology: "read-only", Kind: model.KindRead},
+					{Peer: "backend", Technology: "write-only", Kind: model.KindWrite},
+				},
+			},
+			"backend": {
+				Type: model.TypeDb,
+				Name: "Backend",
+				LinksFrom: []model.Link{
+					{Peer: "client", Technology: "TCP", Description: "mirror pair", Mirror: true},
+				},
+			},
+		},
+	}
+}
+
+// dotEdgeMultiset extracts the ordered endpoint-pair multiset of every edge
+// statement in a DOT render, plus the multiset of emitted penwidth values
+// (multiplicity thickness). Flags must change NEITHER.
+func dotEdgeMultiset(t *testing.T, dot string) (pairs, penwidths []string) {
+	t.Helper()
+
+	pairRe := regexp.MustCompile(`(?m)^\s*("[\w.]+"|[\w]+)\s*->\s*("[\w.]+"|[\w]+)\s+\[`)
+	penRe := regexp.MustCompile(`penwidth=([\d.]+)`)
+
+	pairs = make([]string, 0)
+	for _, m := range pairRe.FindAllStringSubmatch(dot, -1) {
+		pairs = append(pairs, strings.Trim(m[1], `"`)+"->"+strings.Trim(m[2], `"`))
+	}
+
+	sort.Strings(pairs)
+
+	values := penRe.FindAllStringSubmatch(dot, -1)
+	penwidths = make([]string, 0, len(values))
+	for _, m := range values {
+		penwidths = append(penwidths, m[1])
+	}
+
+	sort.Strings(penwidths)
+
+	return pairs, penwidths
+}
+
+// TestEdgeTopologyFlagInvariant pins the BUG-3 invariant: formatting flags
+// (--no-labels, --no-colors, --no-styles, --plain, and compositions) never
+// change the emitted edge-statement multiset (count + ordered endpoint pairs)
+// or the penwidth multiplicity display — on the C1 view AND the --expanded
+// view. Only styling may differ.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestEdgeTopologyFlagInvariant(t *testing.T) {
+	flagSets := []struct {
+		name string
+		set  func(v *view.View)
+	}{
+		{"no flags", func(v *view.View) {}},
+		{"--no-labels", func(v *view.View) { v.NoLabels = true }},
+		{"--no-colors", func(v *view.View) { v.NoColors = true }},
+		{"--no-styles", func(v *view.View) { v.NoStyles = true }},
+		{"--plain", func(v *view.View) { v.Plain = true }},
+		{"--no-labels + --no-colors", func(v *view.View) { v.NoLabels = true; v.NoColors = true }},
+	}
+
+	for _, gen := range []struct {
+		name  string
+		build func(v *view.View) (*graph.Graph, error)
+	}{
+		{
+			name: "C1 view",
+			build: func(v *view.View) (*graph.Graph, error) {
+				return graph.BuildGraph(v), nil
+			},
+		},
+		{
+			name: "expanded view",
+			build: func(v *view.View) (*graph.Graph, error) {
+				return graph.BuildExpandedGraph(v), nil
+			},
+		},
+	} {
+		t.Run(gen.name, func(t *testing.T) {
+			var baselinePairs, baselinePenwidths []string
+
+			for _, fs := range flagSets {
+				t.Run(fs.name, func(t *testing.T) {
+					m := edgeInvariantModel()
+					v := view.GenerateExpandedView(m)
+					v.ShowLegend = false
+
+					// Recreate the view for the generation under test —
+					// flag application must not leak across cases.
+					if gen.name == "C1 view" {
+						v = view.GenerateC1View(m)
+						v.ShowLegend = false
+					}
+
+					fs.set(v)
+
+					g, err := gen.build(v)
+					require.NoError(t, err)
+
+					out, err := render.RenderDOT(g)
+					require.NoError(t, err)
+
+					pairs, penwidths := dotEdgeMultiset(t, string(out))
+
+					// The canonical merge semantics decide the exact counts:
+					// expanded mode draws every parallel link separately
+					// (COMPAT-02) — 5 builder edges, mirror deduped — while
+					// the resolved C1 view collapses the pair (D-01). The
+					// same-description collapse on the pre-fix converter
+					// breaks the expanded count (5 -> 4).
+					wantCount := 5
+					if gen.name == "C1 view" {
+						wantCount = 1
+					}
+
+					require.Len(t, pairs, wantCount,
+						"%s: canonical merge semantics must draw %d edges (got %v)", fs.name, wantCount, pairs)
+
+					if baselinePairs == nil {
+						baselinePairs, baselinePenwidths = pairs, penwidths
+						require.NotEmpty(t, pairs, "the render must draw edges")
+						return
+					}
+
+					assert.Equal(t, baselinePairs, pairs,
+						"%s: edge topology (count + endpoint pairs) must be flag-invariant", fs.name)
+					assert.Equal(t, baselinePenwidths, penwidths,
+						"%s: penwidth multiplicity display must be flag-invariant", fs.name)
+				})
+			}
+		})
+	}
 }
