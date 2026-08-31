@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -2540,4 +2541,169 @@ func TestEdgesFlagOffInvariant(t *testing.T) {
 
 	assert.Contains(t, dot, `splines=false`,
 		"flag-off run honors the model's edges=\"straight\" exactly as before")
+}
+
+// edgesMatrixCell is one flat cell of the TestEdgesComposition matrix.
+type edgesMatrixCell struct {
+	label   string   // subtest path
+	fixture string   // testdata fixture file
+	extra   []string // CLI flags selecting composition and generation
+	dot     string   // generated dot file, relative to the output dir
+	want    string   // expected RAW dot attribute (ignored when absent)
+	absent  bool     // when true, assert the attribute is NOT present
+	why     string   // assertion message
+}
+
+// edgesMatrixCases builds the full GEDGE-07 matrix: --edges style × --plain
+// composition × fixture × generation (root / drill-downs / --expanded), plus
+// the D-04 flag-off resolution cells and the --plain-alone suppression guard.
+func edgesMatrixCases() []edgesMatrixCell {
+	attr := map[string]string{
+		"spline":   `splines=true`,
+		"straight": `splines=false`,
+		"ortho":    `splines=ortho`,
+		"square":   `splines=ortho`, // documented ortho alias (GEDGE-02)
+	}
+
+	type fixture struct {
+		file       string
+		base       string
+		drilldowns []string
+	}
+
+	fixtures := []fixture{
+		{
+			file:       "plain.toml",
+			base:       "plain",
+			drilldowns: []string{filepath.Join("plain", "orders.dot")},
+		},
+		{
+			file: "edges_override.toml",
+			base: "edges_override",
+			drilldowns: []string{
+				filepath.Join("edges_override", "app.dot"),
+				filepath.Join("edges_override", "app", "api.dot"),
+			},
+		},
+	}
+
+	var cells []edgesMatrixCell
+
+	// compositions[0] = flag alone, compositions[1] = flag x --plain (D-05).
+	compositions := [][]string{nil, {"--plain"}}
+
+	for _, style := range []string{"spline", "straight", "ortho", "square"} {
+		for _, composition := range compositions {
+			extra := append(append([]string{}, composition...), "--edges", style)
+			label := strings.Join(extra, " ")
+
+			for _, fx := range fixtures {
+				prefix := fx.base + " fixture/"
+
+				cells = append(cells, edgesMatrixCell{
+					label:   label + "/" + prefix + "root dot",
+					fixture: fx.file,
+					extra:   extra,
+					dot:     fx.base + ".dot",
+					want:    attr[style],
+					why:     "--edges applies to the root view",
+				})
+
+				for i, dd := range fx.drilldowns {
+					why := "--edges applies to drill-down views (beats the global value)"
+					if strings.HasSuffix(dd, "api.dot") {
+						why = "--edges beats the per-unit edges override (D-03)"
+					}
+
+					cells = append(cells, edgesMatrixCell{
+						label:   label + "/" + prefix + fmt.Sprintf("drilldown dot %d", i+1),
+						fixture: fx.file,
+						extra:   extra,
+						dot:     dd,
+						want:    attr[style],
+						why:     why,
+					})
+				}
+
+				cells = append(cells, edgesMatrixCell{
+					label:   label + "/" + prefix + "expanded dot",
+					fixture: fx.file,
+					extra:   append(append([]string{}, extra...), "--expanded"),
+					dot:     fx.base + ".expanded.dot",
+					want:    attr[style],
+					why:     "--edges applies to the --expanded copy (PLAIN-01 threading)",
+				})
+			}
+		}
+	}
+
+	// D-04: without the flag, both model layers resolve exactly as before.
+	cells = append(cells,
+		edgesMatrixCell{
+			label:   "flag off/global at C1",
+			fixture: "edges_override.toml",
+			dot:     "edges_override.dot",
+			want:    `splines=true`,
+			why:     "global properties.edges wins at C1 without the flag",
+		},
+		edgesMatrixCell{
+			label:   "flag off/app drill-down inherits global",
+			fixture: "edges_override.toml",
+			dot:     filepath.Join("edges_override", "app.dot"),
+			want:    `splines=true`,
+			why:     "app drill-down inherits the global value (D-04)",
+		},
+		edgesMatrixCell{
+			label:   "flag off/per-unit at api drill-down",
+			fixture: "edges_override.toml",
+			dot:     filepath.Join("edges_override", "app", "api.dot"),
+			want:    `splines=ortho`,
+			why:     "per-unit edges wins at its own drill-down via cmp.Or resolution (D-04)",
+		},
+		edgesMatrixCell{
+			label:   "flag off/expanded honors global",
+			fixture: "edges_override.toml",
+			extra:   []string{"--expanded"},
+			dot:     "edges_override.expanded.dot",
+			want:    `splines=true`,
+			why:     "expanded view resolves properties.edges without the flag (D-04)",
+		},
+		edgesMatrixCell{
+			label:   "--plain without --edges suppresses the author value",
+			fixture: "plain.toml",
+			extra:   []string{"--plain"},
+			dot:     "plain.dot",
+			absent:  true,
+			why:     "plain keeps ignoring author edges when no explicit flag is given (KEY-02 exact union)",
+		},
+	)
+
+	return cells
+}
+
+// TestEdgesComposition is the GEDGE-07 matrix: --edges style × generation
+// (root / drill-down / --expanded) × --plain, asserting the graphviz
+// `splines` attribute in RAW dot output for every combination. It runs over
+// the plain fixture (global author value only) and the golden-free
+// edges_override fixture (which adds a per-unit override layer, exercising
+// the D-03 flag-beats-per-unit pin and the D-04 flag-off resolution).
+//
+// Attribute forms verified against raw graphviz output: unquoted
+// splines=true / splines=false / splines=ortho — "square" renders as the
+// documented ortho alias (GEDGE-02).
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestEdgesComposition(t *testing.T) {
+	for _, tc := range edgesMatrixCases() {
+		t.Run(tc.label, func(t *testing.T) {
+			dir := generateFixtureOutput(t, tc.fixture, "dot", tc.extra...)
+			dot := readOutputFile(t, filepath.Join(dir, tc.dot))
+
+			if tc.absent {
+				assert.NotContains(t, dot, `splines=`, tc.why)
+			} else {
+				assert.Contains(t, dot, tc.want, tc.why)
+			}
+		})
+	}
 }
