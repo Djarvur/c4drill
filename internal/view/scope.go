@@ -541,19 +541,34 @@ func GenerateC2View(m *parser.Model, systemPath string) *View {
 	// Add external boundary nodes for links from subunits (recursively)
 	addExternalBoundaryNodesForSubunits(v, m, systemUnit.Subunits, subunitOrder, systemPath)
 
+	resolveBoundaryViewLinks(v, m, systemUnit.Subunits, subunitOrder, systemPath)
+
+	return v
+}
+
+// resolveBoundaryViewLinks runs the C2/C3 link-resolution tail shared by
+// GenerateC2View and GenerateC3View: boundary ordering, the upfront
+// deep-link chain registration (order-independent targets — see
+// registerDeepLinkChains), then the boundary-node and cross-subunit
+// resolvers.
+func resolveBoundaryViewLinks(
+	v *View, m *parser.Model,
+	subunits map[string]*model.Unit, subunitOrder []string, parentPath string,
+) {
 	// Sort boundary nodes to match model definition order (layout consistency).
 	sortBoundaryNodesByModelOrder(v, m)
+
+	registerDeepLinkChains(v, m)
 
 	// Resolve links for boundary nodes (external entities have deep links that need resolving)
 	resolveBoundaryNodeLinks(v)
 
 	// Resolve cross-subunit links: when a descendant of subunit A links to a
 	// descendant of subunit B (or to an external boundary node), create a
-	// resolved link A -> B on subunit A's entry. Without this, edges between
-	// sibling subunits are lost because the peer path is too deep for isTargetInView.
-	resolveSubunitCrossLinks(v, m, systemUnit.Subunits, subunitOrder, systemPath)
-
-	return v
+	// resolved link between the depicted entries. Without this, edges between
+	// sibling subunits are lost because the peer path is too deep for
+	// isTargetInView.
+	resolveSubunitCrossLinks(v, m, subunits, subunitOrder, parentPath)
 }
 
 // c3ViewTitle derives the C3 view title and parent path from the expanded
@@ -626,19 +641,7 @@ func GenerateC3View(m *parser.Model, containerPath string) *View {
 	// Add external boundary nodes for links from subunits
 	addExternalBoundaryNodesForSubunits(v, m, containerUnit.Subunits, subunitOrderOf(containerUnit), containerPath)
 
-	// Sort boundary nodes (the tail of UnitOrder) to match the model's top-level
-	// definition order. This ensures the same boundary nodes appear in the same
-	// order regardless of which scanning path discovered them (C1 vs C2/C3),
-	// producing consistent DOT node ordering and GraphViz layouts.
-	sortBoundaryNodesByModelOrder(v, m)
-
-	// Resolve links for boundary nodes (external entities have deep links that need resolving)
-	resolveBoundaryNodeLinks(v)
-
-	// Resolve cross-subunit links: when a descendant of one component links to
-	// a descendant of another component (or to an external boundary node), create
-	// a resolved link between the components.
-	resolveSubunitCrossLinks(v, m, containerUnit.Subunits, subunitOrderOf(containerUnit), containerPath)
+	resolveBoundaryViewLinks(v, m, containerUnit.Subunits, subunitOrderOf(containerUnit), containerPath)
 
 	return v
 }
@@ -911,6 +914,46 @@ func resolveBoundaryByDivergence(expandedUnit, peer string) string {
 	return strings.Join(peerParts[:boundaryDepth], ".")
 }
 
+// registerDeepLinkChains walks EVERY link in the model (outgoing and
+// incoming, mirrors included) and unfolds the deep-link chain beneath each
+// in-scope depicted ancestor BEFORE any link resolution runs. This makes
+// chain registration order-independent: the per-call ensureDeepLinkChain in
+// the resolution walkers only fires for the link being walked, so which
+// chains exist when a given link resolves depends on walk order — the same
+// peer could keep its true target in one scan order and aggregate onto a
+// collapsed stand-in in another (the nesting-context contract promises the
+// former). C1 does not use this pass: its resolver carries its own
+// root-compact guards.
+func registerDeepLinkChains(v *View, m *parser.Model) {
+	var walk func(path string, unit *model.Unit)
+
+	walk = func(path string, unit *model.Unit) {
+		if unit == nil {
+			return
+		}
+
+		for _, link := range unit.Links {
+			if resolved := resolveToViewAncestor(v, link.Peer); resolved != "" {
+				ensureDeepLinkChain(v, m, resolved, link.Peer)
+			}
+		}
+
+		for _, link := range unit.LinksFrom {
+			if resolved := resolveToViewAncestor(v, link.Peer); resolved != "" {
+				ensureDeepLinkChain(v, m, resolved, link.Peer)
+			}
+		}
+
+		for _, name := range subunitOrderOf(unit) {
+			walk(path+"."+name, unit.Subunits[name])
+		}
+	}
+
+	for _, name := range modelUnitOrder(m) {
+		walk(name, m.Units[name])
+	}
+}
+
 // resolveBoundaryNodeLinks resolves links for external boundary nodes so that
 // edges connect to the nearest visible ancestor in the view.
 // For example, if webUser links to linuxSystem.localIDP.grpcAPIs.authAPI but the
@@ -1086,9 +1129,20 @@ func resolveDescendantCrossLinks(
 // Every contributing link is appended without dedup (WR-01): D-05 multiplicity
 // counting in buildEdges needs the full pre-dedup set, and the builder's
 // pair-only markSeen performs the edge dedup (D-01 first-wins).
+//
+// Deep links keep their target: when the unit that authored the link is
+// itself depicted (a registered chain entry or direct subunit), the edge
+// records on THAT entry — symmetric with addResolvedCrossLinkFrom, so an
+// authored link and its mirror land on the same pair and the builder's
+// dedup collapses them into one arrow.
 func addResolvedCrossLink(
 	v *View, m *parser.Model, subunitEntry *Entry, sourcePath string, originalSource string, link model.Link,
 ) {
+	if owner, depicted := v.Units[originalSource]; depicted && owner != nil {
+		subunitEntry = owner
+		sourcePath = originalSource
+	}
+
 	resolvedPeer := resolveToViewAncestor(v, link.Peer)
 	if resolvedPeer == "" || resolvedPeer == sourcePath {
 		return
@@ -1130,9 +1184,19 @@ func addResolvedCrossLink(
 // Every contributing link is appended without dedup (WR-01): D-05 multiplicity
 // counting in buildEdges needs the full pre-dedup set, and the builder's
 // pair-only markSeen performs the edge dedup (D-01 first-wins).
+//
+// Deep links keep their target: when the unit that owns the incoming link is
+// itself depicted in the view (a registered chain entry or direct subunit),
+// the edge records on THAT entry — the arrow terminates at the true target,
+// not at the aggregated ancestor's frame.
 func addResolvedCrossLinkFrom(
 	v *View, m *parser.Model, subunitEntry *Entry, sourcePath string, originalSource string, link model.Link,
 ) {
+	if owner, depicted := v.Units[originalSource]; depicted && owner != nil {
+		subunitEntry = owner
+		sourcePath = originalSource
+	}
+
 	resolvedPeer := resolveToViewAncestor(v, link.Peer)
 	if resolvedPeer == "" || resolvedPeer == sourcePath {
 		return

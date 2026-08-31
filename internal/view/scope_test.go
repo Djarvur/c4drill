@@ -1861,3 +1861,96 @@ func subunitOrderForTest(unit *model.Unit) []string {
 
 	return names
 }
+
+// TestGenerateC3View_DeepLinkTargetsAttachAtTrueUnit pins the nesting-context
+// contract ("deep links keep their target") on the C3 boundary view: a link
+// aimed at a deeply nested unit that the view DEPICTS (inside an unfolded
+// container cluster) terminates at the true target — the recorded mirror
+// lands on the true owner's entry, not on the aggregated ancestor, and the
+// chain registers order-independently (upfront, not as a side effect of
+// whichever link happens to be walked first).
+func TestGenerateC3View_DeepLinkTargetsAttachAtTrueUnit(t *testing.T) {
+	t.Parallel()
+
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Deep Link C3"},
+		UnitOrder:  []string{"actors", "sys"},
+		Units: map[string]*model.Unit{
+			"actors": {
+				Type: model.TypePersonExternal,
+				Name:  "Actors",
+				Links: []model.Link{{Peer: "sys.edge.gateway.router"}},
+			},
+			"sys": {
+				Type:          model.TypeSystem,
+				Name:          "Sys",
+				SubunitOrder:  []string{"webui", "edge", "audit"},
+				Subunits: map[string]*model.Unit{
+					"webui": {
+						Type: model.TypeContainer,
+						Name: "WebUI",
+						Links: []model.Link{
+							{Peer: "sys.edge.gateway.router", Technology: "HTTPS"},
+						},
+					},
+					"edge": {
+						Type:         model.TypeBox,
+						Name:         "Edge",
+						SubunitOrder: []string{"gateway"},
+						Subunits: map[string]*model.Unit{
+							"gateway": {
+								Type:         model.TypeContainer,
+								Name:         "GW",
+								SubunitOrder: []string{"router"},
+								Subunits: map[string]*model.Unit{
+									"router": {
+										Type: model.TypeComponent,
+										Name: "Router",
+										Links: []model.Link{
+											{Peer: "sys.audit"},
+										},
+									},
+								},
+							},
+						},
+					},
+					"audit": {Type: model.TypeContainer, Name: "Audit"},
+				},
+			},
+		},
+	}
+
+	// Validator-synthesized mirrors (as the CLI pipeline provides): the
+	// incoming links on router drive the boundary-edge recording.
+	for _, peer := range []string{"actors", "sys.webui"} {
+		m.Units["sys"].Subunits["edge"].Subunits["gateway"].Subunits["router"].LinksFrom = append(
+			m.Units["sys"].Subunits["edge"].Subunits["gateway"].Subunits["router"].LinksFrom,
+			model.Link{Peer: peer, Mirror: true},
+		)
+	}
+
+	v := view.GenerateC3View(m, "sys.edge")
+	require.NotNil(t, v)
+
+	// The deep-link chain registered the true target as a depicted entry.
+	require.Contains(t, v.Units, "sys.edge.gateway.router",
+		"the deep-link chain must register the true target (order-independent)")
+
+	// The incoming links from actors/webui attach at the TRUE target entry,
+	// not at the aggregated gateway — the arrows terminate at Router.
+	router := v.Units["sys.edge.gateway.router"]
+	peers := make([]string, 0, len(router.ResolvedLinksFrom))
+
+	for _, l := range router.ResolvedLinksFrom {
+		peers = append(peers, l.Peer)
+	}
+
+	assert.Contains(t, peers, "actors", "actors link terminates at Router")
+	assert.Contains(t, peers, "sys.webui", "webui link terminates at Router")
+
+	gateway := v.Units["sys.edge.gateway"]
+	for _, l := range gateway.ResolvedLinksFrom {
+		assert.NotContains(t, []string{"actors", "sys.webui"}, l.Peer,
+			"no aggregated stand-in edge when the true target is depicted")
+	}
+}
