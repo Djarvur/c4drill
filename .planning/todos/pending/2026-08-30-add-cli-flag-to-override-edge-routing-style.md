@@ -2,6 +2,7 @@
 created: 2026-08-30T22:22:16.409Z
 title: Add CLI flag to override edge routing style
 area: rendering
+resolves_phase: 39
 files:
   - cmd/c4drill/root.go:102
   - internal/graph/graph.go:66
