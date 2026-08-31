@@ -12,6 +12,7 @@
 - ✅ **v1.13 Edge Semantics and Legend** — Phase 36 (shipped 2026-08-28) → [archive](milestones/v1.13-ROADMAP.md) — product release tag: v1.18.0
 - ✅ **v1.14 Nesting Context and Plain Rendering** — Phase 37 (shipped 2026-08-30) — product release tag: v1.21.0
 - ✅ **v1.15 Hierarchy Wrapping and Granular Keys** — Phase 38 (SHIPPED 2026-08-30) — product release tag: v1.22.0
+- 🚧 **v1.16 Edge Style Override** — Phase 39 (in progress)
 
 ## Phases
 
@@ -105,9 +106,36 @@ Full details: [milestones/v1.15-ROADMAP.md](milestones/v1.15-ROADMAP.md)
 
 </details>
 
+### 🚧 v1.16 Edge Style Override (In Progress)
+
+**Milestone Goal:** Let users override the edge routing style per invocation via a `--edges <style>` CLI flag — producing variants of the same model (e.g. expanded-with-straight vs non-expanded-with-spline) without editing or duplicating the model file.
+
+- [ ] **Phase 39: Edge Style Override (`--edges` CLI flag)** - Per-invocation edge routing override: persistent flag with loud enum validation, overriding the model `edges` property on every generated view, `--plain` interaction pinned, switch-matrix E2E, backward compat
+
+#### Phase 39: Edge Style Override (`--edges` CLI flag)
+**Goal**: Users can override the edge routing style for a whole invocation via `--edges <style>` (`straight|spline|square|ortho`), rendering the same model as per-invocation variants (e.g. expanded-with-straight vs non-expanded-with-spline) without editing or duplicating the model file.
+**Depends on**: Nothing within this milestone (builds on the shipped v1.15 baseline — Phase 38, v1.22.0; reuses the PLAIN-01 root + `--expanded` threading pattern at cmd/c4drill/root.go:330-386)
+**Requirements**: GEDGE-03, GEDGE-04, GEDGE-05, GEDGE-06, GEDGE-07, GEDGE-08
+**Success Criteria** (what must be TRUE):
+  1. User can run `c4drill model.toml --edges <style>` with each of `straight|spline|square|ortho` and every generated diagram — C1 root, all drill-down views, and the `--expanded` copy — renders with that routing style, the flag winning over the model's `edges` property (no model edit needed)
+  2. User can pass an invalid value (e.g. `--edges diagonal`) and gets a loud error naming the offending value and the allowed enum `straight|spline|square|ortho` — no output produced, no silent fallback
+  3. An explicit CLI `--edges <style>` survives `--plain`'s author-format suppression — user intent wins — with the decision pinned by a dedicated test
+  4. The switch-matrix E2E covers `--edges` × generation (root / drill-down / `--expanded`) × `--plain`, asserting the graphviz `splines` attribute in RAW dot output for each combination
+  5. Without the flag, output is unchanged — all existing canonicalDOT goldens pass untouched
+**Plans**: TBD
+
+Plans:
+- [ ] 39-01: TBD (assigned by /gsd:plan-phase)
+
+**Implementation notes** (from design todo [2026-08-30-add-cli-flag-to-override-edge-routing-style](todos/pending/2026-08-30-add-cli-flag-to-override-edge-routing-style.md)):
+- Flow to extend: TOML `edges` → View → `Graph.EdgeStyle` (internal/graph/builder.go:38-49; builder.go:411 for expanded) → `cg.SetSplines` (internal/render/converter.go:264-271; `square`→ortho alias per GEDGE-02 — enum unchanged, no new styles)
+- Confirm `--edges` does not collide with existing flags in cmd/c4drill/root.go (naming check from design todo)
+- `--plain` interaction is a genuine open decision (PLAIN-02 currently suppresses author TOML edges; "exact union" pin from KEY-02) — settle at plan time, lock with the GEDGE-06 test either way
+- Docs (README.adoc usage/flags + 3 SKILL.md copies, byte-identical per 37-06 sync precedent) follow the established repo convention — carried at plan level, not a v1.16 requirement
+
 ## Progress
 
-**Execution Order:** Phase 38 (single phase; plans sequenced by plan-phase)
+**Execution Order:** Phase 39 (single phase; plans sequenced by plan-phase)
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -122,6 +150,7 @@ Full details: [milestones/v1.15-ROADMAP.md](milestones/v1.15-ROADMAP.md)
 | 36. Edge Semantics and Legend | v1.13 | 6/6 | Complete | 2026-08-28 |
 | 37. Nesting Context and Plain Rendering | v1.14 | 7/7 | Complete | 2026-08-30 |
 | 38. Hierarchy Wrapping and Granular Keys | v1.15 | 6/6 | Complete | 2026-08-30 |
+| 39. Edge Style Override (`--edges` flag) | v1.16 | 0/TBD | Not started | - |
 
 **Post-milestone (2026-08-28):** user-directed design review shipped outside any phase as v1.19.0–v1.20.0 — legend reworked into a floating framed node outside an invisible content cluster (REQUIREMENTS.md LEG-01..03 re-specified in place), queue units render as SVG pipes (SHAPE-01, quick task [260828-qbx](.planning/quick/260828-qbx-render-queue-units-as-horizontal-pipe-sh/)). Quick tasks are not tracked in the phase table above (GSD quick-mode convention).
 

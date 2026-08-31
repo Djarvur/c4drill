@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-08-31T06:18:21.470Z"
 last_activity: 2026-08-31
 progress:
-  total_phases: 0
+  total_phases: 1
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-31)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** Milestone v1.15 archived (v1.21.0 + v1.22.0 shipped) — planning next milestone; candidate: `--edges` CLI flag (todos/pending)
+**Current focus:** Milestone v1.16 Edge Style Override — Phase 39 (`--edges <style>` CLI flag)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-08-31 — Milestone v1.16 started
+Phase: 39 of 39 (Edge Style Override — only phase in v1.16)
+Plan: — of TBD (not yet planned)
+Status: Ready to plan
+Last activity: 2026-08-31 — v1.16 roadmap created (Phase 39; GEDGE-03..08 mapped, 6/6 coverage)
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -47,7 +49,7 @@ Decisions are logged in PROJECT.md Key Decisions table (v1.15 phase-level decisi
 
 ### Pending Todos
 
-See .planning/todos/pending/. (1 pending: add CLI flag to override edge routing style — feature request, 2026-08-30)
+See .planning/todos/pending/. (1 pending: add CLI flag to override edge routing style — now IN SCOPE as Phase 39 of v1.16; design todo carries the data flow, file list, and the resolved `--plain` open question)
 
 ### Blockers/Concerns
 
@@ -63,18 +65,12 @@ None open. (v1.15 concerns — WRAP golden churn, LBL-03 legend pin — resolved
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| *(granular flags item superseded — in scope for v1.15)* | | | |
-| bug | CI Validate Examples asymmetry (11-nesting-context drill-down SVGs tracked in plugin trees, gitignored in skill/) | RESOLVED 2026-08-30 — skill/ force-adds the 5 SVGs per 06-templates precedent (commit 66cd6dc); Validate Examples green | 38-06 |
+| todo | add CLI flag to override edge routing style (--edges) — feature request | IN SCOPE — Phase 39 (v1.16 roadmap, 2026-08-31) | v1.15 close |
 | debug | docs-drift-orphan-rule-testdata — doc/fixture drift around orphan rule VAL-01 | acknowledged open at v1.15 close (2026-08-31) | v1.15 close |
 | debug | knowledge-base — stale note, status unknown | acknowledged open at v1.15 close (2026-08-31) | v1.15 close |
-| todo | add CLI flag to override edge routing style (--edges) — feature request | acknowledged open at v1.15 close (2026-08-31); candidate for next milestone/quick | v1.15 close |
 
 ## Session Continuity
 
-Last session: 2026-08-31 (milestone v1.15 closed — archived, REQUIREMENTS cleared, retrospective updated)
-Stopped at: Awaiting next milestone; candidate work queued in todos/pending (`--edges` CLI flag)
-Resume file: .planning/MILESTONES.md (v1.15 entry)
-
-## Operator Next Steps
-
-- Start the next milestone with /gsd-new-milestone
+Last session: 2026-08-31 (v1.16 roadmap created — Phase 39 Edge Style Override, 6/6 GEDGE requirements mapped)
+Stopped at: Phase 39 ready for /gsd:plan-phase
+Resume file: .planning/ROADMAP.md (v1.16 section)

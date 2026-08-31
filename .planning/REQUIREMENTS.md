@@ -41,18 +41,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GEDGE-03 | — | Pending |
-| GEDGE-04 | — | Pending |
-| GEDGE-05 | — | Pending |
-| GEDGE-06 | — | Pending |
-| GEDGE-07 | — | Pending |
-| GEDGE-08 | — | Pending |
+| GEDGE-03 | Phase 39 | Pending |
+| GEDGE-04 | Phase 39 | Pending |
+| GEDGE-05 | Phase 39 | Pending |
+| GEDGE-06 | Phase 39 | Pending |
+| GEDGE-07 | Phase 39 | Pending |
+| GEDGE-08 | Phase 39 | Pending |
 
 **Coverage:**
 - v1.16 requirements: 6 total
-- Mapped to phases: 0
-- Unmapped: 6 ⚠️ (roadmap pending)
+- Mapped to phases: 6
+- Unmapped: 0 ✓ (roadmap created 2026-08-31 — single phase 39)
 
 ---
 *Requirements defined: 2026-08-31*
-*Last updated: 2026-08-31 after initial definition*
+*Last updated: 2026-08-31 — traceability mapped to Phase 39 (v1.16 roadmap creation)*
