@@ -113,23 +113,34 @@ Full details: [milestones/v1.15-ROADMAP.md](milestones/v1.15-ROADMAP.md)
 - [ ] **Phase 39: Edge Style Override (`--edges` CLI flag)** - Per-invocation edge routing override: persistent flag with loud enum validation, overriding the model `edges` property on every generated view, `--plain` interaction pinned, switch-matrix E2E, backward compat
 
 #### Phase 39: Edge Style Override (`--edges` CLI flag)
+
 **Goal**: Users can override the edge routing style for a whole invocation via `--edges <style>` (`straight|spline|square|ortho`), rendering the same model as per-invocation variants (e.g. expanded-with-straight vs non-expanded-with-spline) without editing or duplicating the model file.
 **Depends on**: Nothing within this milestone (builds on the shipped v1.15 baseline — Phase 38, v1.22.0; reuses the PLAIN-01 root + `--expanded` threading pattern at cmd/c4drill/root.go:330-386)
 **Requirements**: GEDGE-03, GEDGE-04, GEDGE-05, GEDGE-06, GEDGE-07, GEDGE-08
 **Success Criteria** (what must be TRUE):
+
   1. User can run `c4drill model.toml --edges <style>` with each of `straight|spline|square|ortho` and every generated diagram — C1 root, all drill-down views, and the `--expanded` copy — renders with that routing style, the flag winning over the model's `edges` property (no model edit needed)
   2. User can pass an invalid value (e.g. `--edges diagonal`) and gets a loud error naming the offending value and the allowed enum `straight|spline|square|ortho` — no output produced, no silent fallback
   3. An explicit CLI `--edges <style>` survives `--plain`'s author-format suppression — user intent wins — with the decision pinned by a dedicated test
   4. The switch-matrix E2E covers `--edges` × generation (root / drill-down / `--expanded`) × `--plain`, asserting the graphviz `splines` attribute in RAW dot output for each combination
   5. Without the flag, output is unchanged — all existing canonicalDOT goldens pass untouched
-**Plans**: 3 plans
 
+**Plans**: 3 plans
 Plans:
+**Wave 1**
+
 - [ ] 39-01: TDD — `--edges` flag, loud validation, invocation-global override (beats global + per-unit edges), `--plain` survival, flag-off golden invariance (GEDGE-03..06, GEDGE-08)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 39-02: Switch-matrix E2E — `--edges` × generation × `--plain` asserting `splines=` in RAW dot + golden-safe per-unit fixture (GEDGE-07)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 39-03: Docs (README CLI Reference + `--plain` delta + 3 byte-identical SKILL.md copies) + release v1.23.0 (D-07, GEDGE-03/06 docs clause)
 
 **Implementation notes** (from design todo [2026-08-30-add-cli-flag-to-override-edge-routing-style](todos/pending/2026-08-30-add-cli-flag-to-override-edge-routing-style.md)):
+
 - Flow to extend: TOML `edges` → View → `Graph.EdgeStyle` (internal/graph/builder.go:38-49; builder.go:411 for expanded) → `cg.SetSplines` (internal/render/converter.go:264-271; `square`→ortho alias per GEDGE-02 — enum unchanged, no new styles)
 - Confirm `--edges` does not collide with existing flags in cmd/c4drill/root.go (naming check from design todo)
 - `--plain` interaction is a genuine open decision (PLAIN-02 currently suppresses author TOML edges; "exact union" pin from KEY-02) — settle at plan time, lock with the GEDGE-06 test either way
