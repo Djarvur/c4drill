@@ -81,7 +81,24 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - ✓ Post-release correctness (260831-01u): compact C1 root restored (flood bisected to v1.21.0 CTX-02/03 whole-subtree unfolding; pinned by `deepcross` fixture + golden invariant); edge identity made flag-invariant via builder-assigned `Edge.Name` (label-derived find-or-create had silently merged parallel edges under `--no-labels`)
 - ✓ BC-01: without the new keys, default output changes only for the documented WRAP deltas; docs (README.adoc + 3 SKILL.md copies) synced with CI `diff -r` parity (DOC-01..03)
 
-## Current Milestone: v1.15 Hierarchy Wrapping and Granular Keys
+## Current Milestone: v1.16 Edge Style Override
+
+**Goal:** Let users override the edge routing style per invocation via a `--edges <style>` CLI flag — producing variants of the same model (e.g. expanded-with-straight vs non-expanded-with-spline) without editing or duplicating the model file.
+
+**Target features:**
+
+- **`--edges` CLI flag** — persistent flag accepting the existing enum (`straight|spline|square|ortho`), loud error on bad values (same UX as existing LOUD hard-error precedent); no new routing styles.
+- **Override semantics** — the flag overrides the model's `edges` property on every generated view (root + `--expanded` copy), threaded per the PLAIN-01 pattern.
+- **`--plain` interaction pinned** — decide and lock with a test whether an explicit CLI `--edges` survives `--plain`'s author-format suppression ("exact union" contract from KEY-02).
+
+**Key context:**
+- Source: feature request captured 2026-08-30 as todo (`todos/pending/2026-08-30-add-cli-flag-to-override-edge-routing-style.md`) with design sketch and file list.
+- Flow to extend: TOML `edges` → `View` → `Graph.EdgeStyle` → `cg.SetSplines`; threading precedent KEY-01/LBL-02 + PLAIN-01 root + `--expanded` copy at `cmd/c4drill/root.go:330-386`.
+- `square` is implemented as the documented ortho alias (GEDGE-02) — enum unchanged.
+- Naming check: `--edges` must not collide with existing flags in `root.go`.
+- Extend the KEY-03-style switch matrix E2E asserting graphviz `splines` in RAW dot output.
+
+## Previous Milestone: v1.15 Hierarchy Wrapping and Granular Keys — COMPLETE (2026-08-30)
 
 **Goal:** Correct v1.14's scoping after user review — every depicted node on any generated view (regular, boundary, expanded) renders inside its complete ancestor-container chain so nothing hangs in the air (drawing containers only, never extra nodes); add granular CLI switches on top of `--plain`; add a dedicated key to disable labels entirely (labels distort routing and can make diagrams unreadable), honored by drill-down AND expanded generation.
 
@@ -100,8 +117,10 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 ## Current Focus
 
-Planning the next milestone. Open candidates (see STATE.md Deferred Items / todos/pending):
-- CLI flag to override edge routing style (`--edges straight|spline|square|ortho`) — captured feature request, todos/pending
+Executing milestone v1.16 Edge Style Override (`--edges <style>` CLI flag). Remaining backlog after this milestone:
+- Template multi-output / `for_each` fan-out (Future, REQUIREMENTS archive)
+- Compact-link shorthand variants beyond baseline (Future, REQUIREMENTS archive)
+- C4D polish warnings: WR-03 duplicate `properties {}` last-win, WR-04 skill type-inference table drift, WR-05 quoted-label whitespace trim
 - Debug: docs-drift around the orphan rule (VAL-01) testdata; stale `knowledge-base` debug note
 - Human UAT follow-ups from 260831-01u: re-render the reporter's real model (compact root), eyeball re-baselined goldens
 
@@ -134,8 +153,7 @@ Planning the next milestone. Open candidates (see STATE.md Deferred Items / todo
 
 ## Next Milestone Goals
 
-*v1.15 shipped; nothing active. Candidate backlog for later:*
-- CLI flag to override edge routing style — `--edges` (captured todo, ready for planning)
+*v1.16 scoped (`--edges` CLI flag); remaining candidate backlog for later:*
 - Template multi-output / `for_each` fan-out (Future, REQUIREMENTS archive)
 - Compact-link shorthand variants beyond baseline (Future, REQUIREMENTS archive)
 - C4D polish warnings: WR-03 duplicate `properties {}` last-win, WR-04 skill type-inference table drift, WR-05 quoted-label whitespace trim
@@ -330,4 +348,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-31 after v1.15 milestone (shipped as v1.21.0 & v1.22.0)*
+*Last updated: 2026-08-31 at milestone v1.16 start (Edge Style Override)*

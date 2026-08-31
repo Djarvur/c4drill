@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.15
-milestone_name: Hierarchy Wrapping and Granular Keys
-status: Awaiting next milestone
-last_updated: "2026-08-31T05:55:58.823Z"
-last_activity: 2026-08-31 — Milestone v1.15 completed and archived
+milestone: v1.16
+milestone_name: Edge Style Override
+status: planning
+last_updated: "2026-08-31T06:18:21.470Z"
+last_activity: 2026-08-31
 progress:
-  total_phases: 2
-  completed_phases: 1
-  total_plans: 6
-  completed_plans: 6
-  percent: 50
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-08-31)
 
 ## Current Position
 
-Phase: Milestone v1.15 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-08-31 — Milestone v1.15 completed and archived
+Status: Defining requirements
+Last activity: 2026-08-31 — Milestone v1.16 started
 
 ## Performance Metrics
 
