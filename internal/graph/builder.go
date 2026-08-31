@@ -43,6 +43,13 @@ func BuildGraph(v *view.View) *Graph {
 		edgeStyle = ""
 	}
 
+	// D-05/GEDGE-06: an explicit `--edges` CLI request is USER intent, not
+	// author formatting — it replaces the style AFTER the plain zeroing.
+	// Empty override = flag absent = zero behavior change (D-04).
+	if v.EdgesOverride != "" {
+		edgeStyle = v.EdgesOverride
+	}
+
 	g := &Graph{
 		Title:     v.Title,
 		Direction: "TB",
@@ -425,6 +432,12 @@ func BuildExpandedGraph(v *view.View) *Graph {
 	edgeStyle := v.Edges
 	if v.Plain {
 		edgeStyle = ""
+	}
+
+	// D-05/GEDGE-06: explicit --edges is USER intent — applied AFTER the
+	// plain zeroing, identical to BuildGraph (D-04: empty = flag absent).
+	if v.EdgesOverride != "" {
+		edgeStyle = v.EdgesOverride
 	}
 
 	g := &Graph{

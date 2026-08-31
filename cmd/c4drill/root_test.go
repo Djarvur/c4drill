@@ -2482,10 +2482,10 @@ func TestEdgesFlagValidation(t *testing.T) {
 //
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestEdgesFlagOverridesModel(t *testing.T) {
-	dir := generateFixtureOutput(t, "plain", "dot", "--edges", "spline")
+	dir := generateFixtureOutput(t, "plain.toml", "dot", "--edges", "spline")
 
 	dot := readOutputFile(t, filepath.Join(dir, "plain.dot"))
 
-	assert.Contains(t, dot, `splines="true"`,
+	assert.Contains(t, dot, `splines=true`,
 		`--edges spline must beat the model's edges="straight" in RAW dot (GEDGE-05)`)
 }

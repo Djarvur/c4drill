@@ -26,6 +26,7 @@ import (
 // Static errors for better error handling.
 var (
 	errInvalidFormat    = errors.New("invalid format: must be dot, svg, or html")
+	errInvalidEdges     = errors.New("invalid edges: must be straight, spline, square, or ortho")
 	errValidationFailed = errors.New("validation failed")
 	errGenerateView     = errors.New("failed to generate view")
 	errBuildGraph       = errors.New("failed to build graph")
@@ -58,6 +59,7 @@ var (
 	noRank     bool
 	noLabels   bool
 	labelRatio float64
+	edges      string
 	version    = "dev"
 )
 
@@ -101,6 +103,8 @@ Output:
 		"Generate all-expanded diagram showing all units")
 	cmd.PersistentFlags().BoolVar(&plain, "plain", false,
 		"Ignore author-custom formatting: default unit/edge styling, spacing and ranking, plain-text labels")
+	cmd.PersistentFlags().StringVar(&edges, "edges", "",
+		"Override edge routing style for every generated diagram (straight|spline|square|ortho)")
 	cmd.PersistentFlags().BoolVar(&noColors, "no-colors", false,
 		"Suppress colouring only: author unit/link colors and kind-derived edge colours")
 	cmd.PersistentFlags().BoolVar(&noStyles, "no-styles", false,
@@ -136,8 +140,8 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	}
 
 	// Validate flags early (before file I/O)
-	if format != formatDot && format != formatSVG && format != formatHTML {
-		return fmt.Errorf("%w: %q", errInvalidFormat, format)
+	if err := validateOutputFlags(); err != nil {
+		return err
 	}
 
 	// Set label ratio for word-wrapping
@@ -330,12 +334,16 @@ func processView(m *parser.Model, unitPath, basename string, writer *output.Writ
 	// PLAIN-01: thread --plain onto every generated view so the graph builder
 	// suppresses author-custom formatting (PLAIN-02). KEY-01: the granular
 	// switches thread the same way onto every view. LBL-02: --no-labels too.
+	// EDGES: --edges threads as the invocation-global override (D-03) — the
+	// builder applies it after the plain zeroing, so explicit user intent
+	// survives --plain (D-05/GEDGE-06).
 	v.Plain = plain
 	v.NoColors = noColors
 	v.NoStyles = noStyles
 	v.NoLength = noLength
 	v.NoRank = noRank
 	v.NoLabels = noLabels
+	v.EdgesOverride = edges
 
 	// Build graph with navigation
 	g := graph.BuildGraphWithPath(v, unitPath, basename, format)
@@ -383,12 +391,15 @@ func processExpandedView(m *parser.Model, basename string, writer *output.Writer
 	// PLAIN-01: --plain x --expanded — the expanded view gets the flag too
 	// (BuildExpandedGraph copies View.Plain into Graph.Opts.Plain).
 	// KEY-01: the granular switches thread the same way. LBL-02: --no-labels.
+	// EDGES: --edges threads as the invocation-global override (D-03) here too
+	// (D-05/GEDGE-06: survives --plain).
 	v.Plain = plain
 	v.NoColors = noColors
 	v.NoStyles = noStyles
 	v.NoLength = noLength
 	v.NoRank = noRank
 	v.NoLabels = noLabels
+	v.EdgesOverride = edges
 
 	// Build graph with nested clusters (no navigation for expanded view)
 	g := graph.BuildExpandedGraph(v)
@@ -424,6 +435,30 @@ func processExpandedView(m *parser.Model, basename string, writer *output.Writer
 func isC2Path(path string) bool {
 	// C2 if the path has only one segment (no dots)
 	return !strings.Contains(path, ".")
+}
+
+// validEdgesStyle reports whether s is one of the four edge-routing enum
+// values (GEDGE-03). "square" is the documented ortho alias (GEDGE-02) —
+// the enum is unchanged by the --edges flag.
+func validEdgesStyle(s string) bool {
+	return s == "straight" || s == "spline" || s == "square" || s == "ortho"
+}
+
+// validateOutputFlags validates the enum-valued output flags early, before any
+// file I/O: --format and --edges both fail loudly naming the offending value
+// (D-02). For --edges this is the ONLY loud gate — the render converter treats
+// unknown styles as "unset", so an unvalidated value would be silently
+// swallowed (GEDGE-04: no silent fallback).
+func validateOutputFlags() error {
+	if format != formatDot && format != formatSVG && format != formatHTML {
+		return fmt.Errorf("%w: %q", errInvalidFormat, format)
+	}
+
+	if edges != "" && !validEdgesStyle(edges) {
+		return fmt.Errorf("%w: %q", errInvalidEdges, edges)
+	}
+
+	return nil
 }
 
 // getLabelRatio returns the label ratio from CLI flag, env var, or default.
