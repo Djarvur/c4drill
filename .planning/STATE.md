@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.16
 milestone_name: Edge Style Override
 status: planning
-last_updated: "2026-08-31T06:18:21.470Z"
-last_activity: 2026-08-31
+last_updated: "2026-08-31T06:55:44.137Z"
+last_activity: 2026-08-31 — v1.16 roadmap created (Phase 39; GEDGE-03..08 mapped, 6/6 coverage)
 progress:
   total_phases: 1
   completed_phases: 0
@@ -71,6 +71,6 @@ None open. (v1.15 concerns — WRAP golden churn, LBL-03 legend pin — resolved
 
 ## Session Continuity
 
-Last session: 2026-08-31 (v1.16 roadmap created — Phase 39 Edge Style Override, 6/6 GEDGE requirements mapped)
-Stopped at: Phase 39 ready for /gsd:plan-phase
-Resume file: .planning/ROADMAP.md (v1.16 section)
+Last session: 2026-08-31T06:55:44.131Z
+Stopped at: Phase 39 context gathered
+Resume file: .planning/phases/39-edge-style-override-edges-cli-flag/39-CONTEXT.md
