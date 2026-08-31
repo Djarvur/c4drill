@@ -1,0 +1,54 @@
+# Edge-override fixture (phase 39, GEDGE-05/GEDGE-07): carries BOTH a global
+# properties.edges value AND a per-unit edges override so the --edges matrix
+# can prove the flag beats each precedence layer (D-03) while the flag-off
+# path still resolves them exactly as before (D-04).
+# Deliberately golden-free: no committed golden depends on this fixture.
+# app.api is expanded (has subunits) so its own drill-down resolves
+# cmp.Or(unit.edges, properties.edges) = "ortho" — making the per-unit layer
+# observable in RAW dot without the flag.
+
+[properties]
+name = "Edge Override Fixture"
+description = "Exercises --edges precedence over global and per-unit routing"
+edges = "spline" # global author routing — --edges beats it; --plain ignores it
+expanded = ["app"]
+
+[admin]
+type = "person"
+name = "Administrator"
+description = "Drives the demo links"
+
+[[admin.link]]
+peer = "app.api.jobs"
+technology = "HTTPS"
+description = "Manages the platform"
+
+[app]
+type = "box"
+name = "Application"
+technology = "Go"
+description = "App context with a per-unit routing override deeper in"
+
+[app.api]
+type = "system"
+name = "Order API"
+technology = "Go"
+description = "Order processing API"
+edges = "ortho" # per-unit routing override — --edges must still win (D-03); without the flag this value wins at this unit's drill-down (D-04)
+
+[app.api.jobs]
+type = "container"
+name = "Job Runner"
+technology = "Go"
+description = "Runs background jobs"
+
+[app.worker]
+type = "system"
+name = "Worker"
+technology = "Go"
+description = "Background processing"
+
+[[app.worker.link]]
+peer = "app.api.jobs"
+technology = "gRPC"
+description = "Processes jobs"
