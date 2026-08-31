@@ -47,6 +47,45 @@
 
 ---
 
+## Milestone: v1.15 — Hierarchy Wrapping and Granular Keys
+
+**Shipped:** 2026-08-30 (product releases v1.21.0 & v1.22.0; post-release fixes 2026-08-31)
+**Phases:** 2 (37, 38) | **Plans:** 13 + 1 validated quick task (260831-01u, 3 tasks)
+
+### What Was Built
+- Phase 37 (v1.21.0): recursive cluster unfolding, deep-link ancestor chains, cluster drill affordance, `--plain` CLI key (CTX/PLAIN/DOC/REL requirements)
+- Phase 38 (v1.22.0): full ancestor-chain wrapping incl. boundary/sibling entries (WRAP), granular switches `--no-colors/--no-styles/--no-lengths/--no-ranks` composing with `--plain` (KEY), `--no-labels` (LBL); KEY-03 switch matrix locked E2E; real golden re-baseline
+- Quick task 260831-01u (TDD): compact C1 root restored, `--no-labels` narrowed to edge labels only, flag-invariant edge identity via builder-assigned `Edge.Name`
+- Repo hardening: 0 golangci-lint issues, branch protection requiring Build/Lint/Test on master, Validate Examples asymmetry (open since 2026-08-14) fixed
+
+### What Worked
+- **Single-day two-release cadence**: phases 37+38 planned and executed back-to-back in one calendar day, each shipping its own product release — the single-phase milestone precedent (v1.11–v1.14) held.
+- **Capture → validated quick pipeline for user bug reports**: three reports captured with code touch-points and context (including the "93.8 Mpt² measured on a broken basis" insight), then fixed in one `--validate` quick run — plan-checker confirmed the mechanism before execution, verifier confirmed against a freshly built binary.
+- **Post-release bisection discipline**: the reporter blamed b2447da/WRAP; empirical version bisection redirected the fix to v1.21.0 CTX-02/03 — fixing the wrong commit would have shipped a second regression.
+
+### What Was Inefficient
+- **Golden fixtures under-modeled real usage**: goldens covered C1/expanded on fixtures without cross-container deep links, so a whole-model root flood shipped green through 38-04's "zero-delta" re-baseline. The human's real model caught it immediately.
+- **Lint debt accumulated to 60 findings** (some pre-existing from 37/38, some from the quick task) — lint only ran on push, and the push-gate failure was noticed days of commits later. Fixed + branch protection added; new-code lint should be run before push.
+- **Plan-ID comment markers (`BUG-1/BUG-2/BUG-3`) tripped godox** — 18 mechanical rewords post-hoc. Avoid TODO/BUG/FIXME tokens in plan-reference comments.
+- **Manager dashboard staled after artifact archiving**: `init.manager` recommended re-discussing the shipped-and-archived phase 37; disk status and shipped reality diverged until the milestone close.
+
+### Patterns Established
+- **Flags are presentation-only — topology must be flag-invariant**: merge/dedup keys are computed from source-model attributes; `TestEdgeTopologyFlagInvariant` pins identical edge multisets across flag compositions.
+- **Compact-root invariant**: non-expanded root shows only the visible neighborhood; unfolding follows visible paths + deep-link chains, never whole subtrees; pinned by `deepcross` fixture + golden.
+- **Fixtures as regression contracts**: every behavioral fix ships a fixture that reproduces the reported shape (deepcross), not just a unit test.
+
+### Key Lessons
+1. **Bisect empirically before attributing a regression.** The reported culprit commit (b2447da) was provably C2/C3-scoped; static analysis plus version bisection found the real introduction point (v1.21.0). Attribution from a diff read alone is a hypothesis.
+2. **Superseding a pinned requirement is a docs+goldens+matrix event.** Narrowing `--no-labels` (LBL-01) required re-baselining goldens, updating the E2E matrix, 4 docs copies, and explicit supersession notes in STATE/archive — plan for the blast radius, not just the code.
+3. **Run the linter before pushing, not just CI.** 60 findings across pre-existing and fresh code blocked master's sanity run; local `golangci-lint run ./...` would have caught it pre-push.
+
+### Cost Observations
+- Model mix: opus planner, sonnet executor/checker/verifier (quick task); phase 37/38 per-plan mixes per STATE velocity notes.
+- Sessions: one orchestrator session covering 3 bug captures → 1 validated quick task → lint hardening → CI green → milestone close.
+- Notable: three user-reported bugs were captured, planned, plan-checked, executed (7 TDD commits), verified (5/5 must-haves), and documented within the same session as the milestone close.
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -54,12 +93,14 @@
 | Milestone | Sessions | Phases | Key Change |
 |-----------|----------|--------|------------|
 | v1.10 | 1 + 16 bg agents | 6 | First use of parallel background executors with file-overlap-aware serialization; research-first milestone setup (4 parallel researchers) |
+| v1.15 | 1 orchestrator + planner/checker/executor/verifier | 2 (+1 quick task) | Capture→validated-quick pipeline for post-release bug reports; empirical bisection over diff-reading attribution; flags-must-not-change-topology invariant tests; branch protection added after lint debt blocked master |
 
 ### Cumulative Quality
 
 | Milestone | Tests | Coverage | Zero-Dep Additions |
 |-----------|-------|----------|-------------------|
 | v1.10 | full suite green (12 packages) | canonicalDOT goldens (order-insensitive) | 0 new deps (stdlib + existing go-toml/go-graphviz/testify only) |
+| v1.15 | full suite green (15+ packages), 0 lint issues | canonicalDOT goldens + switch-matrix E2E + deepcross root invariant | 0 new deps |
 
 ### Top Lessons (Verified Across Milestones)
 
