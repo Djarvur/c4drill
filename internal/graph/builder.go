@@ -409,7 +409,20 @@ func buildBoundaryCluster(v *view.View) *Cluster {
 		Clusters: make([]*Cluster, 0),
 		Style:    style,
 		Type:     unitTypeOrDefault(unit),
+		// The boundary cluster IS the expanded unit — its 📖 reference flows
+		// to the cluster's URL slot like any container cluster.
+		ReferenceURL: unitReference(unit),
 	}
+}
+
+// unitReference returns the unit's external reference URL, tolerating a nil
+// unit (the boundary fallback path has no model unit).
+func unitReference(unit *model.Unit) string {
+	if unit == nil {
+		return ""
+	}
+
+	return unit.Reference
 }
 
 // unitTypeOrDefault returns the unit type or TypeSystem as default.
@@ -499,13 +512,14 @@ func buildNestedCluster(entry *view.Entry, path string, v *view.View) *Cluster {
 	// fix 260831-01u (edge-labels-only --no-labels): expanded-unit clusters keep their
 	// label — only edge label text is suppressed.
 	cluster := &Cluster{
-		ID:         path,
-		Label:      buildClusterLabel(entry),
-		Nodes:      make([]*Node, 0),
-		Clusters:   make([]*Cluster, 0),
-		Style:      style,
-		Type:       entry.Unit.Type,
-		IsExternal: entry.IsExternal,
+		ID:           path,
+		Label:        buildClusterLabel(entry),
+		Nodes:        make([]*Node, 0),
+		Clusters:     make([]*Cluster, 0),
+		Style:        style,
+		Type:         entry.Unit.Type,
+		IsExternal:   entry.IsExternal,
+		ReferenceURL: entry.Unit.Reference,
 	}
 
 	// Process subunits in definition order (use SubunitOrder if available)
@@ -964,13 +978,14 @@ func buildClusterShell(entry *view.Entry, opts RenderOpts) *Cluster {
 	applyUnitOverrides(style, entry.Unit, opts)
 
 	return &Cluster{
-		ID:         entry.FullPath,
-		Label:      buildClusterLabel(entry),
-		Nodes:      make([]*Node, 0),
-		Clusters:   make([]*Cluster, 0),
-		Style:      style,
-		Type:       entry.Unit.Type,
-		IsExternal: entry.IsExternal,
+		ID:           entry.FullPath,
+		Label:        buildClusterLabel(entry),
+		Nodes:        make([]*Node, 0),
+		Clusters:     make([]*Cluster, 0),
+		Style:        style,
+		Type:         entry.Unit.Type,
+		IsExternal:   entry.IsExternal,
+		ReferenceURL: entry.Unit.Reference,
 	}
 }
 

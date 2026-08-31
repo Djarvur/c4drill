@@ -636,9 +636,16 @@ func setClusterLabel(subgraph *cgraph.Graph, cluster *graph.Cluster, opts graph.
 	// (GraphViz supports URL on clusters, so clicking the cluster frame drills
 	// in). SafeSet errors are ignored, matching the best-effort treatment in
 	// applyNodeStyle. The URL is a structural affordance: emitted under plain
-	// too.
-	if cluster.ExploreURL != "" {
-		_ = subgraph.SafeSet("URL", cluster.ExploreURL, "")
+	// too. A registered 📖 reference wins the single URL slot over drill-down
+	// — the same ARCHITECTURE-v1.10 §6 (6) Option A precedence createNode
+	// applies (a cluster, like a node, has exactly one URL attribute).
+	url := cluster.ReferenceURL
+	if url == "" {
+		url = cluster.ExploreURL
+	}
+
+	if url != "" {
+		_ = subgraph.SafeSet("URL", url, "")
 	}
 }
 

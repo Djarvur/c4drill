@@ -171,6 +171,12 @@ type Cluster struct {
 	// cluster (CTX-03) — the cluster-side analog of Node.ExploreURL. Empty for
 	// expanded or leaf clusters.
 	ExploreURL string
+	// ReferenceURL is the external docs URL (📖) of the unit this cluster
+	// renders — the cluster-side analog of Node.ReferenceURL. Empty if none.
+	// When both it and ExploreURL apply, the EXTERNAL reference wins the
+	// cluster's single URL slot (same ARCHITECTURE-v1.10 §6 (6) Option A
+	// precedence nodes use).
+	ReferenceURL string
 }
 
 // Label represents a node label with multiple parts.

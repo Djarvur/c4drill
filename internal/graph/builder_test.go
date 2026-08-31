@@ -2661,6 +2661,118 @@ func TestReferenceURL_RenderedDOT(t *testing.T) {
 	})
 }
 
+// TestClusterReferenceURL_RenderedDOT is the cluster-side analog of
+// TestReferenceURL_RenderedDOT: a unit with inner units that renders as a
+// CLUSTER (deep-link chain or author-expanded) must expose its registered
+// 📖 reference through the cluster's single URL slot, with the same
+// external-wins precedence nodes use (ARCHITECTURE-v1.10 §6 (6) Option A).
+// Regression: reported after v1.23.1 — the cluster path emitted only the
+// drill-down URL (chain case) or no URL at all (expanded case), so the
+// registered reference was unreachable from non-expanded diagrams.
+func TestClusterReferenceURL_RenderedDOT(t *testing.T) {
+	t.Parallel()
+
+	t.Run("chain-unfolded cluster: reference wins the URL slot over drill-down", func(t *testing.T) {
+		t.Parallel()
+
+		// u deep-links into s.api → the CTX-02 chain unfolds s as a collapsed
+		// cluster with an explore (drill-down) URL; s also carries a reference.
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Cluster Reference Test"},
+			UnitOrder:  []string{"u", "s"},
+			Units: map[string]*model.Unit{
+				"u": {
+					Type: model.TypePerson,
+					Name: "U",
+					Links: []model.Link{
+						{Peer: "s.api"},
+					},
+				},
+				"s": {
+					Type:      model.TypeSystem,
+					Name:      "S",
+					Reference: "https://example.com/docs/s",
+					SubunitOrder: []string{"api"},
+					Subunits: map[string]*model.Unit{
+						"api": {Type: model.TypeContainer, Name: "API"},
+					},
+				},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraphWithPath(v, "", "diagram", "svg")
+
+		require.Len(t, g.Clusters, 1, "the chain-unfolded system renders as a cluster")
+		cluster := g.Clusters[0]
+		assert.Equal(t, "https://example.com/docs/s", cluster.ReferenceURL,
+			"Cluster.ReferenceURL must carry the unit's reference exactly")
+		require.NotEmpty(t, cluster.ExploreURL,
+			"precondition: the collapsed chain cluster has a drill-down URL")
+
+		dotData, err := render.RenderDOT(g)
+		require.NoError(t, err)
+
+		dot := string(dotData)
+		assert.Contains(t, dot, "https://example.com/docs/s",
+			"the cluster URL slot must carry the external reference (external-wins precedence)")
+		assert.NotContains(t, dot, "URL=\""+cluster.ExploreURL+"\"",
+			"the drill-down URL must not take the slot when a reference is registered")
+	})
+
+	t.Run("author-expanded cluster with reference carries the reference URL", func(t *testing.T) {
+		t.Parallel()
+
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Expanded Cluster Reference Test", Expanded: []string{"s"}},
+			UnitOrder:  []string{"u", "s"},
+			Units: map[string]*model.Unit{
+				"u": {
+					Type: model.TypePerson,
+					Name: "U",
+					Links: []model.Link{
+						{Peer: "s.api"},
+					},
+				},
+				"s": {
+					Type:      model.TypeSystem,
+					Name:      "S",
+					Reference: "https://example.com/docs/s",
+					SubunitOrder: []string{"api"},
+					Subunits: map[string]*model.Unit{
+						"api": {Type: model.TypeContainer, Name: "API"},
+					},
+				},
+			},
+		}
+
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraphWithPath(v, "", "diagram", "svg")
+
+		require.Len(t, g.Clusters, 1, "the author-expanded system renders as a cluster")
+
+		var cluster *graph.Cluster
+
+		for _, c := range g.Clusters {
+			if c.ID == "s" {
+				cluster = c
+			}
+		}
+
+		require.NotNil(t, cluster)
+		assert.Equal(t, "https://example.com/docs/s", cluster.ReferenceURL,
+			"the expanded cluster carries its unit's reference URL")
+		assert.Empty(t, cluster.ExploreURL,
+			"precondition: expanded clusters get no drill-down URL (D-04)")
+
+		dotData, err := render.RenderDOT(g)
+		require.NoError(t, err)
+
+		assert.Contains(t, string(dotData), "https://example.com/docs/s",
+			"the expanded cluster URL slot must carry the external reference")
+	})
+}
+
 // TestReference_BackwardCompat exercises REF-05: a unit authored WITHOUT a
 // reference field renders semantically identical to the committed v1.9 golden
 // baseline. This is the existing COMPAT-02 golden (TestBuildExpandedGraphBaselineDOT)
