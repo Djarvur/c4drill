@@ -220,7 +220,9 @@ legend = true                       # Optional: Legend in the upper-right (defau
 
 The `edges` routing value applies to **every** generated diagram (C1, C2,
 C3, expanded); `square` is an alias for ortho routing. A unit-level `edges`
-field overrides the global value for that unit's own diagram.
+field overrides the global value for that unit's own diagram. Either value
+can be overridden per *invocation* with the `--edges` CLI flag (see
+<<CLI Reference>>) — no model edit needed.
 
 === Edge Kinds and the Legend
 
@@ -1235,6 +1237,7 @@ description = "Caches sessions"
 c4drill <input.toml|input.c4d> [flags]
 
 Flags:
+      --edges string        Override edge routing style for every generated diagram (straight|spline|square|ortho)
       --expanded            Generate all-expanded diagram showing all units
   -f, --format string       Output format (dot|svg|html) (default "svg")
   -h, --help                help for c4drill
@@ -1253,6 +1256,25 @@ Flags:
   level), instead of the per-level drill-down set. The file is named
   `++{basename}++.expanded.++{format}++` and contains no drill-down
   links.
+* `--edges` (v1.23) overrides the edge routing style for the *whole
+  invocation*: every generated diagram — the C1 root, every drill-down
+  view, and the `--expanded` copy — renders with the requested style.
+  The flag wins over BOTH the global `properties.edges` value AND any
+  unit-level `edges` override, with no model edit — the same model can
+  be rendered as per-invocation variants (expanded-with-straight vs
+  non-expanded-with-spline). Values: `straight|spline|square|ortho`
+  (`square` is the documented ortho alias). An invalid value is a
+  hard error naming the offending value and the allowed enum —
+  nothing is rendered. An explicit `--edges` also wins over
+  `--plain` (user intent beats author-format suppression; see the
+  composition notes below). Without the flag, routing is resolved
+  exactly as before.
+
+  [source,bash]
+  ----
+  c4drill architecture.toml --edges straight --expanded
+  c4drill architecture.toml --edges spline
+  ----
 * `--plain` (v1.21) renders with author-custom formatting *ignored* —
   a neutral, type-palette look for reviews and diffs. It is a CLI-only
   flag: the model file gains no new keys, and it composes with
@@ -1264,7 +1286,9 @@ Flags:
      the default.
   ** Link `length` and `rank` — default spacing and forward ranking
      (no endpoint swap, no constraint suppression).
-  ** `properties.edges` — default spline routing.
+  ** `properties.edges` — default spline routing. (One exception,
+     v1.23: an explicit `--edges` flag still applies under `--plain`
+     — user intent beats author-format suppression.)
   ** Custom label formatting — labels render as plain text; the
      name/technology/description content is preserved.
 
@@ -1315,7 +1339,11 @@ Flags:
      survive (semantic, v1.21 behaviour), so `--plain --no-colors` is
      what removes them.
   ** `properties.edges` (spline routing) is tied to `--plain` only —
-     no granular switch touches it.
+     no granular switch touches it. One deliberate delta (v1.23): an
+     explicit `--edges` flag is user intent, not author formatting,
+     and *survives* `--plain` — `--plain --edges spline` renders
+     spline routing on every diagram, while `--plain` with no
+     `--edges` still suppresses the author value (pinned by test).
 
   [source,bash]
   ----
