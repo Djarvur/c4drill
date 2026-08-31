@@ -1,3 +1,17 @@
+## v1.16 Edge Style Override (Shipped: 2026-08-31 — product release v1.23.0)
+
+**Phases completed:** 1 phase (39), 3 plans, 8 tasks
+
+**Key accomplishments:**
+
+- Invocation-global `--edges <style>` flag with loud enum validation that beats global and per-unit model edges and survives `--plain`, implemented TDD with zero golden churn
+- GEDGE-07 matrix proving --edges × generation × --plain via RAW-dot splines assertions over a golden-free two-layer precedence fixture
+- --edges documented across README and 3 byte-identical SKILL.md copies with the --plain delta stated explicitly, and milestone v1.16 shipped as published release v1.23.0 with 6 binaries
+
+**Stats:** 29 commits 2026-08-31; +485/−2 Go across 5 files; ~50.3k LOC Go, all tests green. Verification 5/5 roadmap success criteria + 11/11 plan truths; UAT 7/7 (zero issues). Known deferred items at close: 5 (2 debug sessions + 3 quick-task bookkeeping gaps; see STATE.md Deferred Items)
+
+---
+
 ## v1.15 Hierarchy Wrapping and Granular Keys (Shipped: 2026-08-30 — product releases v1.21.0 & v1.22.0)
 
 **Phases completed:** 2 phases (37, 38), 13 plans (7 + 6), plus post-release quick task 260831-01u (3 TDD bug fixes)

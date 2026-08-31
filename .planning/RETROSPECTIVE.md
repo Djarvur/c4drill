@@ -86,6 +86,39 @@
 
 ---
 
+## Milestone: v1.16 — Edge Style Override
+
+**Shipped:** 2026-08-31 (product release v1.23.0)
+**Phases:** 1 | **Plans:** 3
+
+### What Was Built
+Invocation-global `--edges <style>` CLI flag (straight|spline|square|ortho) with loud enum validation; beats global AND per-unit model edges on every generated view via a dedicated `View.EdgesOverride` carrier applied post-PLAIN-02 in both builders; explicit flag survives `--plain` (documented KEY-02 delta, pinned by `TestEdgesSurvivesPlain`); GEDGE-07 switch-matrix E2E (~86 cells asserting `splines=` in RAW dot) over a golden-free two-layer precedence fixture; README + 3 byte-identical SKILL.md copies.
+
+### What Worked
+- **Design-todo-as-spec:** the folded todo carried flow, file:line list, and open questions — the milestone went from candidate to shipped in one day with zero research dependencies.
+- **Pattern replication:** phase 39 is the third member of the PLAIN/KEY flag family; copying the threading + matrix harness made each plan land TDD-clean in ~10–15 min.
+- **Verifier-friendly invariance:** the empty-default `EdgesOverride` carrier made flag-off behavior structural (not merely tested) — zero golden churn, zero re-baselining.
+
+### What Was Inefficient
+- gocognit (limit 15) tripped twice on first-draft forms (inline validation branch in `runRoot` at 16; nested-loop matrix at 28) — both fixed by extraction/flat-table refactors, but the limit keeps surprising first drafts.
+- Plan 39-03's cross-reference pointed at the wrong README section (`=== Edges` documents C4D arrows, not routing) — caught and moved to the Properties Section during execution.
+
+### Patterns Established
+- Explicit-CLI-beats-plain precedence: user intent > author-format suppression, expressed as a dedicated post-suppression override field.
+- RAW-dot attribute assertions must use the verified graphviz emission form (`splines=true|false|ortho`, unquoted) — verified against actual output before pinning.
+- Golden-free fixtures for new-behavior tests keep the backward-compat invariant untouched.
+
+### Key Lessons
+1. Settle precedence questions at phase-context time and pin them with a named test — the `--plain` decision (D-05) was the only open design question and it closed cleanly.
+2. Free-text "Depends on" fields confuse tooling (init.manager parsed version numbers out of prose as dep IDs) — keep roadmap dependency fields machine-clean.
+
+### Cost Observations
+- Model mix: sonnet researchers/synthesizer/roadmapper at milestone setup; the background agent ran the full plan→execute→verify→release chain for phase 39.
+- Sessions: one manager session — discuss inline, plan+execute via background agent, UAT and milestone close in the same session.
+- Notable: human touches were 3 prompt answers (scope confirm, dispatch Continue, verify choice); all 7 UAT tests were agent-executed CLI checks with grep-able evidence.
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -94,6 +127,7 @@
 |-----------|----------|--------|------------|
 | v1.10 | 1 + 16 bg agents | 6 | First use of parallel background executors with file-overlap-aware serialization; research-first milestone setup (4 parallel researchers) |
 | v1.15 | 1 orchestrator + planner/checker/executor/verifier | 2 (+1 quick task) | Capture→validated-quick pipeline for post-release bug reports; empirical bisection over diff-reading attribution; flags-must-not-change-topology invariant tests; branch protection added after lint debt blocked master |
+| v1.16 | 1 manager session (discuss inline; plan+execute via background agent) | 1 | Todo-as-spec single-day milestone; manager-driven dispatch; research skipped deliberately for an in-pattern feature; UAT fully agent-executed for a CLI surface |
 
 ### Cumulative Quality
 
@@ -101,6 +135,7 @@
 |-----------|-------|----------|-------------------|
 | v1.10 | full suite green (12 packages) | canonicalDOT goldens (order-insensitive) | 0 new deps (stdlib + existing go-toml/go-graphviz/testify only) |
 | v1.15 | full suite green (15+ packages), 0 lint issues | canonicalDOT goldens + switch-matrix E2E + deepcross root invariant | 0 new deps |
+| v1.16 | full suite green, 0 lint issues | canonicalDOT goldens (zero churn) + edges composition matrix (~86 cells) | 0 new deps |
 
 ### Top Lessons (Verified Across Milestones)
 

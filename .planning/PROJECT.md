@@ -8,6 +8,8 @@ As of v1.10, models are composable: a diagram can be assembled from multiple TOM
 
 As of v1.15, rendering is CLI-controllable: every depicted node renders inside its complete ancestor-container chain (boundary and sibling entries included — containers only, no extra nodes), and formatting is suppressible per aspect via granular switches (`--no-colors`, `--no-styles`, `--no-lengths`, `--no-ranks`) plus `--plain` (all of them) and `--no-labels` (edge labels only — node/cluster labels and the legend stay). The compact C1 root invariant (root shows only the visible neighborhood, never the whole model) is pinned by fixture + golden.
 
+As of v1.16, edge routing is per-invocation overridable: `--edges <style>` (`straight|spline|square|ortho`) beats both the global `[properties] edges` and per-unit `edges` on every generated view, and an explicit flag survives `--plain` (user intent beats author-format suppression — a documented delta to the exact-union contract).
+
 ## Core Value
 
 Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
@@ -88,7 +90,7 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - ✓ Switch-matrix E2E (GEDGE-07): `--edges` × generation (root / drill-down / `--expanded`) × `--plain` asserted via the graphviz `splines` attribute in RAW dot (~86 cells, `TestEdgesComposition` over the golden-free `edges_override.toml` fixture carrying both precedence layers)
 - ✓ Backward compat (GEDGE-08): without the flag, all existing canonicalDOT goldens pass untouched — zero re-baselining; scope.go resolution and converter mapping unchanged
 
-## Current Milestone: v1.16 Edge Style Override
+## Previous Milestone: v1.16 Edge Style Override — COMPLETE (2026-08-31)
 
 **Goal:** Let users override the edge routing style per invocation via a `--edges <style>` CLI flag — producing variants of the same model (e.g. expanded-with-straight vs non-expanded-with-spline) without editing or duplicating the model file.
 
@@ -99,7 +101,7 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - **`--plain` interaction pinned** — decide and lock with a test whether an explicit CLI `--edges` survives `--plain`'s author-format suppression ("exact union" contract from KEY-02).
 
 **Key context:**
-- Source: feature request captured 2026-08-30 as todo (`todos/pending/2026-08-30-add-cli-flag-to-override-edge-routing-style.md`) with design sketch and file list.
+- Source: feature request captured 2026-08-30 as todo (`todos/completed/2026-08-30-add-cli-flag-to-override-edge-routing-style.md`) with design sketch and file list; design decisions D-01..D-07 locked in phase 39 CONTEXT.md (override scope invocation-global; `--edges` naming).
 - Flow to extend: TOML `edges` → `View` → `Graph.EdgeStyle` → `cg.SetSplines`; threading precedent KEY-01/LBL-02 + PLAIN-01 root + `--expanded` copy at `cmd/c4drill/root.go:330-386`.
 - `square` is implemented as the documented ortho alias (GEDGE-02) — enum unchanged.
 - Naming check: `--edges` must not collide with existing flags in `root.go`.
@@ -126,7 +128,7 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 ## Current Focus
 
-Executing milestone v1.16 Edge Style Override (`--edges <style>` CLI flag). Remaining backlog after this milestone:
+Planning the next milestone — nothing active. Remaining candidate backlog:
 - Template multi-output / `for_each` fan-out (Future, REQUIREMENTS archive)
 - Compact-link shorthand variants beyond baseline (Future, REQUIREMENTS archive)
 - C4D polish warnings: WR-03 duplicate `properties {}` last-win, WR-04 skill type-inference table drift, WR-05 quoted-label whitespace trim
@@ -158,11 +160,13 @@ Executing milestone v1.16 Edge Style Override (`--edges <style>` CLI flag). Rema
 
 ## Current State (2026-08-31)
 
-**Shipped:** v1.15 Hierarchy Wrapping and Granular Keys — 2 phases (37, 38), 13 plans, product releases v1.21.0 + v1.22.0. Full ancestor-chain wrapping on every view, granular formatting switches, `--no-labels`, `--plain`. Post-release: compact C1 root restored, `--no-labels` narrowed to edge labels, flag-invariant edge identity (quick task 260831-01u); CI at 0 lint issues with branch protection requiring Build/Lint/Test. ~49.8k LOC Go, all tests green.
+**Shipped:** v1.16 Edge Style Override — 1 phase (39), 3 plans, 8 tasks, product release v1.23.0. Invocation-global `--edges` routing override (beats global + per-unit edges, survives `--plain`), switch-matrix E2E (~86 cells), zero golden churn. Verification 5/5, UAT 7/7. ~50.3k LOC Go, all tests green, CI at 0 lint issues.
+
+**Previously:** v1.15 Hierarchy Wrapping and Granular Keys — 2 phases (37, 38), 13 plans, product releases v1.21.0 + v1.22.0; post-release quick task 260831-01u restored the compact C1 root, narrowed `--no-labels` to edge labels, made edge identity flag-invariant.
 
 ## Next Milestone Goals
 
-*v1.16 scoped (`--edges` CLI flag); remaining candidate backlog for later:*
+*v1.16 shipped; nothing active. Candidate backlog for later:*
 - Template multi-output / `for_each` fan-out (Future, REQUIREMENTS archive)
 - Compact-link shorthand variants beyond baseline (Future, REQUIREMENTS archive)
 - C4D polish warnings: WR-03 duplicate `properties {}` last-win, WR-04 skill type-inference table drift, WR-05 quoted-label whitespace trim
@@ -278,6 +282,8 @@ The tool uses nested TOML objects where each level contains strictly typed subun
 | `--no-labels` = edge labels only (v1.15 close, 260831-01u) | Suppressed node/cluster labels made `--expanded` render anonymous rectangles; users wanted decluttered edges, not anonymous shapes | ⚠️ Revisit if a true all-labels-off key is ever wanted — supersede LBL-01 deliberately |
 | Builder-assigned `Edge.Name` for cgraph identity (v1.15 close, 260831-01u) | Converter derived edge names from labels; find-or-create then silently merged parallel edges once labels were suppressed — flags must never change topology | ✓ Good — `TestEdgeTopologyFlagInvariant` proves identical edge multisets across flag compositions |
 | Branch protection requires Build/Lint/Test on master (v1.15 close) | PR Sanity lint had gone red unnoticed; PR merges must be gated on the sanity suite | ✓ Good — strict up-to-date check; enforce_admins stays off so direct master pushes keep working |
+| Invocation-global `--edges` override (v1.16, D-03) | Per-unit `edges` surviving the flag would create unpredictable mixed routing across views; `--plain`/`--no-*` family precedent is invocation-global | ✓ Good — pinned E2E (`--edges` beats per-unit ortho on its own drill-down) |
+| `View.EdgesOverride` carrier applied post-PLAIN-02 (v1.16, D-05 mechanism) | Explicit CLI flag is user intent and must beat `--plain`'s author-format zeroing; a dedicated empty-default field makes flag-off invariance structural, not just tested | ✓ Good — `TestEdgesSurvivesPlain` pins the KEY-02 delta; zero golden churn flag-off |
 
 ## TOML Schema (Reference)
 

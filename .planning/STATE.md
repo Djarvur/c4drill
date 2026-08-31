@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.16
 milestone_name: Edge Style Override
-status: milestone_complete
-last_updated: 2026-08-31T08:02:50.059Z
-last_activity: 2026-08-31
+status: Awaiting next milestone
+last_updated: "2026-08-31T08:21:50.823Z"
+last_activity: 2026-08-31 — Milestone v1.16 completed and archived
 progress:
   total_phases: 1
   completed_phases: 1
   total_plans: 3
   completed_plans: 3
   percent: 100
-stopped_at: Milestone complete (Phase 39 was final phase)
 ---
 
 # Project State
@@ -25,12 +24,10 @@ See: .planning/PROJECT.md (updated 2026-08-31)
 
 ## Current Position
 
-Phase: 39
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-08-31
-
-Progress: [██████████] 100%
+Phase: Milestone v1.16 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-08-31 — Milestone v1.16 completed and archived
 
 ## Performance Metrics
 
@@ -67,14 +64,23 @@ None open. (v1.15 concerns — WRAP golden churn, LBL-03 legend pin — resolved
 
 ## Deferred Items
 
+Items acknowledged and deferred at milestone close on 2026-08-31 (v1.16): 5 open audit items, all pre-dating v1.16 — none produced by this milestone's work.
+
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| todo | add CLI flag to override edge routing style (--edges) — feature request | IN SCOPE — Phase 39 (v1.16 roadmap, 2026-08-31) | v1.15 close |
-| debug | docs-drift-orphan-rule-testdata — doc/fixture drift around orphan rule VAL-01 | acknowledged open at v1.15 close (2026-08-31) | v1.15 close |
-| debug | knowledge-base — stale note, status unknown | acknowledged open at v1.15 close (2026-08-31) | v1.15 close |
+| todo | add CLI flag to override edge routing style (--edges) — feature request | ✅ RESOLVED — shipped in v1.16 (GEDGE-03..08, release v1.23.0) | v1.15 close |
+| debug | docs-drift-orphan-rule-testdata — doc/fixture drift around orphan rule VAL-01 | acknowledged open at v1.16 close (2026-08-31) | v1.15 close |
+| debug | knowledge-base — stale note, status unknown | acknowledged open at v1.16 close (2026-08-31) | v1.15 close |
+| quick_task | 260828-qbx-render-queue-units-as-horizontal-pipe-sh — audit status "missing"; work shipped (queue pipes, v1.19–v1.20 review) | bookkeeping gap acknowledged at v1.16 close | v1.16 close |
+| quick_task | 260828-tgf-fix-pipe-end-cap-right-side-must-render- — audit status "missing"; work shipped with pipes render | bookkeeping gap acknowledged at v1.16 close | v1.16 close |
+| quick_task | 260831-01u-fix-three-rendering-bugs-from-todos-pend — audit status "missing"; work shipped, verified, retro'd | bookkeeping gap acknowledged at v1.16 close | v1.16 close |
 
 ## Session Continuity
 
 Last session: 2026-08-31T07:57:42.117Z
 Stopped at: Completed 39-03-PLAN.md
 Resume file: None
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
