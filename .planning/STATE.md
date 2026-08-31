@@ -17,10 +17,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-30)
+See: .planning/PROJECT.md (updated 2026-08-31)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** Phase 38 — hierarchy-wrapping-and-granular-keys
+**Current focus:** Milestone v1.15 archived (v1.21.0 + v1.22.0 shipped) — planning next milestone; candidate: `--edges` CLI flag (todos/pending)
 
 ## Current Position
 
@@ -33,8 +33,7 @@ Last activity: 2026-08-31 — Milestone v1.15 completed and archived
 
 **Velocity (carry-forward):**
 
-- v1.11: 1 phase (34), 4 plans. v1.12: 1 phase (35), 9 plans. v1.13: 1 phase (36), 6 plans. v1.14: 1 phase (37), 7 plans.
-- Expect Phase 38 at mid single-digit plans (plan-phase decides).
+- v1.11: 1 phase (34), 4 plans. v1.12: 1 phase (35), 9 plans. v1.13: 1 phase (36), 6 plans. v1.14: 1 phase (37), 7 plans. v1.15: 2 phases (37, 38), 13 plans + 1 validated quick task.
 
 | Phase | Plans | Notes |
 |-------|-------|-------|
@@ -44,23 +43,7 @@ Last activity: 2026-08-31 — Milestone v1.15 completed and archived
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
-
-- [v1.15 start]: v1.14's scoping decision (boundary/sibling entries top-level) is REVERSED — they must render inside ancestor container chains; fully external entries stay top-level.
-- [v1.15 start]: v1.14's deferred-items entry for granular flags is superseded — granular CLI switches are now in scope (CLI-only confirmed by user 2026-08-30).
-- [v1.15 start]: single-phase milestone (precedent: v1.11–v1.14; shared packages + goldens).
-- [38-01]: wrapper cluster IDs namespaced `wrap_<dotted path>` (T-38-01); dots kept — graphviz quotes them, dot(1) validates.
-- [38-01]: boundary-chain prefix equal to ExpandedUnit maps onto the boundary cluster (no duplicate wrapper) — C2 sibling boundaries land inside the expanded unit's cluster.
-- [38-02]: kind colours survive --plain (v1.14 golden-pinned), so --no-colors suppresses kind colouring only when plain is unset — --plain stays the exact union (KEY-02, TestPlainUnionParity).
-- [38-02]: D-01 source-border default edge colour is structural and survives --no-colors; converter plain call-tree unchanged (only buildCgraph reads g.Opts.Plain).
-- [38-01]: committed goldens cover C1/expanded only and cmd E2E asserts C2/C3 via contains-checks → 38-04 golden re-baseline is EMPTY (see 38-01-SUMMARY census).
-- [38-03]: --no-labels suppresses at the GRAPH layer (builder drops Label content; converter empty-label emission is defense-in-depth); legend stays per LBL-03 pin; census stays EMPTY for 38-04.
-- [38-04]: BC-01 re-baseline verified as NO-OP — zero committed-golden hunks (goldens cover C1/expanded only; WRAP is C2/C3-only; switches opt-in); additive nolabels.dot/nolabels.expanded.dot goldens committed and canonically pinned.
-- [38-04]: KEY-03 matrix locked E2E: every switch × C1/drill-down/--expanded × dot/svg/html + --plain/--no-colors compositions; structural dot markers asserted on RAW dot (uppercase sanctioned markup), hexes lowercased.
-- [38-05]: docs use the real release tag v1.22 (git tag convention; "v1.15" is GSD milestone numbering only); 13-wrapping.toml ships without a .c4d twin per the 12-plain precedent, expectedExampleTwins manifest untouched.
-- [38-06]: release checkpoint auto-selected tag-now (AUTO mode; REL-01 roadmap-approved; v1.21.0 precedent); version stays ldflags-injected — no constant bump.
-- [38-06]: pre-existing Validate Examples CI failure (plugin trees track 11-nesting-context drill-down SVGs, skill/ gitignores them) logged to deferred-items — predates phase 38; release workflow is the gate and is green.
+Decisions are logged in PROJECT.md Key Decisions table (v1.15 phase-level decisions preserved in milestones/v1.15-ROADMAP.md archive).
 
 ### Pending Todos
 
@@ -68,8 +51,7 @@ See .planning/todos/pending/. (1 pending: add CLI flag to override edge routing 
 
 ### Blockers/Concerns
 
-- [Phase 38]: WRAP will cause REAL golden re-baselining for models with cross-container links (unlike v1.14's zero-delta outcome) — budget for documented delta churn.
-- [Phase 38 — planner must pin]: kind-derived colours / legend coverage under the colours switch; legend behavior under `--no-labels` (default: legend stays — metadata, not an element label).
+None open. (v1.15 concerns — WRAP golden churn, LBL-03 legend pin — resolved at close; see milestones/v1.15-ROADMAP.md.)
 
 ### Quick Tasks Completed
 
@@ -89,9 +71,9 @@ See .planning/todos/pending/. (1 pending: add CLI flag to override edge routing 
 
 ## Session Continuity
 
-Last session: 2026-08-30 (plan 38-06 execution — milestone v1.15 complete)
-Stopped at: Milestone v1.15 shipped as v1.22.0 — milestone ready for /gsd:complete-milestone
-Resume file: .planning/phases/38-hierarchy-wrapping-and-granular-keys/38-06-SUMMARY.md
+Last session: 2026-08-31 (milestone v1.15 closed — archived, REQUIREMENTS cleared, retrospective updated)
+Stopped at: Awaiting next milestone; candidate work queued in todos/pending (`--edges` CLI flag)
+Resume file: .planning/MILESTONES.md (v1.15 entry)
 
 ## Operator Next Steps
 
