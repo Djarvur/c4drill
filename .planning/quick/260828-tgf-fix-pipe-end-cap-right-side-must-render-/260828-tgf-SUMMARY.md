@@ -1,4 +1,5 @@
 ---
+status: complete
 phase: 260828-tgf-fix-pipe-end-cap-right-side-must-render-
 plan: 01
 subsystem: render

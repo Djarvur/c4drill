@@ -6,6 +6,8 @@ A Go CLI tool for generating C4 architecture diagrams from TOML definitions. Use
 
 As of v1.10, models are composable: a diagram can be assembled from multiple TOML files (`[[include]]` with cycle detection and `once` dedup), units can be defined once as parametrized `[template.*]` and instantiated N times via `[[use]]`, `peer` references can be relative (resolving against the enclosing parent's ancestry), `name` is optional (humanized from the identifier), and any unit can carry a `reference` URL rendered as a clickable 📖 marker.
 
+As of v1.15, rendering is CLI-controllable: every depicted node renders inside its complete ancestor-container chain (boundary and sibling entries included — containers only, no extra nodes), and formatting is suppressible per aspect via granular switches (`--no-colors`, `--no-styles`, `--no-lengths`, `--no-ranks`) plus `--plain` (all of them) and `--no-labels` (edge labels only — node/cluster labels and the legend stay). The compact C1 root invariant (root shows only the visible neighborhood, never the whole model) is pinned by fixture + golden.
+
 ## Core Value
 
 Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
@@ -70,6 +72,15 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - ✓ LABEL-02 (word-boundary-only breaking): `wrapText` over-budget branch emits the whole word unsplit on its own line; `splitLongWord` deleted (0 references); no character-level fallback anywhere (D-05).
 - ✓ COMPAT-01 (no regression): unit labels byte-identical absent over-budget words; all canonicalDOT goldens (COMPAT-02, REF-05, DI-1) pass unchanged; `go test ./...` green (12/12 packages).
 
+### Validated in Phases 37–38 (v1.14–v1.15) — hierarchy wrapping & formatting keys
+
+- ✓ Nesting context (CTX-01..03): recursive cluster unfolding (`buildNestedCluster`), deep-link ancestor chains (`Entry.UnfoldChain` + `ensureDeepLinkChain`), cluster drill affordance (`Cluster.ExploreURL`); `--plain` renders canonical default-styled output (PLAIN-01..04) — v1.21.0
+- ✓ Full hierarchy wrapping (WRAP-01..03): boundary and sibling entries render inside their complete ancestor-container chains on every view; containers only, depicted node set unchanged (locked by test); fully external entries stay top-level — v1.22.0
+- ✓ Granular CLI switches (KEY-01..03): `--no-colors`/`--no-styles`/`--no-lengths`/`--no-ranks` each suppress one formatting aspect, compose with `--plain` (which stays the exact union) and with each other, across every generation and format; switch matrix locked E2E — v1.22.0
+- ✓ Label suppression (LBL-01..03): `--no-labels` on every generation/format; legend stays (metadata, not an element label). Outcome note: narrowed post-release to edge-labels-only by quick task 260831-01u (2026-08-31) — node/cluster labels survive
+- ✓ Post-release correctness (260831-01u): compact C1 root restored (flood bisected to v1.21.0 CTX-02/03 whole-subtree unfolding; pinned by `deepcross` fixture + golden invariant); edge identity made flag-invariant via builder-assigned `Edge.Name` (label-derived find-or-create had silently merged parallel edges under `--no-labels`)
+- ✓ BC-01: without the new keys, default output changes only for the documented WRAP deltas; docs (README.adoc + 3 SKILL.md copies) synced with CI `diff -r` parity (DOC-01..03)
+
 ## Current Milestone: v1.15 Hierarchy Wrapping and Granular Keys
 
 **Goal:** Correct v1.14's scoping after user review — every depicted node on any generated view (regular, boundary, expanded) renders inside its complete ancestor-container chain so nothing hangs in the air (drawing containers only, never extra nodes); add granular CLI switches on top of `--plain`; add a dedicated key to disable labels entirely (labels distort routing and can make diagrams unreadable), honored by drill-down AND expanded generation.
@@ -85,7 +96,14 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - The v1.14 deferred-items entry for granular flags is superseded: granular switches are now in scope.
 - Boundary wrapping will change golden output for models with cross-container links — expect real re-baselining this time.
 
-**Status:** Active — milestone started 2026-08-30.
+**Status:** ✅ COMPLETE (2026-08-30) — phases 37+38 shipped as product releases v1.21.0 and v1.22.0; post-release quick task 260831-01u (2026-08-31) fixed three rendering bugs and hardened CI. Full record: [MILESTONES.md](MILESTONES.md).
+
+## Current Focus
+
+Planning the next milestone. Open candidates (see STATE.md Deferred Items / todos/pending):
+- CLI flag to override edge routing style (`--edges straight|spline|square|ortho`) — captured feature request, todos/pending
+- Debug: docs-drift around the orphan rule (VAL-01) testdata; stale `knowledge-base` debug note
+- Human UAT follow-ups from 260831-01u: re-render the reporter's real model (compact root), eyeball re-baselined goldens
 
 ## Previous Milestone: v1.14 Nesting Context and Plain Rendering — COMPLETE (2026-08-30)
 
@@ -110,15 +128,16 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - Legend: `graph.Graph.Legend` placeholder struct exists; render via the top graph-label HTML table (right-aligned legend column) — GraphViz has no cluster positioning.
 - Release tag for this milestone: **v1.18.0** (product tags v1.13.0–v1.17.0 already exist; GSD milestone numbering is internal).
 
-## Current State (2026-08-28)
+## Current State (2026-08-31)
 
-**Shipped:** v1.13 Edge Semantics and Legend — 1 phase (36), 6 plans, release v1.18.0. Unit styling renders, global edge style everywhere, `rank = "reverse"`, kind-coloured edges with collapse aggregation, default-on upper-right legend. Product release tag: v1.18.0.
+**Shipped:** v1.15 Hierarchy Wrapping and Granular Keys — 2 phases (37, 38), 13 plans, product releases v1.21.0 + v1.22.0. Full ancestor-chain wrapping on every view, granular formatting switches, `--no-labels`, `--plain`. Post-release: compact C1 root restored, `--no-labels` narrowed to edge labels, flag-invariant edge identity (quick task 260831-01u); CI at 0 lint issues with branch protection requiring Build/Lint/Test. ~49.8k LOC Go, all tests green.
 
 ## Next Milestone Goals
 
-*Current: v1.13 Edge Semantics and Legend (this milestone — see Current Milestone above). Candidate backlog for later:*
-- Template multi-output / `for_each` fan-out (Future, REQUIREMENTS.md)
-- Compact-link shorthand variants beyond baseline (Future, REQUIREMENTS.md)
+*v1.15 shipped; nothing active. Candidate backlog for later:*
+- CLI flag to override edge routing style — `--edges` (captured todo, ready for planning)
+- Template multi-output / `for_each` fan-out (Future, REQUIREMENTS archive)
+- Compact-link shorthand variants beyond baseline (Future, REQUIREMENTS archive)
 - C4D polish warnings: WR-03 duplicate `properties {}` last-win, WR-04 skill type-inference table drift, WR-05 quoted-label whitespace trim
 - Docs drift: README "Validation Rules" VAL-01 orphan rule + unused root testdata (pre-existing, acknowledged)
 
@@ -212,7 +231,7 @@ The tool uses nested TOML objects where each level contains strictly typed subun
 ## Constraints
 
 - **Tech Stack**: Go 1.26.1
-- **Input Format**: TOML — single file
+- **Input Format**: TOML or C4D — single file or composed via `[[include]]` / `[template.*]`+`[[use]]`
 - **Output**: GraphViz DOT, SVG, or HTML via go-graphviz (HTML = SVG inlined in a wrapper with a JS nav shim for Safari compatibility)
 - **Diagram Scope**: C1-C3 layers only
 
@@ -228,6 +247,10 @@ The tool uses nested TOML objects where each level contains strictly typed subun
 | Hand-rolled `Unit.Clone()` (v1.10) | Reflection/JSON/gob deep-copy silently drops the unexported `Link.Mirror` field, which the validator mutates in place | ✓ Good — HS-1 regression test (3 instantiations → disjoint `LinksFrom`) passes |
 | Hard-error-everywhere stance (v1.10) | Strictness over convenience: missing include, missing param, duplicate path, unresolved peer all error loudly | ✓ Good — caught real issues early; no silent corruption |
 | No LikeC4 feature adoption except `reference` (v1.10) | Custom kinds, tags, icons, metadata, deployment model, user-authored views all fight C4Drill's auto-generation philosophy | ✓ Good — kept the format lean; `reference` was the only clear win |
+| Visible-paths-only unfolding (v1.15 close, 260831-01u) | CTX-02/03 whole-subtree unfolding flooded the non-expanded root with the entire model; root must stay a compact C1 neighborhood | ✓ Good — pinned by deepcross fixture invariant; deep-link chains still unfold to true targets |
+| `--no-labels` = edge labels only (v1.15 close, 260831-01u) | Suppressed node/cluster labels made `--expanded` render anonymous rectangles; users wanted decluttered edges, not anonymous shapes | ⚠️ Revisit if a true all-labels-off key is ever wanted — supersede LBL-01 deliberately |
+| Builder-assigned `Edge.Name` for cgraph identity (v1.15 close, 260831-01u) | Converter derived edge names from labels; find-or-create then silently merged parallel edges once labels were suppressed — flags must never change topology | ✓ Good — `TestEdgeTopologyFlagInvariant` proves identical edge multisets across flag compositions |
+| Branch protection requires Build/Lint/Test on master (v1.15 close) | PR Sanity lint had gone red unnoticed; PR merges must be gated on the sanity suite | ✓ Good — strict up-to-date check; enforce_admins stays off so direct master pushes keep working |
 
 ## TOML Schema (Reference)
 
@@ -307,4 +330,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-30 — milestone v1.15 Hierarchy Wrapping and Granular Keys started*
+*Last updated: 2026-08-31 after v1.15 milestone (shipped as v1.21.0 & v1.22.0)*

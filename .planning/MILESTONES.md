@@ -1,3 +1,18 @@
+## v1.15 Hierarchy Wrapping and Granular Keys (Shipped: 2026-08-30 — product releases v1.21.0 & v1.22.0)
+
+**Phases completed:** 2 phases (37, 38), 13 plans (7 + 6), plus post-release quick task 260831-01u (3 TDD bug fixes)
+
+**Stats:** 78 commits 2026-08-30 → 2026-08-31; 58 code files, +8061/−312; ~49.8k LOC Go, all tests green. Known deferred items at close: 3 (2 debug sessions + 1 feature todo — see STATE.md Deferred Items)
+
+**Key accomplishments:**
+
+- Phase 37 (v1.21.0): recursive cluster unfolding (`buildNestedCluster`), deep-link ancestor chains (`Entry.UnfoldChain` + `ensureDeepLinkChain`), cluster drill affordance (`Cluster.ExploreURL`), and the `--plain` CLI key threading (`View.Plain` → `Graph.Plain`) — CTX-01..03, PLAIN-01..04, DOC-01..03, REL-01.
+- Phase 38 (v1.22.0): every depicted node renders inside its complete ancestor-container chain — boundary/sibling entries included, containers only, no extra nodes (WRAP-01..03); granular CLI switches (`--no-colors`/`--no-styles`/`--no-lengths`/`--no-ranks`) each suppressing one author-formatting aspect and composing with `--plain` (KEY-01..03); `--no-labels` (LBL-01..03, later narrowed — see below); KEY-03 switch matrix locked E2E across switch × view × format; real golden re-baseline for cross-container models.
+- Quick task 260831-01u (post-release, RED→GREEN per bug): compact C1 root restored — bisection attributed the root flood to v1.21.0 CTX-02/03 whole-subtree unfolding (not b2447da WRAP), fixed with visible-paths-only unfolding + deep-link-only chains, pinned by new `deepcross` fixture/golden invariant; `--no-labels` narrowed to edge labels only (supersedes LBL-01's all-label semantics; goldens, matrix, docs re-baselined); edge identity made flag-invariant via builder-assigned `Edge.Name` — the converter's label-derived find-or-create had been silently merging parallel edges once labels were suppressed.
+- CI hardening: all golangci-lint findings resolved (0 issues; gocognit splits per 0de124d precedent, godox reword, wsl_v5/testifylint mechanics); branch protection on master now requires Build/Lint/Test (strict, PR merges gated); long-standing Validate Examples asymmetry (open since 2026-08-14) fixed by force-adding the 11-nesting-context drill-down SVGs to `skill/`.
+
+---
+
 ## Post-Milestone Design Review (Shipped: 2026-08-28, v1.19.0–v1.20.0)
 
 **No GSD phase** — user-directed review of the freshly shipped v1.13 legend, plus one quick task (260828-qbx, TDD per workflow defaults).

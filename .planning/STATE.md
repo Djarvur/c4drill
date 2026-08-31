@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: Hierarchy Wrapping and Granular Keys
-status: milestone_complete
-last_updated: "2026-08-30T16:30:00.000Z"
-last_activity: 2026-08-30
+status: Awaiting next milestone
+last_updated: "2026-08-31T05:55:58.823Z"
+last_activity: 2026-08-31 — Milestone v1.15 completed and archived
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 6
   completed_plans: 6
-  percent: 100
+  percent: 50
 ---
 
 # Project State
@@ -24,12 +24,10 @@ See: .planning/PROJECT.md (updated 2026-08-30)
 
 ## Current Position
 
-Phase: 38 (hierarchy-wrapping-and-granular-keys) — COMPLETE (v1.22.0 SHIPPED 2026-08-30)
-Plan: 6 of 6
-Status: 38-06 complete — v1.22.0 tagged (c550b05), release workflow 33322118697 green, GitHub Release published with 6 binaries; milestone v1.15 closed
-Last activity: 2026-08-30 - Completed quick task 260831-01u: three rendering bugs fixed (compact C1 root, edge-only --no-labels, pre-flag edge merge); verification Needs Review — 2 human items
-
-Progress: [██████████] 100%
+Phase: Milestone v1.15 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-08-31 — Milestone v1.15 completed and archived
 
 ## Performance Metrics
 
@@ -85,9 +83,16 @@ See .planning/todos/pending/. (1 pending: add CLI flag to override edge routing 
 |----------|------|--------|-------------|
 | *(granular flags item superseded — in scope for v1.15)* | | | |
 | bug | CI Validate Examples asymmetry (11-nesting-context drill-down SVGs tracked in plugin trees, gitignored in skill/) | RESOLVED 2026-08-30 — skill/ force-adds the 5 SVGs per 06-templates precedent (commit 66cd6dc); Validate Examples green | 38-06 |
+| debug | docs-drift-orphan-rule-testdata — doc/fixture drift around orphan rule VAL-01 | acknowledged open at v1.15 close (2026-08-31) | v1.15 close |
+| debug | knowledge-base — stale note, status unknown | acknowledged open at v1.15 close (2026-08-31) | v1.15 close |
+| todo | add CLI flag to override edge routing style (--edges) — feature request | acknowledged open at v1.15 close (2026-08-31); candidate for next milestone/quick | v1.15 close |
 
 ## Session Continuity
 
 Last session: 2026-08-30 (plan 38-06 execution — milestone v1.15 complete)
 Stopped at: Milestone v1.15 shipped as v1.22.0 — milestone ready for /gsd:complete-milestone
 Resume file: .planning/phases/38-hierarchy-wrapping-and-granular-keys/38-06-SUMMARY.md
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
