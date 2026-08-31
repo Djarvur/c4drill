@@ -240,6 +240,92 @@ func TestIntegrationGraphWithNodesRendersNodeIDs(t *testing.T) {
 }
 
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestIntegrationPartiallyExpandedChainKeepsCollapsedSubtreeEdges(t *testing.T) {
+	// Issue #23: an author-expanded container chain plus a deep actor link
+	// leaves some chain levels rendered as CLUSTERS. The aggregated edges of
+	// the still-collapsed components under those clusters (apikeys -> aaa)
+	// used to vanish at the converter (endpoints without cgraph nodes were
+	// skipped). They must render as compound edges clipped at the cluster
+	// boundary (ltail/lhead) instead of disappearing.
+	m := &parser.Model{
+		Properties: model.Properties{Name: "Repro", Expanded: []string{"s"}},
+		UnitOrder:  []string{"u", "s"},
+		Units: map[string]*model.Unit{
+			"u": {
+				Type: model.TypePerson,
+				Name: "U",
+				Links: []model.Link{
+					{Peer: "s.edge.gw.router", Kind: model.KindReadWrite},
+				},
+			},
+			"s": {
+				Type: model.TypeSystem,
+				Name: "S",
+				SubunitOrder: []string{"edge", "aaa"},
+				Subunits: map[string]*model.Unit{
+					"edge": {
+						Type: model.TypeBox,
+						Name: "Edge",
+						SubunitOrder: []string{"gw"},
+						Subunits: map[string]*model.Unit{
+							"gw": {
+								Type: model.TypeContainer,
+								Name: "GW",
+								SubunitOrder: []string{"router", "apikeys"},
+								Subunits: map[string]*model.Unit{
+									"router":  {Type: model.TypeComponent, Name: "R"},
+									"apikeys": {Type: model.TypeComponent, Name: "K"},
+								},
+							},
+						},
+					},
+					"aaa": {
+						Type: model.TypeContainer,
+						Name: "AAA",
+						SubunitOrder: []string{"keys"},
+						Subunits: map[string]*model.Unit{
+							"keys": {Type: model.TypeComponent, Name: "Keys"},
+						},
+					},
+				},
+			},
+		},
+	}
+	m.Units["s"].Subunits["edge"].Subunits["gw"].Subunits["apikeys"].Links = []model.Link{
+		{Peer: "s.aaa.keys", Kind: model.KindRead},
+	}
+
+	v := view.GenerateC1View(m)
+	g := graph.BuildGraph(v)
+
+	// Graph level: the aggregated edge from the deep-link chain cluster to
+	// the visible sibling exists (aggregated to the nearest visible pair).
+	var aggregated bool
+
+	for _, e := range g.Edges {
+		if e.Source == "s.edge.gw" && e.Target == "s.aaa" {
+			aggregated = true
+		}
+	}
+
+	require.True(t, aggregated,
+		"the collapsed-subtree edge must aggregate to the nearest visible pair (s.edge.gw -> s.aaa)")
+
+	// Render level: the edge must actually be DRAWN. The chain container
+	// renders as a cluster, so the edge anchors on a node inside it and clips
+	// at the cluster boundary (compound ltail), never silently dropped.
+	svg, err := render.RenderSVG(g)
+	require.NoError(t, err)
+
+	svgStr := string(svg)
+
+	assert.Contains(t, svgStr, "u&#45;&gt;s.edge.gw.router",
+		"the deep actor link still terminates at its true target node")
+	assert.Contains(t, svgStr, "s.edge.gw.router&#45;&gt;s.aaa",
+		"the aggregated collapsed-subtree edge renders (anchored inside cluster s.edge.gw)")
+}
+
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestIntegrationGraphWithEdgesRendersRelationships(t *testing.T) {
 	// Test 7: Graph with edges renders all edge relationships in output
 	m := buildTestModelWithLinks()

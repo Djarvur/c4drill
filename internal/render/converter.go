@@ -173,7 +173,7 @@ func buildCgraph(
 	}
 
 	// Create edges
-	if err := createEdges(cg, g.Edges, nodeMap, g.Opts); err != nil {
+	if err := createEdges(cg, g.Edges, nodeMap, clusterIndex(g.Clusters), g.Opts); err != nil {
 		return nil, err
 	}
 
@@ -228,23 +228,114 @@ func createTopLevelNodes(
 	return nil
 }
 
+// clusterIndex maps every cluster (nested included) by its dotted path so
+// edge endpoints that render as clusters can be recognised.
+func clusterIndex(clusters []*graph.Cluster) map[string]*graph.Cluster {
+	index := make(map[string]*graph.Cluster)
+
+	var add func(cs []*graph.Cluster)
+
+	add = func(cs []*graph.Cluster) {
+		for _, c := range cs {
+			index[c.ID] = c
+			add(c.Clusters)
+		}
+	}
+
+	add(clusters)
+
+	return index
+}
+
+// firstNodeIn returns the first node (depth-first, declaration order) inside
+// the cluster subtree — the structural anchor a compound edge attaches to
+// when its logical endpoint is the cluster itself. Nil for a cluster with no
+// nodes anywhere beneath it.
+func firstNodeIn(c *graph.Cluster) *graph.Node {
+	if c == nil {
+		return nil
+	}
+
+	if len(c.Nodes) > 0 {
+		return c.Nodes[0]
+	}
+
+	for _, nested := range c.Clusters {
+		if node := firstNodeIn(nested); node != nil {
+			return node
+		}
+	}
+
+	return nil
+}
+
+// resolveEndpoint returns the cgraph node an edge endpoint attaches to and,
+// when the endpoint is a unit that renders as a CLUSTER (issue #23 — an
+// expanded C1 unit or a CTX-02 deep-link chain container, with no cgraph node
+// of its own), the cluster_ name to clip the arrow at. The edge anchors on
+// the first node inside the cluster subtree; (nil, "") when the endpoint
+// resolves to neither a node nor a node-bearing cluster.
+func resolveEndpoint(
+	nodeMap map[string]*cgraph.Node,
+	clusters map[string]*graph.Cluster,
+	path string,
+) (*cgraph.Node, string) {
+	if node := nodeMap[path]; node != nil {
+		return node, ""
+	}
+
+	c := clusters[path]
+	if c == nil {
+		return nil, ""
+	}
+
+	anchor := firstNodeIn(c)
+	if anchor == nil {
+		return nil, ""
+	}
+
+	return nodeMap[anchor.ID], "cluster_" + c.ID
+}
+
 // createEdges creates all edges from the edge list.
-func createEdges(cg *cgraph.Graph, edges []*graph.Edge, nodeMap map[string]*cgraph.Node, opts graph.RenderOpts) error {
+func createEdges(
+	cg *cgraph.Graph,
+	edges []*graph.Edge,
+	nodeMap map[string]*cgraph.Node,
+	clusters map[string]*graph.Cluster,
+	opts graph.RenderOpts,
+) error {
 	// Fallback name uniquifier for hand-built graphs whose edges carry no
 	// builder-assigned Name (BUG-3): parallel fallback edges stay distinct
 	// without ever deriving names from flag-suppressible label content.
 	nameCounts := make(map[string]int)
 
+	// Set on the graph only when a compound edge was actually emitted, so
+	// existing flag-off DOT/SVG output stays byte-identical.
+	compound := false
+
 	for _, edge := range edges {
-		source := nodeMap[edge.Source]
-		target := nodeMap[edge.Target]
+		// Issue #23: cluster-rendered endpoints anchor inside their cluster
+		// and clip at its boundary (compound ltail/lhead) instead of being
+		// silently dropped.
+		source, sourceCluster := resolveEndpoint(nodeMap, clusters, edge.Source)
+		target, targetCluster := resolveEndpoint(nodeMap, clusters, edge.Target)
 
 		if source == nil || target == nil {
 			continue // Skip edges with missing endpoints
 		}
 
-		if err := createEdge(cg, source, target, edge, opts, nameCounts); err != nil {
+		compound = compound || sourceCluster != "" || targetCluster != ""
+
+		err := createEdge(cg, source, target, edge, opts, nameCounts, sourceCluster, targetCluster)
+		if err != nil {
 			return fmt.Errorf("create edge %s->%s: %w", edge.Source, edge.Target, err)
+		}
+	}
+
+	if compound {
+		if err := cg.SafeSet("compound", "true", ""); err != nil {
+			return fmt.Errorf("set compound: %w", err)
 		}
 	}
 
@@ -631,10 +722,12 @@ func edgeNameFor(edge *graph.Edge, nameCounts map[string]int) string {
 	return name
 }
 
-// createEdge creates a cgraph.Edge from a graph.Edge.
+// createEdge creates a cgraph.Edge from a graph.Edge. sourceCluster /
+// targetCluster carry the cluster_ name a compound endpoint was substituted
+// for (issue #23) — empty when the endpoint is a plain node.
 func createEdge(
 	cg *cgraph.Graph, source, target *cgraph.Node, edge *graph.Edge,
-	opts graph.RenderOpts, nameCounts map[string]int,
+	opts graph.RenderOpts, nameCounts map[string]int, sourceCluster, targetCluster string,
 ) error {
 	edgeName := edgeNameFor(edge, nameCounts)
 
@@ -650,6 +743,25 @@ func createEdge(
 	e, err := cg.CreateEdgeByName(edgeName, tail, head)
 	if err != nil {
 		return fmt.Errorf("create edge by name: %w", err)
+	}
+
+	// Compound clip attributes (issue #23) attach to the DRAWN endpoints, so
+	// a rank=reverse swap flips which cluster is tail and which is head.
+	tailCluster, headCluster := sourceCluster, targetCluster
+	if edge.RankReverse {
+		tailCluster, headCluster = targetCluster, sourceCluster
+	}
+
+	if tailCluster != "" {
+		if err := e.SafeSet("ltail", tailCluster, ""); err != nil {
+			return fmt.Errorf("set ltail: %w", err)
+		}
+	}
+
+	if headCluster != "" {
+		if err := e.SafeSet("lhead", headCluster, ""); err != nil {
+			return fmt.Errorf("set lhead: %w", err)
+		}
 	}
 
 	// Set edge label and font

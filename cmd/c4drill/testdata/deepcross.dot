@@ -1,11 +1,12 @@
 digraph "" {
-	graph [bb="0,0,585.01,894.4",
+	graph [bb="0,0,524.01,965.2",
+		compound=true,
 		fontname=Helvetica,
 		fontsize=14,
 		label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0" ALIGN="CENTER"><TR><TD COLSPAN="1" ALIGN="CENTER"><FONT POINT-SIZE="14">Deep Cross System</FONT></TD></TR></TABLE>>,
 		labelloc=t,
 		lheight=0.23,
-		lp="292.51,882",
+		lp="262.01,952.8",
 		lwidth=1.73,
 		rankdir=TB
 	];
@@ -23,30 +24,30 @@ digraph "" {
 		penwidth=1.0
 	];
 	subgraph cluster___content {
-		graph [bb="8,8,485,839.8",
+		graph [bb="8,8,424,910.6",
 			label="",
 			style=invis
 		];
 		subgraph cluster_actors {
-			graph [bb="16,408.8,347,697.6",
+			graph [bb="16,479.6,347,768.4",
 				color="#073B6F",
 				fontcolor="#073B6F",
 				fontname=Helvetica,
 				label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>Actors Platform</b></td></tr><tr align="center"><td valign="top">Identity and access<BR/>platform</td></tr></table>>,
 				lheight=0.70,
-				lp="181.5,668.4",
+				lp="181.5,739.2",
 				lwidth=1.66,
 				style=rounded
 			];
 			subgraph "cluster_actors.identity" {
 				graph [URL="deepcross/actors/identity.svg",
-					bb="24,498.4,339,631.2",
+					bb="24,569.2,339,702",
 					color="#3C7FC0",
 					fontcolor="#3C7FC0",
 					fontname=Helvetica,
 					label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>Identity Service 🔍</b></td></tr><tr align="center"><td valign="middle"><i>[go]</i></td></tr></table>>,
 					lheight=0.47,
-					lp="181.5,610.4",
+					lp="181.5,681.2",
 					lwidth=1.71,
 					style=rounded
 				];
@@ -54,7 +55,7 @@ digraph "" {
 					fontcolor="#78A8D8",
 					height=1.0444,
 					label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>Session Manager</b></td></tr><tr align="center"><td valign="middle"><i>[go]</i></td></tr><tr align="center"><td valign="top">Manages user<BR/>sessions</td></tr></table>>,
-					pos="98,544",
+					pos="98,614.8",
 					shape=box,
 					style=rounded,
 					width=1.8215];
@@ -62,7 +63,7 @@ digraph "" {
 					fontcolor="#78A8D8",
 					height=0.81111,
 					label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>Token API</b></td></tr><tr align="center"><td valign="middle"><i>[go]</i></td></tr><tr align="center"><td valign="top">Issues access tokens</td></tr></table>>,
-					pos="256,544",
+					pos="256,614.8",
 					shape=box,
 					style=rounded,
 					width=2.0703];
@@ -72,7 +73,7 @@ digraph "" {
 				fontcolor="#3C7FC0",
 				height=0.57778,
 				label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>Audit Service 🔍</b></td></tr><tr align="center"><td valign="middle"><i>[go]</i></td></tr></table>>,
-				pos="252,437.6",
+				pos="226,508.4",
 				shape=box,
 				style=rounded,
 				width=1.7351];
@@ -81,43 +82,43 @@ digraph "" {
 				fontcolor="#78A8D8",
 				fontsize=10,
 				label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="top">Appends audit events</td></tr></table>>,
-				lp="301.97,482.4",
+				lp="288.19,553.2",
 				penwidth=1,
-				pos="e,252.77,458.82 254.91,514.47 254.38,500.7 253.74,484.14 253.2,470.01",
+				pos="e,231.81,529.62 247.8,585.27 243.81,571.36 238.99,554.61 234.9,540.38",
 				style=solid];
 		}
 		subgraph cluster_yic {
-			graph [bb="170,102,462,366.8",
+			graph [bb="110,16,286,437.6",
 				color="#073B6F",
 				fontcolor="#073B6F",
 				fontname=Helvetica,
 				label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>YIC Pipeline</b></td></tr><tr align="center"><td valign="top">Data ingestion and<BR/>analytics</td></tr></table>>,
 				lheight=0.70,
-				lp="316,337.6",
+				lp="198,408.4",
 				lwidth=1.62,
 				style=rounded
 			];
 			subgraph "cluster_yic.pipeline" {
 				graph [URL="deepcross/yic/pipeline.svg",
-					bb="178,110,454,300.4",
+					bb="118,24,278,371.2",
 					color="#3C7FC0",
 					fontcolor="#3C7FC0",
 					fontname=Helvetica,
 					label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>Ingest Pipeline 🔍</b></td></tr><tr align="center"><td valign="middle"><i>[go]</i></td></tr></table>>,
 					lheight=0.47,
-					lp="316,279.6",
+					lp="198,350.4",
 					lwidth=1.64,
 					style="rounded,dashed"
 				];
 				subgraph "cluster_yic.pipeline.ingest" {
 					graph [URL="deepcross/yic/pipeline/ingest.svg",
-						bb="186,118,330,250.8",
+						bb="126,188.8,270,321.6",
 						color="#3C7FC0",
 						fontcolor="#3C7FC0",
 						fontname=Helvetica,
 						label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>Ingest Gateway 🔍</b></td></tr><tr align="center"><td valign="middle"><i>[go]</i></td></tr></table>>,
 						lheight=0.47,
-						lp="258,230",
+						lp="198,300.8",
 						lwidth=1.70,
 						style=rounded
 					];
@@ -125,20 +126,20 @@ digraph "" {
 						fontcolor="#78A8D8",
 						height=1.0444,
 						label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>Ingest API</b></td></tr><tr align="center"><td valign="middle"><i>[go]</i></td></tr><tr align="center"><td valign="top">Accepts telemetry<BR/>batches</td></tr></table>>,
-						pos="258,163.6",
+						pos="198,234.4",
 						shape=box,
 						style=rounded,
 						width=1.7675];
 				}
 				subgraph "cluster_yic.pipeline.store" {
 					graph [URL="deepcross/yic/pipeline/store.svg",
-						bb="338,127,446,241.8",
+						bb="153,32,261,146.8",
 						color="#3C7FC0",
 						fontcolor="#3C7FC0",
 						fontname=Helvetica,
 						label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>Store 🔍</b></td></tr><tr align="center"><td valign="middle"><i>[go]</i></td></tr></table>>,
 						lheight=0.47,
-						lp="392,221",
+						lp="207,126",
 						lwidth=0.77,
 						style=rounded
 					];
@@ -146,18 +147,27 @@ digraph "" {
 						fontcolor="#78A8D8",
 						height=0.79444,
 						label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>Warehouse</b></td></tr><tr align="center"><td valign="middle"><i>[clickhouse]</i></td></tr></table>>,
-						pos="392,163.6",
+						pos="207,68.6",
 						shape=cylinder,
 						style=rounded,
 						width=1.2703];
 				}
+				"yic.pipeline.ingest.api" -> "yic.pipeline.store.warehouse"	[key=yic_pipeline_ingest_api_to_yic_pipeline_store_1,
+					color="#78A8D8",
+					fontcolor="#78A8D8",
+					fontsize=10,
+					label="",
+					lhead="cluster_yic.pipeline.store",
+					penwidth=1,
+					pos="e,202.76,146.8 200.02,196.64 200.66,185.08 201.39,171.77 202.13,158.21",
+					style=solid];
 			}
 		}
 		webUser	[color="#8A8A8A",
 			fontcolor="#8A8A8A",
 			height=0.64444,
 			label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td rowspan="1" valign="middle"><font POINT-SIZE="32">&#x1F464;</font></td><td valign="bottom"><b>Web User</b></td></tr></table>>,
-			pos="98,808.6",
+			pos="98,879.4",
 			shape=box,
 			style=rounded,
 			width=1.613];
@@ -166,15 +176,15 @@ digraph "" {
 			fontcolor="#8A8A8A",
 			fontsize=10,
 			label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="middle"><i>[HTTPS]</i></td></tr><tr align="center"><td valign="top">Manages web session</td></tr></table>>,
-			lp="147.47,717.6",
+			lp="147.47,788.4",
 			penwidth=1,
-			pos="e,98,581.84 98,785.21 98,742.86 98,650.15 98,593.09",
+			pos="e,98,652.64 98,856.01 98,813.66 98,720.95 98,663.89",
 			style=solid];
 		mobileUser	[color="#8A8A8A",
 			fontcolor="#8A8A8A",
 			height=0.64444,
 			label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td rowspan="1" valign="middle"><font POINT-SIZE="32">&#x1F464;</font></td><td valign="bottom"><b>Mobile<BR/>User</b></td></tr></table>>,
-			pos="256,808.6",
+			pos="256,879.4",
 			shape=box,
 			style=rounded,
 			width=1.3319];
@@ -183,15 +193,15 @@ digraph "" {
 			fontcolor="#8A8A8A",
 			fontsize=10,
 			label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="middle"><i>[HTTPS]</i></td></tr><tr align="center"><td valign="top">Requests tokens</td></tr></table>>,
-			lp="293.24,717.6",
+			lp="293.24,788.4",
 			penwidth=1,
-			pos="e,256,573.6 256,785.21 256,740.75 256,640.78 256,584.84",
+			pos="e,256,644.4 256,856.01 256,811.55 256,711.58 256,655.64",
 			style=solid];
 		adminCli	[color="#8A8A8A",
 			fontcolor="#8A8A8A",
 			height=0.5,
 			label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>Admin CLI</b></td></tr></table>>,
-			pos="258,34",
+			pos="59,68.6",
 			shape=box,
 			style=rounded,
 			width=1.1943];
@@ -199,7 +209,7 @@ digraph "" {
 			fontcolor="#8A8A8A",
 			height=0.5,
 			label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="bottom"><b>Metrics Scraper</b></td></tr></table>>,
-			pos="416,437.6",
+			pos="355,234.4",
 			shape=box,
 			style=rounded,
 			width=1.6813];
@@ -208,33 +218,32 @@ digraph "" {
 			fontcolor="#8A8A8A",
 			fontsize=10,
 			label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="middle"><i>[SQL]</i></td></tr><tr align="center"><td valign="top">Reads aggregates</td></tr></table>>,
-			lp="453.38,386.8",
+			lp="343.77,166.8",
 			penwidth=1,
-			pos="e,394.45,192.42 414.46,419.17 410.66,376.08 400.74,263.69 395.45,203.69",
+			pos="e,232.17,97.462 339.44,216.18 315.91,190.13 270.72,140.12 239.73,105.82",
 			style=solid];
 		"actors.audit" -> "yic.pipeline.ingest.api"	[key=actors_audit_to_yic_pipeline_ingest_api_1,
 			color="#3C7FC0",
 			fontcolor="#3C7FC0",
 			fontsize=10,
 			label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="middle"><i>[gRPC]</i></td></tr><tr align="center"><td valign="top">Ships audit batches</td></tr></table>>,
-			lp="220.36,386.8",
+			lp="265.58,457.6",
 			penwidth=1,
-			pos="e,238.98,201.34 194.19,416.45 187.26,411.7 181.1,405.89 176.72,398.8 171.12,389.72 174.76,385.29 176.72,374.8 187.64,316.3 214.28,\
-253.1 234.1,211.45",
+			pos="e,201.8,272.32 223.94,487.4 219.55,444.75 209.17,343.86 202.95,283.47",
 			style=solid];
 		"yic.pipeline.ingest.api" -> adminCli	[key=yic_pipeline_ingest_api_to_adminCli_1,
 			color="#78A8D8",
 			fontcolor="#78A8D8",
 			fontsize=10,
 			label=<<table border="0" cellpadding="0" cellspacing="0"><tr align="center"><td valign="middle"><i>[gRPC]</i></td></tr><tr align="center"><td valign="top">Feeds ingest metrics</td></tr></table>>,
-			lp="304.13,82",
+			lp="150.87,166.8",
 			penwidth=1,
-			pos="e,258,52.366 258,125.69 258,105.98 258,82.082 258,63.765",
+			pos="e,62.63,86.952 134.1,203.53 123.35,196.51 113.02,188.26 104.74,178.8 84.363,155.51 72.133,121.84 65.515,98.061",
 			style=solid];
 	}
 	__c4drill_legend	[height=1.6944,
 		label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" COLOR="#666666"><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#666666"><B>legend</B></FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#073B6F">system</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#3C7FC0">container</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#78A8D8">component</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#78A8D8">component db</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#8A8A8A">external person</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10" COLOR="#8A8A8A">external system</FONT></TD></TR></TABLE>>,
-		pos="539,808.6",
+		pos="478,879.4",
 		shape=plaintext,
 		width=1.2781];
 }
