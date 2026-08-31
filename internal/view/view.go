@@ -31,6 +31,14 @@ type View struct {
 	Units map[string]*Entry
 	// Edges is the edge routing style for this view.
 	Edges string
+	// EdgesOverride carries an explicit `--edges <style>` CLI request
+	// (phase 39, D-03/D-05). It is applied by the graph builders AFTER the
+	// PLAIN-02 plain zeroing, so it replaces the RESOLVED routing style for
+	// every generated view — beating BOTH the global `properties.edges` AND
+	// per-unit `edges` values (invocation-global, GEDGE-05) AND `--plain`'s
+	// author-format suppression (explicit CLI is user intent, GEDGE-06).
+	// Default empty = flag absent = zero behavior change (D-04).
+	EdgesOverride string
 	// Plain indicates author-custom formatting is ignored (--plain, PLAIN-01/
 	// PLAIN-02): unit color/style/border, link color/style/length/rank,
 	// properties.edges, and custom label formatting all fall back to

@@ -4489,3 +4489,92 @@ func TestNoLabelsOptInDefaultPathUntouched(t *testing.T) {
 	require.NotNil(t, g.Edges[0].Label)
 	assert.Equal(t, "reads rows", g.Edges[0].Label.Description)
 }
+
+// Edge override tests (phase 39 plan 01, D-03/D-05/GEDGE-05/GEDGE-06): a
+// non-empty View.EdgesOverride is the explicit `--edges` CLI request. The
+// builders must apply it AFTER the PLAIN-02 zeroing so it beats BOTH the
+// model-derived value (D-03) AND --plain suppression (D-05). An empty
+// override (flag absent) leaves behavior exactly as before (D-04).
+func TestBuildGraph_EdgeOverride(t *testing.T) {
+	t.Parallel()
+
+	overrideModel := func() *parser.Model {
+		return &parser.Model{
+			Properties: model.Properties{
+				Name:  "Test",
+				Edges: "straight",
+			},
+			Units: map[string]*model.Unit{
+				"app": {Type: model.TypeSystem, Name: "App"},
+			},
+		}
+	}
+
+	t.Run("BuildGraph override beats plain zeroing", func(t *testing.T) {
+		t.Parallel()
+
+		v := view.GenerateC1View(overrideModel())
+		v.Plain = true
+		v.EdgesOverride = "spline"
+
+		g := graph.BuildGraph(v)
+
+		assert.Equal(t, "spline", g.EdgeStyle, "explicit --edges must survive --plain (D-05)")
+	})
+
+	t.Run("BuildGraph empty override keeps plain suppression", func(t *testing.T) {
+		t.Parallel()
+
+		v := view.GenerateC1View(overrideModel())
+		v.Plain = true
+
+		g := graph.BuildGraph(v)
+
+		assert.Empty(t, g.EdgeStyle, "plain suppression unchanged when the flag is absent (D-04)")
+	})
+
+	t.Run("BuildGraph override beats model value without plain", func(t *testing.T) {
+		t.Parallel()
+
+		v := view.GenerateC1View(overrideModel())
+		v.EdgesOverride = "ortho"
+
+		g := graph.BuildGraph(v)
+
+		assert.Equal(t, "ortho", g.EdgeStyle, "flag beats the resolved model value (D-03)")
+	})
+
+	t.Run("BuildExpandedGraph override beats plain zeroing", func(t *testing.T) {
+		t.Parallel()
+
+		v := view.GenerateExpandedView(overrideModel())
+		v.Plain = true
+		v.EdgesOverride = "spline"
+
+		g := graph.BuildExpandedGraph(v)
+
+		assert.Equal(t, "spline", g.EdgeStyle, "explicit --edges must survive --plain on the expanded copy (D-05)")
+	})
+
+	t.Run("BuildExpandedGraph empty override keeps plain suppression", func(t *testing.T) {
+		t.Parallel()
+
+		v := view.GenerateExpandedView(overrideModel())
+		v.Plain = true
+
+		g := graph.BuildExpandedGraph(v)
+
+		assert.Empty(t, g.EdgeStyle, "plain suppression unchanged when the flag is absent (D-04)")
+	})
+
+	t.Run("BuildExpandedGraph override beats model value without plain", func(t *testing.T) {
+		t.Parallel()
+
+		v := view.GenerateExpandedView(overrideModel())
+		v.EdgesOverride = "ortho"
+
+		g := graph.BuildExpandedGraph(v)
+
+		assert.Equal(t, "ortho", g.EdgeStyle, "flag beats the resolved model value on the expanded copy (D-03)")
+	})
+}

@@ -2369,3 +2369,123 @@ func TestNoLabelsOptIn(t *testing.T) {
 		"default mode must keep the HTML label path (opt-in proven)")
 	assert.Contains(t, dot, "Order API", "default mode must keep node label text")
 }
+
+// =============================================================================
+// Tests for the --edges flag (phase 39 plan 01, GEDGE-03/GEDGE-04/GEDGE-05)
+// =============================================================================
+
+// TestEdgesFlagValidation mirrors TestFlagValidation for the --edges enum:
+// the four allowed values pass validation, anything else fails loudly naming
+// the offending value and the allowed enum (D-02), and an invalid value
+// produces NO output files (GEDGE-04: no silent fallback).
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestEdgesFlagValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		edges       string
+		setFlag     bool
+		expectError bool
+	}{
+		{
+			name:        "straight is valid",
+			edges:       "straight",
+			setFlag:     true,
+			expectError: false,
+		},
+		{
+			name:        "spline is valid",
+			edges:       "spline",
+			setFlag:     true,
+			expectError: false,
+		},
+		{
+			name:        "square is valid",
+			edges:       "square",
+			setFlag:     true,
+			expectError: false,
+		},
+		{
+			name:        "ortho is valid",
+			edges:       "ortho",
+			setFlag:     true,
+			expectError: false,
+		},
+		{
+			name:        "diagonal is invalid",
+			edges:       "diagonal",
+			setFlag:     true,
+			expectError: true,
+		},
+		{
+			name:        "SPLINE is invalid (case-sensitive enum)",
+			edges:       "SPLINE",
+			setFlag:     true,
+			expectError: true,
+		},
+		{
+			name:        "trailing space is invalid",
+			edges:       "ortho ",
+			setFlag:     true,
+			expectError: true,
+		},
+		{
+			name:        "unset flag means absent (no error)",
+			setFlag:     false,
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) { //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+			cmd := NewRootCmd()
+			buf := &bytes.Buffer{}
+			cmd.SetOut(buf)
+			cmd.SetErr(buf)
+
+			if tt.setFlag {
+				if err := cmd.PersistentFlags().Set("edges", tt.edges); err != nil {
+					t.Fatalf("failed to set edges flag: %v", err)
+				}
+			}
+
+			// Real fixture + temp output dir so the no-output-on-invalid
+			// assertion is observable.
+			dir := t.TempDir()
+			cmd.SetArgs([]string{
+				filepath.Join("testdata", "plain.toml"),
+				"--output", dir,
+				"--format", "dot",
+			})
+
+			err := cmd.Execute()
+
+			if tt.expectError {
+				require.Error(t, err, "invalid --edges value must fail loudly")
+				assert.Contains(t, err.Error(), "invalid edges", "error must carry the sentinel")
+				assert.Contains(t, err.Error(), `"`+tt.edges+`"`, "error must quote the offending value (D-02)")
+				assert.Contains(t, err.Error(), "straight, spline, square, or ortho", "error must name the allowed enum (D-02)")
+
+				entries, readErr := os.ReadDir(dir)
+				require.NoError(t, readErr)
+				assert.Empty(t, entries, "invalid --edges must produce no output files (GEDGE-04)")
+			} else if err != nil {
+				assert.NotContains(t, err.Error(), "invalid edges", "valid value must pass flag validation")
+			}
+		})
+	}
+}
+
+// TestEdgesFlagOverridesModel pins the CLI-tier override (GEDGE-05, D-03):
+// --edges spline on the plain fixture (whose model says edges = "straight")
+// must emit splines="true" in the RAW dot output.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestEdgesFlagOverridesModel(t *testing.T) {
+	dir := generateFixtureOutput(t, "plain", "dot", "--edges", "spline")
+
+	dot := readOutputFile(t, filepath.Join(dir, "plain.dot"))
+
+	assert.Contains(t, dot, `splines="true"`,
+		`--edges spline must beat the model's edges="straight" in RAW dot (GEDGE-05)`)
+}
