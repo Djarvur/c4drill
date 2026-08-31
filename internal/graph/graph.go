@@ -33,10 +33,11 @@ const (
 // RenderOpts carries the formatting-suppression switches threaded from the
 // CLI onto every graph: --plain (master switch, PLAIN-01/PLAIN-02) plus the
 // four granular opt-outs (KEY-01). --plain is the UNION of the granular
-// switches (KEY-02): everything a granular switch suppresses, plain already
-// suppresses — except kind-derived edge colours, which are semantic and
-// survive plain (pinned by the v1.14 plain goldens), so the granular guards
-// defer to plain there.
+// switches (KEY-02) over AUTHOR formatting; kind-derived edge colours are
+// semantic and survive plain alone (pinned by the v1.14 plain goldens), but
+// an EXPLICIT --no-colors still removes them — user intent beats plain's
+// keep-semantic-colours default (issue #22, documented in the README --plain
+// composition notes).
 type RenderOpts struct {
 	// Plain mirrors View.Plain (--plain): author-custom formatting is ignored
 	// and units/edges fall back to defaults.

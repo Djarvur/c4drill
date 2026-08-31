@@ -3882,6 +3882,68 @@ func TestNoColorsSuppressesAllColouring(t *testing.T) {
 	}
 }
 
+// TestPlainNoColorsRemovesKindColours (issue #22): under --plain alone kind
+// colours survive (semantic, v1.21), but the DOCUMENTED composition contract
+// (README --plain composition notes; skill/SKILL.md boundaries) is that an
+// explicit --no-colors wins over plain's keep-semantic-colours default —
+// `--plain --no-colors` removes them. Locked on both colouring paths: the
+// single-link createEdge/resolveEdgeColour rule and the collapsed-pair
+// applyCollapsedPairStyle aggregate.
+func TestPlainNoColorsRemovesKindColours(t *testing.T) {
+	t.Parallel()
+
+	newModel := func(links []model.Link) *parser.Model {
+		return &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"app": {
+					Type:  model.TypeSystem,
+					Name:  "App",
+					Links: links,
+				},
+				"db": {Type: model.TypeDb, Name: "Database"},
+			},
+		}
+	}
+
+	build := func(links []model.Link) *graph.Graph {
+		v := view.GenerateC1View(newModel(links))
+		v.Plain = true
+		v.NoColors = true
+
+		return graph.BuildGraph(v)
+	}
+
+	// Single-link path (resolveEdgeColour): the kind colour must yield to the
+	// structural D-01 source-border default.
+	g := build([]model.Link{{Peer: "db", Kind: model.KindRead}})
+	require.Len(t, g.Edges, 1)
+	assert.NotEqual(t, model.LinkReadColour, g.Edges[0].Color,
+		"--plain --no-colors: the explicit granular switch beats plain's keep-semantic-colours default")
+	assert.Equal(t, model.PersonBorder, g.Edges[0].Color,
+		"the edge falls back to the D-01 source-border default under the combination")
+
+	// Collapsed-pair path (applyCollapsedPairStyle): two same-kind links on
+	// one pair aggregate to the kind colour — suppressed the same way.
+	g = build([]model.Link{
+		{Peer: "db", Kind: model.KindRead, Technology: "sql"},
+		{Peer: "db", Kind: model.KindRead, Technology: "odbc"},
+	})
+	require.Len(t, g.Edges, 1)
+	assert.NotEqual(t, model.LinkReadColour, g.Edges[0].Color,
+		"the collapsed-pair kind aggregate is suppressed under --plain --no-colors too")
+	assert.Equal(t, model.PersonBorder, g.Edges[0].Color,
+		"the collapsed pair falls back to the D-01 source-border default")
+
+	// Control: plain alone still KEEPS the kind colour (semantic survival).
+	vPlain := view.GenerateC1View(newModel([]model.Link{{Peer: "db", Kind: model.KindRead}}))
+	vPlain.Plain = true
+	gPlain := graph.BuildGraph(vPlain)
+	require.Len(t, gPlain.Edges, 1)
+	assert.Equal(t, model.LinkReadColour, gPlain.Edges[0].Color,
+		"under --plain alone the kind-derived colour still survives (v1.21 contract)")
+}
+
 // TestNoStylesSuppressesStyleAndBorders: with NoStyles, author unit Style is
 // skipped (BorderStyle falls back to solid), the author link style falls back
 // to solid, and the applyCollapsedPairStyle aggregate style override is not
@@ -4075,10 +4137,11 @@ func TestDefaultPathUnchangedByOptFlags(t *testing.T) {
 }
 
 // TestPlainImpliesAllAspects (KEY-02, builder level): Plain=true yields the
-// same suppression as Plain + all four granular flags set — union semantics.
-// NOTE: kind-derived colours are semantic and survive plain (v1.14 contract,
-// pinned by the plain goldens), so the union lock holds precisely because the
-// granular guards defer to plain on kind colouring.
+// same AUTHOR-formatting suppression as Plain + all four granular flags set —
+// union semantics. Delta (issue #22): kind-derived colours survive plain
+// ALONE (semantic, v1.14 contract pinned by the plain goldens) but NOT the
+// explicit --no-colors — plain+switches lands on the structural D-01
+// source-border default instead. Everything else stays identical.
 func TestPlainImpliesAllAspects(t *testing.T) {
 	t.Parallel()
 
@@ -4136,7 +4199,10 @@ func TestPlainImpliesAllAspects(t *testing.T) {
 
 	require.Len(t, gPlain.Edges, 1)
 	require.Len(t, gUnion.Edges, 1)
-	assert.Equal(t, gPlain.Edges[0].Color, gUnion.Edges[0].Color, "edge colour identical (kind colour survives both)")
+	assert.Equal(t, model.LinkReadColour, gPlain.Edges[0].Color,
+		"kind colour survives plain alone (semantic)")
+	assert.Equal(t, model.PersonBorder, gUnion.Edges[0].Color,
+		"the explicit --no-colors removes the kind colour even under plain (issue #22): D-01 source-border default")
 	assert.Equal(t, gPlain.Edges[0].Style, gUnion.Edges[0].Style)
 	assert.Equal(t, gPlain.Edges[0].MinLen, gUnion.Edges[0].MinLen)
 	assert.Equal(t, gPlain.Edges[0].RankReverse, gUnion.Edges[0].RankReverse)

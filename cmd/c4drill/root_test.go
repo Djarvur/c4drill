@@ -1750,20 +1750,39 @@ func TestPlainFlagOptIn(t *testing.T) {
 // =============================================================================
 
 // TestPlainUnionParity is the KEY-02 lock: rendering plain.toml with --plain
-// alone and with --plain plus all four granular flags produces canonically
-// IDENTICAL DOT — --plain is the exact union of the switches.
+// alone and with --plain plus the granular flags plain fully subsumes
+// (--no-styles/--no-length/--no-rank) produces canonically IDENTICAL DOT.
+// Documented delta (issue #22): --no-colors is NOT subsumed — kind-derived
+// colours survive plain ALONE (semantic, v1.21 behaviour) and only the
+// explicit switch removes them. Beside --no-colors the other switches stay
+// no-ops under plain.
 //
 //nolint:paralleltest // go-graphviz WASM engine has concurrency issues
 func TestPlainUnionParity(t *testing.T) {
 	plainDir := generatePlainFixtureOutput(t, "dot", "--plain")
 	unionDir := generatePlainFixtureOutput(t, "dot",
-		"--plain", "--no-colors", "--no-styles", "--no-length", "--no-rank")
+		"--plain", "--no-styles", "--no-length", "--no-rank")
 
 	plain := readOutputFile(t, filepath.Join(plainDir, "plain.dot"))
 	union := readOutputFile(t, filepath.Join(unionDir, "plain.dot"))
 
 	require.Equal(t, canonical.Canonical(t, plain), canonical.Canonical(t, union),
-		"--plain must be canonically identical with and without the granular flags (KEY-02 union lock)")
+		"--plain must be canonically identical with and without the subsumed granular flags (KEY-02 union lock)")
+
+	colorsDir := generatePlainFixtureOutput(t, "dot",
+		"--plain", "--no-colors", "--no-styles", "--no-length", "--no-rank")
+	colors := readOutputFile(t, filepath.Join(colorsDir, "plain.dot"))
+
+	assert.NotContains(t, strings.ToLower(colors), "#2e7d32",
+		"--plain --no-colors removes the kind-derived read colour (issue #22)")
+	assert.Contains(t, strings.ToLower(plain), "#2e7d32",
+		"--plain alone keeps the kind-derived colour (semantic survival)")
+
+	colorsOnlyDir := generatePlainFixtureOutput(t, "dot", "--plain", "--no-colors")
+	colorsOnly := readOutputFile(t, filepath.Join(colorsOnlyDir, "plain.dot"))
+
+	require.Equal(t, canonical.Canonical(t, colorsOnly), canonical.Canonical(t, colors),
+		"beside --no-colors, the other granular switches stay no-ops under --plain")
 }
 
 // TestGranularFlagsE2E proves each switch suppresses exactly its own aspect

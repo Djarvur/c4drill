@@ -1430,15 +1430,16 @@ func processIncomingLinks(
 // builder default; the kind/source-border colour logic still applies (kind
 // colours are semantic and survive plain mode). KEY-01: --no-styles skips the
 // aggregate style override too; --no-colors skips the kind-derived aggregate
-// colour, falling back to the source-border default — unless plain is set,
-// which retains kind colouring (KEY-02 union lock).
+// colour, falling back to the source-border default — including under plain
+// (issue #22: the explicit granular switch beats plain's keep-semantic-colours
+// default).
 func applyCollapsedPairStyle(
 	edge *Edge,
 	agg *pairAggregate,
 	sourceEntry *view.Entry,
 	opts RenderOpts,
 ) {
-	kindColoursSuppressed := opts.NoColors && !opts.Plain
+	kindColoursSuppressed := opts.NoColors
 
 	if colour, ok := agg.kindColourFor(); ok && !kindColoursSuppressed {
 		edge.Color = colour
@@ -1477,14 +1478,15 @@ func kindColour(kind model.LinkKind) string {
 // resolveEdgeColour determines color: explicit override -> kind colour ->
 // source border color (D-01, D-03, KIND-01, KIND-02). KEY-01: --no-colors
 // suppresses the author colour AND the kind colour; the D-01 source-border
-// default is structural and stays. KEY-02 union lock: plain retains kind
-// colouring, so NoColors defers to plain there. Returns "" when no rule
-// produces a colour (the edge keeps its zero value).
+// default is structural and stays. Issue #22: the suppression holds under
+// --plain too — kind colours survive plain ALONE (semantic), but the explicit
+// granular switch is user intent and beats plain's retention. Returns "" when
+// no rule produces a colour (the edge keeps its zero value).
 func resolveEdgeColour(link model.Link, linkColor string, sourceEntry *view.Entry, opts RenderOpts) string {
 	switch {
 	case linkColor != "":
 		return linkColor
-	case opts.NoColors && !opts.Plain:
+	case opts.NoColors:
 		// Kind colours are suppressed — fall through to the structural D-01
 		// source-border default.
 	case kindColour(link.Kind) != "":
