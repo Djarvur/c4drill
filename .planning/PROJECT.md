@@ -43,7 +43,7 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 ### Validated in Phase 28 (v1.10)
 
-- ✓ `reference` field (📖): optional per-unit external-docs URL renders a clickable marker via GraphViz native `URL` attribute; external reference wins the single URL slot over drill-down; HTML shim routes external http(s)// to a new tab and no-ops non-http(s) schemes (XSS hardening); no-reference models render byte-identical to v1.9 (canonical-DOT golden)
+- ✓ `reference` field (📖): optional per-unit external-docs URL renders a clickable marker via GraphViz native `URL` attribute; single URL slot with navigation first (supersedes the v1.10 external-wins Option A, re-decided 2026-08-31 after the bigpic navigation breakage): collapsed containers (🔍) drill down with the reference carried on the unit's own child diagram boundary (📖 there), expanded container titles and childless units carry the 📖 docs link directly; HTML shim routes external http(s)// to a new tab and no-ops non-http(s) schemes (XSS hardening); no-reference models render byte-identical to v1.9 (canonical-DOT golden)
 
 ### Validated in Phase 29 (v1.10)
 

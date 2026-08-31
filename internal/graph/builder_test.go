@@ -2549,11 +2549,12 @@ func TestReferenceGlyph(t *testing.T) {
 		assert.Empty(t, node.ReferenceURL, "non-referenced unit must have an empty ReferenceURL")
 	})
 
-	t.Run("expanded parent cluster label has 📖 when referenced", func(t *testing.T) {
+	t.Run("expanded cluster label carries 📖 — its title links to the docs", func(t *testing.T) {
 		t.Parallel()
 
-		// An expanded parent unit (rendered via buildCluster → buildClusterLabel)
-		// carrying a reference must gain the 📖 glyph on its cluster label name.
+		// An expanded parent unit (rendered via buildCluster →
+		// buildClusterLabel) carrying a reference: its contents are depicted,
+		// so instead of a drill-down its title carries the 📖 docs link.
 		m := &parser.Model{
 			Properties: model.Properties{Name: "Reference Cluster Test"},
 			Units: map[string]*model.Unit{
@@ -2581,13 +2582,16 @@ func TestReferenceGlyph(t *testing.T) {
 		require.NotNil(t, cluster.Label, "cluster must have a label")
 		assert.Contains(t, cluster.Label.Name, "📖",
 			"expanded referenced parent cluster label must include 📖")
+		assert.NotContains(t, cluster.Label.Name, "🔍",
+			"expanded entries stay 🔍-free (D-04) — the title is the docs link")
 	})
 }
 
 // TestReferenceURL_RenderedDOT exercises REF-03 (converter): createNode wires
 // the external reference URL into the GraphViz node's single URL attribute.
-// Also covers the external-wins precedence (REF-03/J) when BOTH ReferenceURL
-// and ExploreURL are present on the same node.
+// Also covers the drill-down-wins precedence when BOTH ReferenceURL and
+// ExploreURL are present on the same node: navigation is the primary action
+// and the unit's docs render on its child diagram.
 func TestReferenceURL_RenderedDOT(t *testing.T) {
 	t.Parallel()
 
@@ -2617,13 +2621,13 @@ func TestReferenceURL_RenderedDOT(t *testing.T) {
 			"rendered DOT must carry the external reference URL on the node")
 	})
 
-	t.Run("external reference wins the single URL slot over explore URL", func(t *testing.T) {
+	t.Run("drill-down wins the single URL slot over the reference", func(t *testing.T) {
 		t.Parallel()
 
-		// A collapsed system with subunits AND a reference: BuildGraphWithPath
-		// would normally set ExploreURL for drill-down, but the external
-		// ReferenceURL must win GraphViz's single URL slot (ARCHITECTURE-v1.10
-		// §6 (6) Option A).
+		// A collapsed system with subunits AND a reference: both URLs are
+		// populated, but the drill-down must take GraphViz's single URL slot —
+		// navigation is the primary action, and the unit's 📖 docs render on
+		// its child diagram (the boundary frame there links to the reference).
 		m := &parser.Model{
 			Properties: model.Properties{Name: "Reference Precedence Test"},
 			Units: map[string]*model.Unit{
@@ -2648,37 +2652,40 @@ func TestReferenceURL_RenderedDOT(t *testing.T) {
 		node := g.Nodes[0]
 		// Precondition: both URLs are populated on the Node struct.
 		assert.Equal(t, "https://example.com/docs/main", node.ReferenceURL, "ReferenceURL must be set")
-		assert.NotEmpty(t, node.ExploreURL, "ExploreURL must also be set (collapsed with subunits)")
+		require.NotEmpty(t, node.ExploreURL, "ExploreURL must also be set (collapsed with subunits)")
 
 		dotData, err := render.RenderDOT(g)
 		require.NoError(t, err)
 
 		s := string(dotData)
-		// The external reference URL must win the single slot — the explore
-		// URL (.svg drill-down) must NOT be the rendered URL for this node.
-		assert.Contains(t, s, "https://example.com/docs/main",
-			"rendered DOT must carry the external reference URL (external-wins precedence)")
+		// The drill-down URL must win the single slot — the reference must
+		// NOT be the rendered URL on this diagram.
+		assert.Contains(t, s, node.ExploreURL,
+			"rendered DOT must carry the drill-down URL (drill-down-wins precedence)")
+		assert.NotContains(t, s, "https://example.com/docs/main",
+			"the reference must not take the slot on the parent diagram")
+		assert.NotContains(t, node.Label.Name, "📖",
+			"no 📖 affordance where the docs are not linked")
 	})
 }
 
 // TestClusterReferenceURL_RenderedDOT is the cluster-side analog of
-// TestReferenceURL_RenderedDOT: a unit with inner units that renders as a
-// CLUSTER (deep-link chain or author-expanded) must expose its registered
-// 📖 reference through the cluster's single URL slot, with the same
-// external-wins precedence nodes use (ARCHITECTURE-v1.10 §6 (6) Option A).
-// Regression: reported after v1.23.1 — the cluster path emitted only the
-// drill-down URL (chain case) or no URL at all (expanded case), so the
-// registered reference was unreachable from non-expanded diagrams.
+// TestReferenceURL_RenderedDOT, pinning the split navigation semantics for
+// units with inner units: the parent diagram links the unit ONLY to its
+// child diagram (drill-down wins the single URL slot), and the unit's 📖
+// docs render on that child diagram — the boundary frame there carries the
+// reference URL and the glyph.
 func TestClusterReferenceURL_RenderedDOT(t *testing.T) {
 	t.Parallel()
 
-	t.Run("chain-unfolded cluster: reference wins the URL slot over drill-down", func(t *testing.T) {
-		t.Parallel()
+	newModel := func(expanded bool) *parser.Model {
+		props := model.Properties{Name: "Cluster Reference Test"}
+		if expanded {
+			props.Expanded = []string{"s"}
+		}
 
-		// u deep-links into s.api → the CTX-02 chain unfolds s as a collapsed
-		// cluster with an explore (drill-down) URL; s also carries a reference.
-		m := &parser.Model{
-			Properties: model.Properties{Name: "Cluster Reference Test"},
+		return &parser.Model{
+			Properties: props,
 			UnitOrder:  []string{"u", "s"},
 			Units: map[string]*model.Unit{
 				"u": {
@@ -2699,12 +2706,17 @@ func TestClusterReferenceURL_RenderedDOT(t *testing.T) {
 				},
 			},
 		}
+	}
 
-		v := view.GenerateC1View(m)
+	t.Run("chain-unfolded cluster links to the child diagram, not the docs", func(t *testing.T) {
+		t.Parallel()
+
+		// u deep-links into s.api → the CTX-02 chain unfolds s as a collapsed
+		// cluster; s also carries a reference.
+		v := view.GenerateC1View(newModel(false))
 		g := graph.BuildGraphWithPath(v, "", "diagram", "svg")
 
-		require.Len(t, g.Clusters, 1, "the chain-unfolded system renders as a cluster")
-		cluster := g.Clusters[0]
+		cluster := requireCluster(t, g, "s")
 		assert.Equal(t, "https://example.com/docs/s", cluster.ReferenceURL,
 			"Cluster.ReferenceURL must carry the unit's reference exactly")
 		require.NotEmpty(t, cluster.ExploreURL,
@@ -2714,63 +2726,81 @@ func TestClusterReferenceURL_RenderedDOT(t *testing.T) {
 		require.NoError(t, err)
 
 		dot := string(dotData)
-		assert.Contains(t, dot, "https://example.com/docs/s",
-			"the cluster URL slot must carry the external reference (external-wins precedence)")
-		assert.NotContains(t, dot, "URL=\""+cluster.ExploreURL+"\"",
-			"the drill-down URL must not take the slot when a reference is registered")
+		assert.Contains(t, dot, "URL=\""+cluster.ExploreURL+"\"",
+			"the cluster URL slot must carry the drill-down (navigation is primary)")
+		assert.NotContains(t, dot, "https://example.com/docs/s",
+			"the reference must not be linked on the parent diagram")
+		assert.NotContains(t, cluster.Label.Name, "📖",
+			"no 📖 affordance on a cluster whose docs live on the child diagram")
 	})
 
-	t.Run("author-expanded cluster with reference carries the reference URL", func(t *testing.T) {
+	t.Run("author-expanded cluster title links to the docs with 📖", func(t *testing.T) {
 		t.Parallel()
 
-		m := &parser.Model{
-			Properties: model.Properties{Name: "Expanded Cluster Reference Test", Expanded: []string{"s"}},
-			UnitOrder:  []string{"u", "s"},
-			Units: map[string]*model.Unit{
-				"u": {
-					Type: model.TypePerson,
-					Name: "U",
-					Links: []model.Link{
-						{Peer: "s.api"},
-					},
-				},
-				"s": {
-					Type:      model.TypeSystem,
-					Name:      "S",
-					Reference: "https://example.com/docs/s",
-					SubunitOrder: []string{"api"},
-					Subunits: map[string]*model.Unit{
-						"api": {Type: model.TypeContainer, Name: "API"},
-					},
-				},
-			},
-		}
-
-		v := view.GenerateC1View(m)
+		// An expanded unit shows its contents already — no drill-down link.
+		// Its title carries the 📖 docs link instead.
+		v := view.GenerateC1View(newModel(true))
 		g := graph.BuildGraphWithPath(v, "", "diagram", "svg")
 
-		require.Len(t, g.Clusters, 1, "the author-expanded system renders as a cluster")
-
-		var cluster *graph.Cluster
-
-		for _, c := range g.Clusters {
-			if c.ID == "s" {
-				cluster = c
-			}
-		}
-
-		require.NotNil(t, cluster)
-		assert.Equal(t, "https://example.com/docs/s", cluster.ReferenceURL,
-			"the expanded cluster carries its unit's reference URL")
+		cluster := requireCluster(t, g, "s")
 		assert.Empty(t, cluster.ExploreURL,
-			"precondition: expanded clusters get no drill-down URL (D-04)")
+			"an expanded cluster has no drill-down (its contents are depicted)")
+		assert.Equal(t, "https://example.com/docs/s", cluster.ReferenceURL)
+		require.NotNil(t, cluster.Label)
+		assert.Contains(t, cluster.Label.Name, "📖",
+			"the expanded cluster title shows the 📖 docs affordance")
 
 		dotData, err := render.RenderDOT(g)
 		require.NoError(t, err)
 
-		assert.Contains(t, string(dotData), "https://example.com/docs/s",
-			"the expanded cluster URL slot must carry the external reference")
+		dot := string(dotData)
+		assert.Contains(t, dot, "URL=\"https://example.com/docs/s\"",
+			"the expanded cluster title links to the docs")
 	})
+
+	t.Run("child diagram boundary frame carries the reference and 📖", func(t *testing.T) {
+		t.Parallel()
+
+		// On s's own diagram the unit is the boundary cluster: there, and only
+		// there, its reference takes the URL slot with the 📖 glyph.
+		v := view.GenerateC2View(newModel(false), "s")
+		require.NotNil(t, v)
+		g := graph.BuildGraphWithPath(v, "s", "diagram", "svg")
+
+		boundary := requireCluster(t, g, "s")
+		assert.Equal(t, "https://example.com/docs/s", boundary.ReferenceURL,
+			"the boundary frame carries the unit's reference URL")
+		assert.Empty(t, boundary.ExploreURL,
+			"the boundary has no drill-down of its own — the reference takes the slot")
+		require.NotNil(t, boundary.Label)
+		assert.Contains(t, boundary.Label.Name, "📖",
+			"the boundary label shows the 📖 docs affordance")
+
+		dotData, err := render.RenderDOT(g)
+		require.NoError(t, err)
+
+		dot := string(dotData)
+		assert.Contains(t, dot, "https://example.com/docs/s",
+			"the child diagram boundary frame links to the docs")
+		assert.Contains(t, dot, "📖",
+			"the child diagram renders the 📖 glyph")
+	})
+}
+
+// requireCluster finds a top-level cluster by ID, failing the test when
+// absent.
+func requireCluster(t *testing.T, g *graph.Graph, id string) *graph.Cluster {
+	t.Helper()
+
+	for _, c := range g.Clusters {
+		if c.ID == id {
+			return c
+		}
+	}
+
+	require.FailNowf(t, "cluster not found", "expected cluster %q among %v", id, len(g.Clusters))
+
+	return nil
 }
 
 // TestReference_BackwardCompat exercises REF-05: a unit authored WITHOUT a

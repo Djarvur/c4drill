@@ -227,8 +227,8 @@ explicit `name =` always wins.
 #### reference (External Documentation URL)
 
 Any unit accepts an optional `reference` field — an external
-documentation URL. When set, a 📖 marker appears next to the unit name
-and the node is clickable.
+documentation URL. When the reference is linked, a 📖 marker appears next
+to the unit name and the unit is clickable.
 
 ```toml
 [api]
@@ -242,6 +242,11 @@ reference = "https://wiki.example.com/api-runbook"
 * The URL is rendered via GraphViz's native `URL` attribute (SVG) and
   routed by the HTML shim; external `http(s)` references open in a new tab
   in `-f html` output (distinct from internal drill-down navigation).
+* A unit has a single URL slot and navigation comes first: a collapsed
+  container (🔍) drills down — its reference is not linked on that
+  diagram but on the unit's own child diagram (the boundary frame there
+  shows 📖); an expanded container's title shows 📖 and links to the
+  docs; a unit without subunits shows 📖 and links to the docs itself.
 
 **Type inference rules** (when `type` is omitted, or when a generic
 `db`/`queue` type is set):

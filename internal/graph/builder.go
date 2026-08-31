@@ -386,6 +386,14 @@ func buildBoundaryCluster(v *view.View) *Cluster {
 			Description: unit.Description,
 			Icon:        IconForType(unit.Type),
 		}
+
+		// The boundary frame IS the unit on its own child diagram — this is
+		// where the unit's 📖 docs link lives (the parent diagram links this
+		// unit to its drill-down only).
+		if unit.Reference != "" {
+			label.Name += " 📖"
+		}
+
 		style = GetStyleForType(unit.Type, false)
 		applyUnitOverrides(style, unit, renderOptsFromView(v))
 	} else {
@@ -574,14 +582,13 @@ func buildNode(entry *view.Entry, opts RenderOpts) *Node {
 		Icon:        IconForType(entry.Unit.Type),
 	}
 
-	// Add 🔍 indicator for collapsed units with subunits
+	// Clickable-affordance glyphs mirror the link semantics: a unit WITH
+	// subunits links to its child diagram (🔍 when collapsed) and its 📖
+	// docs live on that child diagram — not here. A leaf with a reference
+	// links to the docs itself (📖).
 	if entry.HasSubunits && !entry.IsExpanded {
 		label.Name += " 🔍"
-	}
-
-	// Add 📖 indicator for units with an external reference URL (REF-02),
-	// mirroring the 🔍 collapsed-cluster affordance style above.
-	if entry.Unit.Reference != "" {
+	} else if entry.Unit.Reference != "" {
 		label.Name += " 📖"
 	}
 
@@ -998,20 +1005,17 @@ func buildClusterLabel(entry *view.Entry) *Label {
 		Icon:        IconForType(entry.Unit.Type),
 	}
 
-	// Add 📖 indicator for referenced expanded parents (REF-02), mirroring the
-	// glyph treatment in buildNode. buildClusterLabel returns a Label (not a
-	// Node), so there is no ReferenceURL to populate here; the cluster's
-	// drill-down/explore URL handling is unchanged.
-	if entry.Unit.Reference != "" {
-		label.Name += " 📖"
-	}
-
-	// CTX-03: collapsed containers rendered as (nested) clusters keep the same
-	// 🔍 affordance buildNode gives collapsed units with subunits. Author-
-	// expanded entries — including every entry of an all-expanded view, where
-	// IsExpanded mirrors HasSubunits — stay 🔍-free (D-04).
+	// Clickable-affordance glyphs mirror the link semantics: a COLLAPSED
+	// container cluster links to its child diagram (🔍, D-04 keeps expanded
+	// entries 🔍-free); an EXPANDED cluster shows its contents already, so its
+	// title links to the unit's 📖 docs instead (the collapsed drill-down is
+	// the only way into a child diagram, and the docs always have a home —
+	// here when expanded, on the child diagram's boundary frame when
+	// collapsed).
 	if entry.HasSubunits && !entry.IsExpanded {
 		label.Name += " 🔍"
+	} else if entry.Unit.Reference != "" {
+		label.Name += " 📖"
 	}
 
 	return label
@@ -1666,7 +1670,9 @@ func shouldHaveExploreLink(node *Node, v *view.View) bool {
 
 // entryShouldHaveExploreLink reports whether a view entry is a collapsed
 // container-capable unit that deserves a drill-down (explore) link — the
-// shared predicate for nodes and nested container clusters (CTX-03).
+// shared predicate for nodes and nested container clusters (CTX-03). An
+// expanded unit shows its contents already; its title links to its 📖 docs
+// instead (see buildClusterLabel/buildBoundaryCluster).
 func entryShouldHaveExploreLink(entry *view.Entry) bool {
 	// Only types that can contain subunits can be expanded
 	switch entry.Unit.Type {

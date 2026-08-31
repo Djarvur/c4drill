@@ -483,16 +483,16 @@ func createNode(
 		}
 	}
 
-	// Set URL for clickable nodes. A GraphViz node has a SINGLE URL attribute,
-	// so when an external reference (📖) and an internal drill-down explore URL
-	// both apply, the EXTERNAL reference wins the slot (ARCHITECTURE-v1.10
-	// §6 (6) Option A). The glyph(s) remain the visible affordance regardless
-	// of which URL the slot carries. See converter.go:175-200 for the
-	// single-URL-per-node GraphViz limitation that drives this precedence.
-	if node.ReferenceURL != "" {
-		cn.SetURL(node.ReferenceURL)
-	} else if node.ExploreURL != "" {
+	// Set URL for clickable nodes. A GraphViz node has a SINGLE URL attribute
+	// (converter.go:175-200), so when a unit has BOTH a drill-down and an
+	// external reference (📖), the DRILL-DOWN wins the slot: navigation is
+	// the primary action, and the unit's docs render on its own child
+	// diagram (the boundary frame there links to the reference). A leaf
+	// without a drill-down carries the reference on the node itself.
+	if node.ExploreURL != "" {
 		cn.SetURL(node.ExploreURL)
+	} else if node.ReferenceURL != "" {
+		cn.SetURL(node.ReferenceURL)
 	}
 
 	return cn, nil
@@ -631,17 +631,20 @@ func setClusterLabel(subgraph *cgraph.Graph, cluster *graph.Cluster, opts graph.
 		subgraph.SetLabelHTML(htmlLabel)
 	}
 
-	// CTX-03: a collapsed container cluster carries its drill-down URL as the
-	// subgraph URL attribute — the cluster-side analog of the node's SetURL
-	// (GraphViz supports URL on clusters, so clicking the cluster frame drills
-	// in). SafeSet errors are ignored, matching the best-effort treatment in
-	// applyNodeStyle. The URL is a structural affordance: emitted under plain
-	// too. A registered 📖 reference wins the single URL slot over drill-down
-	// — the same ARCHITECTURE-v1.10 §6 (6) Option A precedence createNode
-	// applies (a cluster, like a node, has exactly one URL attribute).
-	url := cluster.ReferenceURL
+	// CTX-03: a container cluster carries its drill-down URL as the subgraph
+	// URL attribute — the cluster-side analog of the node's SetURL (GraphViz
+	// supports URL on clusters, so clicking the cluster frame drills into the
+	// unit's dedicated diagram). SafeSet errors are ignored, matching the
+	// best-effort treatment in applyNodeStyle. The URL is a structural
+	// affordance: emitted under plain too. Same single-slot precedence as
+	// nodes: drill-down wins when both apply — the cluster unit's 📖 docs
+	// render on its child diagram's boundary frame, not here. The one
+	// exception is the boundary cluster itself (a unit ON its own child
+	// diagram): it has no drill-down of its own, so its reference takes the
+	// slot.
+	url := cluster.ExploreURL
 	if url == "" {
-		url = cluster.ExploreURL
+		url = cluster.ReferenceURL
 	}
 
 	if url != "" {

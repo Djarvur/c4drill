@@ -395,10 +395,21 @@ promotes to the level-appropriate variant (`containerBox` at C2,
 ==== Reference (External Documentation URL)
 
 Any unit accepts an optional `reference` field — an external
-documentation URL. When set, a 📖 marker appears next to the unit name
-and the node becomes clickable (GraphViz's native `URL` attribute in
-SVG). In `-f html` output, external `http(s)` references open in a new
-tab, distinct from internal drill-down navigation.
+documentation URL. When the reference is linked, a 📖 marker appears next
+to the unit name and the unit becomes clickable (GraphViz's native `URL`
+attribute in SVG). In `-f html` output, external `http(s)` references
+open in a new tab, distinct from internal drill-down navigation.
+
+A unit has a single URL slot, and navigation comes first:
+
+* *Collapsed container* (subunits hidden, 🔍 shown) — the click drills
+  down into the unit's child diagram. Its reference is not linked on
+  this diagram: the unit's own child diagram carries it — the boundary
+  frame there shows 📖 and links to the docs.
+* *Expanded container* (subunits already depicted around it) — the title
+  shows 📖 and links to the docs.
+* *Unit without subunits* — the whole node shows 📖 and links to the
+  docs.
 
 [source,toml]
 ----
@@ -1294,7 +1305,7 @@ Flags:
 
   What deliberately stays: kind-derived edge colours (semantic, from
   `link kind`) and the legend (including custom legend lines), queue
-  SVG pipe shapes, the 🔍/📖 glyphs and their explore links, and
+  SVG pipe shapes, the 🔍/📖 glyphs and their drill-down/docs links, and
   collapsed subtrees stay collapsed.
 
   [source,bash]
