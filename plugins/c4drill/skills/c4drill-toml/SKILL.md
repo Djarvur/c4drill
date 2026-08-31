@@ -982,7 +982,8 @@ c4drill architecture.toml --plain --expanded  # composes with --expanded
 **Ignored under `--plain`:** unit `color`/`style`/`border` (units fall
 back to the C4 type palette, including expanded-unit clusters); link
 `color`/`style`; link `length` and `rank` (default spacing, forward
-ranking); `properties.edges` (default splines); custom label formatting
+ranking); `properties.edges` (default splines — though an explicit
+`--edges` flag still applies, see below); custom label formatting
 (plain-text labels — name/technology/description content preserved).
 
 **Deliberately kept:** kind-derived edge colours and the legend
@@ -991,6 +992,22 @@ and their explore links, and collapsed subtrees stay collapsed.
 `convert` and `fmt` are unaffected. See
 `examples/12-plain.toml` — a fixture full of custom formatting to try
 the flag against.
+
+### Edge Routing Override (--edges)
+
+`--edges` (v1.23) is a CLI-only override (no new model keys) that sets
+the edge routing style for the whole invocation — every generated
+diagram (C1 root, all drill-downs, `--expanded`) renders with it. It
+beats BOTH the global `properties.edges` value AND per-unit `edges`
+overrides, with no model edit. Values: `straight|spline|square|ortho`
+(`square` = ortho alias); anything else is a hard error naming the
+offending value and the enum. An explicit `--edges` also survives
+`--plain` — user intent beats author-format suppression.
+
+```bash
+c4drill architecture.toml --edges straight --expanded  # straight variant
+c4drill architecture.toml --plain --edges spline       # survives --plain
+```
 
 ### Granular Render Flags (--no-*)
 
