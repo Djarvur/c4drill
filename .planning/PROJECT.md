@@ -81,6 +81,13 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - ✓ Post-release correctness (260831-01u): compact C1 root restored (flood bisected to v1.21.0 CTX-02/03 whole-subtree unfolding; pinned by `deepcross` fixture + golden invariant); edge identity made flag-invariant via builder-assigned `Edge.Name` (label-derived find-or-create had silently merged parallel edges under `--no-labels`)
 - ✓ BC-01: without the new keys, default output changes only for the documented WRAP deltas; docs (README.adoc + 3 SKILL.md copies) synced with CI `diff -r` parity (DOC-01..03)
 
+### Validated in Phase 39 (v1.16) — edge style override
+
+- ✓ `--edges` CLI override (GEDGE-03..05): invocation-global routing-style override accepting the unchanged enum (`straight|spline|square|ortho`, `square` = ortho alias per GEDGE-02); beats BOTH the global `properties.edges` value AND per-unit `edges` overrides on every generated view (C1 root, all drill-downs, `--expanded` copy) via a dedicated `View.EdgesOverride` carrier applied after the PLAIN-02 zeroing; invalid values fail loudly naming the value and the enum before any output (GEDGE-04)
+- ✓ `--plain` composition delta (GEDGE-06, D-05): an explicit `--edges` is user intent and SURVIVES `--plain`'s author-format suppression — pinned by `TestEdgesSurvivesPlain` and stated explicitly in the README `--plain` docs (amendment to the KEY-02 exact-union contract); `--plain` with no flag still suppresses author edges
+- ✓ Switch-matrix E2E (GEDGE-07): `--edges` × generation (root / drill-down / `--expanded`) × `--plain` asserted via the graphviz `splines` attribute in RAW dot (~86 cells, `TestEdgesComposition` over the golden-free `edges_override.toml` fixture carrying both precedence layers)
+- ✓ Backward compat (GEDGE-08): without the flag, all existing canonicalDOT goldens pass untouched — zero re-baselining; scope.go resolution and converter mapping unchanged
+
 ## Current Milestone: v1.16 Edge Style Override
 
 **Goal:** Let users override the edge routing style per invocation via a `--edges <style>` CLI flag — producing variants of the same model (e.g. expanded-with-straight vs non-expanded-with-spline) without editing or duplicating the model file.
@@ -97,6 +104,8 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - `square` is implemented as the documented ortho alias (GEDGE-02) — enum unchanged.
 - Naming check: `--edges` must not collide with existing flags in `root.go`.
 - Extend the KEY-03-style switch matrix E2E asserting graphviz `splines` in RAW dot output.
+
+**Status:** ✅ COMPLETE (2026-08-31) — Phase 39 shipped as product release v1.23.0; 1 phase, 3 plans, all 6 requirements (GEDGE-03..08) validated. Full record: [MILESTONES.md](MILESTONES.md).
 
 ## Previous Milestone: v1.15 Hierarchy Wrapping and Granular Keys — COMPLETE (2026-08-30)
 
@@ -348,4 +357,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-31 at milestone v1.16 start (Edge Style Override)*
+*Last updated: 2026-08-31 — milestone v1.16 COMPLETE (Edge Style Override shipped as v1.23.0)*
