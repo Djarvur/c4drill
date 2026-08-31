@@ -373,17 +373,14 @@ func runKeySwitchMatrix(t *testing.T, sw keySwitchCase) {
 
 All other claims carry `[VERIFIED: file:line]` citations verified in this session.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Exact override mechanism (A/B/C above).**
    - What we know: D-03/D-05 fix semantics and precedence; CONTEXT.md explicitly leaves the mechanism to the planner.
-   - What's unclear: nothing blocking — Option A is recommended on testability and D-04-structural grounds.
-   - Recommendation: planner locks Option A in the plan; the GEDGE-06 test pins behavior either way.
-
+   - RESOLVED (plan 39-01): Option A — dedicated `View.EdgesOverride string` carrier (default empty = flag absent), applied AFTER the PLAIN-02 zeroing in BOTH BuildGraph and BuildExpandedGraph. Gives structural D-04 flag-off invariance and builder-tier testability for the D-05 pin.
 2. **Per-unit edges test fixture (D-03 pin).**
-   - What we know: no existing cmd-level fixture carries a per-unit `edges` value (A1).
-   - What's unclear: whether to extend `multilevel.toml` (used by the matrix) or add a minimal fixture.
-   - Recommendation: extend the existing multilevel fixture (one `edges = ...` line on one subunit) — keeps the matrix harness unchanged and makes the D-03 pin a matrix cell.
+   - What we know: no existing cmd-level fixture carries a per-unit `edges` value (A1); `multilevel.expanded.dot` is a compared golden (internal/graph/builder_test.go:1233,2690) so extending multilevel.toml would churn goldens and violate GEDGE-08.
+   - RESOLVED (plan 39-02): new dedicated golden-safe fixture `cmd/c4drill/testdata/edges_override.toml` with global `edges = "spline"` plus one per-unit `edges = "ortho"` subunit — zero golden impact.
 
 ## Environment Availability
 
