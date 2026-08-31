@@ -2489,3 +2489,55 @@ func TestEdgesFlagOverridesModel(t *testing.T) {
 	assert.Contains(t, dot, `splines=true`,
 		`--edges spline must beat the model's edges="straight" in RAW dot (GEDGE-05)`)
 }
+
+// TestEdgesSurvivesPlain is the dedicated GEDGE-06 pin (D-05): an explicit
+// --edges is USER intent, not author formatting, so it survives --plain's
+// author-format suppression on every cell — while --plain with the flag
+// ABSENT still suppresses the author value (the KEY-02 exact-union delta,
+// stated explicitly and pinned here).
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestEdgesSurvivesPlain(t *testing.T) {
+	t.Run("--edges spline alone beats the author value", func(t *testing.T) {
+		dir := generateFixtureOutput(t, "plain.toml", "dot", "--edges", "spline")
+
+		dot := readOutputFile(t, filepath.Join(dir, "plain.dot"))
+
+		assert.Contains(t, dot, `splines=true`,
+			"explicit --edges replaces the model's edges=\"straight\"")
+	})
+
+	t.Run("--plain --edges spline still renders the requested style", func(t *testing.T) {
+		dir := generateFixtureOutput(t, "plain.toml", "dot", "--plain", "--edges", "spline")
+
+		dot := readOutputFile(t, filepath.Join(dir, "plain.dot"))
+
+		assert.Contains(t, dot, `splines=true`,
+			"explicit --edges must survive --plain's author-format suppression (D-05/GEDGE-06)")
+	})
+
+	t.Run("--plain without the flag still suppresses author edges", func(t *testing.T) {
+		dir := generateFixtureOutput(t, "plain.toml", "dot", "--plain")
+
+		dot := readOutputFile(t, filepath.Join(dir, "plain.dot"))
+
+		assert.NotContains(t, dot, `splines=`,
+			"--plain alone keeps suppressing the author edges value (KEY-02 exact union, delta scoped to the explicit flag)")
+	})
+}
+
+// TestEdgesFlagOffInvariant pins flag-off backward compat (D-04/GEDGE-08):
+// without --edges the model's resolved style is honored exactly as before.
+// Byte-level invariance is proven by the existing committed goldens
+// (plain.dot, plain.expanded.dot, nolabels*.dot) passing untouched in the
+// full suite; this test pins the observable routing value on top.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestEdgesFlagOffInvariant(t *testing.T) {
+	dir := generateFixtureOutput(t, "plain.toml", "dot")
+
+	dot := readOutputFile(t, filepath.Join(dir, "plain.dot"))
+
+	assert.Contains(t, dot, `splines=false`,
+		"flag-off run honors the model's edges=\"straight\" exactly as before")
+}
