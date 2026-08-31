@@ -589,6 +589,11 @@ func TestIntegrationC1EdgeResolution(t *testing.T) {
 
 	m := &parser.Model{
 		Properties: model.Properties{Name: "Test"},
+		// UnitOrder pins the definition order the assertions assume: the
+		// deep-linking actor is walked BEFORE the target system, so the CTX-02
+		// chain exists when the handler's own link resolves. Without it the
+		// map-key fallback randomizes the walk order and the test flakes.
+		UnitOrder: []string{"webUser", "system"},
 		Units: map[string]*model.Unit{
 			"webUser": {
 				Type: model.TypePersonExternal,
