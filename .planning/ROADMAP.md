@@ -122,10 +122,12 @@ Full details: [milestones/v1.15-ROADMAP.md](milestones/v1.15-ROADMAP.md)
   3. An explicit CLI `--edges <style>` survives `--plain`'s author-format suppression — user intent wins — with the decision pinned by a dedicated test
   4. The switch-matrix E2E covers `--edges` × generation (root / drill-down / `--expanded`) × `--plain`, asserting the graphviz `splines` attribute in RAW dot output for each combination
   5. Without the flag, output is unchanged — all existing canonicalDOT goldens pass untouched
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 39-01: TBD (assigned by /gsd:plan-phase)
+- [ ] 39-01: TDD — `--edges` flag, loud validation, invocation-global override (beats global + per-unit edges), `--plain` survival, flag-off golden invariance (GEDGE-03..06, GEDGE-08)
+- [ ] 39-02: Switch-matrix E2E — `--edges` × generation × `--plain` asserting `splines=` in RAW dot + golden-safe per-unit fixture (GEDGE-07)
+- [ ] 39-03: Docs (README CLI Reference + `--plain` delta + 3 byte-identical SKILL.md copies) + release v1.23.0 (D-07, GEDGE-03/06 docs clause)
 
 **Implementation notes** (from design todo [2026-08-30-add-cli-flag-to-override-edge-routing-style](todos/pending/2026-08-30-add-cli-flag-to-override-edge-routing-style.md)):
 - Flow to extend: TOML `edges` → View → `Graph.EdgeStyle` (internal/graph/builder.go:38-49; builder.go:411 for expanded) → `cg.SetSplines` (internal/render/converter.go:264-271; `square`→ortho alias per GEDGE-02 — enum unchanged, no new styles)
