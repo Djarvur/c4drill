@@ -9,12 +9,12 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Edge Routing (GEDGE — continues v1.13 numbering)
 
-- [ ] **GEDGE-03**: User can override the edge routing style for a whole invocation via `--edges <style>` accepting `straight|spline|square|ortho`, without editing the model file
-- [ ] **GEDGE-04**: An invalid `--edges` value fails loudly with an error naming the offending value and the allowed enum (no silent fallback)
-- [ ] **GEDGE-05**: `--edges` overrides the model's `edges` property on every generated view — C1 root, all drill-down views, and the `--expanded` copy (PLAIN-01 threading pattern)
-- [ ] **GEDGE-06**: `--edges` composes with `--plain`: an explicit CLI request survives `--plain`'s author-format suppression (user intent wins over model-derived formatting), with the decision pinned by a dedicated test
+- [x] **GEDGE-03**: User can override the edge routing style for a whole invocation via `--edges <style>` accepting `straight|spline|square|ortho`, without editing the model file
+- [x] **GEDGE-04**: An invalid `--edges` value fails loudly with an error naming the offending value and the allowed enum (no silent fallback)
+- [x] **GEDGE-05**: `--edges` overrides the model's `edges` property on every generated view — C1 root, all drill-down views, and the `--expanded` copy (PLAIN-01 threading pattern)
+- [x] **GEDGE-06**: `--edges` composes with `--plain`: an explicit CLI request survives `--plain`'s author-format suppression (user intent wins over model-derived formatting), with the decision pinned by a dedicated test
 - [ ] **GEDGE-07**: The switch-matrix E2E is extended to `--edges` × generation (root / drill-down / `--expanded`) × `--plain`, asserting the graphviz `splines` attribute in RAW dot output
-- [ ] **GEDGE-08**: Without the flag, output is unchanged — all existing canonicalDOT goldens pass untouched (backward compat)
+- [x] **GEDGE-08**: Without the flag, output is unchanged — all existing canonicalDOT goldens pass untouched (backward compat)
 
 ## Future Requirements
 
@@ -41,12 +41,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GEDGE-03 | Phase 39 | Pending |
-| GEDGE-04 | Phase 39 | Pending |
-| GEDGE-05 | Phase 39 | Pending |
-| GEDGE-06 | Phase 39 | Pending |
+| GEDGE-03 | Phase 39 | Complete |
+| GEDGE-04 | Phase 39 | Complete |
+| GEDGE-05 | Phase 39 | Complete |
+| GEDGE-06 | Phase 39 | Complete |
 | GEDGE-07 | Phase 39 | Pending |
-| GEDGE-08 | Phase 39 | Pending |
+| GEDGE-08 | Phase 39 | Complete |
 
 **Coverage:**
 - v1.16 requirements: 6 total

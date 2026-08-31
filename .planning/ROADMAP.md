@@ -129,7 +129,7 @@ Full details: [milestones/v1.15-ROADMAP.md](milestones/v1.15-ROADMAP.md)
 Plans:
 **Wave 1**
 
-- [ ] 39-01: TDD — `--edges` flag, loud validation, invocation-global override (beats global + per-unit edges), `--plain` survival, flag-off golden invariance (GEDGE-03..06, GEDGE-08)
+- [x] 39-01: TDD — `--edges` flag, loud validation, invocation-global override (beats global + per-unit edges), `--plain` survival, flag-off golden invariance (GEDGE-03..06, GEDGE-08)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -163,7 +163,7 @@ Plans:
 | 36. Edge Semantics and Legend | v1.13 | 6/6 | Complete | 2026-08-28 |
 | 37. Nesting Context and Plain Rendering | v1.14 | 7/7 | Complete | 2026-08-30 |
 | 38. Hierarchy Wrapping and Granular Keys | v1.15 | 6/6 | Complete | 2026-08-30 |
-| 39. Edge Style Override (`--edges` flag) | v1.16 | 0/TBD | Not started | - |
+| 39. Edge Style Override (`--edges` flag) | v1.16 | 1/3 | In Progress|  |
 
 **Post-milestone (2026-08-28):** user-directed design review shipped outside any phase as v1.19.0–v1.20.0 — legend reworked into a floating framed node outside an invisible content cluster (REQUIREMENTS.md LEG-01..03 re-specified in place), queue units render as SVG pipes (SHAPE-01, quick task [260828-qbx](.planning/quick/260828-qbx-render-queue-units-as-horizontal-pipe-sh/)). Quick tasks are not tracked in the phase table above (GSD quick-mode convention).
 
