@@ -110,7 +110,7 @@ Full details: [milestones/v1.15-ROADMAP.md](milestones/v1.15-ROADMAP.md)
 
 **Milestone Goal:** Let users override the edge routing style per invocation via a `--edges <style>` CLI flag — producing variants of the same model (e.g. expanded-with-straight vs non-expanded-with-spline) without editing or duplicating the model file.
 
-- [ ] **Phase 39: Edge Style Override (`--edges` CLI flag)** - Per-invocation edge routing override: persistent flag with loud enum validation, overriding the model `edges` property on every generated view, `--plain` interaction pinned, switch-matrix E2E, backward compat
+- [x] **Phase 39: Edge Style Override (`--edges` CLI flag)** - Per-invocation edge routing override: persistent flag with loud enum validation, overriding the model `edges` property on every generated view, `--plain` interaction pinned, switch-matrix E2E, backward compat (completed 2026-08-31)
 
 #### Phase 39: Edge Style Override (`--edges` CLI flag)
 
@@ -137,7 +137,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 39-03: Docs (README CLI Reference + `--plain` delta + 3 byte-identical SKILL.md copies) + release v1.23.0 (D-07, GEDGE-03/06 docs clause)
+- [x] 39-03: Docs (README CLI Reference + `--plain` delta + 3 byte-identical SKILL.md copies) + release v1.23.0 (D-07, GEDGE-03/06 docs clause)
 
 **Implementation notes** (from design todo [2026-08-30-add-cli-flag-to-override-edge-routing-style](todos/pending/2026-08-30-add-cli-flag-to-override-edge-routing-style.md)):
 
@@ -163,7 +163,7 @@ Plans:
 | 36. Edge Semantics and Legend | v1.13 | 6/6 | Complete | 2026-08-28 |
 | 37. Nesting Context and Plain Rendering | v1.14 | 7/7 | Complete | 2026-08-30 |
 | 38. Hierarchy Wrapping and Granular Keys | v1.15 | 6/6 | Complete | 2026-08-30 |
-| 39. Edge Style Override (`--edges` flag) | v1.16 | 2/3 | In Progress|  |
+| 39. Edge Style Override (`--edges` flag) | v1.16 | 3/3 | Complete   | 2026-08-31 |
 
 **Post-milestone (2026-08-28):** user-directed design review shipped outside any phase as v1.19.0–v1.20.0 — legend reworked into a floating framed node outside an invisible content cluster (REQUIREMENTS.md LEG-01..03 re-specified in place), queue units render as SVG pipes (SHAPE-01, quick task [260828-qbx](.planning/quick/260828-qbx-render-queue-units-as-horizontal-pipe-sh/)). Quick tasks are not tracked in the phase table above (GSD quick-mode convention).
 
