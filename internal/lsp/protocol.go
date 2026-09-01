@@ -62,7 +62,16 @@ type TextDocumentSyncOptions struct {
 // milestone adds its entries: M1 text sync, M2 language features, M3
 // formatting, M4 the c4drill render method (via Experimental).
 type ServerCapabilities struct {
-	TextDocumentSync *TextDocumentSyncOptions `json:"textDocumentSync,omitempty"`
+	TextDocumentSync       *TextDocumentSyncOptions `json:"textDocumentSync,omitempty"`
+	CompletionProvider     *CompletionOptions       `json:"completionProvider,omitempty"`
+	HoverProvider          bool                     `json:"hoverProvider,omitempty"`
+	DefinitionProvider     bool                     `json:"definitionProvider,omitempty"`
+	DocumentSymbolProvider bool                     `json:"documentSymbolProvider,omitempty"`
+}
+
+// CompletionOptions advertises the completion capability.
+type CompletionOptions struct {
+	TriggerCharacters []string `json:"triggerCharacters,omitempty"`
 }
 
 // ServerInfo names the server in initialize results.
@@ -141,4 +150,71 @@ type FileEvent struct {
 // (an included file edited outside the editor, for instance).
 type DidChangeWatchedFilesParams struct {
 	Changes []FileEvent `json:"changes"`
+}
+
+// TextDocumentPositionParams is the shared shape of the position-bearing
+// requests (completion, hover, definition).
+type TextDocumentPositionParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Position     Position               `json:"position"`
+}
+
+// CompletionItemKind values used by the c4drill server.
+const (
+	KindModule     = 2  // Module
+	KindField      = 5  // Field
+	KindClass      = 7  // Class
+	KindValue      = 12 // Value
+	KindFile       = 17 // File
+	KindKeyword    = 14 // Keyword
+	KindFolder     = 19 // Folder
+	KindEnumMember = 20 // EnumMember
+	KindObject     = 19 // Object (documentSymbol)
+)
+
+// CompletionItem is one completion proposal. Most items rely on the client's
+// default word-range replacement; FilterText carries the full logical text
+// where the label differs from what is being replaced (dotted paths).
+type CompletionItem struct {
+	Label         string `json:"label"`
+	Kind          int    `json:"kind,omitempty"`
+	Detail        string `json:"detail,omitempty"`
+	Documentation string `json:"documentation,omitempty"`
+	SortText      string `json:"sortText,omitempty"`
+	FilterText    string `json:"filterText,omitempty"`
+	InsertText    string `json:"insertText,omitempty"`
+}
+
+// CompletionList is the textDocument/completion result.
+type CompletionList struct {
+	IsIncomplete bool             `json:"isIncomplete"`
+	Items        []CompletionItem `json:"items"`
+}
+
+// MarkupContent is formatted hover content.
+type MarkupContent struct {
+	Kind  string `json:"kind"` // "markdown" or "plaintext"
+	Value string `json:"value"`
+}
+
+// Hover is the textDocument/hover result.
+type Hover struct {
+	Contents MarkupContent `json:"contents"`
+	Range    *Range        `json:"range,omitempty"`
+}
+
+// Location points into a document.
+type Location struct {
+	URI   DocumentURI `json:"uri"`
+	Range Range       `json:"range"`
+}
+
+// DocumentSymbol is one outline entry with hierarchy.
+type DocumentSymbol struct {
+	Name           string           `json:"name"`
+	Detail         string           `json:"detail,omitempty"`
+	Kind           int              `json:"kind"`
+	Range          Range            `json:"range"`
+	SelectionRange Range            `json:"selectionRange"`
+	Children       []DocumentSymbol `json:"children,omitempty"`
 }

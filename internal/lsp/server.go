@@ -16,9 +16,13 @@ import (
 	"sync"
 )
 
-// LSP lifecycle and text-document method names.
+// LSP lifecycle, text-document, and language-feature method names.
 const (
 	methodInitialize         = "initialize"
+	methodCompletion         = "textDocument/completion"
+	methodHover              = "textDocument/hover"
+	methodDefinition         = "textDocument/definition"
+	methodDocumentSymbol     = "textDocument/documentSymbol"
 	methodInitialized        = "initialized"
 	methodShutdown           = "shutdown"
 	methodExit               = "exit"
@@ -128,9 +132,71 @@ func (s *Server) dispatchRequest(msg *Message) *Message {
 		s.shutdown = true
 
 		return okResponse(msg, json.RawMessage("null"))
+	case methodCompletion:
+		return s.positionRequest(msg, s.completionAt)
+	case methodHover:
+		return s.positionRequest(msg, s.hoverAt)
+	case methodDefinition:
+		return s.positionRequest(msg, s.definitionAt)
+	case methodDocumentSymbol:
+		return s.documentSymbolRequest(msg)
 	default:
 		return errorResponse(msg, codeMethodNotFound, "method not found: "+msg.Method)
 	}
+}
+
+// positionRequest decodes a position-bearing request, resolves its document,
+// and marshals the feature result. A nil feature result answers null; an
+// unknown document answers null too (nothing to report about it).
+func (s *Server) positionRequest(msg *Message, feature func(*document, Position) any) *Message {
+	var p TextDocumentPositionParams
+	if err := json.Unmarshal(msg.Params, &p); err != nil {
+		return errorResponse(msg, codeInvalidParams, "invalid params: "+err.Error())
+	}
+
+	doc, ok := s.docs[p.TextDocument.URI]
+	if !ok {
+		return okResponse(msg, json.RawMessage("null"))
+	}
+
+	result := feature(doc, p.Position)
+	if result == nil {
+		return okResponse(msg, json.RawMessage("null"))
+	}
+
+	raw, err := json.Marshal(result)
+	if err != nil {
+		return errorResponse(msg, codeInternalError, "marshal result: "+err.Error())
+	}
+
+	return okResponse(msg, raw)
+}
+
+// documentSymbolRequest is documentSymbol's shape (document, no position).
+func (s *Server) documentSymbolRequest(msg *Message) *Message {
+	var p struct {
+		TextDocument TextDocumentIdentifier `json:"textDocument"`
+	}
+	if err := json.Unmarshal(msg.Params, &p); err != nil {
+		return errorResponse(msg, codeInvalidParams, "invalid params: "+err.Error())
+	}
+
+	doc, ok := s.docs[p.TextDocument.URI]
+	if !ok {
+		return okResponse(msg, json.RawMessage("null"))
+	}
+
+	symbols := s.documentSymbols(doc)
+	if len(symbols) == 0 {
+		return okResponse(msg, json.RawMessage("null"))
+	}
+
+	raw, err := json.Marshal(symbols)
+	if err != nil {
+		return errorResponse(msg, codeInternalError, "marshal result: "+err.Error())
+	}
+
+	return okResponse(msg, raw)
 }
 
 // handleInitialize answers the initialize request, marking the server
@@ -145,6 +211,10 @@ func (s *Server) handleInitialize(msg *Message) *Message {
 				Change:    SyncFull,
 				Save:      true,
 			},
+			CompletionProvider:     &CompletionOptions{},
+			HoverProvider:          true,
+			DefinitionProvider:     true,
+			DocumentSymbolProvider: true,
 		},
 		ServerInfo: ServerInfo{Name: "c4drill", Version: serverVersion},
 	}

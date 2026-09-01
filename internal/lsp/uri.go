@@ -33,6 +33,13 @@ func uriToPath(raw DocumentURI) string {
 	return p
 }
 
+// pathToURI converts a filesystem path to a file:// document URI.
+func pathToURI(path string) DocumentURI {
+	u := url.URL{Scheme: "file", Path: filepath.ToSlash(path)}
+
+	return DocumentURI(u.String())
+}
+
 // canonicalPath normalizes a filesystem path to the absolute, cleaned form
 // the include graph and buffer overlay key on. It mirrors the resolver's own
 // canonicalization (filepath.Clean + filepath.Abs, symlinks unresolved).
