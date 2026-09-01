@@ -117,7 +117,124 @@ build downloads IntelliJ IDEA Ultimate 2025.3 from JetBrains; if
 it instead.
 
 The full cross-version Plugin Verifier (`./gradlew verifyPlugin`) additionally
-downloads verifier IDE builds; run it where those downloads are reachable.
+downloads verifier IDE builds; run it where those downloads are reachable. It
+is configured to verify against the two ends of the declared compatibility
+range — IntelliJ IDEA 2025.3 (oldest supported platform, since-build 253) and
+2026.2.1 (newest stable platform at the time of #35); all commercial IDEs of
+the same platform build share the API surface the verifier checks. Pass a
+wider `ides { … }` list (or `recommended()`) if you want every product family
+covered and have the disk space (~5 GB per product).
+
+## Headless validation (issue #35)
+
+What is covered without a human in front of the IDE, and how:
+
+- **Cross-version Plugin Verifier** (`./gradlew verifyPlugin`): the plugin is
+  verified **Compatible** against both ends of the compatibility range —
+  IU-253.28294.334 (2025.3) and IU-262.9437.185 (2026.2.1). The one fatal
+  finding the verifier ever reported (invoking `AnAction.actionPerformed`
+  directly in the Format action — an `@ApiStatus.OverrideOnly` API) is fixed;
+  Format Document now delegates via `ActionUtil.performActionDumbAware`.
+  Remaining non-fatal notes, deliberately kept:
+  - *Deprecated/experimental API usages on `C4drillPreviewToolWindowFactory`*
+    (`getIcon`, `getAnchor`, `manage`, `isApplicable`, `isDoNotActivateOnStart`):
+    the Kotlin compiler generates delegation bridges into every implementor of
+    `ToolWindowFactory` (platform Kotlin `jvm-default` configuration); the
+    plugin source overrides none of them.
+  - *Deprecated API usages on the `com.intellij.platform.lsp.api` family in
+    the 2026.2 report*: JetBrains deprecated that API in 262 in favor of a
+    newer replacement that does not exist on 253. While the plugin supports
+    since-build 253, the deprecated-but-present API is the only way to attach
+    a language server; revisit when the minimum moves past 253.
+- **Platform tests** (`src/test/kotlin/dev/djarvur/c4drill/platform/`, run by
+  `./gradlew test` via the IntelliJ Platform test framework against the real
+  2025.3 test distribution): `.c4d` file-type registration, C4D TextMate
+  bundle extraction + `source.c4d` scope registration + real tokenization of
+  an example file, global/project settings wiring, TOML scoping decisions on
+  real VirtualFiles, and the LSP gateway extension wiring.
+- **Language server end-to-end probe**: `c4drill serve --lsp` was probed over
+  stdio LSP with the real binary — `initialize` (capabilities: completion,
+  definition, hover, documentSymbol, formatting, incremental sync),
+  `textDocument/didOpen` → `textDocument/publishDiagnostics` with
+  CLI-identical messages for a broken model, and the custom
+  `c4drill/renderDiagram` request returning an 18 KB SVG for
+  `examples/cloud-system/cloud-system.toml`.
+
+## Manual QA script (interactive `runIde` pass)
+
+The items below need a human clicking through a live IDE; everything
+statically checkable around them is covered above. Budget: ~10 minutes.
+
+**Setup (once)**
+
+1. Build and install:
+   `./gradlew buildPlugin` →
+   Settings | Plugins | ⚙ | *Install Plugin from Disk…* →
+   `build/distributions/c4drill-idea-plugin-0.1.0.zip` → restart the IDE.
+   *Expect:* no startup errors (`Help | Show Log in Files` has no
+   `dev.djarvur.c4drill` stack traces).
+2. Have a `c4drill` binary on `PATH` (or set *c4drill server path:* in
+   Settings | Tools | C4Drill). Open a project containing the repository's
+   `examples/` directory.
+
+**A. File type + highlighting**
+
+3. Open `skill/examples/03-links.c4d` in the repository checkout (or any
+   `.c4d` file). *Expect:* C4D icon in the tab; colored highlighting
+   (keywords `person`/`system`, strings, arrows `->`, `<->`, comments).
+
+**B. LSP features (diagnostics, completion, hover, definition, format)**
+
+4. Open `examples/cloud-system/cloud-system.toml`. *Expect:* no error
+   annotations.
+5. Break it: delete the `=` on any `key = "value"` line. *Expect:* within a
+   second, a red underline whose message matches
+   `c4drill <file>` output for the same broken file (e.g.
+   `parse: parse error at line N: expected '=' after key`). Undo.
+6. Completion: inside a unit block (`[A]`), press Ctrl+Space on a fresh
+   line. *Expect:* unit fields (`type`, `name`, `technology`, …) suggested.
+7. Hover: hover a unit id. *Expect:* doc popup from the language server.
+8. Go to definition: Ctrl+Click (or Ctrl+B) on a `peer = "…"` target name.
+   *Expect:* caret jumps to that unit's section.
+9. Structure view: open the Structure tool window with the model active.
+   *Expect:* units listed via `textDocument/documentSymbol`.
+10. Format: scramble whitespace in the model, run
+    Tools | C4Drill | Format Document. *Expect:* file reformatted;
+    `c4drill <file>` still validates.
+
+**C. Validate / scoping actions**
+
+11. Alt+Shift+V on the valid model. *Expect:* "no problems found"-style
+    balloon; on a broken model, error highlights refresh.
+12. Open a plain `.toml` that is NOT a c4drill model (e.g. any unrelated
+    TOML). *Expect:* no c4drill completions/diagnostics (built-in TOML
+    plugin still owns it).
+13. Run Tools | C4Drill | Activate for This File on it. *Expect:* c4drill
+    features attach (diagnostics from the c4drill pipeline appear);
+    Deactivate for This File reverses it.
+
+**D. Preview tool window (JCEF + drill-through)**
+
+14. Focus the model file, run Tools | C4Drill | Show Preview
+    (Alt+Shift+P). *Expect:* the "C4Drill Preview" tool window opens on the
+    right and renders the C1 diagram of `cloud-system.toml`.
+15. Live re-render: type a change in the model (add a unit). *Expect:*
+    ~0.2 s after you stop typing, the diagram updates.
+16. Drill-through: click a container box that has an internal drill-down
+    link. *Expect:* the preview navigates C1 → C2 (diagram of the nested
+    system), toolbar shows breadcrumbs; click a breadcrumb to go back.
+    *(Requires JCEF — a standard part of 2025.3 desktop IDEs.)*
+17. External link: click a node configured with an `http(s)` reference.
+    *Expect:* opens in the system browser, not inside the preview.
+18. View controls: use the tool window toolbar controls — legend override
+    (model default / on / off), all-expanded, collapse-all, expanded-set
+    override. *Expect:* each changes the rendered diagram accordingly.
+19. Error state: break the model while the preview is open. *Expect:* the
+    tool window shows the CLI-identical error message(s) instead of a stale
+    diagram; fixing it re-renders.
+20. Export SVG…: run it from the tool window toolbar. *Expect:* a file
+    chooser; the saved SVG opens in a browser and matches the preview.
+
 
 ## Layout
 

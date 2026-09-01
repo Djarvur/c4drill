@@ -6,6 +6,9 @@
 // the Structure view (2025.3 addition), and where the unified IntelliJ IDEA
 // distribution ships LSP support to all users.
 
+import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+
 plugins {
     id("java")
     kotlin("jvm") version "2.2.20"
@@ -50,6 +53,10 @@ dependencies {
         // TextMate bundles support for the C4D grammar.
         bundledPlugin("org.jetbrains.plugins.textmate")
         pluginVerifier()
+        // IntelliJ Platform test framework: lets the test task run
+        // BasePlatformTestCase-style headless tests against the real IDE
+        // distribution (issue #35).
+        testFramework(TestFrameworkType.Platform)
     }
 
     testImplementation("junit:junit:4.13.2")
@@ -71,6 +78,13 @@ intellijPlatform {
             server (<code>c4drill serve --lsp</code>).
         """.trimIndent()
 
+        changeNotes = """
+            <b>0.1.0</b> — first release: C4D highlighting (TextMate), diagnostics, completion, hover,
+            go-to-definition, structure view, formatting, and the live C4Drill Preview tool window with
+            drill-down navigation, view controls and SVG export. Cross-version Plugin Verifier clean
+            (issue #35) against IntelliJ IDEA 2025.3 and 2026.2.
+        """.trimIndent()
+
         ideaVersion {
             sinceBuild = "253"
             // Left open: the plugin only uses platform APIs documented as
@@ -81,7 +95,21 @@ intellijPlatform {
 
     pluginVerification {
         ides {
-            recommended()
+            // The compatibility range (since-build 253 → open) is bracketed by
+            // its two platform ends: the OLDEST supported platform (2025.3,
+            // the build the plugin is developed against) and the NEWEST stable
+            // platform (2026.2.1). All commercial IDEs of the same platform
+            // build share the platform API surface the verifier checks, so the
+            // two ends cover the whole declared range; the LSP/TextMate
+            // modules the optional wiring needs exist in every commercial
+            // 253+ IDE (see README "Supported IDE versions").
+            //
+            // `ides { recommended() }` would additionally pull the latest
+            // release of every commercial product family (~10 full IDE
+            // distributions); widen the list back on a machine with the disk
+            // space for that.
+            create(IntelliJPlatformType.IntellijIdeaUltimate, "2025.3")
+            create(IntelliJPlatformType.IntellijIdeaUltimate, "2026.2.1")
         }
     }
 }
