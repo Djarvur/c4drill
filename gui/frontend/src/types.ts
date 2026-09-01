@@ -95,23 +95,33 @@ export interface AppInfo {
 
 // --- P1: AI chat -----------------------------------------------------------
 
+/** Chat providers (issue #36): the backend dispatches on this field. */
+export type ChatProvider = "openai-compatible" | "anthropic";
+
 export interface ChatSettings {
+  provider: ChatProvider;
   baseURL: string;
   model: string;
   apiKey: string;
   systemPrompt: string;
 }
 
-export interface ChatSettingsResult {
-  settings: PublicChatSettings;
-}
-
 /** PublicChatSettings never carries the API key back to the UI. */
 export interface PublicChatSettings {
+  provider: ChatProvider;
   baseURL: string;
   model: string;
   hasAPIKey: boolean;
   systemPrompt: string;
+}
+
+/** ChatConfigResult is the chatConfig response: every provider slot (keys
+ * masked) plus which provider the next chat request will use. */
+export interface ChatConfigResult {
+  provider: ChatProvider;
+  config: PublicChatSettings;
+  providers: Partial<Record<ChatProvider, PublicChatSettings>>;
+  defaultFull: string;
 }
 
 export interface ChatMessage {

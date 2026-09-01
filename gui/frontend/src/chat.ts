@@ -1,9 +1,9 @@
-// chat.ts is the P1 AI chat panel: provider settings (base URL / model /
-// API key stored in local app config only), streaming conversation, and
-// edit proposals that apply ONLY on explicit confirmation.
+// chat.ts is the P1 AI chat panel: provider settings (per-provider base URL
+// / model / API key stored in local app config only), streaming conversation,
+// and edit proposals that apply ONLY on explicit confirmation.
 
 import { backend, call } from "./rpc";
-import type { ChatEvent, ChatMessage, Diag, ProposedEdit } from "./types";
+import type { ChatConfigResult, ChatEvent, ChatMessage, ChatProvider, Diag, ProposedEdit, PublicChatSettings } from "./types";
 
 export interface ChatHooks {
   activePath(): string;
@@ -23,6 +23,27 @@ interface DiffLine {
   kind: "ctx" | "add" | "del";
   text: string;
 }
+
+/** Per-provider base URL hint (issue #36). */
+const PROVIDER_BASE_URL_PLACEHOLDER: Record<ChatProvider, string> = {
+  "openai-compatible": "http://localhost:11434/v1",
+  anthropic: "https://api.anthropic.com",
+};
+
+/** FieldValues are the editable settings fields for one provider slot. */
+interface FieldValues {
+  baseURL: string;
+  model: string;
+  apiKey: string;
+  systemPrompt: string;
+}
+
+const FIELD_SELECTORS: Record<keyof FieldValues, string> = {
+  baseURL: "#chat-base-url",
+  model: "#chat-model",
+  apiKey: "#chat-api-key",
+  systemPrompt: "#chat-prompt",
+};
 
 export class ChatPanel {
   private root: HTMLElement;
@@ -45,6 +66,14 @@ export class ChatPanel {
 
   private streaming = false;
 
+  /** activeProvider is the provider whose fields the form currently shows. */
+  private activeProvider: ChatProvider = "openai-compatible";
+
+  /** fieldCache holds per-provider form values: saved slots from the backend
+   * plus unsaved edits, so switching providers never clobbers the other
+   * slot's settings (issue #36). */
+  private fieldCache: Partial<Record<ChatProvider, FieldValues>> = {};
+
   constructor(parent: HTMLElement, private hooks: ChatHooks) {
     parent.insertAdjacentHTML("beforeend", `
       <div class="chat-pane" id="chat-pane">
@@ -53,8 +82,14 @@ export class ChatPanel {
           <button id="chat-settings-btn" title="Provider settings">⚙</button>
         </div>
         <div class="chat-settings" id="chat-settings" hidden>
+          <label>Provider
+            <select id="chat-provider">
+              <option value="openai-compatible">OpenAI-compatible</option>
+              <option value="anthropic">Anthropic</option>
+            </select>
+          </label>
           <label>Base URL <input id="chat-base-url" placeholder="http://localhost:11434/v1" /></label>
-          <label>Model <input id="chat-model" placeholder="llama3.1 / gpt-4o-mini" /></label>
+          <label>Model <input id="chat-model" placeholder="llama3.1 / gpt-4o-mini / claude-sonnet" /></label>
           <label>API key <input id="chat-api-key" type="password" placeholder="(stored in local app config)" /></label>
           <label>Extra system prompt
             <textarea id="chat-prompt" rows="3" placeholder="optional additional instructions"></textarea>
@@ -81,6 +116,8 @@ export class ChatPanel {
     this.root.querySelector<HTMLButtonElement>("#chat-save-settings")!
       .addEventListener("click", () => void this.saveSettings());
     this.sendBtn.addEventListener("click", () => void this.send());
+    this.root.querySelector<HTMLSelectElement>("#chat-provider")!
+      .addEventListener("change", (ev) => this.switchProvider((ev.target as HTMLSelectElement).value as ChatProvider));
     this.input.addEventListener("keydown", (ev) => {
       if (ev.key === "Enter" && !ev.shiftKey) {
         ev.preventDefault();
@@ -93,28 +130,62 @@ export class ChatPanel {
     void this.loadSettings();
   }
 
-  /** loadSettings fills the form from the backend (key masked). */
+  /** loadSettings fills the form from the backend (keys masked). */
   private async loadSettings(): Promise<void> {
     try {
-      const res = await call<{ config: { baseURL: string; model: string; hasAPIKey: boolean; systemPrompt: string } }>("chatConfig");
-      this.setFormValue("#chat-base-url", res.config.baseURL);
-      this.setFormValue("#chat-model", res.config.model);
-      this.setFormValue("#chat-api-key", "");
-      (this.root.querySelector<HTMLInputElement>("#chat-api-key") as HTMLInputElement).placeholder =
-        res.config.hasAPIKey ? "(saved — type to replace)" : "(stored in local app config)";
-      this.setFormValue("#chat-prompt", res.config.systemPrompt);
+      const res = await call<ChatConfigResult>("chatConfig");
+
+      this.fieldCache = {};
+      for (const [provider, cfg] of Object.entries(res.providers ?? {}) as [ChatProvider, PublicChatSettings][]) {
+        this.fieldCache[provider] = {
+          baseURL: cfg.baseURL,
+          model: cfg.model,
+          apiKey: "",
+          systemPrompt: cfg.systemPrompt,
+        };
+      }
+
+      this.setProvider(res.provider ?? "openai-compatible", false);
+
+      const apiKeyInput = this.root.querySelector<HTMLInputElement>("#chat-api-key")!;
+      apiKeyInput.placeholder = res.config.hasAPIKey ? "(saved — type to replace)" : "(stored in local app config)";
     } catch {
       // settings not configured yet: the form starts empty
     }
   }
 
-  private setFormValue(selector: string, value: string): void {
-    const el = this.root.querySelector<HTMLInputElement | HTMLTextAreaElement>(selector);
-    if (el) el.value = value;
+  /** setProvider shows one provider slot's fields in the form. */
+  private setProvider(provider: ChatProvider, keepCached = true): void {
+    if (keepCached && this.activeProvider !== provider) {
+      this.fieldCache[this.activeProvider] = this.readFields();
+    }
+
+    this.activeProvider = provider;
+    (this.root.querySelector<HTMLSelectElement>("#chat-provider")!).value = provider;
+
+    const values = this.fieldCache[provider] ?? { baseURL: "", model: "", apiKey: "", systemPrompt: "" };
+
+    for (const field of Object.keys(FIELD_SELECTORS) as (keyof FieldValues)[]) {
+      const el = this.root.querySelector<HTMLInputElement | HTMLTextAreaElement>(FIELD_SELECTORS[field])!;
+      el.value = values[field];
+    }
+
+    (this.root.querySelector<HTMLInputElement>("#chat-base-url")!).placeholder =
+      PROVIDER_BASE_URL_PLACEHOLDER[provider];
   }
 
-  private formValue(selector: string): string {
-    return this.root.querySelector<HTMLInputElement | HTMLTextAreaElement>(selector)?.value ?? "";
+  /** switchProvider stashes the outgoing slot's edits and swaps fields. */
+  private switchProvider(provider: ChatProvider): void {
+    this.setProvider(provider);
+  }
+
+  private readFields(): FieldValues {
+    const values = {} as FieldValues;
+    for (const field of Object.keys(FIELD_SELECTORS) as (keyof FieldValues)[]) {
+      values[field] = this.root.querySelector<HTMLInputElement | HTMLTextAreaElement>(FIELD_SELECTORS[field])!.value;
+    }
+
+    return values;
   }
 
   private toggleSettings(): void {
@@ -123,16 +194,24 @@ export class ChatPanel {
 
   private async saveSettings(): Promise<void> {
     const msg = this.root.querySelector<HTMLElement>("#chat-settings-msg")!;
+    const provider = (this.root.querySelector<HTMLSelectElement>("#chat-provider")!).value as ChatProvider;
+    const fields = this.readFields();
 
     try {
-      await call("saveChatConfig", {
-        baseURL: this.formValue("#chat-base-url").trim(),
-        apiKey: this.formValue("#chat-api-key"),
-        model: this.formValue("#chat-model").trim(),
-        systemPrompt: this.formValue("#chat-prompt"),
+      const saved = await call<{ provider: ChatProvider }>("saveChatConfig", {
+        provider,
+        baseURL: fields.baseURL.trim(),
+        apiKey: fields.apiKey,
+        model: fields.model.trim(),
+        systemPrompt: fields.systemPrompt,
       });
+
+      this.fieldCache[saved.provider] = { ...fields, apiKey: "" };
+      this.setProvider(saved.provider, false);
+
+      const apiKeyInput = this.root.querySelector<HTMLInputElement>("#chat-api-key")!;
+      apiKeyInput.placeholder = "(saved — type to replace)";
       msg.textContent = "saved";
-      await this.loadSettings();
     } catch (err) {
       msg.textContent = String(err);
     }

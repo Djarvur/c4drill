@@ -82,10 +82,13 @@ export layout + byte parity, chat streaming/proposals/confirmation gating
 
 ## AI chat (P1)
 
-Settings (⚙ in the chat header): base URL, model, API key, optional extra
-system prompt. Any OpenAI-compatible endpoint works — Ollama
-(`http://localhost:11434/v1`), LM Studio, OpenAI (`https://api.openai.com/v1`).
-The key is stored in the local user-config file only
+Settings (⚙ in the chat header): provider, base URL, model, API key, optional
+extra system prompt. Two providers ship (issue #36): **openai-compatible**
+(OpenAI, Ollama `http://localhost:11434/v1`, LM Studio, most proxies) and a
+native **Anthropic** Messages-API adapter (`https://api.anthropic.com` —
+`x-api-key`/`anthropic-version` headers, top-level `system` field, typed SSE
+events). Settings persist per provider, so switching never clobbers the other
+slot. The key is stored in the local user-config file only
 (`<UserConfigDir>/c4drill/gui.json`, 0600) and is never echoed back to the UI.
 
 The assistant's system prompt is seeded from a build-time snapshot of
@@ -95,8 +98,7 @@ skill changes). Edit proposals arrive as fenced `c4drill-edit path=…` blocks,
 render as add/remove diffs, and are written **only** on explicit Apply, with
 the scope (opened project, model files only) re-checked at apply time.
 
-Not yet (honest list): an Anthropic-native adapter (OpenAI-compatible
-endpoints only), per-request abort from the UI (backend supports
+Not yet (honest list): per-request abort from the UI (backend supports
 `chatAbort`; no button yet), streaming tool-calls.
 
 ## Layout map
@@ -106,8 +108,9 @@ gui/
   main.go              Wails shell + HTTP fallback (one Dispatch protocol)
   internal/app/        backend: workspace, LSP bridge, render/drill, export,
                        chat orchestration, dispatch table (+ tests)
-  internal/ai/         OpenAI-compatible client, prompt assembly, edit
-                       proposals/diff (+ tests, skill_seed.md snapshot)
+  internal/ai/         provider clients (OpenAI-compatible + Anthropic
+                       Messages-API), prompt assembly, edit proposals/diff
+                       (+ tests, skill_seed.md snapshot)
   frontend/            vite + TypeScript: CodeMirror 6 editor, preview,
                        toolbar, chat panel; dist/ is embedded via go:embed
   build/appicon.png    app icon placeholder (Wails packaging convention)

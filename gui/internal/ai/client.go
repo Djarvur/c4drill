@@ -1,7 +1,7 @@
 // Package ai is the P1 chat panel's engine (issue #31): a provider-agnostic
-// OpenAI-compatible streaming client, the authoring context assembly, and
-// the structured edit-proposal pipeline (parse → validate → diff → apply on
-// explicit confirmation only).
+// streaming chat client (OpenAI-compatible and Anthropic-native since #36),
+// the authoring context assembly, and the structured edit-proposal pipeline
+// (parse → validate → diff → apply on explicit confirmation only).
 package ai
 
 import (
@@ -22,6 +22,10 @@ var (
 	ErrEmptyBaseURL = errors.New("no base URL configured")
 	ErrEmptyModel   = errors.New("no model configured")
 
+	// ErrUnknownProvider rejects configuration with a provider name outside
+	// the ProviderOpenAI / ProviderAnthropic set (issue #36).
+	ErrUnknownProvider = errors.New("unknown chat provider")
+
 	// ErrStreamEnded wraps provider-side stream terminations.
 	ErrStreamEnded = errors.New("stream ended without a [DONE] sentinel")
 
@@ -29,23 +33,55 @@ var (
 	errChatRequest = errors.New("chat request failed")
 )
 
+// Chat provider identifiers (issue #36). The empty provider means
+// ProviderOpenAI for backward compatibility with pre-#36 stored configs.
+const (
+	ProviderOpenAI    = "openai-compatible"
+	ProviderAnthropic = "anthropic"
+)
+
+// ValidProvider reports whether name is a known provider ("" is the legacy
+// spelling of ProviderOpenAI).
+func ValidProvider(name string) bool {
+	switch name {
+	case "", ProviderOpenAI, ProviderAnthropic:
+		return true
+	default:
+		return false
+	}
+}
+
 // Message is one chat-transcript message (OpenAI wire shape).
 type Message struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
 }
 
-// Config is the provider configuration. The API key lives in local app
+// Config is one provider's configuration. The API key lives in local app
 // config only (issue #31) — never in the model output back to the UI.
 type Config struct {
+	// Provider selects the adapter: ProviderOpenAI ("" for legacy) or
+	// ProviderAnthropic (issue #36).
+	Provider     string `json:"provider,omitempty"`
 	BaseURL      string `json:"baseURL"`
 	APIKey       string `json:"apiKey"`
 	Model        string `json:"model"`
 	SystemPrompt string `json:"systemPrompt"`
 }
 
+// NormalizedProvider returns the provider with the legacy empty spelling
+// resolved to ProviderOpenAI.
+func (c Config) NormalizedProvider() string {
+	if c.Provider == "" {
+		return ProviderOpenAI
+	}
+
+	return c.Provider
+}
+
 // PublicConfig is what the UI may see: the key reduced to presence.
 type PublicConfig struct {
+	Provider     string `json:"provider"`
 	BaseURL      string `json:"baseURL"`
 	Model        string `json:"model"`
 	HasAPIKey    bool   `json:"hasAPIKey"`
@@ -55,6 +91,7 @@ type PublicConfig struct {
 // Mask reduces a Config to its public form.
 func (c Config) Mask() PublicConfig {
 	return PublicConfig{
+		Provider:     c.NormalizedProvider(),
 		BaseURL:      c.BaseURL,
 		Model:        c.Model,
 		HasAPIKey:    c.APIKey != "",
@@ -65,6 +102,8 @@ func (c Config) Mask() PublicConfig {
 // Validate checks the config is usable for a chat request.
 func (c Config) Validate() error {
 	switch {
+	case !ValidProvider(c.Provider):
+		return ErrUnknownProvider
 	case c.BaseURL == "":
 		return ErrEmptyBaseURL
 	case c.Model == "":
@@ -174,7 +213,16 @@ func (c *Client) Stream(ctx context.Context, messages []Message, ch chan<- Strea
 // consume scans the SSE stream line by line, dispatching data frames to
 // handleFrame until [DONE] or EOF.
 func (c *Client) consume(ctx context.Context, resp *http.Response, ch chan<- StreamDelta) error {
-	scanner := bufio.NewScanner(resp.Body)
+	return consumeSSE(ctx, resp.Body, func(payload string) (bool, error) {
+		return c.handleFrame(payload, ch)
+	})
+}
+
+// consumeSSE scans an SSE body line by line, feeding every `data:` frame to
+// handle until it reports the end of the stream or an error. Shared by both
+// provider adapters (the frame shapes differ, the transport does not).
+func consumeSSE(ctx context.Context, body io.Reader, handle func(payload string) (end bool, err error)) error {
+	scanner := bufio.NewScanner(body)
 	scanner.Buffer(make([]byte, 0, 64<<10), 1<<20)
 
 	done := false
@@ -189,7 +237,7 @@ func (c *Client) consume(ctx context.Context, resp *http.Response, ch chan<- Str
 			continue // SSE comment, separator, or non-data line
 		}
 
-		end, err := c.handleFrame(payload, ch)
+		end, err := handle(payload)
 		if err != nil {
 			return err
 		}
@@ -201,7 +249,7 @@ func (c *Client) consume(ctx context.Context, resp *http.Response, ch chan<- Str
 		return fmt.Errorf("read chat stream: %w", err)
 	}
 
-	return nil // EOF without [DONE]: providers do this; the stream is over
+	return nil // EOF without a sentinel: providers do this; the stream is over
 }
 
 // dataFrame extracts the payload of a `data:` SSE line (ok=false for
@@ -240,4 +288,24 @@ func (c *Client) handleFrame(payload string, ch chan<- StreamDelta) (bool, error
 	}
 
 	return false, nil
+}
+
+// Streamer is the provider-agnostic streaming chat surface both adapters
+// implement (issue #36).
+type Streamer interface {
+	// Stream posts the chat request and feeds text deltas to ch until the
+	// provider's stream ends or an error occurs. It returns when the stream
+	// ends; the caller owns ch.
+	Stream(ctx context.Context, messages []Message, ch chan<- StreamDelta) error
+}
+
+// NewProviderClient builds the streaming client for cfg's provider
+// (issue #36): ProviderOpenAI (default) → NewClient, ProviderAnthropic →
+// NewAnthropicClient. httpClient may be nil (sane defaults used).
+func NewProviderClient(cfg Config, httpClient *http.Client) Streamer {
+	if cfg.NormalizedProvider() == ProviderAnthropic {
+		return NewAnthropicClient(cfg, httpClient)
+	}
+
+	return NewClient(cfg, httpClient)
 }
