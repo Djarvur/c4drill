@@ -25,7 +25,7 @@ import (
 
 // Static errors for better error handling.
 var (
-	errInvalidFormat    = errors.New("invalid format: must be dot, svg, or html")
+	errInvalidFormat    = errors.New("invalid format: must be dot, svg, html, or png")
 	errInvalidEdges     = errors.New("invalid edges: must be straight, spline, square, or ortho")
 	errValidationFailed = errors.New("validation failed")
 	errGenerateView     = errors.New("failed to generate view")
@@ -37,6 +37,7 @@ const (
 	formatDot  = "dot"
 	formatSVG  = "svg"
 	formatHTML = "html"
+	formatPNG  = "png"
 )
 
 // Accepted input extensions (D-27): dispatch is extension-based and fails
@@ -63,13 +64,9 @@ var (
 	version    = "dev"
 )
 
-// NewRootCmd creates the root command for c4drill.
-// It configures flags, validation, and the main execution function.
-func NewRootCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "c4drill <input.toml|input.c4d>",
-		Short: "Generate C4 architecture diagrams from TOML and C4D",
-		Long: `Generate C4 architecture diagrams from TOML or C4D definitions.
+// rootLong is the root command's long help: input dispatch (D-27), output
+// layout, and usage examples.
+const rootLong = `Generate C4 architecture diagrams from TOML or C4D definitions.
 
 Input dispatch is by extension (D-27): .toml files parse through the TOML
 front-end, .c4d files through the C4D DSL front-end — both render directly
@@ -84,11 +81,23 @@ Examples:
   c4drill architecture.c4d
   c4drill architecture.toml -o ./docs/diagrams
   c4drill architecture.toml -f dot -o ./output
+  c4drill architecture.toml -f png -o ./output
 
 Output:
   - C1 diagram: {basename}.{format}
   - C2 diagrams: {basename}/{system}.{format}
-  - C3 diagrams: {basename}/{system}/{container}.{format}`,
+  - C3 diagrams: {basename}/{system}/{container}.{format}
+  For -f png each raster also gains a sibling .html doc carrying the
+  clickable navigation (breadcrumb, drill-down, references) a bare PNG
+  cannot hold.`
+
+// NewRootCmd creates the root command for c4drill.
+// It configures flags, validation, and the main execution function.
+func NewRootCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:          "c4drill <input.toml|input.c4d>",
+		Short:        "Generate C4 architecture diagrams from TOML and C4D",
+		Long:         rootLong,
 		Version:      version,
 		Args:         cobra.MaximumNArgs(1),
 		RunE:         runRoot,
@@ -96,7 +105,7 @@ Output:
 	}
 
 	cmd.PersistentFlags().StringVarP(&format, "format", "f", formatSVG,
-		"Output format (dot|svg|html)")
+		"Output format (dot|svg|html|png)")
 	cmd.PersistentFlags().StringVarP(&outputDir, "output", "o", "",
 		"Output directory (default: same as input file)")
 	cmd.PersistentFlags().BoolVar(&expanded, "expanded", false,
@@ -352,7 +361,8 @@ func processView(m *parser.Model, unitPath, basename string, writer *output.Writ
 	}
 
 	// Render with output directory for icon extraction (SVG/HTML use the same
-	// graphviz SVG pipeline; HTML post-processes the bytes into a wrapper doc)
+	// graphviz SVG pipeline; HTML post-processes the bytes into a wrapper doc;
+	// PNG renders the raster and additionally writes its HTML navigation doc)
 	var (
 		data []byte
 		err  error
@@ -363,6 +373,8 @@ func processView(m *parser.Model, unitPath, basename string, writer *output.Writ
 		data, err = render.RenderSVGWithOutput(g, writer.BaseDir())
 	case formatHTML:
 		data, err = render.RenderHTML(g)
+	case formatPNG:
+		return writePNGView(g, basename, unitPath, writer)
 	default:
 		data, err = render.Render(g, format)
 	}
@@ -373,6 +385,59 @@ func processView(m *parser.Model, unitPath, basename string, writer *output.Writ
 
 	// Write
 	if err := writer.Write(basename, unitPath, format, data); err != nil {
+		return fmt.Errorf("write: %w", err)
+	}
+
+	return nil
+}
+
+// writePNGView renders the diagram as a PNG raster (issue #26) and writes it
+// together with its sibling HTML navigation doc — a bare PNG cannot carry
+// hyperlinks, so the .html page is the clickable layer (breadcrumb,
+// drill-down, references) over the image. The doc embeds the PNG by the file
+// name output.PNGImageName computes from the same layout the writer uses.
+func writePNGView(g *graph.Graph, basename, unitPath string, writer *output.Writer) error {
+	pngData, err := render.RenderPNG(g)
+	if err != nil {
+		return fmt.Errorf("render: %w", err)
+	}
+
+	htmlDoc, err := render.RenderHTMLForPNG(g, output.PNGImageName(basename, unitPath))
+	if err != nil {
+		return fmt.Errorf("render: %w", err)
+	}
+
+	if err := writer.Write(basename, unitPath, formatPNG, pngData); err != nil {
+		return fmt.Errorf("write: %w", err)
+	}
+
+	if err := writer.Write(basename, unitPath, formatHTML, htmlDoc); err != nil {
+		return fmt.Errorf("write: %w", err)
+	}
+
+	return nil
+}
+
+// writeExpandedPNGView is writePNGView for the --expanded single diagram:
+// the raster is written to {basename}.expanded.png with its sibling
+// {basename}.expanded.html navigation doc (image-only — the expanded graph
+// carries no navigation data).
+func writeExpandedPNGView(g *graph.Graph, basename string, writer *output.Writer) error {
+	pngData, err := render.RenderPNG(g)
+	if err != nil {
+		return fmt.Errorf("render: %w", err)
+	}
+
+	htmlDoc, err := render.RenderHTMLForPNG(g, output.ExpandedPNGImageName(basename))
+	if err != nil {
+		return fmt.Errorf("render: %w", err)
+	}
+
+	if err := writer.WriteExpanded(basename, formatPNG, pngData); err != nil {
+		return fmt.Errorf("write: %w", err)
+	}
+
+	if err := writer.WriteExpanded(basename, formatHTML, htmlDoc); err != nil {
 		return fmt.Errorf("write: %w", err)
 	}
 
@@ -407,15 +472,18 @@ func processExpandedView(m *parser.Model, basename string, writer *output.Writer
 		return fmt.Errorf("%w: expanded graph", errBuildGraph)
 	}
 
-	// Render with icon extraction for SVG format
+	// Render with icon extraction for SVG format; PNG gains its HTML doc
 	var (
 		data []byte
 		err  error
 	)
 
-	if format == formatSVG {
+	switch format {
+	case formatSVG:
 		data, err = render.RenderSVGWithOutput(g, writer.BaseDir())
-	} else {
+	case formatPNG:
+		return writeExpandedPNGView(g, basename, writer)
+	default:
 		data, err = render.Render(g, format)
 	}
 
@@ -450,7 +518,7 @@ func validEdgesStyle(s string) bool {
 // unknown styles as "unset", so an unvalidated value would be silently
 // swallowed (GEDGE-04: no silent fallback).
 func validateOutputFlags() error {
-	if format != formatDot && format != formatSVG && format != formatHTML {
+	if format != formatDot && format != formatSVG && format != formatHTML && format != formatPNG {
 		return fmt.Errorf("%w: %q", errInvalidFormat, format)
 	}
 

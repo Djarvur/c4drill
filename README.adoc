@@ -83,6 +83,9 @@ c4drill architecture.toml -o ./docs/diagrams
 
 # Generate DOT format for customization
 c4drill architecture.toml -f dot -o ./output
+
+# Generate PNG raster images (each with a linking HTML doc)
+c4drill architecture.toml -f png -o ./output
 ----
 
 Both authoring formats are interchangeable throughout: pass a
@@ -1250,7 +1253,7 @@ c4drill <input.toml|input.c4d> [flags]
 Flags:
       --edges string        Override edge routing style for every generated diagram (straight|spline|square|ortho)
       --expanded            Generate all-expanded diagram showing all units
-  -f, --format string       Output format (dot|svg|html) (default "svg")
+  -f, --format string       Output format (dot|svg|html|png) (default "svg")
   -h, --help                help for c4drill
       --label-ratio float   Width:height ratio for unit labels (default: 1.6, credit card proportions)
       --no-colors           Suppress colouring only: author unit/link colors and kind-derived edge colours
@@ -1267,6 +1270,23 @@ Flags:
   level), instead of the per-level drill-down set. The file is named
   `++{basename}++.expanded.++{format}++` and contains no drill-down
   links.
+* `--format png` renders each diagram as a PNG raster at the same
+  per-level paths the SVG layout uses (`++{basename}++.png`,
+  `++{basename}++/++{system}++.png`, …). A bare PNG cannot carry
+  hyperlinks, so every raster also gains a sibling `.html` doc —
+  the interactive layer over the image. Each doc embeds its PNG and
+  navigates like the SVG output does: a clickable breadcrumb trail
+  up the ancestor pages, one drill-down link per drill-capable unit
+  to its child page, and external `reference` URLs opening in a new
+  tab. The in-diagram nav bar and legend are baked into the raster
+  (visual parity with SVG); the clickable breadcrumb is re-emitted
+  above the image in the HTML doc. Existing `dot`/`svg`/`html`
+  output is unchanged.
+
+  [source,bash]
+  ----
+  c4drill architecture.toml -f png -o ./output
+  ----
 * `--edges` (v1.23) overrides the edge routing style for the *whole
   invocation*: every generated diagram — the C1 root, every drill-down
   view, and the `--expanded` copy — renders with the requested style.
