@@ -1469,6 +1469,36 @@ c4drill fmt [--check] <file|dir>...
 c4drill fmt --check .   # exits 1 listing offending files
 ----
 
+=== serve
+
+[source,text]
+----
+c4drill serve --lsp
+----
+
+* Runs the c4drill *language server* (issue #32) — the shared foundation
+the VS Code, JetBrains and Zed plugins and the GUI app are thin clients
+over. Editors launch it as `c4drill serve --lsp`; stdin/stdout carry the
+protocol (Content-Length framed JSON-RPC), so nothing else may write to
+stdout.
+* Covers both authoring formats. `textDocument/publishDiagnostics` runs
+the exact CLI pipeline, so message text and line numbers match
+`c4drill <file>` — including `[[include]]` graphs, where editing an
+included file (open buffer or watched on-disk change) republishes
+diagnostics for every including document.
+* Also speaks `textDocument/completion` (all 17 unit types with nesting
+inference and generic-type promotion, unit/link fields, enum values,
+peers, template params, include paths), `hover` (resolved peer paths,
+level and promoted type; template param info), `definition` (peer to
+unit section, template reference, include target), `documentSymbol`
+(unit outline) and `textDocument/formatting` (fmt parity for both
+formats).
+* Custom method `c4drill/renderDiagram` renders the CLI SVG pipeline
+in-process — params: document URI, optional target unit path
+(C1/C2/C3), all-expanded toggle, expanded-set and legend overrides —
+returning the SVG text plus render-time diagnostics. This is the
+live-preview primitive the editor plugins and the GUI app build on.
+
 === Output Format
 
 * *svg* (default): Rendered SVG diagrams with clickable navigation links
