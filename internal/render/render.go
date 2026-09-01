@@ -1,4 +1,5 @@
-// Package render provides functions to render graph structures to DOT, SVG, and HTML formats.
+// Package render provides functions to render graph structures to DOT, SVG,
+// HTML, PNG, and C4-PlantUML formats.
 package render
 
 import (
@@ -87,11 +88,11 @@ func RenderSVGWithOutput(g *graph.Graph, _ string) ([]byte, error) {
 	return render(g, graphviz.SVG)
 }
 
-// Render renders a graph to the specified format ("dot", "svg", "html", or
-// "png"). Returns an error for unsupported formats. Note that the "png" case
-// returns ONLY the raster bytes — the clickable HTML navigation doc that
-// accompanies each PNG is built separately (RenderHTMLForPNG) because it
-// needs the output file name.
+// Render renders a graph to the specified format ("dot", "svg", "html",
+// "png", or "plantuml"). Returns an error for unsupported formats. Note that
+// the "png" case returns ONLY the raster bytes — the clickable HTML
+// navigation doc that accompanies each PNG is built separately
+// (RenderHTMLForPNG) because it needs the output file name.
 func Render(g *graph.Graph, format string) ([]byte, error) {
 	switch format {
 	case "dot":
@@ -102,8 +103,10 @@ func Render(g *graph.Graph, format string) ([]byte, error) {
 		return RenderHTML(g)
 	case "png":
 		return RenderPNG(g)
+	case "plantuml":
+		return RenderPlantUML(g)
 	default:
-		return nil, fmt.Errorf("%w: %q (supported: dot, svg, html, png)", ErrUnsupportedFormat, format)
+		return nil, fmt.Errorf("%w: %q (supported: dot, svg, html, png, plantuml)", ErrUnsupportedFormat, format)
 	}
 }
 
@@ -122,8 +125,10 @@ func RenderWithOutput(g *graph.Graph, format, _ string) ([]byte, error) {
 		return RenderHTML(g)
 	case "png":
 		return RenderPNG(g)
+	case "plantuml":
+		return RenderPlantUML(g)
 	default:
-		return nil, fmt.Errorf("%w: %q (supported: dot, svg, html, png)", ErrUnsupportedFormat, format)
+		return nil, fmt.Errorf("%w: %q (supported: dot, svg, html, png, plantuml)", ErrUnsupportedFormat, format)
 	}
 }
 

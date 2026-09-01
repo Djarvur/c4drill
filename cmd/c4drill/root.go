@@ -25,7 +25,7 @@ import (
 
 // Static errors for better error handling.
 var (
-	errInvalidFormat    = errors.New("invalid format: must be dot, svg, html, or png")
+	errInvalidFormat    = errors.New("invalid format: must be dot, svg, html, png, or plantuml")
 	errInvalidEdges     = errors.New("invalid edges: must be straight, spline, square, or ortho")
 	errValidationFailed = errors.New("validation failed")
 	errGenerateView     = errors.New("failed to generate view")
@@ -38,6 +38,11 @@ const (
 	formatSVG  = "svg"
 	formatHTML = "html"
 	formatPNG  = "png"
+	// formatPlantUML is the -f value; the files it writes carry the
+	// .puml extension C4-PlantUML users expect (issue #25), so the writer
+	// is called with pumlExt instead of the flag value.
+	formatPlantUML = "plantuml"
+	pumlExt        = "puml"
 )
 
 // Accepted input extensions (D-27): dispatch is extension-based and fails
@@ -82,6 +87,7 @@ Examples:
   c4drill architecture.toml -o ./docs/diagrams
   c4drill architecture.toml -f dot -o ./output
   c4drill architecture.toml -f png -o ./output
+  c4drill architecture.toml -f plantuml -o ./output
 
 Output:
   - C1 diagram: {basename}.{format}
@@ -89,7 +95,9 @@ Output:
   - C3 diagrams: {basename}/{system}/{container}.{format}
   For -f png each raster also gains a sibling .html doc carrying the
   clickable navigation (breadcrumb, drill-down, references) a bare PNG
-  cannot hold.`
+  cannot hold. For -f plantuml the files are written with the .puml
+  extension: C4-PlantUML sources whose drill-down links point at the
+  sibling .svg files, so plantuml -tsvg output stays clickable.`
 
 // NewRootCmd creates the root command for c4drill.
 // It configures flags, validation, and the main execution function.
@@ -105,7 +113,7 @@ func NewRootCmd() *cobra.Command {
 	}
 
 	cmd.PersistentFlags().StringVarP(&format, "format", "f", formatSVG,
-		"Output format (dot|svg|html|png)")
+		"Output format (dot|svg|html|png|plantuml)")
 	cmd.PersistentFlags().StringVarP(&outputDir, "output", "o", "",
 		"Output directory (default: same as input file)")
 	cmd.PersistentFlags().BoolVar(&expanded, "expanded", false,
@@ -375,6 +383,8 @@ func processView(m *parser.Model, unitPath, basename string, writer *output.Writ
 		data, err = render.RenderHTML(g)
 	case formatPNG:
 		return writePNGView(g, basename, unitPath, writer)
+	case formatPlantUML:
+		return writePlantUMLView(g, basename, unitPath, writer)
 	default:
 		data, err = render.Render(g, format)
 	}
@@ -385,6 +395,41 @@ func processView(m *parser.Model, unitPath, basename string, writer *output.Writ
 
 	// Write
 	if err := writer.Write(basename, unitPath, format, data); err != nil {
+		return fmt.Errorf("write: %w", err)
+	}
+
+	return nil
+}
+
+// writePlantUMLView renders the diagram as a C4-PlantUML source document
+// (issue #25) and writes it with the .puml extension — the flag value is
+// "plantuml" but the artifact is what C4-PlantUML users and toolchains
+// expect. The document carries the drill-down links on the element macros'
+// $link parameter, so the plain-text file needs no sibling doc: converting
+// it with plantuml -tsvg produces SVGs whose nodes are real anchors pointing
+// at the sibling .svg files.
+func writePlantUMLView(g *graph.Graph, basename, unitPath string, writer *output.Writer) error {
+	data, err := render.RenderPlantUML(g)
+	if err != nil {
+		return fmt.Errorf("render: %w", err)
+	}
+
+	if err := writer.Write(basename, unitPath, pumlExt, data); err != nil {
+		return fmt.Errorf("write: %w", err)
+	}
+
+	return nil
+}
+
+// writeExpandedPlantUMLView is writePlantUMLView for the --expanded single
+// diagram: {basename}.expanded.puml.
+func writeExpandedPlantUMLView(g *graph.Graph, basename string, writer *output.Writer) error {
+	data, err := render.RenderPlantUML(g)
+	if err != nil {
+		return fmt.Errorf("render: %w", err)
+	}
+
+	if err := writer.WriteExpanded(basename, pumlExt, data); err != nil {
 		return fmt.Errorf("write: %w", err)
 	}
 
@@ -483,6 +528,8 @@ func processExpandedView(m *parser.Model, basename string, writer *output.Writer
 		data, err = render.RenderSVGWithOutput(g, writer.BaseDir())
 	case formatPNG:
 		return writeExpandedPNGView(g, basename, writer)
+	case formatPlantUML:
+		return writeExpandedPlantUMLView(g, basename, writer)
 	default:
 		data, err = render.Render(g, format)
 	}
@@ -518,7 +565,8 @@ func validEdgesStyle(s string) bool {
 // unknown styles as "unset", so an unvalidated value would be silently
 // swallowed (GEDGE-04: no silent fallback).
 func validateOutputFlags() error {
-	if format != formatDot && format != formatSVG && format != formatHTML && format != formatPNG {
+	if format != formatDot && format != formatSVG && format != formatHTML && format != formatPNG &&
+		format != formatPlantUML {
 		return fmt.Errorf("%w: %q", errInvalidFormat, format)
 	}
 

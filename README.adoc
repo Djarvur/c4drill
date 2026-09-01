@@ -86,6 +86,9 @@ c4drill architecture.toml -f dot -o ./output
 
 # Generate PNG raster images (each with a linking HTML doc)
 c4drill architecture.toml -f png -o ./output
+
+# Generate C4-PlantUML sources (render with: plantuml -tsvg *.puml)
+c4drill architecture.toml -f plantuml -o ./output
 ----
 
 Both authoring formats are interchangeable throughout: pass a
@@ -1253,7 +1256,7 @@ c4drill <input.toml|input.c4d> [flags]
 Flags:
       --edges string        Override edge routing style for every generated diagram (straight|spline|square|ortho)
       --expanded            Generate all-expanded diagram showing all units
-  -f, --format string       Output format (dot|svg|html|png) (default "svg")
+  -f, --format string       Output format (dot|svg|html|png|plantuml) (default "svg")
   -h, --help                help for c4drill
       --label-ratio float   Width:height ratio for unit labels (default: 1.6, credit card proportions)
       --no-colors           Suppress colouring only: author unit/link colors and kind-derived edge colours
@@ -1286,6 +1289,26 @@ Flags:
   [source,bash]
   ----
   c4drill architecture.toml -f png -o ./output
+  ----
+* `--format plantuml` serializes each diagram as a
+  https://github.com/plantuml-stdlib/C4-PlantUML[C4-PlantUML] source
+  document (`.puml` extension, same per-level paths as the SVG
+  layout: `++{basename}++.puml`, `++{basename}++/++{system}++.puml`,
+  …). Every c4drill unit type maps onto the standard
+  C4_Context/C4_Container/C4_Component macros (persons, systems,
+  containers, components, db/queue variants, and grouping boxes as
+  boundaries), and relationships map onto `Rel`/`Rel_Back`/`BiRel`
+  by arrow direction. The drill-down links ride the element macros'
+  link parameter, so converting with `plantuml -tsvg` produces SVGs
+  whose nodes are real anchors pointing at the sibling `.svg`
+  diagrams — the breadcrumb nav bar is not expressible in PlantUML
+  and is omitted. Model colours ride `AddElementTag`/`AddRelTag`
+  declarations; the legend flag emits `LAYOUT_WITH_LEGEND()`.
+
+  [source,bash]
+  ----
+  c4drill architecture.toml -f plantuml -o ./output
+  plantuml -tsvg output/*.puml
   ----
 * `--edges` (v1.23) overrides the edge routing style for the *whole
   invocation*: every generated diagram — the C1 root, every drill-down
