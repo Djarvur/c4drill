@@ -104,6 +104,10 @@ node_modules/
 package.json
 package-lock.json
 
+# ...except the VS Code extension (extension/), which is a real npm project
+!extension/package.json
+!extension/package-lock.json
+
 # ZCode session artifacts
 .zcode/plans/
 

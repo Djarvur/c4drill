@@ -1,0 +1,167 @@
+{
+  "name": "c4drill-vscode",
+  "displayName": "C4Drill",
+  "description": "C4 architecture models with c4drill: syntax highlighting, diagnostics, completion, formatting and a live diagram preview for .c4d and scoped .toml models",
+  "version": "0.1.0",
+  "publisher": "djarvur",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Djarvur/c4drill"
+  },
+  "categories": [
+    "Programming Languages",
+    "Visualization"
+  ],
+  "keywords": [
+    "c4",
+    "architecture",
+    "diagram",
+    "c4drill",
+    "toml"
+  ],
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "activationEvents": [
+    "onLanguage:c4drill-c4d",
+    "onLanguage:toml",
+    "onCommand:c4drill.showPreview",
+    "onCommand:c4drill.validateFile",
+    "onCommand:c4drill.formatDocument",
+    "onCommand:c4drill.activateForFile",
+    "onCommand:c4drill.deactivateForFile"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "c4drill-c4d",
+        "aliases": [
+          "C4Drill C4D",
+          "c4drill-c4d"
+        ],
+        "extensions": [
+          ".c4d"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/c4drill.svg",
+          "dark": "./icons/c4drill.svg"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "c4drill-c4d",
+        "scopeName": "source.c4d",
+        "path": "./syntaxes/c4d.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "c4drill.showPreview",
+        "title": "C4Drill: Show Preview",
+        "icon": "$(preview)"
+      },
+      {
+        "command": "c4drill.validateFile",
+        "title": "C4Drill: Validate File",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "c4drill.formatDocument",
+        "title": "C4Drill: Format Document"
+      },
+      {
+        "command": "c4drill.activateForFile",
+        "title": "C4Drill: Activate for This File"
+      },
+      {
+        "command": "c4drill.deactivateForFile",
+        "title": "C4Drill: Deactivate for This File"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "c4drill.showPreview",
+          "group": "navigation",
+          "when": "resourceExtname == .c4d || resourceExtname == .toml"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "c4drill.activateForFile",
+          "when": "resourceExtname == .toml",
+          "group": "9_c4drill"
+        },
+        {
+          "command": "c4drill.deactivateForFile",
+          "when": "resourceExtname == .toml",
+          "group": "9_c4drill"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "c4drill.activateForFile",
+          "when": "resourceExtname == .toml"
+        },
+        {
+          "command": "c4drill.deactivateForFile",
+          "when": "resourceExtname == .toml"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "C4Drill",
+      "properties": {
+        "c4drill.server.path": {
+          "type": "string",
+          "default": "c4drill",
+          "markdownDescription": "Path to the `c4drill` binary. A name on `PATH` or an absolute path. The extension runs `c4drill serve --lsp` over stdio. `C4DRILL_SERVER_PATH` is honored when the setting is left at the default.",
+          "scope": "resource"
+        },
+        "c4drill.toml.patterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/*.architecture.toml"
+          ],
+          "markdownDescription": "Globs (VS Code glob syntax, relative to the workspace folder) of `.toml` files that should be treated as c4drill models. Plain TOML files are never touched. Individual files can be opted in with the `C4Drill: Activate for This File` command regardless of these globs.",
+          "scope": "resource"
+        },
+        "c4drill.preview.debounce": {
+          "type": "number",
+          "default": 200,
+          "minimum": 50,
+          "maximum": 2000,
+          "markdownDescription": "Debounce delay in milliseconds between document edits and the live preview re-render.",
+          "scope": "resource"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -w -p ./",
+    "test": "npm run compile && node --test out/test/unit/",
+    "test:integration": "npm run compile && node out/test/integration/runTest.js",
+    "lint": "tsc -p ./ --noEmit"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.15.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/test-electron": "^3.1.0",
+    "mocha": "^12.0.0",
+    "typescript": "^5.8.3",
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.3.2"
+  }
+}

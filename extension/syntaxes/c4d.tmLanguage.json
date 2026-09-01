@@ -1,0 +1,548 @@
+{
+  "name": "C4D (C4Drill)",
+  "scopeName": "source.c4d",
+  "fileTypes": [
+    "c4d"
+  ],
+  "uuid": "7d1f6a52-0d3e-4a2b-9c8f-5a1e3c4d6b90",
+  "information_for_contributors": [
+    "Authoritative syntax: internal/c4d/grammar/c4d.peg in the c4drill repository.",
+    "Statement keywords: properties / template / use / include / once.",
+    "Unit header: [id ':'] type ['external'] ['\"Name\"'] '{' ... '}' with the 17 type keywords below.",
+    "Edge statements start with one of <-> -> <- -- and may carry a ': label' and an inline '{ ... }' option block.",
+    "Strings are double-quoted or triple-quoted (\"\"\"...\"\"\"); ${param} template tokens may appear anywhere a value can."
+  ],
+  "patterns": [
+    {
+      "include": "#comment"
+    },
+    {
+      "include": "#properties-block"
+    },
+    {
+      "include": "#template-declaration"
+    },
+    {
+      "include": "#include-statement"
+    },
+    {
+      "include": "#use-statement"
+    },
+    {
+      "include": "#unit-block"
+    },
+    {
+      "include": "#edge-statement"
+    },
+    {
+      "include": "#field-statement"
+    }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.line.number-sign.c4d",
+      "match": "#[^\\n]*"
+    },
+    "type-keywords": {
+      "match": "(?x)\\b(personExternal|systemExternal|dbExternal|queueExternal|containerDb|containerQueue|containerBox|componentDb|componentQueue|componentBox|container|component|person|system|queue|box|db)\\b",
+      "name": "storage.type.unit.c4d"
+    },
+    "template-token": {
+      "comment": "${param} substitution token; legal wherever a value or bareword is (substituted by the template expander, never by the parser).",
+      "match": "\\$\\{[A-Za-z_][A-Za-z0-9_]*\\}",
+      "name": "variable.other.template-param.c4d"
+    },
+    "double-quoted-string": {
+      "name": "string.quoted.double.c4d",
+      "begin": "\"",
+      "end": "(\")|(?=\\n)",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.begin.c4d"
+        }
+      },
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.string.end.c4d"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#string-content"
+        }
+      ]
+    },
+    "triple-quoted-string": {
+      "comment": "Multi-line string (c4d.peg: TripleQuoted). No escapes inside; only the closing triple quote terminates.",
+      "name": "string.quoted.double.multiline.c4d",
+      "begin": "\"\"\"",
+      "end": "\"\"\"",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.begin.c4d"
+        }
+      },
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.end.c4d"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#template-token"
+        }
+      ]
+    },
+    "string-content": {
+      "patterns": [
+        {
+          "include": "#template-token"
+        },
+        {
+          "comment": "Escapes per parser.go string handling (\\\" \\\\ \\n ...).",
+          "match": "\\\\.",
+          "name": "constant.character.escape.c4d"
+        }
+      ]
+    },
+    "list-literal": {
+      "name": "meta.list.c4d",
+      "begin": "\\[",
+      "end": "\\]|(?=\\n)",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.list.begin.c4d"
+        }
+      },
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.list.end.c4d"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#triple-quoted-string"
+        },
+        {
+          "include": "#double-quoted-string"
+        },
+        {
+          "include": "#template-token"
+        },
+        {
+          "include": "#numeric"
+        },
+        {
+          "match": ",",
+          "name": "punctuation.separator.comma.c4d"
+        },
+        {
+          "comment": "ListBareword element (stops at , ] and whitespace are tolerated visually).",
+          "match": "[^\\],\\s]+",
+          "name": "string.unquoted.c4d"
+        }
+      ]
+    },
+    "numeric": {
+      "match": "(?<!\\w)\\d+(?:\\.\\d+)?(?!\\w)",
+      "name": "constant.numeric.c4d"
+    },
+    "enum-value": {
+      "comment": "Enumerated values: edges (straight|spline|square|ortho), arrow (forward|reverse|bidirectional|none), kind (read|write|read-write), style (solid|dashed|dotted).",
+      "match": "(?x)\\b(straight|spline|square|ortho|forward|reverse|bidirectional|none|read-write|read|write|solid|dashed|dotted)\\b",
+      "name": "constant.language.c4d"
+    },
+    "bareword": {
+      "comment": "Unquoted scalar (technology names, unit ids in expanded lists, template args, ...).",
+      "match": "(?x)\n(?:(?:[A-Za-z_][A-Za-z0-9_./-]*)|(?:\\$\\{[A-Za-z_][A-Za-z0-9_]*\\}))(?:\\.(?:[A-Za-z_][A-Za-z0-9_./-]*|\\$\\{[A-Za-z_][A-Za-z0-9_]*\\}))*",
+      "name": "string.unquoted.c4d"
+    },
+    "properties-block": {
+      "comment": "properties { ... } — model-level presentation block.",
+      "name": "meta.properties.c4d",
+      "begin": "^\\s*(properties)\\s*(\\{)",
+      "end": "^\\s*\\}",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.other.properties.c4d"
+        },
+        "2": {
+          "name": "punctuation.section.block.begin.c4d"
+        }
+      },
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.section.block.end.c4d"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#field-statement"
+        }
+      ]
+    },
+    "include-statement": {
+      "comment": "include <path> [once] — path is a bareword or a quoted string, relative to the including file.",
+      "name": "meta.include.c4d",
+      "match": "^\\s*(include)\\s+(?:(\")([^\"\\\\\\n]*(?:\\\\.[^\"\\\\\\n]*)*)(\")|([A-Za-z0-9_./\\\\-]+))(?:\\s+(once))?\\s*(#[^\\n]*)?",
+      "captures": {
+        "1": {
+          "name": "keyword.control.include.c4d"
+        },
+        "2": {
+          "name": "punctuation.definition.string.begin.c4d"
+        },
+        "3": {
+          "name": "string.quoted.double.c4d"
+        },
+        "4": {
+          "name": "punctuation.definition.string.end.c4d"
+        },
+        "5": {
+          "name": "string.unquoted.include-path.c4d"
+        },
+        "6": {
+          "name": "keyword.modifier.once.c4d"
+        },
+        "7": {
+          "name": "comment.line.number-sign.c4d"
+        }
+      }
+    },
+    "template-declaration": {
+      "comment": "template name(params) { ... } — function-like declaration; the body uses the unit grammar.",
+      "name": "meta.template.c4d",
+      "begin": "^\\s*(template)\\s+([A-Za-z_][A-Za-z0-9_-]*)\\s*(\\()([^()\\n]*)(\\))\\s*(\\{)",
+      "end": "^\\s*\\}",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.declaration.template.c4d"
+        },
+        "2": {
+          "name": "entity.name.function.template.c4d"
+        },
+        "3": {
+          "name": "punctuation.definition.parameters.begin.bracket.round.c4d"
+        },
+        "4": {
+          "name": "variable.parameter.c4d"
+        },
+        "5": {
+          "name": "punctuation.definition.parameters.end.bracket.round.c4d"
+        },
+        "6": {
+          "name": "punctuation.section.block.begin.c4d"
+        }
+      },
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.section.block.end.c4d"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#unit-body"
+        }
+      ]
+    },
+    "use-statement": {
+      "comment": "use templateName(key: value, ...) — template instantiation, legal at top level and inside unit blocks.",
+      "name": "meta.use.c4d",
+      "begin": "^\\s*(use)\\s+([A-Za-z_][A-Za-z0-9_-]*)\\s*(\\()",
+      "end": "\\)",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.use.c4d"
+        },
+        "2": {
+          "name": "entity.name.function.use.c4d"
+        },
+        "3": {
+          "name": "punctuation.definition.parameters.begin.bracket.round.c4d"
+        }
+      },
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.parameters.end.bracket.round.c4d"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#triple-quoted-string"
+        },
+        {
+          "include": "#double-quoted-string"
+        },
+        {
+          "include": "#list-literal"
+        },
+        {
+          "include": "#template-token"
+        },
+        {
+          "match": "(?<=\\s|^)[A-Za-z_][A-Za-z0-9_-]*\\s*(?=:)",
+          "captures": {
+            "0": {
+              "name": "support.type.property-name.c4d"
+            }
+          }
+        },
+        {
+          "match": ":",
+          "name": "punctuation.separator.key-value.c4d"
+        },
+        {
+          "match": ",",
+          "name": "punctuation.separator.comma.c4d"
+        },
+        {
+          "include": "#numeric"
+        },
+        {
+          "include": "#bareword"
+        }
+      ]
+    },
+    "unit-block": {
+      "comment": "Unit declaration: [id ':'] type ['external'] ['\"Name\"'] '{' ... '}'. Units nest recursively (box/db/queue/queue promotion containers).",
+      "name": "meta.unit.c4d",
+      "begin": "(?x)\n^\\s*\n(?:\n  (?: ([A-Za-z_][A-Za-z0-9_-]*) | (\\$\\{[A-Za-z_][A-Za-z0-9_]*\\}) ) \\s* (:) \\s*\n)?\n(personExternal|systemExternal|dbExternal|queueExternal|containerDb|containerQueue|containerBox|componentDb|componentQueue|componentBox|container|component|person|system|queue|box|db)\\b\n(?:\\s+(external))?\n(?:\\s+ (\") ([^\"\\\\\\n]*(?:\\\\.[^\"\\\\\\n]*)*) (\") )?\n\\s*(\\{)",
+      "end": "^\\s*\\}",
+      "beginCaptures": {
+        "1": {
+          "name": "entity.name.unit.c4d"
+        },
+        "2": {
+          "name": "entity.name.unit.c4d"
+        },
+        "3": {
+          "name": "punctuation.separator.key-value.c4d"
+        },
+        "4": {
+          "name": "storage.type.unit.c4d"
+        },
+        "5": {
+          "name": "storage.modifier.external.c4d"
+        },
+        "6": {
+          "name": "punctuation.definition.string.begin.c4d"
+        },
+        "7": {
+          "name": "string.quoted.double.c4d"
+        },
+        "8": {
+          "name": "punctuation.definition.string.end.c4d"
+        },
+        "9": {
+          "name": "punctuation.section.block.begin.c4d"
+        }
+      },
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.section.block.end.c4d"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#unit-body"
+        }
+      ]
+    },
+    "unit-body": {
+      "comment": "Shared content of unit and template bodies: fields, edges, nested units, use, comments.",
+      "patterns": [
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#use-statement"
+        },
+        {
+          "include": "#unit-block"
+        },
+        {
+          "include": "#template-declaration"
+        },
+        {
+          "include": "#edge-statement"
+        },
+        {
+          "include": "#type-field"
+        },
+        {
+          "include": "#field-statement"
+        }
+      ]
+    },
+    "type-field": {
+      "comment": "Template root type statement: type: <type> [external] (the D-22 text form of a TOML template's root type key).",
+      "match": "^\\s*(type)\\s*(:)\\s*(personExternal|systemExternal|dbExternal|queueExternal|containerDb|containerQueue|containerBox|componentDb|componentQueue|componentBox|container|component|person|system|queue|box|db)\\b(?:\\s+(external))?\\s*(#[^\\n]*)?",
+      "captures": {
+        "1": {
+          "name": "support.type.property-name.c4d"
+        },
+        "2": {
+          "name": "punctuation.separator.key-value.c4d"
+        },
+        "3": {
+          "name": "storage.type.unit.c4d"
+        },
+        "4": {
+          "name": "storage.modifier.external.c4d"
+        },
+        "5": {
+          "name": "comment.line.number-sign.c4d"
+        }
+      }
+    },
+    "edge-statement": {
+      "comment": "Edge: (<->|->|<-|--) peer [':' label] ['{' options '}']. The label is a quoted string or 'tech | desc' barewords; options are field statements in an inline block.",
+      "name": "meta.edge.c4d",
+      "begin": "(?x)\n^\\s*\n(<->|->|<-|--)\n\\s+\n([A-Za-z_][A-Za-z0-9_-]*|\\$\\{[A-Za-z_][A-Za-z0-9_]*\\})\n(?:\\.\n  (?: [A-Za-z_][A-Za-z0-9_-]* | \\$\\{[A-Za-z_][A-Za-z0-9_]*\\} )\n)*\n\\s*(:)?\\s*",
+      "end": "(?=\\n)|(?<=\\})",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.operator.arrow.c4d"
+        },
+        "2": {
+          "name": "entity.other.attribute-name.peer.c4d"
+        },
+        "3": {
+          "name": "punctuation.separator.key-value.c4d"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#edge-label"
+        },
+        {
+          "include": "#option-block"
+        }
+      ]
+    },
+    "edge-label": {
+      "comment": "Pipe shorthand: single value = description; 'tech | desc' splits on the first pipe (D-09).",
+      "patterns": [
+        {
+          "include": "#triple-quoted-string"
+        },
+        {
+          "include": "#double-quoted-string"
+        },
+        {
+          "include": "#template-token"
+        },
+        {
+          "match": "\\|",
+          "name": "keyword.operator.pipe.c4d"
+        },
+        {
+          "match": "[^\\n{}|\"#\\s]+",
+          "name": "string.unquoted.c4d"
+        }
+      ]
+    },
+    "option-block": {
+      "comment": "Inline trailing brace block of edge options: { color: ... style: dashed ... }.",
+      "name": "meta.edge.options.c4d",
+      "begin": "\\{",
+      "end": "\\}|(?=\\n)",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.section.block.begin.c4d"
+        }
+      },
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.section.block.end.c4d"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#inline-field"
+        }
+      ]
+    },
+    "field-statement": {
+      "comment": "Field statement at line start: key ':' value. Values are strings, lists, enums, numbers, barewords or ${param} tokens.",
+      "name": "meta.field.c4d",
+      "begin": "(?x)\n(?: ^\\s* | (?<=[{,])\\s* )\n([A-Za-z_][A-Za-z0-9_-]*)\n(\\s*) (:)",
+      "end": "(?=\\n|[};])",
+      "beginCaptures": {
+        "1": {
+          "name": "support.type.property-name.c4d"
+        },
+        "3": {
+          "name": "punctuation.separator.key-value.c4d"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#field-value"
+        }
+      ]
+    },
+    "inline-field": {
+      "comment": "Field statement inside an inline edge-option block (same rules, no line-start requirement).",
+      "name": "meta.field.c4d",
+      "begin": "([A-Za-z_][A-Za-z0-9_-]*)\\s*(:)",
+      "end": "(?=\\n|[};])",
+      "beginCaptures": {
+        "1": {
+          "name": "support.type.property-name.c4d"
+        },
+        "2": {
+          "name": "punctuation.separator.key-value.c4d"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#field-value"
+        }
+      ]
+    },
+    "field-value": {
+      "patterns": [
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#triple-quoted-string"
+        },
+        {
+          "include": "#double-quoted-string"
+        },
+        {
+          "include": "#list-literal"
+        },
+        {
+          "include": "#type-keywords"
+        },
+        {
+          "include": "#enum-value"
+        },
+        {
+          "include": "#template-token"
+        },
+        {
+          "include": "#numeric"
+        },
+        {
+          "include": "#bareword"
+        }
+      ]
+    }
+  }
+}
