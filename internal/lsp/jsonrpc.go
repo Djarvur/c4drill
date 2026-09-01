@@ -130,6 +130,20 @@ func (c *Conn) Notify(method string, params any) error {
 	return c.Write(&Message{JSONRPC: jsonrpcVersion, Method: method, Params: raw})
 }
 
+// Request sends a server→client request without awaiting its response — the
+// transport shape of fire-and-forget dynamic capability registration. The
+// client's response (when one arrives) is dropped by the server core.
+func (c *Conn) Request(method string, params any, callID uint64) error {
+	raw, err := json.Marshal(params)
+	if err != nil {
+		return fmt.Errorf("marshal %s params: %w", method, err)
+	}
+
+	id := ID(strconv.FormatUint(callID, 10))
+
+	return c.Write(&Message{JSONRPC: jsonrpcVersion, ID: &id, Method: method, Params: raw})
+}
+
 // Write frames and writes one message.
 func (c *Conn) Write(msg *Message) error {
 	data, err := json.Marshal(msg)

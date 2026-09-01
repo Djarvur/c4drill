@@ -60,7 +60,8 @@ type TextDocumentSyncOptions struct {
 
 // ServerCapabilities is the capability list advertised by initialize. Each
 // milestone adds its entries: M1 text sync, M2 language features, M3
-// formatting, M4 the c4drill render method (via Experimental).
+// formatting, M4 the c4drill render method (via Experimental); #33 adds
+// semantic tokens (TOML dialect).
 type ServerCapabilities struct {
 	TextDocumentSync           *TextDocumentSyncOptions `json:"textDocumentSync,omitempty"`
 	CompletionProvider         *CompletionOptions       `json:"completionProvider,omitempty"`
@@ -68,6 +69,34 @@ type ServerCapabilities struct {
 	DefinitionProvider         bool                     `json:"definitionProvider,omitempty"`
 	DocumentSymbolProvider     bool                     `json:"documentSymbolProvider,omitempty"`
 	DocumentFormattingProvider bool                     `json:"documentFormattingProvider,omitempty"`
+	SemanticTokensProvider     *SemanticTokensOptions   `json:"semanticTokensProvider,omitempty"`
+}
+
+// Semantic token type names in the server's legend order (LSP
+// SemanticTokenTypes); the wire tokens reference them by index.
+const (
+	SemTokenTypeProperty   = "property"   // unit-type keys, link-table keys
+	SemTokenTypeClass      = "class"      // unit type keyword values
+	SemTokenTypeEnumMember = "enumMember" // enum value spellings
+)
+
+// SemanticTokensLegend lists the token types the server emits.
+type SemanticTokensLegend struct {
+	TokenTypes     []string `json:"tokenTypes"`
+	TokenModifiers []string `json:"tokenModifiers"`
+}
+
+// SemanticTokensOptions advertises textDocument/semanticTokens (full
+// documents only; no range requests, no token modifiers).
+type SemanticTokensOptions struct {
+	Legend SemanticTokensLegend `json:"legend"`
+	Full   bool                 `json:"full"`
+}
+
+// SemanticTokens is the delta-encoded semantic-token result: quintuples of
+// (deltaLine, deltaStartChar, length, tokenTypeIndex, tokenModifiers).
+type SemanticTokens struct {
+	Data []uint32 `json:"data"`
 }
 
 // CompletionOptions advertises the completion capability.
@@ -151,6 +180,31 @@ type FileEvent struct {
 // (an included file edited outside the editor, for instance).
 type DidChangeWatchedFilesParams struct {
 	Changes []FileEvent `json:"changes"`
+}
+
+// FileSystemWatcher is one registration watcher glob.
+type FileSystemWatcher struct {
+	GlobPattern string `json:"globPattern"`
+}
+
+// WatchedFilesRegistrationOptions is the registerOptions payload of a
+// workspace/didChangeWatchedFiles registration.
+type WatchedFilesRegistrationOptions struct {
+	Watchers []FileSystemWatcher `json:"watchers"`
+}
+
+// Registration is one dynamic capability registration.
+type Registration struct {
+	ID              string `json:"id"`
+	Method          string `json:"method"`
+	RegisterOptions any    `json:"registerOptions,omitempty"`
+}
+
+// RegistrationParams is the client/registerCapability request payload — how
+// the server asks clients to start reporting watched-file changes (the LSP
+// spec has no static server capability for didChangeWatchedFiles).
+type RegistrationParams struct {
+	Registrations []Registration `json:"registrations"`
 }
 
 // TextDocumentPositionParams is the shared shape of the position-bearing

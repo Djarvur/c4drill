@@ -116,6 +116,24 @@ func TestServeOverPipe(t *testing.T) {
 
 	client.send(`{"jsonrpc":"2.0","method":"initialized","params":{}}`)
 
+	// The registration is the server's first server→client REQUEST over the
+	// wire (dynamic didChangeWatchedFiles registration, issue #33); the
+	// synchronous pipe requires it to be consumed before anything else.
+	reg := client.receive()
+	assert.Equal(t, "client/registerCapability", reg["method"])
+
+	regParams, ok := reg["params"].(map[string]any)
+	require.True(t, ok, "registration params are an object")
+
+	registrations, ok := regParams["registrations"].([]any)
+	require.True(t, ok, "registrations is an array")
+	require.Len(t, registrations, 1)
+
+	watched, ok := registrations[0].(map[string]any)
+	require.True(t, ok, "registration is an object")
+
+	assert.Equal(t, "workspace/didChangeWatchedFiles", watched["method"])
+
 	modelJSON, err := json.Marshal(`[web]
 type = "system"
 name = "Web"

@@ -25,6 +25,7 @@ const (
 	methodHover              = "textDocument/hover"
 	methodDefinition         = "textDocument/definition"
 	methodDocumentSymbol     = "textDocument/documentSymbol"
+	methodSemanticTokens     = "textDocument/semanticTokens/full"
 	methodInitialized        = "initialized"
 	methodShutdown           = "shutdown"
 	methodExit               = "exit"
@@ -32,6 +33,7 @@ const (
 	methodDidChange          = "textDocument/didChange"
 	methodDidClose           = "textDocument/didClose"
 	methodWatchedFiles       = "workspace/didChangeWatchedFiles"
+	methodRegisterCapability = "client/registerCapability"
 	methodPublishDiagnostics = "textDocument/publishDiagnostics"
 )
 
@@ -57,12 +59,14 @@ type document struct {
 // Server is the c4drill language-server core. It is safe for concurrent
 // Handle calls (the stdio loop is sequential; the GUI may not be).
 type Server struct {
-	mu          sync.Mutex
-	docs        map[DocumentURI]*document
-	initialized bool
-	shutdown    bool
-	exited      bool
-	notify      notifier
+	mu                     sync.Mutex
+	docs                   map[DocumentURI]*document
+	initialized            bool
+	shutdown               bool
+	exited                 bool
+	notify                 notifier
+	request                func(method string, params any) // server→client requests (dynamic registration)
+	watchedFilesRegistered bool
 }
 
 // NewServer builds a server with notifications discarded.
@@ -83,6 +87,18 @@ func (s *Server) SetNotifier(n func(method string, params any)) {
 	s.notify = n
 }
 
+// SetRequester installs the sink for server→client REQUESTS (dynamic
+// capability registration). Optional: transports that cannot deliver them
+// (the in-proc GUI session) simply leave it unset and the server skips
+// registration. The client's response is not awaited. Must be called before
+// the first Handle.
+func (s *Server) SetRequester(r func(method string, params any)) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.request = r
+}
+
 // Exited reports whether the client sent the exit notification — the
 // transport loop's signal to stop serving.
 func (s *Server) Exited() bool {
@@ -96,6 +112,13 @@ func (s *Server) Exited() bool {
 // message, or nil for notifications. It is the in-memory transport entry:
 // the GUI app (#31) and the conformance tests drive the server through it.
 func (s *Server) Handle(ctx context.Context, msg *Message) *Message {
+	// A message with an id but no method is a RESPONSE to a server→client
+	// request (e.g. client/registerCapability); registration is
+	// fire-and-forget, so nothing is pending and the message is dropped.
+	if msg.ID != nil && msg.Method == "" {
+		return nil
+	}
+
 	if msg.ID == nil {
 		s.handleNotification(msg)
 
@@ -142,6 +165,8 @@ func (s *Server) dispatchRequest(ctx context.Context, msg *Message) *Message {
 		return s.positionRequest(msg, s.definitionAt)
 	case methodDocumentSymbol:
 		return s.documentSymbolRequest(msg)
+	case methodSemanticTokens:
+		return s.semanticTokensRequest(msg)
 	case methodFormatting:
 		return s.formattingRequest(msg)
 	case methodRenderDiagram:
@@ -257,6 +282,29 @@ func (s *Server) documentSymbolRequest(msg *Message) *Message {
 	return okResponse(msg, raw)
 }
 
+// semanticTokensRequest is textDocument/semanticTokens/full's shape
+// (document, no position); the result is always a SemanticTokens object.
+func (s *Server) semanticTokensRequest(msg *Message) *Message {
+	var p struct {
+		TextDocument TextDocumentIdentifier `json:"textDocument"`
+	}
+	if err := json.Unmarshal(msg.Params, &p); err != nil {
+		return errorResponse(msg, codeInvalidParams, "invalid params: "+err.Error())
+	}
+
+	doc, ok := s.docs[p.TextDocument.URI]
+	if !ok {
+		return okResponse(msg, json.RawMessage(`{"data":[]}`))
+	}
+
+	raw, err := json.Marshal(s.semanticTokens(doc))
+	if err != nil {
+		return errorResponse(msg, codeInternalError, "marshal result: "+err.Error())
+	}
+
+	return okResponse(msg, raw)
+}
+
 // handleInitialize answers the initialize request, marking the server
 // initialized and advertising the capability surface.
 func (s *Server) handleInitialize(msg *Message) *Message {
@@ -274,6 +322,10 @@ func (s *Server) handleInitialize(msg *Message) *Message {
 			DefinitionProvider:         true,
 			DocumentSymbolProvider:     true,
 			DocumentFormattingProvider: true,
+			SemanticTokensProvider: &SemanticTokensOptions{
+				Legend: SemanticTokensLegend{TokenTypes: semTokenTypes},
+				Full:   true,
+			},
 		},
 		ServerInfo: ServerInfo{Name: "c4drill", Version: serverVersion},
 	}
@@ -307,7 +359,9 @@ func (s *Server) handleNotification(msg *Message) {
 
 	switch msg.Method {
 	case methodInitialized:
-		// The client acknowledged initialize; nothing to negotiate back.
+		// The client acknowledged initialize; negotiate the dynamic
+		// capabilities (watched files) back.
+		s.registerWatchedFiles()
 	case methodDidOpen:
 		s.onDidOpen(msg.Params)
 	case methodDidChange:
@@ -317,6 +371,34 @@ func (s *Server) handleNotification(msg *Message) {
 	case methodWatchedFiles:
 		s.onWatchedFiles(msg.Params)
 	}
+}
+
+// registerWatchedFiles dynamically registers workspace/didChangeWatchedFiles
+// (issue #33). The server has handled the notification since M1 — include
+// resolution republishes on on-disk edits — but the LSP spec has no static
+// server capability for it: clients only start reporting once the server
+// registers. The registration is fire-and-forget: transports without a
+// requester (the in-proc GUI session) skip it, and the client's response is
+// tolerated to never arrive.
+func (s *Server) registerWatchedFiles() {
+	if s.request == nil || s.watchedFilesRegistered {
+		return
+	}
+
+	s.watchedFilesRegistered = true
+
+	s.request(methodRegisterCapability, RegistrationParams{
+		Registrations: []Registration{{
+			ID:     "c4drill-watched-files",
+			Method: methodWatchedFiles,
+			RegisterOptions: WatchedFilesRegistrationOptions{
+				Watchers: []FileSystemWatcher{
+					{GlobPattern: "**/*.toml"},
+					{GlobPattern: "**/*.c4d"},
+				},
+			},
+		}},
+	})
 }
 
 // onDidOpen stores the document snapshot and publishes its diagnostics plus
@@ -453,6 +535,15 @@ func Serve(ctx context.Context, r io.Reader, w io.Writer) error {
 	conn := NewConn(r, w)
 	srv := NewServer()
 	srv.SetNotifier(func(method string, params any) { _ = conn.Notify(method, params) })
+
+	var callSeq uint64
+
+	srv.SetRequester(func(method string, params any) {
+		callSeq++
+		// A failed registration write must not kill the loop — the client
+		// may be gone; the next Read surfaces that.
+		_ = conn.Request(method, params, callSeq)
+	})
 
 	for {
 		select {

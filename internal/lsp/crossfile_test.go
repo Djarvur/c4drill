@@ -6,6 +6,8 @@
 package lsp_test
 
 import (
+	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -310,4 +312,65 @@ func TestMixedFormatIncludeGraph(t *testing.T) {
 		`error: unit "entrySvc" has no incoming or outgoing links in entrySvc`,
 		`error: unit "sharedDb" has no incoming or outgoing links in sharedDb`,
 	}, messagesOf(pub), "C4D entry + TOML include merges at Model level exactly like the CLI")
+}
+
+// TestInitializedRegistersWatchedFiles (issue #33): the server has handled
+// workspace/didChangeWatchedFiles since M1, but the LSP spec has no static
+// server capability for it — clients only report once the server registers
+// dynamically on initialized.
+func TestInitializedRegistersWatchedFiles(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	h.withRequester()
+
+	h.request("initialize", lsp.InitializeResult{})
+
+	require.Empty(t, h.sentRequests(), "nothing registers before initialized")
+
+	h.notify("initialized", lsp.InitializedParams{})
+
+	reqs := h.sentRequests()
+	require.Len(t, reqs, 1, "exactly one client/registerCapability request")
+
+	var params lsp.RegistrationParams
+	require.NoError(t, json.Unmarshal(reqs[0].Params, &params))
+
+	require.Len(t, params.Registrations, 1)
+
+	reg := params.Registrations[0]
+	assert.Equal(t, "c4drill-watched-files", reg.ID)
+	assert.Equal(t, "workspace/didChangeWatchedFiles", reg.Method)
+	assert.Contains(t, string(reqs[0].Params), "**/*.toml")
+	assert.Contains(t, string(reqs[0].Params), "**/*.c4d")
+
+	// A repeated initialized does not register twice.
+	h.notify("initialized", lsp.InitializedParams{})
+	assert.Empty(t, h.sentRequests())
+
+	// Without a requester (the in-proc GUI session shape) nothing registers.
+	h2 := newHarness(t)
+	h2.request("initialize", lsp.InitializeResult{})
+	h2.notify("initialized", lsp.InitializedParams{})
+	assert.Empty(t, h2.sentRequests())
+}
+
+// TestClientResponseIsDropped: a client response to the (fire-and-forget)
+// registration request is tolerated — never answered with an error.
+func TestClientResponseIsDropped(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	h.withRequester()
+
+	h.request("initialize", lsp.InitializeResult{})
+	h.notify("initialized", lsp.InitializedParams{})
+	require.Len(t, h.sentRequests(), 1)
+
+	id := lsp.ID("srv-1")
+	assert.Nil(t, h.srv.Handle(context.Background(), &lsp.Message{
+		JSONRPC: "2.0",
+		ID:      &id,
+		Result:  json.RawMessage("[]"),
+	}), "a client response gets no response back")
 }

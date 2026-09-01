@@ -30,6 +30,7 @@ type harness struct {
 
 	mu   sync.Mutex
 	sent []lsp.Message
+	reqs []lsp.Message
 }
 
 func newHarness(t *testing.T) *harness {
@@ -51,6 +52,39 @@ func newHarness(t *testing.T) *harness {
 	})
 
 	return h
+}
+
+// withRequester records server→client requests (dynamic capability
+// registrations) alongside the notifications.
+func (h *harness) withRequester() {
+	h.t.Helper()
+
+	h.srv.SetRequester(func(method string, params any) {
+		raw, err := json.Marshal(params)
+		require.NoError(h.t, err)
+
+		h.mu.Lock()
+		defer h.mu.Unlock()
+
+		h.reqs = append(h.reqs, lsp.Message{
+			JSONRPC: "2.0",
+			Method:  method,
+			Params:  raw,
+		})
+	})
+}
+
+// sentRequests drains the recorded server→client requests.
+func (h *harness) sentRequests() []lsp.Message {
+	h.t.Helper()
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	out := h.reqs
+	h.reqs = nil
+
+	return out
 }
 
 // request sends one JSON-RPC request and returns the raw response message.
@@ -206,6 +240,14 @@ func TestInitializeAdvertisesCapabilities(t *testing.T) {
 	assert.True(t, result.Capabilities.TextDocumentSync.OpenClose)
 	assert.Equal(t, lsp.SyncFull, result.Capabilities.TextDocumentSync.Change)
 	assert.Equal(t, "c4drill", result.ServerInfo.Name)
+
+	// Semantic tokens (issue #33): advertised full-document with the
+	// three-entry c4drill legend.
+	require.NotNil(t, result.Capabilities.SemanticTokensProvider)
+	assert.True(t, result.Capabilities.SemanticTokensProvider.Full)
+	assert.Equal(t,
+		lsp.SemanticTokensLegend{TokenTypes: []string{"property", "class", "enumMember"}},
+		result.Capabilities.SemanticTokensProvider.Legend)
 }
 
 func TestRequestBeforeInitializeFails(t *testing.T) {
