@@ -1488,13 +1488,19 @@ the exact CLI pipeline, so message text and line numbers match
 `c4drill <file>` — including `[[include]]` graphs, where editing an
 included file (open buffer or watched on-disk change) republishes
 diagnostics for every including document.
-* Also speaks `textDocument/completion` (all 17 unit types with nesting
-inference and generic-type promotion, unit/link fields, enum values,
-peers, template params, include paths), `hover` (resolved peer paths,
-level and promoted type; template param info), `definition` (peer to
-unit section, template reference, include target), `documentSymbol`
-(unit outline) and `textDocument/formatting` (fmt parity for both
-formats).
+* Both formats get the full feature surface: `textDocument/completion`
+(all 17 unit types with nesting inference and generic-type promotion,
+unit/link fields, enum values, peers, template params, include paths),
+`hover` (resolved peer paths, level and promoted type; template param
+info), `definition` (peer to unit section, template reference, include
+target), `documentSymbol` (unit outline) and `textDocument/formatting`
+(fmt parity).
+* `textDocument/semanticTokens/full` (TOML dialect) marks unit-type
+keys/values, link-table segments and enum values for editors that layer
+semantic tokens over their grammars. On `initialized` the server
+dynamically registers `workspace/didChangeWatchedFiles` watchers for
+`**/*.toml` and `**/*.c4d`, so on-disk include edits republish
+diagnostics even in clients that never send the notification manually.
 * Custom method `c4drill/renderDiagram` renders the CLI SVG pipeline
 in-process — params: document URI, optional target unit path
 (C1/C2/C3), all-expanded toggle, expanded-set and legend overrides —
