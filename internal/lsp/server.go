@@ -20,6 +20,8 @@ import (
 const (
 	methodInitialize         = "initialize"
 	methodCompletion         = "textDocument/completion"
+	methodFormatting         = "textDocument/formatting"
+	methodRenderDiagram      = "c4drill/renderDiagram"
 	methodHover              = "textDocument/hover"
 	methodDefinition         = "textDocument/definition"
 	methodDocumentSymbol     = "textDocument/documentSymbol"
@@ -93,20 +95,20 @@ func (s *Server) Exited() bool {
 // Handle dispatches one incoming JSON-RPC message and returns the response
 // message, or nil for notifications. It is the in-memory transport entry:
 // the GUI app (#31) and the conformance tests drive the server through it.
-func (s *Server) Handle(_ context.Context, msg *Message) *Message {
+func (s *Server) Handle(ctx context.Context, msg *Message) *Message {
 	if msg.ID == nil {
 		s.handleNotification(msg)
 
 		return nil
 	}
 
-	return s.handleRequest(msg)
+	return s.handleRequest(ctx, msg)
 }
 
 // handleRequest processes requests (messages carrying an id); every request
 // gets a response. Before initialize only `initialize` is answered; after
 // shutdown everything but `exit` fails (LSP §lifecycle).
-func (s *Server) handleRequest(msg *Message) *Message {
+func (s *Server) handleRequest(ctx context.Context, msg *Message) *Message {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -121,12 +123,12 @@ func (s *Server) handleRequest(msg *Message) *Message {
 		return errorResponse(msg, codeInvalidRequest, errAfterShutdown.Error())
 	}
 
-	return s.dispatchRequest(msg)
+	return s.dispatchRequest(ctx, msg)
 }
 
 // dispatchRequest routes an initialized-state request to its capability
 // handler. Unknown methods fail with MethodNotFound.
-func (s *Server) dispatchRequest(msg *Message) *Message {
+func (s *Server) dispatchRequest(ctx context.Context, msg *Message) *Message {
 	switch msg.Method {
 	case methodShutdown:
 		s.shutdown = true
@@ -140,6 +142,10 @@ func (s *Server) dispatchRequest(msg *Message) *Message {
 		return s.positionRequest(msg, s.definitionAt)
 	case methodDocumentSymbol:
 		return s.documentSymbolRequest(msg)
+	case methodFormatting:
+		return s.formattingRequest(msg)
+	case methodRenderDiagram:
+		return s.renderDiagramRequest(ctx, msg)
 	default:
 		return errorResponse(msg, codeMethodNotFound, "method not found: "+msg.Method)
 	}
@@ -163,6 +169,58 @@ func (s *Server) positionRequest(msg *Message, feature func(*document, Position)
 	if result == nil {
 		return okResponse(msg, json.RawMessage("null"))
 	}
+
+	raw, err := json.Marshal(result)
+	if err != nil {
+		return errorResponse(msg, codeInternalError, "marshal result: "+err.Error())
+	}
+
+	return okResponse(msg, raw)
+}
+
+// formattingRequest is textDocument/formatting's shape.
+func (s *Server) formattingRequest(msg *Message) *Message {
+	var p DocumentFormattingParams
+	if err := json.Unmarshal(msg.Params, &p); err != nil {
+		return errorResponse(msg, codeInvalidParams, "invalid params: "+err.Error())
+	}
+
+	doc, ok := s.docs[p.TextDocument.URI]
+	if !ok {
+		return okResponse(msg, json.RawMessage("null"))
+	}
+
+	edits := s.formatting(doc, p.Options)
+	if edits == nil {
+		return okResponse(msg, json.RawMessage("null")) // malformed or unsupported
+	}
+
+	if len(edits) == 0 {
+		return okResponse(msg, json.RawMessage("[]")) // already formatted
+	}
+
+	raw, err := json.Marshal(edits)
+	if err != nil {
+		return errorResponse(msg, codeInternalError, "marshal result: "+err.Error())
+	}
+
+	return okResponse(msg, raw)
+}
+
+// renderDiagramRequest is the c4drill/renderDiagram custom method (M4): the
+// live-preview primitive #27/#29/#30 and #31 build on.
+func (s *Server) renderDiagramRequest(ctx context.Context, msg *Message) *Message {
+	var p RenderDiagramParams
+	if err := json.Unmarshal(msg.Params, &p); err != nil {
+		return errorResponse(msg, codeInvalidParams, "invalid params: "+err.Error())
+	}
+
+	doc, ok := s.docs[p.TextDocument.URI]
+	if !ok {
+		return okResponse(msg, json.RawMessage("null"))
+	}
+
+	result := s.renderDiagram(ctx, doc, p)
 
 	raw, err := json.Marshal(result)
 	if err != nil {
@@ -211,10 +269,11 @@ func (s *Server) handleInitialize(msg *Message) *Message {
 				Change:    SyncFull,
 				Save:      true,
 			},
-			CompletionProvider:     &CompletionOptions{},
-			HoverProvider:          true,
-			DefinitionProvider:     true,
-			DocumentSymbolProvider: true,
+			CompletionProvider:         &CompletionOptions{},
+			HoverProvider:              true,
+			DefinitionProvider:         true,
+			DocumentSymbolProvider:     true,
+			DocumentFormattingProvider: true,
 		},
 		ServerInfo: ServerInfo{Name: "c4drill", Version: serverVersion},
 	}

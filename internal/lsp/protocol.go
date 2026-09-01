@@ -62,11 +62,12 @@ type TextDocumentSyncOptions struct {
 // milestone adds its entries: M1 text sync, M2 language features, M3
 // formatting, M4 the c4drill render method (via Experimental).
 type ServerCapabilities struct {
-	TextDocumentSync       *TextDocumentSyncOptions `json:"textDocumentSync,omitempty"`
-	CompletionProvider     *CompletionOptions       `json:"completionProvider,omitempty"`
-	HoverProvider          bool                     `json:"hoverProvider,omitempty"`
-	DefinitionProvider     bool                     `json:"definitionProvider,omitempty"`
-	DocumentSymbolProvider bool                     `json:"documentSymbolProvider,omitempty"`
+	TextDocumentSync           *TextDocumentSyncOptions `json:"textDocumentSync,omitempty"`
+	CompletionProvider         *CompletionOptions       `json:"completionProvider,omitempty"`
+	HoverProvider              bool                     `json:"hoverProvider,omitempty"`
+	DefinitionProvider         bool                     `json:"definitionProvider,omitempty"`
+	DocumentSymbolProvider     bool                     `json:"documentSymbolProvider,omitempty"`
+	DocumentFormattingProvider bool                     `json:"documentFormattingProvider,omitempty"`
 }
 
 // CompletionOptions advertises the completion capability.
@@ -217,4 +218,63 @@ type DocumentSymbol struct {
 	Range          Range            `json:"range"`
 	SelectionRange Range            `json:"selectionRange"`
 	Children       []DocumentSymbol `json:"children,omitempty"`
+}
+
+// FormattingOptions are the client's formatting preferences. c4drill
+// formatting is whitespace-normalizing with fixed style, so only the shape
+// is accepted — the values do not alter the output (gofmt-style).
+type FormattingOptions struct {
+	TabSize      int  `json:"tabSize"`
+	InsertSpaces bool `json:"insertSpaces"`
+}
+
+// DocumentFormattingParams is the textDocument/formatting payload.
+type DocumentFormattingParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Options      FormattingOptions      `json:"options"`
+}
+
+// TextEdit is one contiguous replacement.
+type TextEdit struct {
+	Range   Range  `json:"range"`
+	NewText string `json:"newText"`
+}
+
+// RenderDiagramParams is the c4drill/renderDiagram request (issue #32, M4 —
+// the live-preview contract for #27/#29/#30/#31). Wire shape (v1):
+//
+//	{
+//	  "textDocument": { "uri": "file:///path/model.toml" },
+//	  "target": "cloud.ui",     // optional: unit path to render. "" = C1
+//	                            // context; one segment = that unit's C2
+//	                            // diagram; deeper = C3 — the CLI layout.
+//	  "allExpanded": false,     // optional: the single all-expanded diagram
+//	                            // (the CLI --expanded mode); overrides target
+//	  "expanded": ["cloud"],    // optional: replacement for the model's
+//	                            // [properties].expanded C1 drill-down set
+//	                            // (per-unit expanded lists stay author-owned)
+//	  "legend": true,           // optional: overrides properties.legend
+//	  "format": "svg"           // optional, only "svg" in v1 (default)
+//	}
+//
+// The response carries the SVG text plus the pipeline diagnostics observed
+// while preparing it (see RenderDiagramResult). Validation failures return
+// HTTP-style success with the diagnostics and an empty svg — the same
+// information the CLI prints before refusing to render.
+type RenderDiagramParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Target       string                 `json:"target,omitempty"`
+	AllExpanded  bool                   `json:"allExpanded,omitempty"`
+	// Expanded has no omitempty deliberately: an EMPTY slice is a
+	// meaningful override ("collapse all") and must reach the server.
+	Expanded []string `json:"expanded"`
+	Legend   *bool    `json:"legend,omitempty"`
+	Format   string   `json:"format,omitempty"`
+}
+
+// RenderDiagramResult is the c4drill/renderDiagram response: the rendered
+// SVG text (empty when validation failed) and every pipeline diagnostic.
+type RenderDiagramResult struct {
+	SVG         string       `json:"svg"`
+	Diagnostics []Diagnostic `json:"diagnostics"`
 }
