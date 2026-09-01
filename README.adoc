@@ -1297,9 +1297,11 @@ Flags:
   …). Every c4drill unit type maps onto the standard
   C4_Context/C4_Container/C4_Component macros (persons, systems,
   containers, components, db/queue variants, and grouping boxes as
-  boundaries), and relationships map onto `Rel`/`Rel_Back`/`BiRel`
+  boundaries — upstream C4-PlantUML has no `Component_Boundary`, so
+  `componentBox` frames with the generic `Boundary` macro), and
+  relationships map onto `Rel`/`Rel_Back`/`BiRel`
   by arrow direction. The drill-down links ride the element macros'
-  link parameter, so converting with `plantuml -tsvg` produces SVGs
+  `$link` parameter, so converting with `plantuml -tsvg` produces SVGs
   whose nodes are real anchors pointing at the sibling `.svg`
   diagrams — the breadcrumb nav bar is not expressible in PlantUML
   and is omitted. Model colours ride `AddElementTag`/`AddRelTag`
@@ -1507,6 +1509,12 @@ navigation in Safari/WebKit, which silently ignores SVG `++<++a++>++`
 hyperlinks. Use `-f html` when diagrams will be opened in Safari or
 viewed via `file://`.
 * *dot*: Raw GraphViz DOT format for customization
+* *png*: PNG raster diagrams at the same per-level paths the SVG layout
+uses, each with a sibling `.html` doc carrying the clickable navigation
+(see `--format png` above)
+* *plantuml*: C4-PlantUML source documents (`.puml`) whose `$link`
+drill-downs point at the sibling SVGs after `plantuml -tsvg` (see
+`--format plantuml` above)
 
 === Exit Codes
 
@@ -1514,6 +1522,54 @@ viewed via `file://`.
 * *1*: Error (parse failure, validation error, I/O error)
 
 Errors are written to stderr, making the tool suitable for scripting.
+
+== Editor and GUI Clients
+
+Four clients ship in this repository, all thin layers over the same
+core: language features come from the `c4drill serve --lsp` server
+(see <<serve>>) and live previews from its custom
+`c4drill/renderDiagram` request, so diagnostics, completion and
+rendered output match `c4drill <file>` in every client; each
+subsection points at the per-directory documentation.
+
+=== VS Code Extension (`extension/`)
+
+Registers a `c4drill-c4d` language backed by a TextMate grammar and
+scopes TOML opt-in: plain `.toml` files are never touched unless they
+match the `c4drill.toml.patterns` globs (default
+`**/*.architecture.toml`) or are activated per file. An LSP client
+launches `c4drill serve --lsp` (`c4drill.server.path` picks the
+binary), and a preview webview re-renders the diagram as you type with
+click-through drill-down navigation and breadcrumbs. The command and
+settings surface is listed in `extension/package.json`.
+
+=== JetBrains Plugin (`idea-plugin/`)
+
+Builds on the IntelliJ platform's built-in LSP client (requires IDE
+2025.3+ of the commercial IDEs) and reuses the same C4D TextMate
+grammar for highlighting, with the same TOML opt-in rule as the VS
+Code extension. A "C4Drill Preview" tool window renders through
+`c4drill/renderDiagram` with drill-down navigation, view controls and
+SVG export. Details, install and build instructions in
+`idea-plugin/README.md`.
+
+=== Zed Extension (`zed-extension/`)
+
+Ships a tree-sitter-c4d grammar (Zed has no TextMate support), wires
+the LSP server for diagnostics, completion, hover, definition and
+formatting, and contributes render/export tasks that run the CLI
+(`c4drill: render diagram`, export dot/PlantUML). TOML scoping rides
+Zed's `file_types` settings glob; a live preview panel is pending
+Zed's visual extension API. Details in `zed-extension/README.md`.
+
+=== Desktop GUI App (`gui/`)
+
+A Wails desktop app wrapping the full authoring loop: a code editor
+for both formats with the shared language features, a live
+auto-refreshing diagram preview with drill-down and export, and an AI
+chat panel whose edit proposals land as confirmed diffs. The same UI
+is also available in a browser via `./gui --serve`. Build, run and
+configuration details in `gui/README.md`.
 
 == Validation Rules
 
@@ -1545,7 +1601,8 @@ TOML → Parse → Validate → Generate Views → Build Graphs → Render → W
 * *Validator*: Enforces C4 rules and reference integrity
 * *View Generator*: Creates C1/C2/C3 views from model
 * *Graph Builder*: Constructs graphviz-compatible structures
-* *Renderer*: Outputs DOT, SVG, or HTML via go-graphviz
+* *Renderer*: Outputs DOT, SVG, HTML, and PNG via go-graphviz, plus
+C4-PlantUML source documents
 * *Writer*: Creates output directory hierarchy
 
 == License
