@@ -11,6 +11,8 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.actionSystem.IdeActions
+import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
@@ -95,8 +97,14 @@ class C4drillFormatAction : AnAction() {
 
         // Delegate to the platform's reformat action: for LSP-backed files it
         // routes to textDocument/formatting on the c4drill server.
-        ActionManager.getInstance().getAction("ReformatCode")?.let { action ->
-            action.actionPerformed(e)
+        // ActionUtil.performActionDumbAwareWithCallbacks is the supported way
+        // to invoke another action programmatically —
+        // AnAction.actionPerformed is @ApiStatus.OverrideOnly and must not be
+        // called directly (flagged by the Plugin Verifier, issue #35).
+        val reformat = ActionManager.getInstance().getAction(IdeActions.ACTION_EDITOR_REFORMAT)
+
+        if (reformat != null && isManagedFile(project, file)) {
+            ActionUtil.performActionDumbAwareWithCallbacks(reformat, e)
         }
     }
 }
