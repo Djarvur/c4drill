@@ -13,7 +13,30 @@ const (
 	dirPermission = 0o750
 	// filePermission is the permission for created files.
 	filePermission = 0o600
+	// pngExt is the PNG raster file extension.
+	pngExt = ".png"
 )
+
+// PNGImageName returns the bare file name (no directory) of the PNG that the
+// sibling HTML navigation doc embeds via <img src> (issue #26). It mirrors
+// the Write layout so the doc always references the image sitting next to it:
+// {basename}.png for C1, {last-path-segment}.png for C2/C3.
+func PNGImageName(basename, unitPath string) string {
+	if unitPath == "" {
+		return basename + pngExt
+	}
+
+	parts := strings.Split(unitPath, ".")
+
+	return parts[len(parts)-1] + pngExt
+}
+
+// ExpandedPNGImageName returns the bare file name of the PNG for the
+// --expanded diagram's HTML navigation doc: {basename}.expanded.png,
+// mirroring WriteExpanded's layout.
+func ExpandedPNGImageName(basename string) string {
+	return basename + ".expanded" + pngExt
+}
 
 // Writer handles writing rendered diagrams to files with proper directory structure.
 type Writer struct {

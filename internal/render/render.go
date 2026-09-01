@@ -41,6 +41,21 @@ func RenderSVG(g *graph.Graph) ([]byte, error) {
 	return render(g, graphviz.SVG)
 }
 
+// RenderPNG renders a graph to PNG format (raster image).
+//
+// The WASM graphviz engine renders PNG natively (graphviz.PNG). Like SVG, the
+// render goes through the wasmMutex-serialized internal render(), but — unlike
+// SVG — it skips the applyPipeRendering post-process, which rewrites SVG
+// bytes only (guarded by `format == graphviz.SVG`): a queue node keeps its
+// plain rect in the raster. A bare PNG cannot carry hyperlinks; pair it with
+// RenderHTMLForPNG, which builds the clickable HTML navigation doc that
+// embeds the image.
+//
+//nolint:revive // Function name matches plan specification
+func RenderPNG(g *graph.Graph) ([]byte, error) {
+	return render(g, graphviz.PNG)
+}
+
 // RenderHTML renders a graph to a self-contained HTML document that inlines
 // the SVG and injects a small JS shim so diagram links work in Safari/WebKit.
 //
@@ -72,8 +87,11 @@ func RenderSVGWithOutput(g *graph.Graph, _ string) ([]byte, error) {
 	return render(g, graphviz.SVG)
 }
 
-// Render renders a graph to the specified format ("dot", "svg", or "html").
-// Returns an error for unsupported formats.
+// Render renders a graph to the specified format ("dot", "svg", "html", or
+// "png"). Returns an error for unsupported formats. Note that the "png" case
+// returns ONLY the raster bytes — the clickable HTML navigation doc that
+// accompanies each PNG is built separately (RenderHTMLForPNG) because it
+// needs the output file name.
 func Render(g *graph.Graph, format string) ([]byte, error) {
 	switch format {
 	case "dot":
@@ -82,8 +100,10 @@ func Render(g *graph.Graph, format string) ([]byte, error) {
 		return RenderSVG(g)
 	case "html":
 		return RenderHTML(g)
+	case "png":
+		return RenderPNG(g)
 	default:
-		return nil, fmt.Errorf("%w: %q (supported: dot, svg, html)", ErrUnsupportedFormat, format)
+		return nil, fmt.Errorf("%w: %q (supported: dot, svg, html, png)", ErrUnsupportedFormat, format)
 	}
 }
 
@@ -100,8 +120,10 @@ func RenderWithOutput(g *graph.Graph, format, _ string) ([]byte, error) {
 		return render(g, graphviz.SVG)
 	case "html":
 		return RenderHTML(g)
+	case "png":
+		return RenderPNG(g)
 	default:
-		return nil, fmt.Errorf("%w: %q (supported: dot, svg, html)", ErrUnsupportedFormat, format)
+		return nil, fmt.Errorf("%w: %q (supported: dot, svg, html, png)", ErrUnsupportedFormat, format)
 	}
 }
 
