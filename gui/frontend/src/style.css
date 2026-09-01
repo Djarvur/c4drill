@@ -1,0 +1,408 @@
+/* c4drill GUI — three-area layout: sidebar | editor | preview (+ chat in P1) */
+
+:root {
+  --bg: #16181d;
+  --bg-panel: #1d2026;
+  --bg-raised: #242830;
+  --border: #2e333d;
+  --fg: #d6dae2;
+  --fg-dim: #8b93a1;
+  --accent: #4f9cf9;
+  --error: #f47067;
+  --ok: #57ab5a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+}
+
+button,
+select,
+input {
+  background: var(--bg-raised);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--accent);
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+}
+
+/* title bar */
+.titlebar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-panel);
+}
+
+.logo {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.project-controls {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+}
+
+#project-dir {
+  flex: 0 1 480px;
+  font-family: ui-monospace, Menlo, monospace;
+}
+
+.project-label {
+  color: var(--fg-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* main layout */
+.layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 200px minmax(320px, 34%) 1fr;
+  min-height: 0;
+}
+
+.layout:has(.chat-pane:not([hidden])) {
+  grid-template-columns: 200px minmax(280px, 30%) 1fr minmax(280px, 24%);
+}
+
+.sidebar {
+  border-right: 1px solid var(--border);
+  background: var(--bg-panel);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sidebar-header {
+  padding: 6px 10px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--fg-dim);
+}
+
+.file-tree {
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 0 4px;
+}
+
+.tree-item {
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tree-item:hover {
+  background: var(--bg-raised);
+}
+
+.tree-empty {
+  color: var(--fg-dim);
+  padding: 8px;
+}
+
+/* editor pane */
+.editor-pane {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  min-width: 0;
+  min-height: 0;
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px 6px 0;
+  background: var(--bg-panel);
+  min-height: 28px;
+  flex-wrap: wrap;
+}
+
+.tab {
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  background: var(--bg);
+  color: var(--fg-dim);
+  padding: 3px 8px;
+}
+
+.tab.active {
+  color: var(--fg);
+  background: var(--bg-raised);
+}
+
+.tab.dirty {
+  font-style: italic;
+}
+
+.tab-close {
+  margin-left: 6px;
+  color: var(--fg-dim);
+}
+
+.tab-close:hover {
+  color: var(--error);
+}
+
+.editor-host {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.editor-host .cm-editor {
+  height: 100%;
+  font-size: 12.5px;
+}
+
+.editor-host .cm-scroller {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  line-height: 1.5;
+}
+
+.cm-hover {
+  max-width: 420px;
+  white-space: pre-wrap;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 12px;
+}
+
+.editor-status {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 4px 8px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-panel);
+}
+
+.hint {
+  color: var(--fg-dim);
+  font-size: 11px;
+  margin-left: auto;
+}
+
+/* preview pane */
+.preview-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--fg-dim);
+}
+
+.toolbar .check input {
+  margin: 0;
+}
+
+.spacer {
+  flex: 0 0 6px;
+}
+
+.chips {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.chips-label {
+  color: var(--fg-dim);
+  font-size: 11px;
+}
+
+.chip {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.chip-reset {
+  color: var(--accent);
+}
+
+.chip-empty {
+  color: var(--fg-dim);
+  border-style: dashed;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  min-height: 26px;
+  flex-wrap: wrap;
+}
+
+.crumb {
+  background: none;
+  border: none;
+  color: var(--fg);
+  padding: 2px 4px;
+  font-family: ui-monospace, Menlo, monospace;
+}
+
+.crumb-link {
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.crumb-current {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.crumb-sep {
+  color: var(--fg-dim);
+}
+
+.preview-container {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+  background:
+    linear-gradient(45deg, #1a1d23 25%, transparent 25%, transparent 75%, #1a1d23 75%),
+    linear-gradient(45deg, #1a1d23 25%, transparent 25%, transparent 75%, #1a1d23 75%);
+  background-size: 24px 24px;
+  background-position: 0 0, 12px 12px;
+  cursor: grab;
+}
+
+.preview-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12px;
+}
+
+.preview-stage svg {
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 18px rgb(0 0 0 / 45%);
+}
+
+.preview-stage a {
+  cursor: pointer;
+}
+
+.preview-error {
+  flex: 1;
+  overflow: auto;
+  padding: 14px;
+  background: #241a1c;
+  border-bottom: 1px solid var(--border);
+  font-family: ui-monospace, Menlo, monospace;
+  white-space: pre-wrap;
+}
+
+.preview-error-title {
+  color: var(--error);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.preview-error-line {
+  color: var(--fg);
+  padding: 2px 0 2px 12px;
+}
+
+.preview-status-bar {
+  display: flex;
+  gap: 12px;
+  padding: 3px 10px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-panel);
+  color: var(--fg-dim);
+  font-size: 11px;
+}
+
+/* toast */
+.toast {
+  position: fixed;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-raised);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 8px 14px;
+  max-width: 70%;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 40%);
+  z-index: 50;
+  word-break: break-all;
+}
+
+.toast.error {
+  border-color: var(--error);
+}
+
+/* CodeMirror diagnostics accents already come from the lint theme; keep the
+   lint panel readable on dark background. */
+.cm-tooltip-lint {
+  background: var(--bg-raised) !important;
+  color: var(--fg) !important;
+  border: 1px solid var(--border) !important;
+}

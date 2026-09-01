@@ -1,0 +1,8 @@
+# Included half of the GUI cross-file fixture: defines authService, which the
+# entry side's links resolve against after include merging.
+
+[authService]
+type = "system"
+name = "Auth Service"
+description = "Authentication boundary"
+technology = "Go"

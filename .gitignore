@@ -114,6 +114,15 @@ zed-extension/target/
 !zed-extension/grammars/c4d/package.json
 !zed-extension/grammars/c4d/package-lock.json
 
+# ...and the GUI frontend (gui/frontend/, issue #31) — a real npm project, so
+# its package manifests are tracked despite the global package.json ignore;
+# node_modules/ stays ignored via the global rule, dist/ via the negation
+# below except the placeholder that keeps `go build` working without npm.
+!gui/frontend/package.json
+!gui/frontend/package-lock.json
+gui/frontend/dist/*
+!gui/frontend/dist/.gitkeep
+
 # ZCode session artifacts
 .zcode/plans/
 
