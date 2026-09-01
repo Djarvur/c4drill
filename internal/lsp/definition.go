@@ -1,10 +1,11 @@
-// definition.go implements textDocument/definition (issue #32):
+// definition.go implements textDocument/definition (issues #32/#33):
 //   - peer values resolve (walk-up, read-only) to the target unit's
-//     [section] header — in this document or, via the include closure, in
-//     the included file that defines it;
-//   - `template = "name"` values jump to the [template.name] header;
-//   - `path =` values in [[include]] jump to the target file itself.
-// TOML dialect only.
+//     [section] header / unit header line — in this document or, via the
+//     include closure, in the included file that defines it (both formats);
+//   - `template = "name"` / `use name(...)` values jump to the
+//     [template.name] header / template declaration;
+//   - `path =` / `include path` values jump to the target file itself.
+// The TOML classes live here; the .c4d classes in c4dlang.go.
 
 package lsp
 
@@ -17,10 +18,18 @@ import (
 // definitionAt is the textDocument/definition feature entry; the LSP result
 // is Location[] (null when nothing is found).
 func (s *Server) definitionAt(doc *document, pos Position) any {
-	if filepath.Ext(doc.Path) != extToml {
+	switch ext := filepath.Ext(doc.Path); ext {
+	case extC4d:
+		return s.c4dDefinition(doc, pos)
+	case extToml:
+		return s.tomlDefinition(doc, pos)
+	default:
 		return nil
 	}
+}
 
+// tomlDefinition is the TOML-dialect definition body.
+func (s *Server) tomlDefinition(doc *document, pos Position) any {
 	text := string(doc.Text)
 	ctx := analyzeLine(text, pos)
 
@@ -59,12 +68,7 @@ func (s *Server) peerDefinition(doc *document, text string, ctx lineContext) *Lo
 		return nil
 	}
 
-	// This document first, then every transitively included file.
-	if r := headerRange(scanHeaders(text), target, false); r != nil {
-		return &Location{URI: doc.URI, Range: *r}
-	}
-
-	return s.searchIncludedFiles(doc, target)
+	return s.searchIncludesFrom(doc.Path, text, defTarget{unitPath: target}, map[string]bool{})
 }
 
 // templateDefinition jumps from a `template = "name"` value to its
@@ -75,13 +79,7 @@ func (s *Server) templateDefinition(doc *document, text string, ctx lineContext)
 		return nil
 	}
 
-	target := tblTemplate + "." + name
-
-	if r := headerRange(scanHeaders(text), target, false); r != nil {
-		return &Location{URI: doc.URI, Range: *r}
-	}
-
-	return s.searchIncludedFiles(doc, target)
+	return s.searchIncludesFrom(doc.Path, text, defTarget{template: name}, map[string]bool{})
 }
 
 // includeDefinition jumps from a [[include]] path to the target file.
@@ -101,16 +99,11 @@ func (s *Server) includeDefinition(doc *document, ctx lineContext) *Location {
 	}
 }
 
-// searchIncludedFiles walks the include closure (open buffers first, then
-// disk) looking for the plain-table header defining path.
-func (s *Server) searchIncludedFiles(doc *document, path string) *Location {
-	visited := map[string]bool{}
-
-	return s.searchIncludesFrom(doc.Path, string(doc.Text), path, visited)
-}
-
-// searchIncludesFrom is the recursive worker over one file's text.
-func (s *Server) searchIncludesFrom(path, text, target string, visited map[string]bool) *Location {
+// searchIncludesFrom walks the include closure (open buffers first, then
+// disk) looking for the target's defining line. The entry file is searched
+// first; the closure walks whichever front-end each file's extension selects,
+// so a .c4d entry can define peers in .toml files and vice versa.
+func (s *Server) searchIncludesFrom(path, text string, target defTarget, visited map[string]bool) *Location {
 	canonical := canonicalPath(path)
 	if visited[canonical] {
 		return nil
@@ -118,25 +111,21 @@ func (s *Server) searchIncludesFrom(path, text, target string, visited map[strin
 
 	visited[canonical] = true
 
-	headers := scanHeaders(text)
-	if r := headerRange(headers, target, false); r != nil {
-		loc := &Location{URI: pathToURI(canonical), Range: *r}
+	var r *Range
 
-		return loc
+	if filepath.Ext(canonical) == extC4d {
+		r = target.findInC4D(text)
+	} else {
+		r = target.findInToml(text)
+	}
+
+	if r != nil {
+		return &Location{URI: pathToURI(canonical), Range: *r}
 	}
 
 	dir := filepath.Dir(canonical)
 
-	for _, h := range headers {
-		if !h.isArray || !strings.HasSuffix(h.path, "."+tblInclude) && h.path != tblInclude {
-			continue
-		}
-
-		includeTarget := includeDirectiveTarget(text, h)
-		if includeTarget == "" {
-			continue
-		}
-
+	for _, includeTarget := range includeDirectives(canonical, text) {
 		includedPath := canonicalPath(filepath.Join(dir, includeTarget))
 
 		includedText, err := s.readForWalk(includedPath)
@@ -150,6 +139,35 @@ func (s *Server) searchIncludesFrom(path, text, target string, visited map[strin
 	}
 
 	return nil
+}
+
+// includeDirectives extracts the include paths a document (of either format)
+// directives at, in source order.
+func includeDirectives(path, text string) []string {
+	if filepath.Ext(path) == extC4d {
+		includes := c4dScanDocument(text).includes
+		paths := make([]string, 0, len(includes))
+
+		for _, inc := range includes {
+			paths = append(paths, inc.path)
+		}
+
+		return paths
+	}
+
+	var paths []string
+
+	for _, h := range scanHeaders(text) {
+		if !h.isArray || !strings.HasSuffix(h.path, "."+tblInclude) && h.path != tblInclude {
+			continue
+		}
+
+		if target := includeDirectiveTarget(text, h); target != "" {
+			paths = append(paths, target)
+		}
+	}
+
+	return paths
 }
 
 // includeDirectiveTarget extracts the `path = "..."` value authored inside

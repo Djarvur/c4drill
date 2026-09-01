@@ -259,7 +259,7 @@ name = "User"
 	assert.Equal(t, uint32(20), symbols[1].Range.End.Line, "last section closes at the EOF line")
 }
 
-func TestLanguageFeaturesAdvertiseAndScopeToToml(t *testing.T) {
+func TestLanguageFeaturesScopeByExtension(t *testing.T) {
 	t.Parallel()
 
 	h := newHarness(t)
@@ -274,30 +274,50 @@ func TestLanguageFeaturesAdvertiseAndScopeToToml(t *testing.T) {
 	assert.True(t, result.Capabilities.DefinitionProvider)
 	assert.True(t, result.Capabilities.DocumentSymbolProvider)
 
-	// A .c4d document: features scope to TOML, so they answer empty/null.
+	// A .c4d document gets the same feature surface as .toml (issue #33).
 	c4dURI := lsp.DocumentURI("file:///ws/model.c4d")
 
-	h.openDoc(c4dURI, "web: system \"Web\" { }\n")
+	h.openDoc(c4dURI, "web: system \"Web\" {\n  desc\n}\n")
 
 	comp := h.request("textDocument/completion", lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{URI: c4dURI},
-		Position:     lsp.Position{Line: 0, Character: 0},
+		Position:     lsp.Position{Line: 1, Character: 4},
 	})
 	require.Nil(t, comp.Error)
 
 	var list lsp.CompletionList
 	require.NoError(t, json.Unmarshal(comp.Result, &list))
-	assert.Empty(t, list.Items, ".c4d completion is intentionally empty in M2")
-
-	hover := h.request("textDocument/hover", lsp.TextDocumentPositionParams{
-		TextDocument: lsp.TextDocumentIdentifier{URI: c4dURI},
-		Position:     lsp.Position{Line: 0, Character: 1},
-	})
-	assert.JSONEq(t, "null", string(hover.Result), ".c4d hover is null in M2")
+	assert.NotEmpty(t, list.Items, ".c4d completion serves the unit body keywords")
 
 	symbols := h.request("textDocument/documentSymbol", lsp.TextDocumentPositionParams{
 		TextDocument: lsp.TextDocumentIdentifier{URI: c4dURI},
 		Position:     lsp.Position{},
 	})
-	assert.JSONEq(t, "null", string(symbols.Result), ".c4d symbols are null in M2")
+	require.Nil(t, symbols.Error)
+	assert.NotEqual(t, "null", string(symbols.Result), ".c4d symbols outline the unit blocks")
+
+	// An unsupported extension still answers empty/null everywhere.
+	xyzURI := lsp.DocumentURI("file:///ws/model.xyz")
+	h.openDoc(xyzURI, "anything")
+
+	comp = h.request("textDocument/completion", lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: xyzURI},
+		Position:     lsp.Position{Line: 0, Character: 0},
+	})
+	require.Nil(t, comp.Error)
+
+	require.NoError(t, json.Unmarshal(comp.Result, &list))
+	assert.Empty(t, list.Items, "unknown extensions complete nothing")
+
+	hover := h.request("textDocument/hover", lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: xyzURI},
+		Position:     lsp.Position{Line: 0, Character: 0},
+	})
+	assert.JSONEq(t, "null", string(hover.Result), "unknown extensions hover nothing")
+
+	symbols = h.request("textDocument/documentSymbol", lsp.TextDocumentPositionParams{
+		TextDocument: lsp.TextDocumentIdentifier{URI: xyzURI},
+		Position:     lsp.Position{},
+	})
+	assert.JSONEq(t, "null", string(symbols.Result), "unknown extensions have no outline")
 }

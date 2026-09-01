@@ -1,7 +1,7 @@
-// hover.go implements textDocument/hover (issue #32): at peer references the
-// resolved absolute unit path, its C level, and its (post-promotion) type;
-// at ${param} tokens and template references, the template's parameter info.
-// TOML dialect only — other formats hover nothing.
+// hover.go implements textDocument/hover (issue #32/#33): at peer references
+// the resolved absolute unit path, its C level, and its (post-promotion)
+// type; at ${param} tokens and template references, the template's parameter
+// info. The TOML classes live here; the .c4d classes in c4dlang.go.
 
 package lsp
 
@@ -34,10 +34,18 @@ func (s *Server) mergedModel(doc *document) *parser.Model {
 
 // hoverAt is the textDocument/hover feature entry.
 func (s *Server) hoverAt(doc *document, pos Position) any {
-	if filepath.Ext(doc.Path) != extToml {
+	switch ext := filepath.Ext(doc.Path); ext {
+	case extC4d:
+		return s.c4dHover(doc, pos)
+	case extToml:
+		return s.tomlHover(doc, pos)
+	default:
 		return nil
 	}
+}
 
+// tomlHover is the TOML-dialect hover body.
+func (s *Server) tomlHover(doc *document, pos Position) any {
 	text := string(doc.Text)
 	ctx := analyzeLine(text, pos)
 
@@ -71,6 +79,15 @@ func (s *Server) peerHover(doc *document, text string, ctx lineContext, pos Posi
 		return nil
 	}
 
+	return &Hover{
+		Contents: MarkupContent{Kind: "markdown", Value: peerHoverMarkdown(target, unit)},
+		Range:    wordRangeAt(text, pos),
+	}
+}
+
+// peerHoverMarkdown renders the resolved-peer hover text shared by both
+// dialects: absolute path, C level, promoted type, display name, description.
+func peerHoverMarkdown(target string, unit *model.Unit) string {
 	var b strings.Builder
 
 	b.WriteString("**" + target + "**\n\n")
@@ -84,21 +101,12 @@ func (s *Server) peerHover(doc *document, text string, ctx lineContext, pos Posi
 		b.WriteString(" — " + unit.Description)
 	}
 
-	return &Hover{
-		Contents: MarkupContent{Kind: "markdown", Value: b.String()},
-		Range:    wordRangeAt(text, pos),
-	}
+	return b.String()
 }
 
-// templateParamHover reports the parameter list of the template the cursor's
-// ${...} token belongs to.
-func templateParamHover(text string, ctx lineContext) *Hover {
-	name := enclosingTemplate(ctx)
-	if name == "" {
-		return nil
-	}
-
-	params := templateParams(text, name)
+// templateParamListHover renders the ${param} hover for a template's declared
+// parameters (shared by both dialects).
+func templateParamListHover(name string, params []string) *Hover {
 	if len(params) == 0 {
 		return nil
 	}
@@ -114,23 +122,39 @@ func templateParamHover(text string, ctx lineContext) *Hover {
 	return &Hover{Contents: MarkupContent{Kind: "markdown", Value: b.String()}}
 }
 
-// templateRefHover reports the referenced template's parameter info at a
-// `template = "name"` value.
-func templateRefHover(text string, ctx lineContext) *Hover {
-	params := templateParams(text, ctx.fullValue)
+// templateRefListHover renders the template-reference hover (shared by both
+// dialects).
+func templateRefListHover(name string, params []string) *Hover {
 	if len(params) == 0 {
 		return nil
 	}
 
 	var b strings.Builder
 
-	b.WriteString("Template `" + ctx.fullValue + "` — parameters:")
+	b.WriteString("Template `" + name + "` — parameters:")
 
 	for _, p := range params {
 		b.WriteString(" `" + p + "`")
 	}
 
 	return &Hover{Contents: MarkupContent{Kind: "markdown", Value: b.String()}}
+}
+
+// templateParamHover reports the parameter list of the template the cursor's
+// ${...} token belongs to.
+func templateParamHover(text string, ctx lineContext) *Hover {
+	name := enclosingTemplate(ctx)
+	if name == "" {
+		return nil
+	}
+
+	return templateParamListHover(name, templateParams(text, name))
+}
+
+// templateRefHover reports the referenced template's parameter info at a
+// `template = "name"` value.
+func templateRefHover(text string, ctx lineContext) *Hover {
+	return templateRefListHover(ctx.fullValue, templateParams(text, ctx.fullValue))
 }
 
 // levelLabel derives C1/C2/C3 from the unit path depth (the view levels).

@@ -1,17 +1,29 @@
-// symbols.go implements textDocument/documentSymbol (issue #32, M2): the
+// symbols.go implements textDocument/documentSymbol (issues #32/#33): the
 // document's units as an outline with hierarchy — each plain-table unit
-// section becomes a symbol nested under its parent unit, with the display
-// name and type as detail. TOML dialect only.
+// section (TOML) or unit block (C4D, closed at its own brace) becomes a
+// symbol nested under its parent unit, with the display name and type as
+// detail.
 
 package lsp
 
 import (
+	"path/filepath"
 	"strings"
 )
 
-// documentSymbols builds the unit outline for a document; empty for
-// documents without unit sections.
+// documentSymbols builds the unit outline for a document; nil for documents
+// without unit sections.
 func (s *Server) documentSymbols(doc *document) []DocumentSymbol {
+	if filepath.Ext(doc.Path) == extC4d {
+		return s.c4dDocumentSymbols(doc)
+	}
+
+	return s.tomlDocumentSymbols(doc)
+}
+
+// tomlDocumentSymbols is the TOML-dialect outline body: plain-table unit
+// sections nested by their dotted paths.
+func (s *Server) tomlDocumentSymbols(doc *document) []DocumentSymbol {
 	text := string(doc.Text)
 
 	headers := scanHeaders(text)

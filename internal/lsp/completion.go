@@ -1,5 +1,6 @@
 // completion.go implements textDocument/completion for the c4drill TOML
-// dialect. Context classes, per issue #32:
+// dialect (the .c4d counterpart lives in c4dlang.go). Context classes, per
+// issue #32:
 //
 //   - unit `type =` — all 17 unit types, context-aware: the nesting default
 //     (parser.DefaultTypeForParent) sorts first, generic db/queue/box show
@@ -13,9 +14,8 @@
 //   - `path =` in [[include]] — a filesystem scan relative to the including
 //     file (INC-02).
 //
-// Language features target the TOML dialect; .c4d documents return empty
-// completion. The analyzer works on the live buffer, so completion survives
-// mid-edit states that no longer parse as a model.
+// The analyzer works on the live buffer, so completion survives mid-edit
+// states that no longer parse as a model.
 
 package lsp
 
@@ -31,19 +31,22 @@ import (
 
 // completionAt is the textDocument/completion feature entry.
 func (s *Server) completionAt(doc *document, pos Position) any {
-	if filepath.Ext(doc.Path) != extToml {
+	switch ext := filepath.Ext(doc.Path); ext {
+	case extC4d:
+		return s.c4dCompletion(doc, pos)
+	case extToml:
+		text := string(doc.Text)
+		ctx := analyzeLine(text, pos)
+
+		items := s.completionItems(doc, text, ctx)
+		if len(items) == 0 {
+			return CompletionList{Items: []CompletionItem{}}
+		}
+
+		return CompletionList{Items: items}
+	default:
 		return CompletionList{Items: []CompletionItem{}}
 	}
-
-	text := string(doc.Text)
-	ctx := analyzeLine(text, pos)
-
-	items := s.completionItems(doc, text, ctx)
-	if len(items) == 0 {
-		return CompletionList{Items: []CompletionItem{}}
-	}
-
-	return CompletionList{Items: items}
 }
 
 // completionItems dispatches on the cursor context.
@@ -277,8 +280,12 @@ func allUnitTypes() []model.UnitType {
 // unitTypeItems produces the 17 unit types, context-aware: the level default
 // sorts first, generics note their promotion at this nesting, rest after.
 func unitTypeItems(text string, ctx lineContext) []CompletionItem {
-	parentType := model.UnitType(declaredParentType(text, ctx))
+	return unitTypeItemsForParent(model.UnitType(declaredParentType(text, ctx)))
+}
 
+// unitTypeItemsForParent is the shared type-slot list for both dialects: the
+// level default sorts first, generics note their promotion at this nesting.
+func unitTypeItemsForParent(parentType model.UnitType) []CompletionItem {
 	defaultType := parser.DefaultTypeForParent(parentType)
 
 	items := make([]CompletionItem, 0, len(allUnitTypes()))
@@ -346,16 +353,20 @@ func typeLevel(t model.UnitType) string {
 // peerItems completes `peer =`: bare walk-up names across the host's
 // ancestor scopes (D-13/D-14/D-15) plus every absolute dotted path.
 func peerItems(text string, ctx lineContext) []CompletionItem {
-	paths := unitPaths(scanHeaders(text))
+	return peerItemsFromPaths(unitPaths(scanHeaders(text)), ctx.hostUnitPath())
+}
+
+// peerItemsFromPaths is the shared peer-target list for both dialects: bare
+// candidates are the direct children of each ancestor scope of the host —
+// precisely the scopes peer.Resolve searches, nearest-first — plus every
+// absolute path (the host itself excluded).
+func peerItemsFromPaths(paths []string, host string) []CompletionItem {
 	if len(paths) == 0 {
 		return nil
 	}
 
-	host := ctx.hostUnitPath()
 	hostSegments := strings.Split(host, ".")
 
-	// Bare candidates: the direct children of each ancestor scope of the
-	// host — precisely the scopes peer.Resolve searches, nearest-first.
 	bare := map[string]bool{}
 
 	for i := len(hostSegments) - 1; i >= 0; i-- {
