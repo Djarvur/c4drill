@@ -1,4 +1,4 @@
-// types.ts mirrors the Go backend's JSON contracts (gui/internal/app).
+// types.ts mirrors the Go backend's JSON contracts (internal/gui/app).
 
 export interface FileInfo {
   path: string;

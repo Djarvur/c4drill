@@ -16,11 +16,12 @@ change things, export.
 
 ## Architecture
 
-- **One backend, two transports.** `gui/internal/app` is the orchestration
+- **One backend, two transports.** `internal/gui/app` is the orchestration
   layer over the existing in-process Go packages (parser, validator, LSP
-  core, render, output). Both the Wails desktop window (`gui/main.go`) and
-  the plain-HTTP fallback speak the same `Dispatch(method, params)` JSON
-  protocol, so behavior cannot drift between them.
+  core, render, output). Both the Wails desktop window
+  (`cmd/c4drill-gui/main.go`) and the plain-HTTP fallback speak the same
+  `Dispatch(method, params)` JSON protocol, so behavior cannot drift between
+  them.
 - **One LSP server, four clients.** The editor area drives the shared
   `internal/lsp` server core through its in-memory `Handle` transport — the
   same entry point the VS Code / JetBrains / Zed / stdio clients wrap — so
@@ -51,34 +52,45 @@ WebView2). CGO is required for the Wails window.
 
 ```sh
 # frontend (once, before the first desktop build)
-cd gui/frontend && npm install && npm run build
+cd internal/gui/frontend && npm install && npm run build
 
 # desktop app (system webview window)
-go build ./gui && ./gui --dir /path/to/project
+go build ./cmd/c4drill-gui && ./c4drill-gui --dir /path/to/project
 
 # webview-less mode: same UI in a regular browser
-go run ./gui --serve --addr 127.0.0.1:5278 --dir /path/to/project
+go run ./cmd/c4drill-gui --serve --addr 127.0.0.1:5278 --dir /path/to/project
 
 # frontend dev mode (vite HMR against the HTTP backend)
-go run ./gui --serve &          # backend on :5278
-cd gui/frontend && npm run dev  # vite on :5279, /api proxied
+go run ./cmd/c4drill-gui --serve &   # backend on :5278
+cd internal/gui/frontend && npm run dev  # vite on :5279, /api proxied
 ```
 
 Without a prior `npm run build`, `go build` still succeeds: the committed
-`gui/frontend/dist/.gitkeep` keeps `go:embed` valid and the app serves a
-placeholder page (tests and the backend API work; the UI needs the vite
-build).
+`internal/gui/frontend/dist/.gitkeep` keeps `go:embed` valid and the app
+serves a placeholder page (tests and the backend API work; the UI needs the
+vite build). The embed lives in `internal/gui` (`assets.go`) because
+`go:embed` cannot reach outside the package directory — `cmd/c4drill-gui`
+imports `internal/gui.Assets` for both transports.
 
 The `wails` CLI (`go install github.com/wailsapp/wails/v2/cmd/wails@latest`)
 is optional — only needed for `wails dev`/packaging; plain `go build` works.
+`wails.json` sits in `cmd/c4drill-gui/` (the Wails CLI builds the main
+package from its own directory), with the frontend wired in via
+`frontend:dir`:
+
+```sh
+cd cmd/c4drill-gui
+wails build   # frontend: npm install + npm run build in internal/gui/frontend,
+              # then the desktop binary into build/bin/c4drill-gui
+```
 
 ## Tests
 
 ```sh
-go test ./gui/...            # backend binding logic + HTTP smoke e2e
-go test -race ./gui/...      # chat streams across goroutines
-cd gui/frontend && npm test           # vitest: Lezer grammar token tests
-cd gui/frontend && npx tsc --noEmit   # frontend typecheck (also in npm run build)
+go test ./cmd/c4drill-gui/... ./internal/gui/...  # backend binding logic + HTTP smoke e2e
+go test -race ./internal/gui/...                  # chat streams across goroutines
+cd internal/gui/frontend && npm test              # vitest: Lezer grammar token tests
+cd internal/gui/frontend && npx tsc --noEmit      # frontend typecheck (also in npm run build)
 ```
 
 Coverage highlights: in-memory LSP round trip (didOpen → clean diagnostics,
@@ -109,11 +121,12 @@ partial answer stays in the transcript visibly marked "stopped — answer is
 partial", and the composer resets. Aborted answers never carry edit proposals.
 
 The assistant's system prompt is seeded from a build-time snapshot of
-`plugins/c4drill/skills/c4drill-toml/SKILL.md` (`gui/internal/ai/skill_seed.md`
-— `go:embed` cannot reach outside `gui/`, so regenerate the snapshot when the
-skill changes). Edit proposals arrive as fenced `c4drill-edit path=…` blocks,
-render as add/remove diffs, and are written **only** on explicit Apply, with
-the scope (opened project, model files only) re-checked at apply time.
+`plugins/c4drill/skills/c4drill-toml/SKILL.md`
+(`internal/gui/ai/skill_seed.md` — `go:embed` cannot reach outside
+`internal/gui/`, so regenerate the snapshot when the skill changes). Edit
+proposals arrive as fenced `c4drill-edit path=…` blocks, render as
+add/remove diffs, and are written **only** on explicit Apply, with the scope
+(opened project, model files only) re-checked at apply time.
 
 Not yet (honest list): streaming tool-calls. Known grammar trade-offs (all
 documented in `frontend/src/language/c4d.grammar`): inside an id-led header
@@ -125,15 +138,18 @@ corpus trips either case.
 ## Layout map
 
 ```
-gui/
+cmd/c4drill-gui/
   main.go              Wails shell + HTTP fallback (one Dispatch protocol)
-  internal/app/        backend: workspace, LSP bridge, render/drill, export,
+  wails.json           Wails CLI config (frontend wired to internal/gui/frontend)
+  build/appicon.png    app icon placeholder (Wails packaging convention)
+internal/gui/
+  assets.go            go:embed of frontend/dist (served by both transports)
+  app/                 backend: workspace, LSP bridge, render/drill, export,
                        chat orchestration, dispatch table (+ tests)
-  internal/ai/         provider clients (OpenAI-compatible + Anthropic
+  ai/                  provider clients (OpenAI-compatible + Anthropic
                        Messages-API), prompt assembly, edit proposals/diff
                        (+ tests, skill_seed.md snapshot)
   frontend/            vite + TypeScript: CodeMirror 6 editor (TOML legacy
                        mode + the C4D Lezer grammar), preview, toolbar, chat
                        panel; dist/ is embedded via go:embed
-  build/appicon.png    app icon placeholder (Wails packaging convention)
 ```

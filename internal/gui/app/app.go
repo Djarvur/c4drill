@@ -4,9 +4,10 @@
 // its in-memory transport — the same server the editor clients use — and
 // exposes the live-preview render plus the export pipeline.
 //
-// The package is transport-agnostic: Wails bindings and the HTTP fallback in
-// gui/main both call Dispatch and consume the same JSON contracts, and
-// server→client traffic (diagnostics) flows through the EventSink.
+// The package is transport-agnostic: the Wails bindings and the HTTP
+// fallback in cmd/c4drill-gui both call Dispatch and consume the same JSON
+// contracts, and server→client traffic (diagnostics) flows through the
+// EventSink.
 package app
 
 import (

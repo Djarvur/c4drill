@@ -6,7 +6,7 @@ export default defineConfig({
   base: "./",
   server: {
     port: 5279,
-    // Dev convenience: proxy the backend API to `go run ./gui --serve`.
+    // Dev convenience: proxy the backend API to `go run ./cmd/c4drill-gui --serve`.
     proxy: {
       "/api": {
         target: "http://127.0.0.1:5278",

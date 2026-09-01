@@ -1568,14 +1568,15 @@ formatting, and contributes render/export tasks that run the CLI
 Zed's `file_types` settings glob; a live preview panel is pending
 Zed's visual extension API. Details in `zed-extension/README.md`.
 
-=== Desktop GUI App (`gui/`)
+=== Desktop GUI App (`cmd/c4drill-gui`)
 
 A Wails desktop app wrapping the full authoring loop: a code editor
 for both formats with the shared language features, a live
 auto-refreshing diagram preview with drill-down and export, and an AI
-chat panel whose edit proposals land as confirmed diffs. The same UI
-is also available in a browser via `./gui --serve`. Build, run and
-configuration details in `gui/README.md`.
+chat panel whose edit proposals land as confirmed diffs. Build it
+with `go build ./cmd/c4drill-gui`; the same UI is also available in a
+browser via `go run ./cmd/c4drill-gui --serve`. Build, run and
+configuration details in `internal/gui/README.md`.
 
 == Validation Rules
 

@@ -1,22 +1,21 @@
-// Command gui is the c4drill desktop app (issue #31): a Wails v2 shell whose
-// backend binds the in-process pipeline — the shared LSP server core
-// (internal/lsp) and the render/export packages — to a CodeMirror 6 + SVG
-// frontend.
+// Command c4drill-gui is the c4drill desktop app (issue #31): a Wails v2
+// shell whose backend binds the in-process pipeline — the shared LSP server
+// core (internal/lsp) and the render/export packages — to a CodeMirror 6 +
+// SVG frontend.
 //
 // Two transports, one backend:
 //
-//	gui              native desktop window (Wails v2, system webview)
-//	gui --serve      HTTP fallback on 127.0.0.1 — same UI in a regular
-//	                 browser (no webview required; also used by the smoke
-//	                 e2e test)
+//	c4drill-gui          native desktop window (Wails v2, system webview)
+//	c4drill-gui --serve  HTTP fallback on 127.0.0.1 — same UI in a regular
+//	                     browser (no webview required; also used by the smoke
+//	                     e2e test)
 //
 // Both speak the same Dispatch(method, params) JSON protocol implemented in
-// gui/internal/app, so behavior cannot drift between them.
+// internal/gui/app, so behavior cannot drift between them.
 package main
 
 import (
 	"context"
-	"embed"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -27,16 +26,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Djarvur/c4drill/gui/internal/app"
+	"github.com/Djarvur/c4drill/internal/gui"
+	"github.com/Djarvur/c4drill/internal/gui/app"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
-
-//go:embed all:frontend/dist
-var assets embed.FS
 
 // version is stamped at build time (-ldflags "-X main.version=...").
 var version = "dev"
@@ -71,22 +68,22 @@ func main() {
 	}
 }
 
-// gui is the Wails-bound struct. A single Dispatch method carries the whole
-// JSON protocol (see gui/internal/app), keeping the frontend identical
+// desktop is the Wails-bound struct. A single Dispatch method carries the
+// whole JSON protocol (see internal/gui/app), keeping the frontend identical
 // across the desktop and browser transports.
-type gui struct {
+type desktop struct {
 	backend *app.App
 
 	//nolint:containedctx // the Wails lifecycle hands its context via OnStartup
 	ctx context.Context
 }
 
-func newGUI(backend *app.App) *gui {
-	return &gui{backend: backend}
+func newDesktop(backend *app.App) *desktop {
+	return &desktop{backend: backend}
 }
 
 // Dispatch routes one backend call: method + JSON params → JSON result.
-func (g *gui) Dispatch(method, params string) (string, error) {
+func (g *desktop) Dispatch(method, params string) (string, error) {
 	res, err := g.backend.Dispatch(method, json.RawMessage(params))
 	if res == nil {
 		res = json.RawMessage("null")
@@ -95,12 +92,12 @@ func (g *gui) Dispatch(method, params string) (string, error) {
 	return string(res), err
 }
 
-func (g *gui) startup(ctx context.Context) {
+func (g *desktop) startup(ctx context.Context) {
 	g.ctx = ctx
 }
 
 func runWails(backend *app.App) error {
-	g := newGUI(backend)
+	g := newDesktop(backend)
 
 	// Backend → frontend events (diagnostics, P1 chat streaming) ride Wails
 	// runtime events under the single "backend" channel; the frontend's
@@ -121,7 +118,7 @@ func runWails(backend *app.App) error {
 		MinWidth:  960,
 		MinHeight: 600,
 		AssetServer: &assetserver.Options{
-			Assets: assets,
+			Assets: gui.Assets,
 		},
 		OnStartup: g.startup,
 		Bind:      []interface{}{g},
@@ -164,7 +161,7 @@ func newHandler(backend *app.App) http.Handler {
 		hub.broadcast(eventFrame{Event: event, Payload: payload})
 	})
 
-	dist, err := fs.Sub(assets, "frontend/dist")
+	dist, err := fs.Sub(gui.Assets, "frontend/dist")
 	if err != nil {
 		panic(fmt.Sprintf("gui: embed frontend/dist: %v", err)) // build-time invariant
 	}

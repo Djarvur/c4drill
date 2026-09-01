@@ -2,7 +2,7 @@
 
 (Build-time snapshot of plugins/c4drill/skills/c4drill-toml/SKILL.md, the AI chat's
 system-prompt seed. The original is the source of truth; regenerate this
-copy when it changes — go:embed cannot reach outside the gui/ directory.)
+copy when it changes — go:embed cannot reach outside the internal/gui/ directory.)
 
 ---
 name: c4drill-toml

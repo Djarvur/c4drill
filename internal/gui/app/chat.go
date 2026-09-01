@@ -17,7 +17,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/Djarvur/c4drill/gui/internal/ai"
+	"github.com/Djarvur/c4drill/internal/gui/ai"
 )
 
 // chatEventName is the event the streaming chat pushes under.

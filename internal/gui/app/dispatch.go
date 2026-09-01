@@ -1,8 +1,8 @@
 // dispatch.go is the single transport-agnostic RPC surface of the GUI
-// backend: method name → handler over JSON. gui/main routes both the Wails
-// bindings and the HTTP fallback through Dispatch, so the two transports
-// cannot drift and the frontend speaks one protocol in dev (browser) and
-// production (desktop window) alike.
+// backend: method name → handler over JSON. cmd/c4drill-gui routes both the
+// Wails bindings and the HTTP fallback through Dispatch, so the two
+// transports cannot drift and the frontend speaks one protocol in dev
+// (browser) and production (desktop window) alike.
 
 package app
 
@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/Djarvur/c4drill/gui/internal/ai"
+	"github.com/Djarvur/c4drill/internal/gui/ai"
 )
 
 // handlers is the dispatch table. Registered in newDispatch.
@@ -278,7 +278,7 @@ type Info struct {
 	Version    string `json:"version"`
 }
 
-// guiVersion is stamped by gui/main via SetVersion.
+// guiVersion is stamped by the cmd/c4drill-gui main package via SetVersion.
 //
 //nolint:gochecknoglobals // build-time injection precedent: cmd/c4drill root.go `version`
 var guiVersion = "dev"

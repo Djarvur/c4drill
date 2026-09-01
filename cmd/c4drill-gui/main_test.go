@@ -1,6 +1,6 @@
 // main_test.go is the P0 smoke e2e: the full HTTP transport (the webview-less
-// mode real users can run with `go run ./gui --serve`) driven end to end —
-// open project → didOpen → live render → drill navigation → export.
+// mode real users can run with `go run ./cmd/c4drill-gui --serve`) driven end
+// to end — open project → didOpen → live render → drill navigation → export.
 
 package main
 
@@ -15,7 +15,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Djarvur/c4drill/gui/internal/app"
+	"github.com/Djarvur/c4drill/internal/gui/app"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -28,7 +28,8 @@ func TestHTTPSmokeE2E(t *testing.T) {
 	// Assemble the project directory.
 	root := t.TempDir()
 
-	fixture := filepath.Join("internal", "app", "testdata", "demo", "demo.toml")
+	fixture := filepath.Join("..", "..", "internal", "gui", "app",
+		"testdata", "demo", "demo.toml")
 	src, err := os.ReadFile(fixture) //nolint:gosec // fixture path constant
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(filepath.Join(root, "demo.toml"), src, 0o600)) //nolint:gosec // temp-dir fixture

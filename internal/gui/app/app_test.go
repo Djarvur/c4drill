@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Djarvur/c4drill/gui/internal/app"
+	"github.com/Djarvur/c4drill/internal/gui/app"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
