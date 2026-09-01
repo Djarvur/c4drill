@@ -130,3 +130,11 @@ gui/frontend/dist/*
 cmd/c4drill/testdata/multilevel.svg
 cmd/c4drill/testdata/multilevel.expanded.svg
 cmd/c4drill/testdata/multilevel/
+
+# JetBrains plugin build output (idea-plugin/, issue #29)
+idea-plugin/.gradle/
+idea-plugin/build/
+idea-plugin/.idea/
+
+# IntelliJ Platform Gradle Plugin working dir
+idea-plugin/.intellijPlatform/
