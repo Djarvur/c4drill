@@ -1,6 +1,7 @@
 // chat.ts is the P1 AI chat panel: provider settings (per-provider base URL
 // / model / API key stored in local app config only), streaming conversation,
-// and edit proposals that apply ONLY on explicit confirmation.
+// a stop control for in-flight requests (issue #36), and edit proposals that
+// apply ONLY on explicit confirmation.
 
 import { backend, call } from "./rpc";
 import type { ChatConfigResult, ChatEvent, ChatMessage, ChatProvider, Diag, ProposedEdit, PublicChatSettings } from "./types";
@@ -58,6 +59,8 @@ export class ChatPanel {
 
   private sendBtn: HTMLButtonElement;
 
+  private stopBtn: HTMLButtonElement;
+
   private transcript: ChatMessage[] = [];
 
   private pending: Map<string, HTMLElement> = new Map();
@@ -65,6 +68,9 @@ export class ChatPanel {
   private proposalViews: ProposalView[] = [];
 
   private streaming = false;
+
+  /** currentRequestID is the in-flight request — the Stop button's target. */
+  private currentRequestID: string | null = null;
 
   /** activeProvider is the provider whose fields the form currently shows. */
   private activeProvider: ChatProvider = "openai-compatible";
@@ -100,6 +106,7 @@ export class ChatPanel {
         <div class="chat-messages" id="chat-messages"></div>
         <div class="chat-input-row">
           <textarea id="chat-input" rows="2" placeholder="Ask about the architecture… (Enter to send)"></textarea>
+          <button id="chat-stop" title="Stop generating" class="chat-stop" hidden>■ Stop</button>
           <button id="chat-send" title="Send">Send</button>
         </div>
       </div>
@@ -111,11 +118,13 @@ export class ChatPanel {
     this.settingsBtn = this.root.querySelector<HTMLButtonElement>("#chat-settings-btn")!;
     this.input = this.root.querySelector<HTMLTextAreaElement>("#chat-input")!;
     this.sendBtn = this.root.querySelector<HTMLButtonElement>("#chat-send")!;
+    this.stopBtn = this.root.querySelector<HTMLButtonElement>("#chat-stop")!;
 
     this.settingsBtn.addEventListener("click", () => this.toggleSettings());
     this.root.querySelector<HTMLButtonElement>("#chat-save-settings")!
       .addEventListener("click", () => void this.saveSettings());
     this.sendBtn.addEventListener("click", () => void this.send());
+    this.stopBtn.addEventListener("click", () => void this.stop());
     this.root.querySelector<HTMLSelectElement>("#chat-provider")!
       .addEventListener("change", (ev) => this.switchProvider((ev.target as HTMLSelectElement).value as ChatProvider));
     this.input.addEventListener("keydown", (ev) => {
@@ -230,6 +239,7 @@ export class ChatPanel {
 
     this.streaming = true;
     this.sendBtn.disabled = true;
+    this.stopBtn.hidden = false;
 
     try {
       const res = await call<{ requestID: string }>("chat", {
@@ -243,12 +253,40 @@ export class ChatPanel {
         },
       });
 
+      this.currentRequestID = res.requestID;
       this.appendStreamTarget(res.requestID);
     } catch (err) {
-      this.streaming = false;
-      this.sendBtn.disabled = false;
+      this.resetComposer();
       this.appendBubble("assistant", `⚠ ${err}`);
     }
+  }
+
+  /** stop aborts the in-flight request (issue #36). The backend cancels the
+   * provider stream; the terminal frame keeps the partial answer and carries
+   * the aborted marker that finishes the composer state. */
+  private async stop(): Promise<void> {
+    if (!this.currentRequestID) return;
+
+    const requestID = this.currentRequestID;
+    this.currentRequestID = null;
+    this.stopBtn.disabled = true;
+
+    try {
+      await call("chatAbort", { requestID });
+    } catch {
+      // the request may already have finished — the terminal frame resolves
+      // the composer state either way
+    }
+  }
+
+  /** resetComposer restores the input row after a request ends or fails. */
+  private resetComposer(): void {
+    this.streaming = false;
+    this.currentRequestID = null;
+    this.sendBtn.disabled = false;
+    this.stopBtn.hidden = true;
+    this.stopBtn.disabled = false;
+    this.input.focus();
   }
 
   /** appendStreamTarget creates the assistant bubble that deltas append to. */
@@ -271,8 +309,7 @@ export class ChatPanel {
     if (!frame.done) return;
 
     this.pending.delete(frame.requestID);
-    this.streaming = false;
-    this.sendBtn.disabled = false;
+    this.resetComposer();
 
     if (frame.error) {
       bubble.textContent = bubble.textContent
@@ -280,8 +317,17 @@ export class ChatPanel {
         : `⚠ ${frame.error}`;
     }
 
+    // Capture the transcript text before any aborted marker is appended.
     const answer = frame.answer ?? bubble.textContent;
+
+    if (frame.aborted) {
+      bubble.classList.add("aborted");
+      bubble.insertAdjacentHTML("beforeend", '<div class="aborted-marker">⏹ stopped — answer is partial</div>');
+    }
+
     this.transcript.push({ role: "assistant", content: answer });
+
+    if (frame.aborted) return; // partial answers never carry proposals
 
     this.proposalViews = (frame.proposals ?? []).map((proposal) => ({
       proposal,

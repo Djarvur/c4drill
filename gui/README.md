@@ -91,6 +91,11 @@ events). Settings persist per provider, so switching never clobbers the other
 slot. The key is stored in the local user-config file only
 (`<UserConfigDir>/c4drill/gui.json`, 0600) and is never echoed back to the UI.
 
+While an answer streams, the composer's **Stop** button aborts the request:
+the backend cancels the provider stream end-to-end (request context), the
+partial answer stays in the transcript visibly marked "stopped — answer is
+partial", and the composer resets. Aborted answers never carry edit proposals.
+
 The assistant's system prompt is seeded from a build-time snapshot of
 `plugins/c4drill/skills/c4drill-toml/SKILL.md` (`gui/internal/ai/skill_seed.md`
 — `go:embed` cannot reach outside `gui/`, so regenerate the snapshot when the
@@ -98,8 +103,7 @@ skill changes). Edit proposals arrive as fenced `c4drill-edit path=…` blocks,
 render as add/remove diffs, and are written **only** on explicit Apply, with
 the scope (opened project, model files only) re-checked at apply time.
 
-Not yet (honest list): per-request abort from the UI (backend supports
-`chatAbort`; no button yet), streaming tool-calls.
+Not yet (honest list): streaming tool-calls.
 
 ## Layout map
 

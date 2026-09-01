@@ -486,6 +486,28 @@ button:hover {
   background: var(--bg-raised);
 }
 
+/* aborted in-flight answer (issue #36): partial text kept, visibly marked */
+.bubble-assistant.aborted {
+  opacity: 0.75;
+  border: 1px dashed var(--border);
+}
+
+.aborted-marker {
+  margin-top: 6px;
+  color: var(--fg-dim);
+  font-size: 11px;
+}
+
+.chat-stop {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.chat-stop:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .chat-input-row {
   display: flex;
   gap: 6px;

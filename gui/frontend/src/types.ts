@@ -142,6 +142,8 @@ export interface ChatEvent {
   delta?: string;
   done?: boolean;
   error?: string;
+  /** aborted marks a user-cancelled request: the partial answer stays. */
+  aborted?: boolean;
   proposals?: ProposedEdit[];
   answer?: string;
 }
