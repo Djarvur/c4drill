@@ -1540,8 +1540,8 @@ match the `c4drill.toml.patterns` globs (default
 `**/*.architecture.toml`) or are activated per file. An LSP client
 launches `c4drill serve --lsp` (`c4drill.server.path` picks the
 binary), and a preview webview re-renders the diagram as you type with
-click-through drill-down navigation and breadcrumbs. The command and
-settings surface is listed in `extension/package.json`.
+click-through drill-down navigation and breadcrumbs. See
+`extension/README.md` for the full command and settings surface.
 
 === JetBrains Plugin (`idea-plugin/`)
 
