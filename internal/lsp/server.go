@@ -1,0 +1,369 @@
+// server.go is the transport-agnostic language-server core: LSP lifecycle,
+// the open-document store, and method dispatch. Capability logic never sees
+// a transport — Handle consumes one decoded JSON-RPC message and returns the
+// response (or nil for notifications); server→client traffic flows through
+// the notifier. The stdio transport (Serve) and in-memory test harnesses are
+// thin shells around this.
+
+package lsp
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"sync"
+)
+
+// LSP lifecycle and text-document method names.
+const (
+	methodInitialize         = "initialize"
+	methodInitialized        = "initialized"
+	methodShutdown           = "shutdown"
+	methodExit               = "exit"
+	methodDidOpen            = "textDocument/didOpen"
+	methodDidChange          = "textDocument/didChange"
+	methodDidClose           = "textDocument/didClose"
+	methodWatchedFiles       = "workspace/didChangeWatchedFiles"
+	methodPublishDiagnostics = "textDocument/publishDiagnostics"
+)
+
+// static server errors.
+var (
+	errNotInitialized = errors.New("server not initialized")
+	errAfterShutdown  = errors.New("server is shutting down")
+)
+
+// notifier delivers a server→client notification. Set via SetNotifier; the
+// default swallows traffic so an in-proc server without transport is usable.
+type notifier func(method string, params any)
+
+// document is one open text document: its URI, canonical on-disk path, and
+// the current unsaved buffer contents (the source of truth for validation).
+type document struct {
+	URI     DocumentURI
+	Path    string // canonical (filepath.Clean + filepath.Abs)
+	Version int
+	Text    []byte
+}
+
+// Server is the c4drill language-server core. It is safe for concurrent
+// Handle calls (the stdio loop is sequential; the GUI may not be).
+type Server struct {
+	mu          sync.Mutex
+	docs        map[DocumentURI]*document
+	initialized bool
+	shutdown    bool
+	exited      bool
+	notify      notifier
+}
+
+// NewServer builds a server with notifications discarded.
+func NewServer() *Server {
+	return &Server{
+		docs:   make(map[DocumentURI]*document),
+		notify: func(string, any) {},
+	}
+}
+
+// SetNotifier installs the sink for server→client notifications (the only
+// server-initiated traffic: textDocument/publishDiagnostics). It must be
+// called before the first Handle.
+func (s *Server) SetNotifier(n func(method string, params any)) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.notify = n
+}
+
+// Exited reports whether the client sent the exit notification — the
+// transport loop's signal to stop serving.
+func (s *Server) Exited() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.exited
+}
+
+// Handle dispatches one incoming JSON-RPC message and returns the response
+// message, or nil for notifications. It is the in-memory transport entry:
+// the GUI app (#31) and the conformance tests drive the server through it.
+func (s *Server) Handle(_ context.Context, msg *Message) *Message {
+	if msg.ID == nil {
+		s.handleNotification(msg)
+
+		return nil
+	}
+
+	return s.handleRequest(msg)
+}
+
+// handleRequest processes requests (messages carrying an id); every request
+// gets a response. Before initialize only `initialize` is answered; after
+// shutdown everything but `exit` fails (LSP §lifecycle).
+func (s *Server) handleRequest(msg *Message) *Message {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if msg.Method == methodInitialize {
+		return s.handleInitialize(msg)
+	}
+
+	switch {
+	case !s.initialized:
+		return errorResponse(msg, codeServerNotInitialized, errNotInitialized.Error())
+	case s.shutdown:
+		return errorResponse(msg, codeInvalidRequest, errAfterShutdown.Error())
+	}
+
+	return s.dispatchRequest(msg)
+}
+
+// dispatchRequest routes an initialized-state request to its capability
+// handler. Unknown methods fail with MethodNotFound.
+func (s *Server) dispatchRequest(msg *Message) *Message {
+	switch msg.Method {
+	case methodShutdown:
+		s.shutdown = true
+
+		return okResponse(msg, json.RawMessage("null"))
+	default:
+		return errorResponse(msg, codeMethodNotFound, "method not found: "+msg.Method)
+	}
+}
+
+// handleInitialize answers the initialize request, marking the server
+// initialized and advertising the capability surface.
+func (s *Server) handleInitialize(msg *Message) *Message {
+	s.initialized = true
+
+	result := InitializeResult{
+		Capabilities: ServerCapabilities{
+			TextDocumentSync: &TextDocumentSyncOptions{
+				OpenClose: true,
+				Change:    SyncFull,
+				Save:      true,
+			},
+		},
+		ServerInfo: ServerInfo{Name: "c4drill", Version: serverVersion},
+	}
+
+	raw, err := json.Marshal(result)
+	if err != nil {
+		return errorResponse(msg, codeInternalError,
+			fmt.Sprintf("marshal initialize result: %v", err))
+	}
+
+	return okResponse(msg, raw)
+}
+
+// handleNotification processes notifications (no id): unknown or
+// pre-initialize notifications are silently dropped per the LSP spec.
+func (s *Server) handleNotification(msg *Message) {
+	if msg.Method == methodExit {
+		s.mu.Lock()
+		s.exited = true
+		s.mu.Unlock()
+
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if !s.initialized {
+		return
+	}
+
+	switch msg.Method {
+	case methodInitialized:
+		// The client acknowledged initialize; nothing to negotiate back.
+	case methodDidOpen:
+		s.onDidOpen(msg.Params)
+	case methodDidChange:
+		s.onDidChange(msg.Params)
+	case methodDidClose:
+		s.onDidClose(msg.Params)
+	case methodWatchedFiles:
+		s.onWatchedFiles(msg.Params)
+	}
+}
+
+// onDidOpen stores the document snapshot and publishes its diagnostics plus
+// those of every open document that includes it.
+func (s *Server) onDidOpen(raw json.RawMessage) {
+	var p DidOpenTextDocumentParams
+	if err := json.Unmarshal(raw, &p); err != nil {
+		return // malformed notification params are dropped, never fatal
+	}
+
+	doc := &document{
+		URI:     p.TextDocument.URI,
+		Path:    canonicalPath(uriToPath(p.TextDocument.URI)),
+		Version: p.TextDocument.Version,
+		Text:    []byte(p.TextDocument.Text),
+	}
+
+	s.docs[doc.URI] = doc
+	s.revalidate(doc.Path)
+}
+
+// onDidChange applies the content changes to the stored buffer and
+// republishes diagnostics for the document and its dependents.
+func (s *Server) onDidChange(raw json.RawMessage) {
+	var p DidChangeTextDocumentParams
+	if err := json.Unmarshal(raw, &p); err != nil {
+		return
+	}
+
+	doc, ok := s.docs[p.TextDocument.URI]
+	if !ok {
+		return // didChange for an unopened document: drop (LSP §state)
+	}
+
+	doc.Version = p.TextDocument.Version
+	doc.Text = applyChanges(doc.Text, p.ContentChanges)
+	s.revalidate(doc.Path)
+}
+
+// onDidClose drops the document, clears its published diagnostics, and
+// republishes dependents — they may have been validating against this
+// document's unsaved buffer, which just reverted to disk content.
+func (s *Server) onDidClose(raw json.RawMessage) {
+	var p DidCloseTextDocumentParams
+	if err := json.Unmarshal(raw, &p); err != nil {
+		return
+	}
+
+	doc, ok := s.docs[p.TextDocument.URI]
+	if !ok {
+		return
+	}
+
+	delete(s.docs, p.TextDocument.URI)
+	s.publish(doc.URI, nil, nil)
+	s.revalidate(doc.Path)
+}
+
+// onWatchedFiles republishes dependents for every externally changed file:
+// an included file edited outside the editor changes what its includers
+// resolve against, and only the client can report that.
+func (s *Server) onWatchedFiles(raw json.RawMessage) {
+	var p DidChangeWatchedFilesParams
+	if err := json.Unmarshal(raw, &p); err != nil {
+		return
+	}
+
+	for _, ch := range p.Changes {
+		s.revalidate(canonicalPath(uriToPath(ch.URI)))
+	}
+}
+
+// applyChanges folds content changes into the buffer. Full sync sends a
+// single range-less replacement; ranged edits are spliced defensively.
+func applyChanges(text []byte, changes []TextDocumentContentChangeEvent) []byte {
+	for _, ch := range changes {
+		if ch.Range == nil {
+			text = []byte(ch.Text)
+
+			continue
+		}
+
+		text = spliceText(text, *ch.Range, ch.Text)
+	}
+
+	return text
+}
+
+// publish sends one textDocument/publishDiagnostics notification. A nil
+// diagnostics slice publishes the empty array (the LSP way to clear).
+func (s *Server) publish(uri DocumentURI, version *int, diags []Diagnostic) {
+	if diags == nil {
+		diags = []Diagnostic{}
+	}
+
+	s.notify(methodPublishDiagnostics, PublishDiagnosticsParams{
+		URI:         uri,
+		Version:     version,
+		Diagnostics: diags,
+	})
+}
+
+// okResponse builds a success response echoing the request id.
+func okResponse(req *Message, result json.RawMessage) *Message {
+	return &Message{JSONRPC: jsonrpcVersion, ID: req.ID, Result: result}
+}
+
+// errorResponse builds an error response echoing the request id.
+func errorResponse(req *Message, code int, text string) *Message {
+	return &Message{
+		JSONRPC: jsonrpcVersion,
+		ID:      req.ID,
+		Error:   &ResponseError{Code: code, Message: text},
+	}
+}
+
+// serverVersion is stamped by the CLI build via SetServerVersion; the
+// package-level default keeps the in-proc server stable for tests.
+//
+//nolint:gochecknoglobals // build-time injection precedent: cmd/c4drill root.go `version`
+var serverVersion = "dev"
+
+// SetServerVersion overrides the advertised server version (wired from the
+// CLI's build-time version variable).
+func SetServerVersion(v string) {
+	serverVersion = v
+}
+
+// Serve runs the server over a Content-Length framed JSON-RPC stream until
+// exit, EOF, or a transport error. It is the `c4drill serve --lsp` loop:
+// stdin/stdout in production, any pipe elsewhere. Notification write
+// failures are tolerated — a broken pipe surfaces on the next Read.
+func Serve(ctx context.Context, r io.Reader, w io.Writer) error {
+	conn := NewConn(r, w)
+	srv := NewServer()
+	srv.SetNotifier(func(method string, params any) { _ = conn.Notify(method, params) })
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+		}
+
+		msg, err := conn.Read()
+		switch {
+		case errors.Is(err, io.EOF):
+			return nil
+		case errors.Is(err, errBodyParse):
+			// JSON-RPC: a syntactically invalid body is answered with a
+			// -32700 response (null id) and the connection stays up.
+			if werr := conn.Write(errorResponse(&Message{ID: nullID()}, codeParseError, err.Error())); werr != nil {
+				return fmt.Errorf("write parse-error response: %w", werr)
+			}
+
+			continue
+		case err != nil:
+			return fmt.Errorf("read json-rpc: %w", err)
+		}
+
+		resp := srv.Handle(ctx, msg)
+		if resp != nil {
+			if err := conn.Write(resp); err != nil {
+				return fmt.Errorf("write response: %w", err)
+			}
+		}
+
+		if srv.Exited() {
+			return nil
+		}
+	}
+}
+
+// nullID returns the JSON null request id used on -32700 responses.
+func nullID() *ID {
+	id := ID("null")
+
+	return &id
+}

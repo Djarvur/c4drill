@@ -141,6 +141,10 @@ func NewRootCmd() *cobra.Command {
 	// Subcommands (Plan 35-08): format both authoring formats in place.
 	cmd.AddCommand(newFMTCmd())
 
+	// Subcommand (issue #32): the language server the editor plugins and the
+	// GUI app consume.
+	cmd.AddCommand(newServeCmd())
+
 	return cmd
 }
 

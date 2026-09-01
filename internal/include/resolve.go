@@ -22,6 +22,7 @@ package include
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -53,13 +54,28 @@ const maxIncludeDepth = 100
 // Any failure (cycle, missing file, cross-file collision, properties conflict)
 // is a *parser.ParseError naming the relevant file(s).
 func Resolve(entry *parser.Model, entryDir, entryFile string) (*parser.Model, error) {
+	return ResolveWithReader(entry, entryDir, entryFile, nil)
+}
+
+// ResolveWithReader is Resolve with an injectable file reader: read is called
+// for every transitively-included file's bytes. nil selects os.ReadFile —
+// byte-identical behavior to Resolve. The LSP (issue #32) passes an overlay
+// reader that serves unsaved editor buffers by canonical path, so including
+// documents validate against what the author SEES, not what is on disk;
+// error messages are unaffected (reader failures produce the same
+// include-not-found attribution as missing files).
+func ResolveWithReader(
+	entry *parser.Model,
+	entryDir, entryFile string,
+	read func(path string) ([]byte, error),
+) (*parser.Model, error) {
 	visited := map[string]bool{}
 
 	if entryFile == "" {
 		entryFile = entryDir
 	}
 
-	return resolve(entry, entryDir, entryFile, nil, visited)
+	return resolve(entry, entryDir, entryFile, nil, visited, read)
 }
 
 // resolve is the recursive worker. stack is the current ancestor chain (for
@@ -72,6 +88,7 @@ func resolve(
 	includingFile string,
 	stack []string,
 	visited map[string]bool,
+	read func(path string) ([]byte, error),
 ) (*parser.Model, error) {
 	if len(stack) > maxIncludeDepth {
 		return nil, &parser.ParseError{
@@ -81,7 +98,7 @@ func resolve(
 	}
 
 	for _, dir := range m.Includes {
-		skip, err := resolveOne(&m, dir, includingDir, includingFile, stack, visited)
+		skip, err := resolveOne(&m, dir, includingDir, includingFile, stack, visited, read)
 		if err != nil {
 			return nil, err
 		}
@@ -108,6 +125,7 @@ func resolveOne(
 	includingFile string,
 	stack []string,
 	visited map[string]bool,
+	read func(path string) ([]byte, error),
 ) (bool, error) {
 	absPath, err := canonicalize(dir.Path, includingDir)
 	if err != nil {
@@ -148,7 +166,7 @@ func resolveOne(
 	// at Model level so graphs mix formats freely). Missing file →
 	// *ParseError naming both the referenced path and the including file
 	// (INC-10/D-12).
-	included, err := parseIncludedFile(absPath)
+	included, err := parseIncludedFile(absPath, read)
 	if err != nil {
 		return false, &parser.ParseError{
 			Message: "include not found: " + dir.Path,
@@ -162,7 +180,7 @@ func resolveOne(
 	// (INC-02 relative-to-including-file, INC-03 transitive).
 	newStack := append(append([]string{}, stack...), absPath)
 
-	included, err = resolve(included, filepath.Dir(absPath), absPath, newStack, visited)
+	included, err = resolve(included, filepath.Dir(absPath), absPath, newStack, visited, read)
 	if err != nil {
 		return false, err
 	}
@@ -224,15 +242,28 @@ func checkIncludeExtension(absPath, displayPath, includingFile string) error {
 
 // parseIncludedFile parses an included file through the front-end its
 // extension selects (D-26): .c4d -> the C4D front-end, .toml -> the TOML
-// front-end. The extension gate ran before this call, so the default branch
-// is defensive only.
+// front-end. Bytes come through read (nil = os.ReadFile) so embedders can
+// overlay open-editor buffers; error messages are identical either way —
+// read failures produce the same "failed to read file" ParseError ParseFile
+// would, and c4d errors carry the file path via ParseNamed's attribution.
+// The extension gate ran before this call, so the default branch is
+// defensive only.
 //
 //nolint:wrapcheck // resolveOne wraps the returned error with include-not-found attribution
-func parseIncludedFile(path string) (*parser.Model, error) {
+func parseIncludedFile(path string, read func(path string) ([]byte, error)) (*parser.Model, error) {
+	if read == nil {
+		read = os.ReadFile
+	}
+
+	data, err := read(path)
+	if err != nil {
+		return nil, &parser.ParseError{Message: "failed to read file", Context: path, Cause: err}
+	}
+
 	switch filepath.Ext(path) {
 	case extC4d:
-		return c4d.ParseFile(path)
+		return c4d.ParseNamed(path, data)
 	default:
-		return parser.ParseFile(path)
+		return parser.Parse(data)
 	}
 }
