@@ -1,0 +1,144 @@
+==================
+02-edges
+==================
+
+# The four ASCII arrows (D-05), labels (D-09) and option blocks
+customer: person "Customer" {
+  -> webapp: "HTTPS | Browses" { arrow: forward }
+  -> api: "REST/JSON | Queries API" { arrow: reverse color: blue }
+  -> cache: "Redis | Session cache" { kind: read labelPosition: tail }
+  <-> bus: "Redis Protocol | Caches/Retrieves" { style: dashed }
+  -- analytics: "HTTP POST | Sends events" { color: gray style: dotted }
+  -> database: "SQL | Queries" { rank: reverse color: green }
+  <- payment: "Webhook | Payment callback" { color: purple }
+}
+
+webapp: system "Web Application" {
+  technology: React
+  -> messageBus: Publishes events
+  -> shop.api.handlers: Routes via absolute dotted peer
+  -> ${upstreamBus}: "Publishes ${name} domain events"
+}
+
+---
+
+(document
+  (comment)
+  (unit_block
+    (unit_header
+      id: (identifier)
+      type: (type_keyword)
+      name: (string))
+    (edge_statement
+      arrow: (arrow)
+      peer: (peer_path
+        (peer_segment
+          (identifier)))
+      label: (string)
+      (options_block
+        (edge_option
+          key: (identifier)
+          value: (option_bareword))))
+    (edge_statement
+      arrow: (arrow)
+      peer: (peer_path
+        (peer_segment
+          (identifier)))
+      label: (string)
+      (options_block
+        (edge_option
+          key: (identifier)
+          value: (option_bareword))
+        (edge_option
+          key: (identifier)
+          value: (option_bareword))))
+    (edge_statement
+      arrow: (arrow)
+      peer: (peer_path
+        (peer_segment
+          (identifier)))
+      label: (string)
+      (options_block
+        (edge_option
+          key: (identifier)
+          value: (option_bareword))
+        (edge_option
+          key: (identifier)
+          value: (option_bareword))))
+    (edge_statement
+      arrow: (arrow)
+      peer: (peer_path
+        (peer_segment
+          (identifier)))
+      label: (string)
+      (options_block
+        (edge_option
+          key: (identifier)
+          value: (option_bareword))))
+    (edge_statement
+      arrow: (arrow)
+      peer: (peer_path
+        (peer_segment
+          (identifier)))
+      label: (string)
+      (options_block
+        (edge_option
+          key: (identifier)
+          value: (option_bareword))
+        (edge_option
+          key: (identifier)
+          value: (option_bareword))))
+    (edge_statement
+      arrow: (arrow)
+      peer: (peer_path
+        (peer_segment
+          (identifier)))
+      label: (string)
+      (options_block
+        (edge_option
+          key: (identifier)
+          value: (option_bareword))
+        (edge_option
+          key: (identifier)
+          value: (option_bareword))))
+    (edge_statement
+      arrow: (arrow)
+      peer: (peer_path
+        (peer_segment
+          (identifier)))
+      label: (string)
+      (options_block
+        (edge_option
+          key: (identifier)
+          value: (option_bareword)))))
+  (unit_block
+    (unit_header
+      id: (identifier)
+      type: (type_keyword)
+      name: (string))
+    (field_statement
+      key: (identifier)
+      value: (bareword))
+    (edge_statement
+      arrow: (arrow)
+      peer: (peer_path
+        (peer_segment
+          (identifier)))
+      label: (edge_label_text))
+    (edge_statement
+      arrow: (arrow)
+      peer: (peer_path
+        (peer_segment
+          (identifier))
+        (peer_segment
+          (identifier))
+        (peer_segment
+          (identifier)))
+      label: (edge_label_text))
+    (edge_statement
+      arrow: (arrow)
+      peer: (peer_path
+        (peer_segment
+          (param_token
+            (identifier))))
+      label: (string))))

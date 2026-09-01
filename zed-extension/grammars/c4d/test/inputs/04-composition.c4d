@@ -1,0 +1,36 @@
+# Properties, templates, use and include (D-12/D-13/D-14/D-16/D-17)
+properties {
+  name: Composition Example
+  description: Parametrized templates and includes
+  edges: spline
+  expanded: [platform]
+  legend: true
+}
+
+platform: system "Platform" {
+  use microservice(name: auth, tech: "Go, gRPC", upstreamBus: messageBus)
+  use dataService(users)
+  use positional("quoted arg", 42)
+}
+
+messageBus: queue "Message Bus" { description: Backbone }
+
+template microservice(name, tech, upstreamBus) {
+  type: container
+  name: "${name} Service"
+  description: "${name} handles its domain; publishes to ${upstreamBus}"
+  technology: "${tech}"
+  reference: "https://wiki.example.com/${name}"
+  -> ${upstreamBus}: "Publishes ${name} domain events"
+  cache: componentDb "${name} Cache" {
+    technology: Redis
+  }
+}
+
+template externalService() {
+  type: container external
+}
+
+include "./domains/auth.c4d"
+include billing.c4d
+include "shared/labels.c4d" once

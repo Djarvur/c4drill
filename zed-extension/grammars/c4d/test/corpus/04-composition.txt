@@ -1,0 +1,145 @@
+==================
+04-composition
+==================
+
+# Properties, templates, use and include (D-12/D-13/D-14/D-16/D-17)
+properties {
+  name: Composition Example
+  description: Parametrized templates and includes
+  edges: spline
+  expanded: [platform]
+  legend: true
+}
+
+platform: system "Platform" {
+  use microservice(name: auth, tech: "Go, gRPC", upstreamBus: messageBus)
+  use dataService(users)
+  use positional("quoted arg", 42)
+}
+
+messageBus: queue "Message Bus" { description: Backbone }
+
+template microservice(name, tech, upstreamBus) {
+  type: container
+  name: "${name} Service"
+  description: "${name} handles its domain; publishes to ${upstreamBus}"
+  technology: "${tech}"
+  reference: "https://wiki.example.com/${name}"
+  -> ${upstreamBus}: "Publishes ${name} domain events"
+  cache: componentDb "${name} Cache" {
+    technology: Redis
+  }
+}
+
+template externalService() {
+  type: container external
+}
+
+include "./domains/auth.c4d"
+include billing.c4d
+include "shared/labels.c4d" once
+
+---
+
+(document
+  (comment)
+  (properties_block
+    (property_field
+      key: (identifier)
+      value: (bareword))
+    (property_field
+      key: (identifier)
+      value: (bareword))
+    (property_field
+      key: (identifier)
+      value: (bareword))
+    (property_field
+      key: (identifier)
+      value: (list
+        (list_bareword)))
+    (property_field
+      key: (identifier)
+      value: (bareword)))
+  (unit_block
+    (unit_header
+      id: (identifier)
+      type: (type_keyword)
+      name: (string))
+    (use_statement
+      template: (identifier)
+      (argument_list
+        (argument
+          name: (identifier)
+          value: (identifier))
+        (argument
+          name: (identifier)
+          value: (string))
+        (argument
+          name: (identifier)
+          value: (identifier))))
+    (use_statement
+      template: (identifier)
+      (argument_list
+        (argument
+          value: (identifier))))
+    (use_statement
+      template: (identifier)
+      (argument_list
+        (argument
+          value: (string))
+        (argument
+          value: (identifier)))))
+  (unit_block
+    (unit_header
+      id: (identifier)
+      type: (type_keyword)
+      name: (string))
+    (field_statement
+      key: (identifier)
+      value: (bareword)))
+  (template_declaration
+    name: (identifier)
+    (parameter_list
+      (identifier)
+      (identifier)
+      (identifier))
+    (type_statement
+      type: (type_keyword))
+    (field_statement
+      key: (identifier)
+      value: (string))
+    (field_statement
+      key: (identifier)
+      value: (string))
+    (field_statement
+      key: (identifier)
+      value: (string))
+    (field_statement
+      key: (identifier)
+      value: (string))
+    (edge_statement
+      arrow: (arrow)
+      peer: (peer_path
+        (peer_segment
+          (param_token
+            (identifier))))
+      label: (string))
+    (unit_block
+      (unit_header
+        id: (identifier)
+        type: (type_keyword)
+        name: (string))
+      (field_statement
+        key: (identifier)
+        value: (bareword))))
+  (template_declaration
+    name: (identifier)
+    (type_statement
+      type: (type_keyword)))
+  (include_statement
+    path: (string))
+  (include_statement
+    path: (include_path))
+  (include_statement
+    path: (string)
+    (once_modifier)))

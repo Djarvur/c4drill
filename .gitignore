@@ -108,6 +108,12 @@ package-lock.json
 !extension/package.json
 !extension/package-lock.json
 
+# ...and the Zed extension (zed-extension/), whose tree-sitter grammar is a
+# real npm project; target/ is the wasm build output (issue #30)
+zed-extension/target/
+!zed-extension/grammars/c4d/package.json
+!zed-extension/grammars/c4d/package-lock.json
+
 # ZCode session artifacts
 .zcode/plans/
 

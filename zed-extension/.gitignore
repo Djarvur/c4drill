@@ -1,0 +1,9 @@
+# Rust / wasm build output
+target/
+
+# grammar dev/build artifacts
+node_modules/
+.grammar-mirror/
+# Zed's grammar checkout turns grammars/c4d into a git clone at install
+# time; its .git must never leak into the c4drill repo.
+grammars/c4d/.git/

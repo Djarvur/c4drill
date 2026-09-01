@@ -1,0 +1,19 @@
+# C4Drill TOML — the scoped TOML-dialect activation.
+#
+# This language claims NO file suffixes on purpose: plain .toml files must
+# stay plain TOML (issue #30 acceptance criterion 2). Activate it with a
+# glob pattern in your Zed settings (the "file_types" setting), e.g.:
+#
+#   {
+#     "file_types": {
+#       "C4Drill TOML": ["models/**/*.toml", "architecture/**/*.toml"]
+#     }
+#   }
+#
+# or per-buffer via `editor: change language`. See the extension README
+# for the full scoping rationale.
+name = "C4Drill TOML"
+grammar = "toml"
+path_suffixes = []
+line_comments = ["# "]
+tab_size = 2

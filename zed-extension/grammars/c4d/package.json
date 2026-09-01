@@ -1,0 +1,30 @@
+{
+  "name": "tree-sitter-c4d",
+  "version": "0.1.0",
+  "description": "Tree-sitter grammar for the c4drill C4D architecture-model DSL",
+  "main": "bindings/node",
+  "keywords": [
+    "tree-sitter",
+    "c4d",
+    "c4drill",
+    "c4",
+    "architecture",
+    "dsl"
+  ],
+  "license": "MIT",
+  "tree-sitter": [
+    {
+      "scope": "source.c4d",
+      "file-types": ["c4d"],
+      "injection-regex": "^c4d$"
+    }
+  ],
+  "scripts": {
+    "generate": "tree-sitter generate",
+    "test": "tree-sitter test",
+    "parse:examples": "tree-sitter parse --quiet ../../skill/examples/**/*.c4d"
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "^0.25.0"
+  }
+}
