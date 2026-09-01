@@ -1,0 +1,39 @@
+# Nested Structure Example - C4D twin of 02-nested.toml (renders identically)
+# C2 containers and C3 components nest as brace blocks; dotted peers are absolute.
+properties {
+  name: Nested Architecture
+  description: System with containers and components
+}
+
+user: person "Customer" {
+  -> shop.webapp: "HTTPS | Browses and orders"
+}
+
+shop: system "E-Commerce Platform" {
+  description: Online shopping platform
+  webapp: container "Web Application" { description: Customer-facing frontend; technology: "React, TypeScript" }
+  api: container "API Service" {
+    description: Backend API
+    technology: "Node.js, Express"
+    handlers: component "HTTP Handlers" {
+      description: Request routing and validation
+      technology: Express Router
+      -> shop.webapp: "REST/JSON | Serves"
+    }
+    services: component "Business Services" {
+      description: Domain logic and orchestration
+      technology: TypeScript
+      -> shop.api.handlers: Called by
+    }
+    repository: component "Data Repository" {
+      description: Database access layer
+      technology: Prisma ORM
+      -> shop.api.services: Used by
+    }
+  }
+  database: containerDb "Database" {
+    description: Persistent storage
+    technology: PostgreSQL
+    -> shop.api.repository: "SQL | Queries"
+  }
+}

@@ -1,0 +1,51 @@
+# Link Syntax Example - C4D twin of 03-links.toml (renders identically)
+# All four arrows plus the edge shorthand: -> outgoing, <- incoming (linkFrom),
+# <-> bidirectional, -- no arrowhead. "tech | description" carries both label
+# parts; a single un-piped value is the description.
+properties {
+  name: Link Examples
+  description: Various link configurations
+} # Edge kinds (v1.13): kind = read/write/read-write colours the edge green,
+
+# red, or purple — no explicit color needed. An explicit color still wins.
+# rank = "reverse" flips the layout ranking while the arrow still points at
+# the target — the single-knob replacement for "<-" + arrow: reverse.
+customer: person "Customer" {
+  -> webapp: "HTTPS | Browses" { arrow: forward }
+}
+
+webapp: system "Web Application" {
+  technology: React
+  -> api: "REST/JSON | Queries API" { arrow: reverse color: blue }
+  -> cache: "Redis | Session cache" { kind: read labelPosition: tail }
+}
+
+api: system "API Gateway" {
+  technology: Node.js
+  <-> cache: "Redis Protocol | Caches/Retrieves" { style: dashed }
+  -- analytics: "HTTP POST | Sends events" { color: gray style: dotted }
+  -> database: "SQL | Queries" { rank: reverse color: green }
+  -> payment: "HTTPS | Processes payments" { rank: equal color: orange style: solid }
+  <- payment: "Webhook | Payment callback" { color: purple labelPosition: head }
+}
+
+payment: system external "Payment Service" {
+  description: External payment processor
+  <- api: Processes payments
+}
+
+analytics: system external "Analytics" {
+  description: Usage analytics platform
+  <- api: Sends events
+}
+
+database: db "Database" {
+  technology: PostgreSQL
+  <- api: Queries
+}
+
+cache: db "Cache" {
+  technology: Redis
+  <- webapp: Session cache
+  <- api: Caches/Retrieves
+}

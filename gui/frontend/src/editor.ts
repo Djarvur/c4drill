@@ -1,13 +1,12 @@
 // editor.ts sets up the CodeMirror 6 editor area: TOML highlighting via the
-// legacy mode, a small dedicated StreamLanguage for C4D (issue #31 allows a
-// simple mode for P0; a full Lezer grammar is a follow-up), LSP-driven
-// completion, hover, go-to-definition and diagnostics squiggles over the
-// backend dispatch.
+// legacy mode and C4D via the dedicated Lezer grammar (issue #36 — folding
+// and indentation included), LSP-driven completion, hover, go-to-definition
+// and diagnostics squiggles over the backend dispatch.
 
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, placeholder, hoverTooltip } from "@codemirror/view";
 import { EditorState, Compartment, type Extension } from "@codemirror/state";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
-import { StreamLanguage, syntaxHighlighting, defaultHighlightStyle, type StringStream } from "@codemirror/language";
+import { StreamLanguage, syntaxHighlighting, defaultHighlightStyle, foldGutter, foldKeymap } from "@codemirror/language";
 import { toml as tomlMode } from "@codemirror/legacy-modes/mode/toml";
 import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap, type CompletionContext, type CompletionResult } from "@codemirror/autocomplete";
 import { linter, lintGutter, setDiagnostics, type Diagnostic as LintDiagnostic } from "@codemirror/lint";
@@ -15,38 +14,10 @@ import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import type { Tooltip } from "@codemirror/view";
 import type { Diag } from "./types";
 import { call } from "./rpc";
-
-/** c4dDefinition is a small StreamParser for the C4D DSL: # comments,
- * identifier: type "Name" { ... } headers, key: value fields and -> links. */
-const c4dDefinition = {
-  name: "c4d",
-  token(stream: StringStream) {
-    if (stream.eatSpace()) return null;
-
-    if (stream.match("#.*")) return "comment";
-
-    if (stream.match(/->\s*[A-Za-z_][\w.]*/)) return "keyword";
-
-    if (stream.match(/"(?:[^"\\]|\\.)*"/)) return "string";
-
-    if (stream.match(/[{}]/)) return "brace";
-
-    // unit header: name: type
-    const word = stream.match(/[A-Za-z_][\w-]*/);
-    if (word) {
-      if (stream.peek() === ":") return "variableName";
-      return "atom";
-    }
-
-    stream.next();
-    return null;
-  },
-};
+import { c4d } from "./language/c4d";
 
 export function languageFor(path: string): Extension {
-  return path.toLowerCase().endsWith(".c4d")
-    ? StreamLanguage.define(c4dDefinition)
-    : StreamLanguage.define(tomlMode);
+  return path.toLowerCase().endsWith(".c4d") ? c4d() : StreamLanguage.define(tomlMode);
 }
 
 export interface EditorHooks {
@@ -80,6 +51,7 @@ export class EditorArea {
     return [
       lineNumbers(),
       highlightActiveLineGutter(),
+      foldGutter(),
       highlightActiveLine(),
       drawSelection(),
       history(),
@@ -95,6 +67,7 @@ export class EditorArea {
         ...closeBracketsKeymap,
         ...defaultKeymap,
         ...historyKeymap,
+        ...foldKeymap,
         ...searchKeymap,
         ...completionKeymap,
         indentWithTab,

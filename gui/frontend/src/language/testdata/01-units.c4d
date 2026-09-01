@@ -1,0 +1,15 @@
+# All three unit header forms plus nesting (D-01/D-02)
+full: person "Customer" {
+  description: The customer
+}
+
+typedled: system external "Payment" {
+  technology: Datadog
+}
+
+typeonlyname: containerQueue "Raw Queue" {}
+
+inner: box "Box" {
+  nested: db "Nested DB" {}
+  oneline: queue { }
+}

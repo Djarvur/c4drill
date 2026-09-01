@@ -1,0 +1,38 @@
+# Relative Peer Resolution Example - C4D twin of 07-relative-peer.toml
+# (renders identically). Bare edge targets walk up the enclosing parent's
+# ancestor scopes nearest-first; a dotted target is absolute, used as-is.
+properties {
+  name: Relative Peer Resolution Example
+  description: Four bare-peer walk-up cases plus an absolute-fallback peer
+  edges: spline
+}
+
+messageBus: queue "Message Bus" { description: Top-level backbone reachable by walk-up from any depth }
+
+platform: system "Platform" {
+  description: Parent system whose subunits exercise each walk-up case
+  cache: containerDb "Platform Cache" {
+    description: Sibling of platform.api — Case 1 sibling-match target
+    -> messageBus: Publishes cache invalidations (keeps this leaf non-orphan)
+  }
+  queue: containerQueue "Platform Queue" {
+    description: Aunt of platform.api.handlers.auth — Case 2 aunt-match target
+    -> messageBus: Drains platform-level queue work (keeps this leaf non-orphan)
+  }
+  router: container "Router Service" {
+    description: Case 1 + 4 host: sibling 'cache' + absolute 'externalGateway'
+    -> cache: Reads/writes the shared platform cache
+    -> platform.api.handlers: Routes to the handlers component via an absolute dotted peer (no walk-up)
+  }
+  api: container "API Service" {
+    description: Parent container hosting the Case 2 + Case 3 walk-up hosts
+    handlers: component "API Handlers Stub" {
+      description: A C3 component under platform.api (forces walk-up past the api scope for Case 2/3)
+      -> queue: Enqueues work to the aunt platform.queue
+    }
+    auth: component "Auth Component" {
+      description: Case 3 host: bare peer 'messageBus' climbs to root (D-15)
+      -> messageBus: Publishes auth events to the root-scope messageBus
+    }
+  }
+}

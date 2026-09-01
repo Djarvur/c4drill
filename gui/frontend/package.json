@@ -6,12 +6,16 @@
   "description": "c4drill desktop GUI frontend (issue #31): CodeMirror editor, live diagram preview, AI chat",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "npm run grammar && tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
-    "postbuild": "touch dist/.gitkeep  # keeps go:embed working without a prior npm build"
+    "postbuild": "touch dist/.gitkeep  # keeps go:embed working without a prior npm build",
+    "grammar": "lezer-generator src/language/c4d.grammar -o src/language/c4d_parser.ts && node -e \"const fs=require('fs');const p='src/language/c4d_parser.ts';const s=fs.readFileSync(p,'utf8');if(!s.startsWith('// @ts-nocheck'))fs.writeFileSync(p,'// @ts-nocheck\\\\n'+s)\"",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@lezer/highlight": "^1.2.3",
+    "@lezer/lr": "^1.4.10",
     "codemirror": "^6.0.2"
   },
   "devDependencies": {
@@ -23,7 +27,9 @@
     "@codemirror/search": "^6.5.11",
     "@codemirror/state": "^6.5.2",
     "@codemirror/view": "^6.38.1",
+    "@lezer/generator": "^1.8.0",
     "typescript": "^5.9.2",
-    "vite": "^7.1.5"
+    "vite": "^7.1.5",
+    "vitest": "^4.1.11"
   }
 }

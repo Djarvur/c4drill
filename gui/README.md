@@ -27,6 +27,13 @@ change things, export.
   diagnostics wording, completion, formatting and the `c4drill/renderDiagram`
   live-preview method are identical to the CLI and the other editors by
   construction.
+- **C4D highlighting via a real grammar.** The editor parses `.c4d` buffers
+  with a dedicated CodeMirror Lezer grammar (`frontend/src/language/`),
+  authored against `internal/c4d/grammar/c4d.peg` with the #27 TextMate and
+  #30 tree-sitter grammars as references for the disambiguation cases. It
+  provides syntax highlighting, code folding and brace indentation; the P0
+  StreamLanguage fallback is gone (TOML highlighting still uses the legacy
+  mode).
 - **Preview fidelity.** The preview renders through `c4drill/renderDiagram`,
   i.e. the exact CLI pipeline. Export writes through `internal/output`'s
   Writer with the CLI's `-f svg|html|dot|png|plantuml` conventions; tests
@@ -70,6 +77,7 @@ is optional — only needed for `wails dev`/packaging; plain `go build` works.
 ```sh
 go test ./gui/...            # backend binding logic + HTTP smoke e2e
 go test -race ./gui/...      # chat streams across goroutines
+cd gui/frontend && npm test           # vitest: Lezer grammar token tests
 cd gui/frontend && npx tsc --noEmit   # frontend typecheck (also in npm run build)
 ```
 
@@ -78,7 +86,11 @@ broken buffer → CLI-parity messages, cross-file include republish),
 completion/format/hover, live render contract (no stale diagram on invalid
 models), drill-target algebra (the real href set from C1/C2/C3 outputs),
 export layout + byte parity, chat streaming/proposals/confirmation gating
-(provider mocked via httptest), and a full HTTP-transport smoke e2e.
+for both providers (OpenAI-compatible and Anthropic Messages-API mocked via
+httptest, including the abort/cancellation path), and a full HTTP-transport
+smoke e2e. The frontend's vitest suite parses every `.c4d` example fixture
+with the Lezer grammar (no error nodes) and asserts the highlight spans and
+folding/indentation props.
 
 ## AI chat (P1)
 
@@ -103,7 +115,12 @@ skill changes). Edit proposals arrive as fenced `c4drill-edit path=…` blocks,
 render as add/remove diffs, and are written **only** on explicit Apply, with
 the scope (opened project, model files only) re-checked at apply time.
 
-Not yet (honest list): streaming tool-calls.
+Not yet (honest list): streaming tool-calls. Known grammar trade-offs (all
+documented in `frontend/src/language/c4d.grammar`): inside an id-led header
+the id and type words share the plain-text style, and unquoted value words
+that start with identifier characters lex as identifiers — so a value like
+`https://x` splits at the colon (quote URLs). Nothing in the example
+corpus trips either case.
 
 ## Layout map
 
@@ -115,7 +132,8 @@ gui/
   internal/ai/         provider clients (OpenAI-compatible + Anthropic
                        Messages-API), prompt assembly, edit proposals/diff
                        (+ tests, skill_seed.md snapshot)
-  frontend/            vite + TypeScript: CodeMirror 6 editor, preview,
-                       toolbar, chat panel; dist/ is embedded via go:embed
+  frontend/            vite + TypeScript: CodeMirror 6 editor (TOML legacy
+                       mode + the C4D Lezer grammar), preview, toolbar, chat
+                       panel; dist/ is embedded via go:embed
   build/appicon.png    app icon placeholder (Wails packaging convention)
 ```
