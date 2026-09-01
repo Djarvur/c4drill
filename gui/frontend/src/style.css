@@ -406,3 +406,155 @@ button:hover {
   color: var(--fg) !important;
   border: 1px solid var(--border) !important;
 }
+
+/* chat pane (P1) */
+.chat-pane {
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+  background: var(--bg-panel);
+  min-width: 0;
+  min-height: 0;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--fg-dim);
+  border-bottom: 1px solid var(--border);
+}
+
+.chat-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.chat-settings label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--fg-dim);
+  font-size: 11px;
+}
+
+.chat-settings input,
+.chat-settings textarea {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 12px;
+}
+
+.chat-settings-msg {
+  color: var(--fg-dim);
+  font-size: 11px;
+  min-height: 14px;
+  word-break: break-all;
+}
+
+.chat-messages {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bubble {
+  max-width: 95%;
+  padding: 6px 9px;
+  border-radius: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12.5px;
+}
+
+.bubble-user {
+  align-self: flex-end;
+  background: #2b3b57;
+}
+
+.bubble-assistant {
+  align-self: flex-start;
+  background: var(--bg-raised);
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid var(--border);
+}
+
+#chat-input {
+  flex: 1;
+  resize: none;
+  font: inherit;
+}
+
+.proposal {
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.proposal.invalid {
+  border-color: var(--error);
+}
+
+.proposal-head {
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+
+.proposal-diff {
+  margin: 0;
+  max-height: 180px;
+  overflow: auto;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.diff-add {
+  color: var(--ok);
+  background: rgb(87 171 90 / 12%);
+}
+
+.diff-del {
+  color: var(--error);
+  background: rgb(244 112 103 / 12%);
+}
+
+.proposal-actions {
+  display: flex;
+  gap: 6px;
+  padding: 6px 8px;
+}
+
+.proposal-apply {
+  border-color: var(--ok);
+}
+
+.proposal-applied {
+  padding: 2px 8px 6px;
+  color: var(--ok);
+  font-size: 11px;
+}
+
+.proposal-error {
+  padding: 2px 8px 6px;
+  color: var(--error);
+  font-size: 11px;
+  word-break: break-all;
+}

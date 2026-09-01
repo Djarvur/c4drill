@@ -9,27 +9,34 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/Djarvur/c4drill/gui/internal/ai"
 )
 
 // handlers is the dispatch table. Registered in newDispatch.
 func (a *App) handlers() map[string]func(params json.RawMessage) (any, error) {
 	return map[string]func(json.RawMessage) (any, error){
-		"openProject":  a.dispatchOpenProject,
-		"listFiles":    a.dispatchListFiles,
-		"readFile":     a.dispatchReadFile,
-		"writeFile":    a.dispatchWriteFile,
-		"didOpen":      a.dispatchDidOpen,
-		"didChange":    a.dispatchDidChange,
-		"didClose":     a.dispatchDidClose,
-		"completion":   a.dispatchCompletion,
-		"hover":        a.dispatchHover,
-		"definition":   a.dispatchDefinition,
-		"symbols":      a.dispatchSymbols,
-		"format":       a.dispatchFormat,
-		"render":       a.dispatchRender,
-		"resolveDrill": a.dispatchResolveDrill,
-		"export":       a.dispatchExport,
-		"appInfo":      a.dispatchAppInfo,
+		"openProject":    a.dispatchOpenProject,
+		"listFiles":      a.dispatchListFiles,
+		"readFile":       a.dispatchReadFile,
+		"writeFile":      a.dispatchWriteFile,
+		"didOpen":        a.dispatchDidOpen,
+		"didChange":      a.dispatchDidChange,
+		"didClose":       a.dispatchDidClose,
+		"completion":     a.dispatchCompletion,
+		"hover":          a.dispatchHover,
+		"definition":     a.dispatchDefinition,
+		"symbols":        a.dispatchSymbols,
+		"format":         a.dispatchFormat,
+		"render":         a.dispatchRender,
+		"resolveDrill":   a.dispatchResolveDrill,
+		"export":         a.dispatchExport,
+		"appInfo":        a.dispatchAppInfo,
+		"chatConfig":     a.dispatchChatConfig,
+		"saveChatConfig": a.dispatchSaveChatConfig,
+		"chat":           a.dispatchChat,
+		"chatAbort":      a.dispatchChatAbort,
+		"applyEdits":     a.dispatchApplyEdits,
 	}
 }
 
@@ -286,4 +293,65 @@ func (a *App) dispatchAppInfo(_ json.RawMessage) (any, error) {
 	defer a.mu.Unlock()
 
 	return Info{InitialDir: a.root, Version: guiVersion}, nil
+}
+
+// --- P1: AI chat ----------------------------------------------------------
+
+func (a *App) dispatchChatConfig(_ json.RawMessage) (any, error) {
+	return a.ChatConfig()
+}
+
+func (a *App) dispatchSaveChatConfig(params json.RawMessage) (any, error) {
+	var cfg ai.Config
+	if err := decodeParams(params, &cfg); err != nil {
+		return nil, err
+	}
+
+	return a.SaveChatConfig(cfg)
+}
+
+type chatParams struct {
+	History []ai.Message         `json:"history"`
+	Text    string               `json:"text"`
+	Ctx     *ai.AuthoringContext `json:"ctx"`
+}
+
+func (a *App) dispatchChat(params json.RawMessage) (any, error) {
+	var p chatParams
+	if err := decodeParams(params, &p); err != nil {
+		return nil, err
+	}
+
+	id, err := a.Chat(p.History, p.Text, p.Ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]string{"requestID": id}, nil
+}
+
+type chatAbortParams struct {
+	RequestID string `json:"requestID"`
+}
+
+func (a *App) dispatchChatAbort(params json.RawMessage) (any, error) {
+	var p chatAbortParams
+	if err := decodeParams(params, &p); err != nil {
+		return nil, err
+	}
+
+	a.ChatAbort(p.RequestID)
+
+	return map[string]bool{"ok": true}, nil
+}
+
+func (a *App) dispatchApplyEdits(params json.RawMessage) (any, error) {
+	var p struct {
+		Proposals []ai.Proposal `json:"proposals"`
+	}
+	if err := decodeParams(params, &p); err != nil {
+		return nil, err
+	}
+
+	return a.ApplyEdits(p.Proposals)
 }

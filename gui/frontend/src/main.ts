@@ -6,7 +6,8 @@ import "./style.css";
 import { backend, call, isDesktop, wailsRuntime } from "./rpc";
 import { EditorArea } from "./editor";
 import { Preview } from "./preview";
-import type { AppInfo, DiagnosticsEvent, ExportResult, FileContent, ProjectInfo, RenderOptions } from "./types";
+import { ChatPanel } from "./chat";
+import type { AppInfo, Diag, DiagnosticsEvent, ExportResult, FileContent, ProjectInfo, RenderOptions } from "./types";
 
 interface OpenTab {
   path: string;
@@ -92,6 +93,7 @@ const toastEl = appEl.querySelector<HTMLElement>("#toast")!;
 const openTabs: OpenTab[] = [];
 let activeTab: string | null = null;
 let projectDir = "";
+const latestDiags = new Map<string, Diag[]>();
 
 // --- editor + preview wiring ------------------------------------------------
 
@@ -129,6 +131,8 @@ const preview = new Preview(
 // --- diagnostics events ------------------------------------------------------
 
 backend.on("diagnostics", (payload: DiagnosticsEvent) => {
+  latestDiags.set(payload.path, payload.diagnostics ?? []);
+
   if (payload.path === editor.currentPath()) {
     editor.applyDiagnostics(payload.diagnostics ?? []);
   }
@@ -440,6 +444,39 @@ appEl.querySelector<HTMLElement>("#preview-container")!.addEventListener("click"
     const next = cur.includes(unit) ? cur.filter((u) => u !== unit) : [...cur, unit];
     preview.setExpanded(next);
   });
+});
+
+// --- chat panel -----------------------------------------------------------------
+
+new ChatPanel(appEl.querySelector<HTMLElement>(".layout")!, {
+  activePath: () => editor.currentPath(),
+  activeText: () => editor.currentText(),
+  activeSelection: () => {
+    const sel = editor.view.state.selection.main;
+    return editor.view.state.doc.sliceString(sel.from, sel.to);
+  },
+  activeDiagnostics: () => latestDiags.get(editor.currentPath()) ?? [],
+  onEditsApplied(paths) {
+    // Reload applied files into open tabs and re-render.
+    void (async () => {
+      for (const path of paths) {
+        const content = await call<FileContent>("readFile", { path }).catch(() => null);
+        if (!content) continue;
+
+        const tab = openTabs.find((t) => t.path === path);
+        if (tab) tab.saved = content.text;
+
+        if (path === editor.currentPath()) {
+          editor.view.dispatch({
+            changes: { from: 0, to: editor.view.state.doc.length, insert: content.text },
+          });
+        }
+      }
+
+      preview.invalidate();
+      await toast(`applied: ${paths.join(", ")}`);
+    })();
+  },
 });
 
 // --- toast ----------------------------------------------------------------------

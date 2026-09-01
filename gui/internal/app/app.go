@@ -10,6 +10,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -70,6 +71,9 @@ type App struct {
 	// openFiles tracks the project-relative paths currently open in the LSP
 	// session so the preview can render buffers without re-reading disk.
 	openFiles map[string]bool
+
+	// chat is the P1 chat panel state (provider config + in-flight requests).
+	chat chatState
 }
 
 // New builds an App. sink may be nil (events are dropped).
@@ -81,6 +85,7 @@ func New(sink EventSink) *App {
 	a := &App{
 		events:    sink,
 		openFiles: make(map[string]bool),
+		chat:      chatState{cancels: make(map[string]context.CancelFunc)},
 	}
 
 	a.lsp = newLSPBridge(a.onDiagnostics)
