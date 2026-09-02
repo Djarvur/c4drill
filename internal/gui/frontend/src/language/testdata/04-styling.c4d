@@ -1,0 +1,66 @@
+# Styling Example - C4D twin of 04-styling.toml (renders identically)
+# Colors, borders and edge styles are plain fields inside the unit block.
+# Custom legend lines (v1.13): appended under the default colour explanations
+# in the upper-right legend. legend: false disables the legend model-wide.
+properties {
+  name: Styling Demo
+  description: Visual customization examples
+  color: "#FAFAFA"
+  border: "#BDBDBD"
+  edges: spline
+  legendLine: ["Nightly batch|#E65100|dashed"]
+}
+
+admin: person "Administrator" {
+  description: System admin
+  color: "#FFF9C4"
+  border: "#F9A825"
+  <- dashboard: Manages
+}
+
+dashboard: system "Admin Dashboard" {
+  description: Internal admin interface
+  technology: "React, Material-UI"
+  color: "#E3F2FD"
+  border: "#1565C0"
+  -> admin: "HTTPS | Manages" { color: "#1565C0" }
+}
+
+monitoring: system external "Monitoring Service" {
+  description: External monitoring platform
+  technology: Datadog
+  color: "#F3E5F5"
+  style: "filled,dashed"
+  border: "#7B1FA2"
+  -> dashboard: "API | Sends metrics" { color: "#7B1FA2" style: dashed }
+}
+
+auditdb: db "Audit Database" {
+  description: Audit trail storage
+  technology: PostgreSQL
+  color: "#E8F5E9"
+  border: "#2E7D32"
+  -> dashboard: "SQL | Logs actions" { color: "#2E7D32" }
+}
+
+internal: box "Internal Services" {
+  description: Internal infrastructure
+  color: "#FFF3E0"
+  border: "#E65100"
+  edges: ortho
+  auth: system "Auth Service" {
+    description: Authentication service
+    technology: "Node.js, JWT"
+    color: "#FFECB3"
+    border: "#FF8F00"
+    -> dashboard: "gRPC | Validates tokens" { color: "#FF8F00" }
+    -> auditdb: "SQL | Writes audit logs" { arrow: forward color: "#2E7D32" style: solid }
+  }
+  config: system "Config Service" {
+    description: Configuration management
+    technology: "Go, Etcd"
+    color: "#FFECB3"
+    border: "#FF8F00"
+    -> dashboard: "HTTP | Fetches config" { color: "#FF8F00" style: dotted }
+  }
+}

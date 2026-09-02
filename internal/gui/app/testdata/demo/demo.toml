@@ -1,0 +1,54 @@
+# GUI P0 test fixture: small but complete model — properties.expanded C1
+# drill-down set, nested subunits (so C1 click targets exist at C2 and C3),
+# and leaf-level links only (units with subunits cannot carry direct links).
+
+[properties]
+name = "GUI Demo"
+description = "Fixture model for the GUI app tests"
+expanded = ["cloud"]
+
+[customer]
+type = "person"
+name = "Customer"
+description = "Uses the platform"
+
+[[customer.link]]
+peer = "cloud.ui.api"
+description = "Uses the API"
+
+[cloud]
+type = "system"
+name = "Cloud Platform"
+description = "The SaaS platform"
+technology = "Go"
+
+[cloud.ui]
+type = "container"
+name = "Web UI"
+description = "Browser frontend"
+technology = "React"
+
+[cloud.ui.api]
+type = "component"
+name = "API"
+description = "HTTP API"
+technology = "Go"
+
+[[cloud.ui.api.link]]
+peer = "mail"
+description = "Sends notification emails"
+
+[cloud.db]
+type = "container"
+name = "Database"
+description = "Primary store"
+technology = "PostgreSQL"
+
+[[cloud.db.link]]
+peer = "cloud.ui.api"
+description = "Written through the API"
+
+[mail]
+type = "systemExternal"
+name = "Mail Provider"
+description = "External email service"

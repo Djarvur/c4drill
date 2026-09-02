@@ -1,0 +1,33 @@
+# c4drill Zed extension manifest.
+#
+# This extension provides, in one package:
+#   - the C4D DSL language (Tree-sitter grammar `c4d`, shipped in-repo);
+#   - the scoped "C4Drill TOML" language (see languages/c4drill-toml and
+#     the README for why it claims NO file extensions by default);
+#   - the c4drill language server wiring (`c4drill serve --lsp`, the #32
+#     Go server: diagnostics, completion, hover, definition, document
+#     symbols, formatting, and the custom c4drill/renderDiagram request).
+
+id = "c4drill"
+name = "C4Drill"
+version = "0.1.0"
+schema_version = 1
+authors = ["Djarvur"]
+description = "C4 architecture diagrams: syntax highlighting, autocomplete, diagnostics, formatting and diagram rendering for c4drill models (TOML dialect and C4D DSL)."
+repository = "https://github.com/Djarvur/c4drill"
+
+[language_servers.c4drill]
+name = "C4Drill LSP"
+languages = ["C4D", "C4Drill TOML"]
+
+[grammars.c4d]
+# The tree-sitter-c4d grammar ships inside this extension (grammars/c4d).
+# Zed compiles grammars by cloning `repository` at `rev`, so installing
+# this extension as a dev extension requires the grammar directory to be a
+# git clone of the URL below. For offline local development run
+# `scripts/bootstrap-grammar.sh --local` (rewrites this URL to a file://
+# path — a local tweak, do not commit it). For the committed, canonical
+# flow: push grammars/c4d to the standalone tree-sitter-c4d repository and
+# pin a SHA as rev here.
+repository = "https://github.com/Djarvur/tree-sitter-c4d"
+rev = "master"

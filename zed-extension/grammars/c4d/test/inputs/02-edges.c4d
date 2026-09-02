@@ -1,0 +1,17 @@
+# The four ASCII arrows (D-05), labels (D-09) and option blocks
+customer: person "Customer" {
+  -> webapp: "HTTPS | Browses" { arrow: forward }
+  -> api: "REST/JSON | Queries API" { arrow: reverse color: blue }
+  -> cache: "Redis | Session cache" { kind: read labelPosition: tail }
+  <-> bus: "Redis Protocol | Caches/Retrieves" { style: dashed }
+  -- analytics: "HTTP POST | Sends events" { color: gray style: dotted }
+  -> database: "SQL | Queries" { rank: reverse color: green }
+  <- payment: "Webhook | Payment callback" { color: purple }
+}
+
+webapp: system "Web Application" {
+  technology: React
+  -> messageBus: Publishes events
+  -> shop.api.handlers: Routes via absolute dotted peer
+  -> ${upstreamBus}: "Publishes ${name} domain events"
+}

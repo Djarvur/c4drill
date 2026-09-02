@@ -83,6 +83,12 @@ c4drill architecture.toml -o ./docs/diagrams
 
 # Generate DOT format for customization
 c4drill architecture.toml -f dot -o ./output
+
+# Generate PNG raster images (each with a linking HTML doc)
+c4drill architecture.toml -f png -o ./output
+
+# Generate C4-PlantUML sources (render with: plantuml -tsvg *.puml)
+c4drill architecture.toml -f plantuml -o ./output
 ----
 
 Both authoring formats are interchangeable throughout: pass a
@@ -1250,7 +1256,7 @@ c4drill <input.toml|input.c4d> [flags]
 Flags:
       --edges string        Override edge routing style for every generated diagram (straight|spline|square|ortho)
       --expanded            Generate all-expanded diagram showing all units
-  -f, --format string       Output format (dot|svg|html) (default "svg")
+  -f, --format string       Output format (dot|svg|html|png|plantuml) (default "svg")
   -h, --help                help for c4drill
       --label-ratio float   Width:height ratio for unit labels (default: 1.6, credit card proportions)
       --no-colors           Suppress colouring only: author unit/link colors and kind-derived edge colours
@@ -1267,6 +1273,45 @@ Flags:
   level), instead of the per-level drill-down set. The file is named
   `++{basename}++.expanded.++{format}++` and contains no drill-down
   links.
+* `--format png` renders each diagram as a PNG raster at the same
+  per-level paths the SVG layout uses (`++{basename}++.png`,
+  `++{basename}++/++{system}++.png`, …). A bare PNG cannot carry
+  hyperlinks, so every raster also gains a sibling `.html` doc —
+  the interactive layer over the image. Each doc embeds its PNG and
+  navigates like the SVG output does: a clickable breadcrumb trail
+  up the ancestor pages, one drill-down link per drill-capable unit
+  to its child page, and external `reference` URLs opening in a new
+  tab. The in-diagram nav bar and legend are baked into the raster
+  (visual parity with SVG); the clickable breadcrumb is re-emitted
+  above the image in the HTML doc. Existing `dot`/`svg`/`html`
+  output is unchanged.
+
+  [source,bash]
+  ----
+  c4drill architecture.toml -f png -o ./output
+  ----
+* `--format plantuml` serializes each diagram as a
+  https://github.com/plantuml-stdlib/C4-PlantUML[C4-PlantUML] source
+  document (`.puml` extension, same per-level paths as the SVG
+  layout: `++{basename}++.puml`, `++{basename}++/++{system}++.puml`,
+  …). Every c4drill unit type maps onto the standard
+  C4_Context/C4_Container/C4_Component macros (persons, systems,
+  containers, components, db/queue variants, and grouping boxes as
+  boundaries — upstream C4-PlantUML has no `Component_Boundary`, so
+  `componentBox` frames with the generic `Boundary` macro), and
+  relationships map onto `Rel`/`Rel_Back`/`BiRel`
+  by arrow direction. The drill-down links ride the element macros'
+  `$link` parameter, so converting with `plantuml -tsvg` produces SVGs
+  whose nodes are real anchors pointing at the sibling `.svg`
+  diagrams — the breadcrumb nav bar is not expressible in PlantUML
+  and is omitted. Model colours ride `AddElementTag`/`AddRelTag`
+  declarations; the legend flag emits `LAYOUT_WITH_LEGEND()`.
+
+  [source,bash]
+  ----
+  c4drill architecture.toml -f plantuml -o ./output
+  plantuml -tsvg output/*.puml
+  ----
 * `--edges` (v1.23) overrides the edge routing style for the *whole
   invocation*: every generated diagram — the C1 root, every drill-down
   view, and the `--expanded` copy — renders with the requested style.
@@ -1426,6 +1471,42 @@ c4drill fmt [--check] <file|dir>...
 c4drill fmt --check .   # exits 1 listing offending files
 ----
 
+=== serve
+
+[source,text]
+----
+c4drill serve --lsp
+----
+
+* Runs the c4drill *language server* (issue #32) — the shared foundation
+the VS Code, JetBrains and Zed plugins and the GUI app are thin clients
+over. Editors launch it as `c4drill serve --lsp`; stdin/stdout carry the
+protocol (Content-Length framed JSON-RPC), so nothing else may write to
+stdout.
+* Covers both authoring formats. `textDocument/publishDiagnostics` runs
+the exact CLI pipeline, so message text and line numbers match
+`c4drill <file>` — including `[[include]]` graphs, where editing an
+included file (open buffer or watched on-disk change) republishes
+diagnostics for every including document.
+* Both formats get the full feature surface: `textDocument/completion`
+(all 17 unit types with nesting inference and generic-type promotion,
+unit/link fields, enum values, peers, template params, include paths),
+`hover` (resolved peer paths, level and promoted type; template param
+info), `definition` (peer to unit section, template reference, include
+target), `documentSymbol` (unit outline) and `textDocument/formatting`
+(fmt parity).
+* `textDocument/semanticTokens/full` (TOML dialect) marks unit-type
+keys/values, link-table segments and enum values for editors that layer
+semantic tokens over their grammars. On `initialized` the server
+dynamically registers `workspace/didChangeWatchedFiles` watchers for
+`**/*.toml` and `**/*.c4d`, so on-disk include edits republish
+diagnostics even in clients that never send the notification manually.
+* Custom method `c4drill/renderDiagram` renders the CLI SVG pipeline
+in-process — params: document URI, optional target unit path
+(C1/C2/C3), all-expanded toggle, expanded-set and legend overrides —
+returning the SVG text plus render-time diagnostics. This is the
+live-preview primitive the editor plugins and the GUI app build on.
+
 === Output Format
 
 * *svg* (default): Rendered SVG diagrams with clickable navigation links
@@ -1434,6 +1515,12 @@ navigation in Safari/WebKit, which silently ignores SVG `++<++a++>++`
 hyperlinks. Use `-f html` when diagrams will be opened in Safari or
 viewed via `file://`.
 * *dot*: Raw GraphViz DOT format for customization
+* *png*: PNG raster diagrams at the same per-level paths the SVG layout
+uses, each with a sibling `.html` doc carrying the clickable navigation
+(see `--format png` above)
+* *plantuml*: C4-PlantUML source documents (`.puml`) whose `$link`
+drill-downs point at the sibling SVGs after `plantuml -tsvg` (see
+`--format plantuml` above)
 
 === Exit Codes
 
@@ -1441,6 +1528,55 @@ viewed via `file://`.
 * *1*: Error (parse failure, validation error, I/O error)
 
 Errors are written to stderr, making the tool suitable for scripting.
+
+== Editor and GUI Clients
+
+Four clients ship in this repository, all thin layers over the same
+core: language features come from the `c4drill serve --lsp` server
+(see <<serve>>) and live previews from its custom
+`c4drill/renderDiagram` request, so diagnostics, completion and
+rendered output match `c4drill <file>` in every client; each
+subsection points at the per-directory documentation.
+
+=== VS Code Extension (`extension/`)
+
+Registers a `c4drill-c4d` language backed by a TextMate grammar and
+scopes TOML opt-in: plain `.toml` files are never touched unless they
+match the `c4drill.toml.patterns` globs (default
+`**/*.architecture.toml`) or are activated per file. An LSP client
+launches `c4drill serve --lsp` (`c4drill.server.path` picks the
+binary), and a preview webview re-renders the diagram as you type with
+click-through drill-down navigation and breadcrumbs. See
+`extension/README.md` for the full command and settings surface.
+
+=== JetBrains Plugin (`idea-plugin/`)
+
+Builds on the IntelliJ platform's built-in LSP client (requires IDE
+2025.3+ of the commercial IDEs) and reuses the same C4D TextMate
+grammar for highlighting, with the same TOML opt-in rule as the VS
+Code extension. A "C4Drill Preview" tool window renders through
+`c4drill/renderDiagram` with drill-down navigation, view controls and
+SVG export. Details, install and build instructions in
+`idea-plugin/README.md`.
+
+=== Zed Extension (`zed-extension/`)
+
+Ships a tree-sitter-c4d grammar (Zed has no TextMate support), wires
+the LSP server for diagnostics, completion, hover, definition and
+formatting, and contributes render/export tasks that run the CLI
+(`c4drill: render diagram`, export dot/PlantUML). TOML scoping rides
+Zed's `file_types` settings glob; a live preview panel is pending
+Zed's visual extension API. Details in `zed-extension/README.md`.
+
+=== Desktop GUI App (`cmd/c4drill-gui`)
+
+A Wails desktop app wrapping the full authoring loop: a code editor
+for both formats with the shared language features, a live
+auto-refreshing diagram preview with drill-down and export, and an AI
+chat panel whose edit proposals land as confirmed diffs. Build it
+with `go build ./cmd/c4drill-gui`; the same UI is also available in a
+browser via `go run ./cmd/c4drill-gui --serve`. Build, run and
+configuration details in `internal/gui/README.md`.
 
 == Validation Rules
 
@@ -1472,7 +1608,8 @@ TOML → Parse → Validate → Generate Views → Build Graphs → Render → W
 * *Validator*: Enforces C4 rules and reference integrity
 * *View Generator*: Creates C1/C2/C3 views from model
 * *Graph Builder*: Constructs graphviz-compatible structures
-* *Renderer*: Outputs DOT, SVG, or HTML via go-graphviz
+* *Renderer*: Outputs DOT, SVG, HTML, and PNG via go-graphviz, plus
+C4-PlantUML source documents
 * *Writer*: Creates output directory hierarchy
 
 == License

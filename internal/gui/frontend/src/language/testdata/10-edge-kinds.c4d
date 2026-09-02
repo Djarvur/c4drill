@@ -1,0 +1,48 @@
+# Edge Kinds & Legend Example - C4D twin of 10-edge-kinds.toml (renders identically)
+# kind = read / write / read-write colours edges green / red / purple; an
+# explicit color wins. rank: reverse flips layout ranking with one option.
+# legendLine rows append custom lines to the default-on upper-right legend.
+properties {
+  name: Edge Kinds & Legend
+  description: "Kind-coloured edges, rank reversal, and the legend"
+}
+
+reader: person "Reader" {
+  description: Consumes content
+  -> app.reader: "HTTPS | Browses" { kind: read }
+}
+
+app: system "Application" {
+  technology: Go
+  reader: container "Reader API" {
+    technology: Go
+    -> ext.store: "SQL | Reads rows" { kind: read }
+  }
+  writer: container "Writer API" {
+    technology: Go
+    -> ext.store: "SQL | Writes rows" { kind: write }
+  }
+  publisher: container "Publisher" {
+    technology: Go
+    -> queue: "AMQP | Publishes" { rank: reverse kind: write }
+    -> search: "HTTP | Index updates" { kind: write color: "#E65100" }
+  }
+}
+
+ext: box "External Storage" {
+  store: db external "Document Store" {
+    technology: PostgreSQL
+    <- app.reader: Reads rows
+    <- app.writer: Writes rows
+  }
+}
+
+search: system external "Search Index" {
+  description: Full-text search platform
+  <- app.publisher: Index updates
+}
+
+queue: queue "Event Queue" {
+  technology: RabbitMQ
+  <- app.publisher: Publishes
+}

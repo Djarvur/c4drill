@@ -1,0 +1,18 @@
+# Entry file for the GUI cross-file fixture: includes the shared half so
+# editing the included file must republish diagnostics for this document.
+
+[properties]
+name = "Main App"
+description = "Cross-file include fixture"
+
+[guiMain]
+type = "system"
+name = "Main"
+description = "Entry-side unit"
+
+[[guiMain.link]]
+peer = "authService"
+description = "Delegates authentication"
+
+[[include]]
+path = "shared_half.toml"

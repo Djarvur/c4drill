@@ -18,12 +18,36 @@ import (
 //
 // Parse composes the exported AST entry: ParseAST then ToModel.
 func Parse(data []byte) (*parser.Model, error) {
-	doc, err := ParseAST(data)
+	return ParseNamed("", data)
+}
+
+// ParseNamed is Parse with error attribution: grammar errors carry name in
+// their rendered message (pigeon prefixes the parser name) and conversion
+// errors ride it in ParseError.Context — exactly what ParseFile produces
+// for the same bytes, minus the disk read. Callers that hold file content
+// from a non-disk source (the LSP's open-editor buffers) use it so their
+// diagnostics stay message-for-message identical to the CLI.
+func ParseNamed(name string, data []byte) (*parser.Model, error) {
+	doc, err := parse(name, data)
 	if err != nil {
 		return nil, err
 	}
 
-	return ToModel(doc)
+	m, err := ToModel(doc)
+	if err != nil {
+		// Attribution: conversion errors carry the statement line; the
+		// caller-supplied name rides in Context when the converter did not
+		// set one (empty name adds nothing, mirroring Parse).
+		var perr *parser.ParseError
+
+		if name != "" && errors.As(err, &perr) && perr.Context == "" {
+			perr.Context = name
+		}
+
+		return nil, err
+	}
+
+	return m, nil
 }
 
 // ParseFile reads a C4D file and parses it into a *parser.Model (D-21).
@@ -35,24 +59,7 @@ func ParseFile(path string) (*parser.Model, error) {
 		return nil, &parser.ParseError{Message: "failed to read file", Context: path, Cause: err}
 	}
 
-	doc, err := parse(path, data)
-	if err != nil {
-		return nil, err
-	}
-
-	m, err := ToModel(doc)
-	if err != nil {
-		// Attribution: conversion errors carry the statement line; the file
-		// path rides in Context when the converter did not set one.
-		var perr *parser.ParseError
-		if errors.As(err, &perr) && perr.Context == "" {
-			perr.Context = path
-		}
-
-		return nil, err
-	}
-
-	return m, nil
+	return ParseNamed(path, data)
 }
 
 // ParseAST parses C4D data into the typed AST document — the exported

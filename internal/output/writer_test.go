@@ -356,3 +356,75 @@ func TestWriteExpanded_OverwritesExistingFile(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []byte("new content"), content)
 }
+
+// Tests for PNG image-name helpers (issue #26): the HTML navigation doc that
+// accompanies each PNG embeds its raster sibling by bare file name, so the
+// helper must mirror the Write/WriteExpanded layout exactly.
+
+func TestPNGImageName(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		basename   string
+		unitPath   string
+		wantImage  string
+		wantDocDir string // directory the doc/PNG pair lands in, relative to base
+	}{
+		{
+			name:       "C1 flat layout",
+			basename:   "model",
+			unitPath:   "",
+			wantImage:  "model.png",
+			wantDocDir: ".",
+		},
+		{
+			name:       "C2 single segment",
+			basename:   "model",
+			unitPath:   "mainapp",
+			wantImage:  "mainapp.png",
+			wantDocDir: "model",
+		},
+		{
+			name:       "C3 dotted path",
+			basename:   "model",
+			unitPath:   "mainapp.api",
+			wantImage:  "api.png",
+			wantDocDir: filepath.Join("model", "mainapp"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tt.wantImage, output.PNGImageName(tt.basename, tt.unitPath))
+
+			// Consistency lock: the name helper must reference exactly the
+			// PNG file Write produces for the same basename/unitPath.
+			tmpDir := t.TempDir()
+			w := output.NewWriter(tmpDir)
+			require.NoError(t, w.Write(tt.basename, tt.unitPath, "png", []byte("raster")))
+
+			docDir := tmpDir
+			if tt.wantDocDir != "." {
+				docDir = filepath.Join(tmpDir, tt.wantDocDir)
+			}
+
+			assert.FileExists(t, filepath.Join(docDir, tt.wantImage),
+				"PNGImageName must name the PNG Write creates")
+		})
+	}
+}
+
+func TestExpandedPNGImageName(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, "model.expanded.png", output.ExpandedPNGImageName("model"))
+
+	// Consistency lock against WriteExpanded's layout.
+	tmpDir := t.TempDir()
+	w := output.NewWriter(tmpDir)
+	require.NoError(t, w.WriteExpanded("model", "png", []byte("raster")))
+	assert.FileExists(t, filepath.Join(tmpDir, output.ExpandedPNGImageName("model")))
+}

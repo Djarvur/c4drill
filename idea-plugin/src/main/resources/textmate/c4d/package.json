@@ -1,0 +1,22 @@
+{
+  "name": "c4drill-c4d",
+  "displayName": "C4Drill C4D",
+  "description": "C4Drill C4D grammar (reused verbatim from the VS Code extension, issue #27).",
+  "contributes": {
+    "languages": [
+      {
+        "id": "c4d",
+        "extensions": [
+          ".c4d"
+        ]
+      }
+    ],
+    "grammars": [
+      {
+        "language": "c4d",
+        "scopeName": "source.c4d",
+        "path": "./syntaxes/c4d.tmLanguage.json"
+      }
+    ]
+  }
+}

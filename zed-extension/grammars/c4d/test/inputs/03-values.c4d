@@ -1,0 +1,17 @@
+# Field values: quoted, triple-quoted, barewords, lists (D-06/D-15)
+styled: system "Styled" {
+  description: Multi word bareword value
+  technology: "React, TypeScript"
+  reference: https://example.com/docs/overview
+  color: "#FAFAFA"
+  border: "#BDBDBD"
+  style: "filled,dashed"
+  expanded: [platform, amazon.rds]
+  legendLine: ["Nightly batch|#E65100|dashed", "Manual runs|#1B5E20"]
+  width: 24
+  height: 12
+  doc: """
+    A longer triple-quoted description with "quotes" inside.
+    Second line.
+"""
+}

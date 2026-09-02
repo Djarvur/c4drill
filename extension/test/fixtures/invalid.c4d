@@ -1,0 +1,11 @@
+# Smoke Fixture (invalid) - link to a peer that does not exist. The diagnostic
+# must match the CLI error text: resolve peers: cannot resolve peer "missing"
+# from unit "alpha".
+properties {
+  name: Broken Fixture
+}
+
+alpha: system "Alpha" {
+  description: Points at a peer that is not in the model
+  -> missing: "Nowhere"
+}

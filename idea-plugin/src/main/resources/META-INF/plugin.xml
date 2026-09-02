@@ -1,0 +1,88 @@
+<idea-plugin>
+    <id>dev.djarvur.c4drill</id>
+    <name>C4Drill</name>
+    <vendor>Djarvur</vendor>
+
+    <!-- The platform's LSP client and the TextMate bundles plugin are
+         optional: the file type, settings and preview shell load everywhere,
+         while language-server wiring and TextMate highlighting activate only
+         when the respective module is present (every commercial 253+ IDE). -->
+    <depends optional="true" config-file="lsp.xml">com.intellij.modules.lsp</depends>
+    <depends optional="true" config-file="textmate.xml">org.jetbrains.plugins.textmate</depends>
+
+    <extensionPoints>
+        <!-- The seam the optional LSP integration plugs into. -->
+        <extensionPoint name="gateway"
+                        interface="dev.djarvur.c4drill.lsp.C4drillGateway"
+                        dynamic="true"/>
+    </extensionPoints>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- C4D: claimed unconditionally. -->
+        <fileType name="C4D"
+                  implementationClass="dev.djarvur.c4drill.C4dFileType"
+                  language="C4D"
+                  fieldName="INSTANCE"
+                  extensions="c4d"/>
+
+        <!-- Live diagram preview. -->
+        <toolWindow id="C4Drill Preview"
+                    anchor="right"
+                    factoryClass="dev.djarvur.c4drill.preview.C4drillPreviewToolWindowFactory"
+                    icon="/icons/c4drill.svg"/>
+
+        <!-- Settings. -->
+        <applicationService serviceImplementation="dev.djarvur.c4drill.C4drillGlobalSettings"/>
+        <projectService serviceImplementation="dev.djarvur.c4drill.C4drillProjectSettings"/>
+        <projectConfigurable groupId="tools"
+                             id="dev.djarvur.c4drill.configurable"
+                             instance="dev.djarvur.c4drill.C4drillConfigurable"
+                             displayName="C4Drill"/>
+
+        <!-- Notifications. -->
+        <notificationGroup id="C4Drill" displayType="BALLOON"/>
+
+        <!-- Registry overrides. -->
+        <registryKey key="c4drill.render.timeout.ms" defaultValue="10000"
+                     description="c4drill/renderDiagram request timeout in milliseconds."/>
+    </extensions>
+
+    <actions>
+        <group id="C4DrillActions"
+               text="C4Drill"
+               popup="true">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+
+            <action id="C4Drill.ValidateFile"
+                    class="dev.djarvur.c4drill.actions.C4drillValidateAction"
+                    text="Validate File"
+                    description="Run the c4drill validation pipeline on the current file (CLI-identical diagnostics)">
+                <keyboard-shortcut keymap="$default" first-keystroke="alt shift V"/>
+            </action>
+
+            <action id="C4Drill.FormatDocument"
+                    class="dev.djarvur.c4drill.actions.C4drillFormatAction"
+                    text="Format Document"
+                    description="Format the current c4drill document via the language server (textDocument/formatting)"/>
+
+            <action id="C4Drill.ShowPreview"
+                    class="dev.djarvur.c4drill.actions.C4drillShowPreviewAction"
+                    text="Show Preview"
+                    description="Open the live C4Drill diagram preview for the current file">
+                <keyboard-shortcut keymap="$default" first-keystroke="alt shift P"/>
+            </action>
+
+            <separator/>
+
+            <action id="C4Drill.ActivateForFile"
+                    class="dev.djarvur.c4drill.actions.C4drillActivateForFileAction"
+                    text="Activate for This File"
+                    description="Handle the current .toml file with c4drill (opt in, persisted per project)"/>
+
+            <action id="C4Drill.DeactivateForFile"
+                    class="dev.djarvur.c4drill.actions.C4drillDeactivateForFileAction"
+                    text="Deactivate for This File"
+                    description="Stop handling the current .toml file with c4drill"/>
+        </group>
+    </actions>
+</idea-plugin>

@@ -43,7 +43,7 @@ func TestHelpText(t *testing.T) {
 	assert.Contains(t, output, "Examples:", "Help should include examples section")
 	assert.Contains(t, output, "--format", "Help should document --format flag")
 	assert.Contains(t, output, "--output", "Help should document --output flag")
-	assert.Contains(t, output, "dot|svg|html", "Help should show available formats")
+	assert.Contains(t, output, "dot|svg|html|png|plantuml", "Help should show available formats")
 }
 
 // TestHelpSubcommand verifies that help subcommand shows same content as --help.
@@ -134,8 +134,18 @@ func TestFlagValidation(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name:        "png format is invalid",
+			name:        "png format is valid",
 			format:      "png",
+			expectError: false,
+		},
+		{
+			name:        "plantuml format is valid",
+			format:      "plantuml",
+			expectError: false,
+		},
+		{
+			name:        "webp format is invalid",
+			format:      "webp",
 			expectError: true,
 		},
 		{
@@ -1005,6 +1015,203 @@ func TestRootCmd_HTMLFormat(t *testing.T) {
 		assert.NotContains(t, c3, `.svg"`,
 			"C3 HTML must not contain any .svg href suffix")
 	})
+}
+
+// TestRootCmd_PNGFormat (issue #26) verifies that `-f png` produces a PNG
+// raster at every C1/C2/C3 path MIRRORED by a sibling HTML navigation doc.
+// A bare PNG cannot carry hyperlinks, so the .html page is the interactive
+// layer: it embeds the raster via <img src>, re-emits the breadcrumb as real
+// anchors, links drill-down targets, and keeps every href .html-suffixed.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestRootCmd_PNGFormat(t *testing.T) {
+	dir := generateMultilevelOutput(t, "png")
+
+	t.Run("produces PNG and HTML at C1/C2/C3 paths", func(t *testing.T) {
+		for _, rel := range []string{
+			"multilevel.png",
+			"multilevel.html",
+			filepath.Join("multilevel", "mainSystem.png"),
+			filepath.Join("multilevel", "mainSystem.html"),
+			filepath.Join("multilevel", "mainSystem", "sshAuth.png"),
+			filepath.Join("multilevel", "mainSystem", "sshAuth.html"),
+		} {
+			assert.FileExists(t, filepath.Join(dir, rel), "%s should exist", rel)
+		}
+	})
+
+	t.Run("PNG output is valid raster (magic number)", func(t *testing.T) {
+		for _, rel := range []string{
+			"multilevel.png",
+			filepath.Join("multilevel", "mainSystem.png"),
+			filepath.Join("multilevel", "mainSystem", "sshAuth.png"),
+		} {
+			//nolint:gosec // G304: Test reads files generated into t.TempDir()
+			data, err := os.ReadFile(filepath.Join(dir, rel))
+			require.NoError(t, err, "%s must be readable", rel)
+			require.GreaterOrEqual(t, len(data), 8, "%s must be non-empty", rel)
+			assert.Equal(t, []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}, data[:8],
+				"%s must start with the PNG signature", rel)
+		}
+	})
+
+	t.Run("C1 HTML embeds its PNG", func(t *testing.T) {
+		c1 := readOutputFile(t, filepath.Join(dir, "multilevel.html"))
+
+		assert.True(t, strings.HasPrefix(c1, "<!DOCTYPE html>"), "C1 doc must be HTML")
+		assert.Contains(t, c1, `<img src="multilevel.png"`,
+			"C1 doc must embed its sibling raster")
+	})
+
+	t.Run("C2 HTML carries breadcrumb, drill-down and image anchors", func(t *testing.T) {
+		c2 := readOutputFile(t, filepath.Join(dir, "multilevel", "mainSystem.html"))
+
+		assert.Contains(t, c2, `<img src="mainSystem.png"`,
+			"C2 doc must embed its sibling raster")
+		assert.Contains(t, c2, `<a href="../multilevel.html">`,
+			"C2 breadcrumb must anchor up to the C1 page")
+		assert.Contains(t, c2, `mainSystem/sshAuth.html`,
+			"C2 drill-down must anchor the sshAuth child page (.html rewritten)")
+		assert.NotContains(t, c2, `.svg"`,
+			"C2 doc must not retain any .svg href suffix")
+	})
+
+	t.Run("C3 HTML breadcrumb returns to its ancestor", func(t *testing.T) {
+		c3 := readOutputFile(t, filepath.Join(dir, "multilevel", "mainSystem", "sshAuth.html"))
+
+		assert.Contains(t, c3, `<img src="sshAuth.png"`,
+			"C3 doc must embed its sibling raster")
+		assert.Contains(t, c3, `<a href="../mainSystem.html">`,
+			"C3 breadcrumb must anchor up to the C2 page")
+		assert.NotContains(t, c3, `.svg"`,
+			"C3 doc must not retain any .svg href suffix")
+	})
+}
+
+// TestRootCmd_PNGFormat_Expanded verifies that `-f png --expanded` emits the
+// raster as {basename}.expanded.png with its sibling {basename}.expanded.html
+// navigation doc (image-only — the expanded graph carries no navigation).
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestRootCmd_PNGFormat_Expanded(t *testing.T) {
+	dir := t.TempDir()
+
+	cmd := NewRootCmd()
+	cmd.SetArgs([]string{
+		filepath.Join("testdata", "expanded.toml"),
+		"--output", dir,
+		"--format", "png",
+		"--expanded",
+	})
+
+	require.NoError(t, cmd.Execute(), "-f png --expanded should succeed")
+
+	//nolint:gosec // G304: Test reads files generated into t.TempDir()
+	pngData, err := os.ReadFile(filepath.Join(dir, "expanded.expanded.png"))
+	require.NoError(t, err, "expanded PNG should exist")
+	require.GreaterOrEqual(t, len(pngData), 8)
+	assert.Equal(t, []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}, pngData[:8],
+		"expanded output must be a PNG raster")
+
+	doc := readOutputFile(t, filepath.Join(dir, "expanded.expanded.html"))
+	assert.Contains(t, doc, `<img src="expanded.expanded.png"`,
+		"expanded doc must embed its sibling raster")
+}
+
+// TestRootCmd_PlantUMLFormat (issue #25) verifies that `-f plantuml` writes
+// C4-PlantUML sources with the .puml extension at the same C1/C2/C3 layout
+// the SVG writer uses, and that the drill-down links carry EXACTLY the hrefs
+// ComputeExploreURL computes (.svg targets), so `plantuml -tsvg` output stays
+// clickable. The breadcrumb nav bar is deliberately omitted (HTML-like
+// GraphViz labels have no PlantUML equivalent).
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestRootCmd_PlantUMLFormat(t *testing.T) {
+	dir := generateMultilevelOutput(t, "plantuml")
+
+	t.Run("produces .puml files at the C1/C2/C3 paths", func(t *testing.T) {
+		for _, rel := range []string{
+			"multilevel.puml",
+			filepath.Join("multilevel", "mainSystem.puml"),
+			filepath.Join("multilevel", "mainSystem", "sshAuth.puml"),
+		} {
+			assert.FileExists(t, filepath.Join(dir, rel), "%s should exist", rel)
+		}
+	})
+
+	t.Run("C1 source maps units and drills down with ComputeExploreURL hrefs", func(t *testing.T) {
+		c1 := readOutputFile(t, filepath.Join(dir, "multilevel.puml"))
+
+		assert.Contains(t, c1, "@startuml", "C1 must be PlantUML source")
+		assert.Contains(t, c1, "!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/",
+			"C1 must include C4-PlantUML from the stdlib URL")
+		assert.Contains(t, c1, "Person_Ext(actorA, \"Actor A\"",
+			"personExternal must map to Person_Ext")
+		assert.Contains(t, c1, "System_Ext(externalSys,",
+			"systemExternal must map to System_Ext")
+		assert.Contains(t, c1, "System_Boundary(mainSystem,",
+			"the expanded system must frame as System_Boundary")
+		// ComputeExploreURL("", "mainSystem.sshAuth", "multilevel", ...).
+		assert.Contains(t, c1, "multilevel/mainSystem/sshAuth.svg",
+			"the drill-down must target the sibling .svg the SVG layout produces")
+	})
+
+	t.Run("C2 source frames the expanded system and maps containers", func(t *testing.T) {
+		c2 := readOutputFile(t, filepath.Join(dir, "multilevel", "mainSystem.puml"))
+
+		assert.Contains(t, c2, "System_Boundary(mainSystem, \"Main System\"",
+			"the expanded unit must render as its boundary")
+		assert.Contains(t, c2, "ContainerDb(mainSystem_sshAuth_etcStorage,",
+			"containerDb must map to ContainerDb")
+		assert.Contains(t, c2, "ComponentDb(mainSystem_sshAuth_authProxy_sessionDb,",
+			"componentDb must map to ComponentDb")
+		assert.Contains(t, c2, "Component(mainSystem_sshAuth_systemd_logind,",
+			"component must map to Component")
+		// ComputeExploreURL("mainSystem", "mainSystem.sshAuth", ...) and
+		// ("mainSystem", "mainSystem.authModules.otp", ...) respectively.
+		assert.Contains(t, c2, `"mainSystem/sshAuth.svg"`,
+			"C2 drill-downs must target the .svg siblings")
+		assert.Contains(t, c2, `"mainSystem/authModules/otp.svg"`,
+			"deep descendants must keep the dotted-path .svg layout")
+	})
+
+	t.Run("C3 source maps components and boundary boxes", func(t *testing.T) {
+		c3 := readOutputFile(t, filepath.Join(dir, "multilevel", "mainSystem", "sshAuth.puml"))
+
+		assert.Contains(t, c3, "Component(mainSystem_sshAuth_pam_common,",
+			"component must map to Component")
+		assert.Contains(t, c3, "Boundary(mainSystem_sshAuth_authProxy_varlinkAPIs, \"Varlink APIs 🔍\", \"Component\"",
+			"componentBox must frame as a Component-typed boundary")
+		// ComputeExploreURL("mainSystem.sshAuth", "mainSystem.localIDP", ...):
+		// cross-branch navigation resolves through the shared ancestor.
+		assert.Contains(t, c3, `"localIDP.svg"`,
+			"C3 cross-branch drill-down must target the sibling .svg layout")
+	})
+}
+
+// TestRootCmd_PlantUMLFormat_Expanded verifies that `-f plantuml --expanded`
+// emits {basename}.expanded.puml — a single C4-PlantUML document mirroring
+// the other formats' expanded layout.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestRootCmd_PlantUMLFormat_Expanded(t *testing.T) {
+	dir := t.TempDir()
+
+	cmd := NewRootCmd()
+	cmd.SetArgs([]string{
+		filepath.Join("testdata", "expanded.toml"),
+		"--output", dir,
+		"--format", "plantuml",
+		"--expanded",
+	})
+
+	require.NoError(t, cmd.Execute(), "-f plantuml --expanded should succeed")
+
+	doc := readOutputFile(t, filepath.Join(dir, "expanded.expanded.puml"))
+	assert.Contains(t, doc, "@startuml", "expanded output must be PlantUML source")
+	assert.Contains(t, doc, "System_Boundary(", "expanded nesting must render as boundaries")
+	assert.Contains(t, doc, "Container_Boundary(", "containers render as container boundaries")
+	assert.NotContains(t, doc, "[[", "links ride the macro link slot, not literal [[…]] markup")
 }
 
 // --- Phase 30: relative-peer resolution integration tests ---

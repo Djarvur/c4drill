@@ -1,0 +1,7 @@
+# C4D DSL — the c4drill architecture-model language (first-class format,
+# D-29). Claims the .c4d extension unconditionally.
+name = "C4D"
+grammar = "c4d"
+path_suffixes = ["c4d"]
+line_comments = ["# "]
+tab_size = 2

@@ -104,6 +104,29 @@ node_modules/
 package.json
 package-lock.json
 
+# ...except the VS Code extension (extension/), which is a real npm project
+!extension/package.json
+!extension/package-lock.json
+
+# ...and the Zed extension (zed-extension/), whose tree-sitter grammar is a
+# real npm project; target/ is the wasm build output (issue #30)
+zed-extension/target/
+!zed-extension/grammars/c4d/package.json
+!zed-extension/grammars/c4d/package-lock.json
+
+# ...and the GUI frontend (internal/gui/frontend/, issue #31) — a real npm
+# project, so its package manifests are tracked despite the global
+# package.json ignore; node_modules/ stays ignored via the global rule,
+# dist/ via the negation below except the placeholder that keeps `go build`
+# working without npm.
+!internal/gui/frontend/package.json
+!internal/gui/frontend/package-lock.json
+internal/gui/frontend/dist/*
+!internal/gui/frontend/dist/.gitkeep
+
+# Wails desktop build output (`wails build` in cmd/c4drill-gui)
+cmd/c4drill-gui/build/bin/
+
 # ZCode session artifacts
 .zcode/plans/
 
@@ -111,3 +134,11 @@ package-lock.json
 cmd/c4drill/testdata/multilevel.svg
 cmd/c4drill/testdata/multilevel.expanded.svg
 cmd/c4drill/testdata/multilevel/
+
+# JetBrains plugin build output (idea-plugin/, issue #29)
+idea-plugin/.gradle/
+idea-plugin/build/
+idea-plugin/.idea/
+
+# IntelliJ Platform Gradle Plugin working dir
+idea-plugin/.intellijPlatform/

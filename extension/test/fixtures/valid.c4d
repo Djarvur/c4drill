@@ -1,0 +1,14 @@
+# Smoke Fixture (valid) - minimal model for the extension integration test.
+properties {
+  name: Smoke Fixture
+  description: Minimal valid model used by the VS Code extension tests
+}
+
+alpha: system "Alpha" {
+  description: The only system in the model
+}
+
+beta: person "Beta" {
+  description: Uses Alpha
+  -> alpha: "Uses"
+}

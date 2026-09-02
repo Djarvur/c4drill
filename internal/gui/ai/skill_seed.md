@@ -1,0 +1,1061 @@
+# c4drill TOML format — authoring reference
+
+(Build-time snapshot of plugins/c4drill/skills/c4drill-toml/SKILL.md, the AI chat's
+system-prompt seed. The original is the source of truth; regenerate this
+copy when it changes — go:embed cannot reach outside the internal/gui/ directory.)
+
+---
+name: c4drill-toml
+description: Generate valid C4Drill architecture definitions in TOML or C4D format
+version: 2.0.0
+---
+
+# C4Drill Skill (TOML and C4D)
+
+**Purpose:** Enable AI assistants to generate valid C4Drill architecture
+definitions — in the TOML format or the compact C4D format — without
+prior training.
+
+**Target:** Generic LLM (model-agnostic). Works with Claude Code, Cursor,
+OpenCode, or any AI with skill support.
+
+---
+
+## Quick Reference
+
+### Unit Types (17 total)
+
+**C1 Context Level:**
+
+* `person` - Actor/user
+* `personExternal` - External actor
+* `system` - Software system
+* `systemExternal` - External system
+* `db` - Database
+* `dbExternal` - External database
+* `queue` - Message queue
+* `queueExternal` - External queue
+* `box` - Grouping container. A universal shorthand: write `type = "box"`
+  anywhere and it promotes to the level-appropriate variant
+  (`containerBox` at C2, `componentBox` at C3); at C1 (root or inside
+  another `box`) it stays `box`. See Type inference rules below.
+
+**C2 Container Level:**
+
+* `container` - Container within system
+* `containerDb` - Container database
+* `containerQueue` - Container queue
+* `containerBox` - Explicit C2 grouping box (synonym for `box` inside a
+  system/containerBox; use `box` to let inference pick the level)
+
+**C3 Component Level:**
+
+* `component` - Component within container
+* `componentDb` - Component database
+* `componentQueue` - Component queue
+* `componentBox` - Explicit C3 grouping box (synonym for `box` inside a
+  container/componentBox; use `box` to let inference pick the level)
+
+### Required Fields
+
+**Every unit must have:**
+
+```toml
+name = "Display Name"  # Optional - humanized from identifier if omitted
+type = "<unit_type>"   # Optional - defaults based on nesting level
+```
+
+**Default types by nesting level:**
+
+| Level | Parent | Default Type |
+|-------|--------|--------------|
+| C1 | None (root) | `system` |
+| C2 | system, systemExternal, box | `container` |
+| C3 | container | `component` |
+
+```toml
+[webapp]              # C1: defaults to "system"
+name = "Web App"
+
+[webapp.api]          # C2: defaults to "container"
+name = "API Service"
+
+[webapp.api.handlers] # C3: defaults to "component"
+name = "Handlers"
+```
+
+**Every TOML file must have:**
+
+```toml
+[properties]
+name = "Architecture Name"
+```
+
+---
+
+## C4D Format (Compact Alternative)
+
+The same model can be authored in **C4D** (`.c4d`) — a brace-block
+format that is less verbose for multi-level diagrams. `c4drill
+diagram.c4d` renders directly through the same pipeline as `.toml`.
+
+**When to prefer C4D:** deep nesting or many links (edges live inside
+the unit they belong to; one-line leaf blocks keep files compact).
+**When to prefer TOML:** machine-generated files or tooling that
+already speaks TOML.
+
+### C4D Syntax Cheat-Sheet
+
+```c4d
+properties {
+  name: My Architecture        # same keys as [properties]
+  edges: spline
+  expanded: [platform]         # or one item per line
+}
+
+# id: type "Display Name" { ... } — type optional (same inference
+# as TOML), name optional (same humanization), braces required
+user: person "User" { }
+
+platform: system "Platform" {
+  # fields: description, technology, reference, color, style,
+  # border, edges — values with { } : | or commas need double quotes
+  api: container "API Service" { technology: "Go, gRPC" }
+
+  # edges live INSIDE unit blocks; four arrows:
+  -> user: serves                        # single value = description
+  -> api.db: "SQL | queries" { color: green }  # "tech | description" + options
+  <- payment: "Webhook | callback"       # incoming (linkFrom on target)
+  <-> cache: "Redis | caches"            # bidirectional
+  -- metrics: "HTTP | posts"             # no arrowhead
+
+  # use inside a unit block attaches under that parent (nested use)
+  use microservice(name: auth, tech: Go, upstreamBus: messageBus)
+}
+
+# templates are function-like; ${param} semantics identical to TOML
+template microservice(name, tech, upstreamBus) {
+  type: container
+  name: "${name} Service"
+  technology: "${tech}"
+  -> ${upstreamBus}: "Publishes ${name} events"
+}
+
+# includes: relative paths, optional once, mixed .toml/.c4d graphs
+include templates.c4d once
+include domains/auth.c4d
+```
+
+**Rules identical to TOML:** type inference and generic `db`/`queue`/
+`box` promotion, name humanization, relative-peer walk-up (bare edge
+targets) vs absolute (dotted), the orphan rule, duplicate-edge
+rejection. `;` separates statements (one-line blocks); `"""..."""`
+multi-line strings; `#` comments (fmt preserves them). Field keywords
+(`name`, `description`, `technology`, ...) are reserved — a unit id
+colliding with one is a hard parse error.
+
+### Converting and Formatting (convert / fmt)
+
+```bash
+# TOML -> C4D and back; the source is validated first (invalid input
+# is a hard error, no output written); twin lands next to the input
+c4drill convert to-c4d architecture.toml
+c4drill convert to-toml architecture.c4d
+
+# whole include graph migration (include paths rewritten, once kept)
+c4drill convert to-c4d --follow-includes entry.toml
+
+# in-place formatter for BOTH formats, gofmt-style (comments kept,
+# author's key order kept)
+c4drill fmt architecture.c4d
+c4drill fmt --check .        # CI gate: exit 1 listing offenders
+```
+
+---
+
+## Schema Reference
+
+### [properties] Section
+
+Root-level section defining global settings:
+
+```toml
+[properties]
+name = "My Architecture"        # Required: Diagram name
+description = "Description"     # Optional: Project description
+color = "#E3F2FD"               # Optional: Default background color
+style = "filled"                # Optional: Default visual style
+border = "#1565C0"              # Optional: Default border color
+edges = "spline"                # Optional: Edge routing (straight|spline|square|ortho)
+lineLength = 40                 # Optional: Max line length before wrap (0=auto)
+expanded = ["payments"]         # Optional: Units expanded by default
+legend = true                   # Optional: Upper-right legend (default: on; false disables)
+
+[[properties.legendLine]]       # Optional: Custom legend row (after the defaults)
+label = "Nightly batch"
+color = "#E65100"
+style = "dashed"
+```
+
+`edges` applies to EVERY generated diagram (C1/C2/C3/expanded); a
+unit-level `edges` overrides it for that unit's own diagram. `square` is
+an alias for ortho routing.
+
+### Unit Definition
+
+Each unit is a TOML section. Section name becomes the identifier:
+
+```toml
+[section_name]
+type = "system"                 # Optional: Unit type (defaults based on nesting)
+name = "Display Name"           # Optional: defaults to humanized last path segment
+description = "What it does"    # Optional: Brief description
+technology = "Go, PostgreSQL"   # Optional: Tech stack (not for person types)
+color = "#E3F2FD"               # Optional: Background fill (renders on node + cluster; dark fill -> white label)
+style = "filled"                # Optional: Border style override (solid|dashed|dotted)
+border = "#1565C0"              # Optional: Border color override
+edges = "spline"                # Optional: Edge style (cascades to subunits)
+width = 300                     # Optional: Explicit width (0=auto)
+height = 200                    # Optional: Explicit height (0=auto)
+expanded = ["subunit1"]         # Optional: Subunits expanded by default
+reference = "https://docs.example.com/runbook" # Optional: External docs URL (📖 marker, clickable)
+[[unit.link]]                   # Optional: Outgoing links (array of tables)
+[[unit.linkFrom]]               # Optional: Incoming links (array of tables)
+```
+
+**Optional name humanization:** when `name` is omitted, the display name
+is derived from the last segment of the unit's identifier via a dumb
+camelCase split (e.g. `localIDP` → "Local IDP", `sessionManager` →
+"Session Manager", `linuxSystem` → "Linux System"). Acronyms are **not**
+preserved (`gRPC` → "Grpc") — set `name =` explicitly to override. An
+explicit `name =` always wins.
+
+#### reference (External Documentation URL)
+
+Any unit accepts an optional `reference` field — an external
+documentation URL. When the reference is linked, a 📖 marker appears next
+to the unit name and the unit is clickable.
+
+```toml
+[api]
+type = "system"
+name = "API Service"
+reference = "https://wiki.example.com/api-runbook"
+```
+
+* Empty string and an omitted field are equivalent (no 📖, not
+  clickable).
+* The URL is rendered via GraphViz's native `URL` attribute (SVG) and
+  routed by the HTML shim; external `http(s)` references open in a new tab
+  in `-f html` output (distinct from internal drill-down navigation).
+* A unit has a single URL slot and navigation comes first: a collapsed
+  container (🔍) drills down — its reference is not linked on that
+  diagram but on the unit's own child diagram (the boundary frame there
+  shows 📖); an expanded container's title shows 📖 and links to the
+  docs; a unit without subunits shows 📖 and links to the docs itself.
+
+**Type inference rules** (when `type` is omitted, or when a generic
+`db`/`queue` type is set):
+
+**Default type by parent** (`defaultTypeForParent`):
+
+| Parent type | Inferred child type | Level |
+|---|---|---|
+| (none — root) | `system` | C1 |
+| `system` | `container` | C2 |
+| `box` | `system` | C1 (same-level grouping) |
+| `container` | `component` | C3 |
+| `containerBox` | `container` | C2 (same-level grouping) |
+| `componentBox` | `component` | C3 (same-level grouping) |
+| (other: db, queue, etc.) | `system` | C1 fallback |
+
+**Generic `db`/`queue` promotion by nesting level** (`inferGenericType`):
+
+| Parent type | `db` becomes | `queue` becomes | Level |
+|---|---|---|---|
+| (none) or `box` | `db` | `queue` | C1 (unchanged) |
+| `system` or `containerBox` | `containerDb` | `containerQueue` | C2 |
+| `container` or `componentBox` | `componentDb` | `componentQueue` | C3 |
+
+**`box` promotion by nesting level** (same `inferGenericType` pass):
+
+| Parent type | `box` becomes | Level |
+|---|---|---|
+| (none) or `box` | `box` | C1 (unchanged — same-level grouping) |
+| `system` or `containerBox` | `containerBox` | C2 |
+| `container` or `componentBox` | `componentBox` | C3 |
+
+So `type = "box"` is valid at any nesting depth and resolves to the
+correct variant. Once promoted, the box's children follow the
+level-specific default (`container` under `containerBox`, `component`
+under `componentBox`).
+
+```toml
+[platform]
+# type omitted → inferred "system" (no parent)
+[platform.webapp]
+# type omitted → inferred "container" (parent is system)
+[platform.webapp.cache]
+type = "db"
+# explicit generic db → promoted to "componentDb" (parent is container)
+[platform.group]
+type = "box"
+# box inside system → promoted to "containerBox"; its children default to container
+```
+
+An explicit non-generic `type =` always wins (no inference runs). The
+explicit variants `containerBox` and `componentBox` are themselves
+non-generic, so they pass through unchanged — use them only when you
+want to pin the level regardless of position.
+Source: `defaultTypeForParent` and `inferGenericType` in
+`internal/parser/parser.go`.
+
+### Pipeline Ordering
+
+The v1.10 composition features run in a fixed pipeline order. Ordering
+is load-bearing for correctness:
+
+```text
+include.Resolve → template.Expand → peer.Resolve → humanize → validate → views → render
+```
+
+* **`include.Resolve` runs FIRST** so templates defined in included files
+  are visible to `[[use]]` directives in the entry file (XC-02).
+* **`template.Expand` runs before `peer.Resolve`** so relative peers
+  authored inside templates resolve at the *instantiation site* (the
+  `[[use]]` location), not the template's lexical location (XC-03).
+* **`humanize` runs after expand** (so it sees substituted names) and
+  *before validate* (so error messages show final names) (XC-04).
+  Currently humanize runs at parse time; templates carry explicit `name=`
+  so parse-time humanize does not fire for them.
+* **`validate` sees only absolute paths** (peer.Resolve has rewritten all
+  bare peers) and a fully-expanded model (no `${param}` tokens, no
+  `[[use]]`/`[[include]]` directives remain).
+
+Reordering any pass breaks the multi-file templated relative-peer case
+(enforced as a behavioral regression test — see the XC-01 test in
+`cmd/c4drill/root_test.go`).
+
+### Nesting (C2/C3 Diagrams)
+
+Use dotted notation for nested units. Types that can have subunits:
+
+* `system`, `systemExternal` — can contain containers or boxes
+* `container` — can contain components or boxes
+* `box` — can contain any unit type (grouping container)
+
+**Minimal example** (types inferred from nesting):
+
+```toml
+[properties]
+name = "My App"
+
+[mainapp]                       # C1: defaults to "system"
+name = "Main Application"
+
+[mainapp.api]                   # C2: defaults to "container"
+name = "API Service"
+
+[mainapp.api.handlers]          # C3: defaults to "component"
+name = "HTTP Handlers"
+
+[mainapp.api.services]          # C3: Another component
+name = "Business Services"
+
+[mainapp.db]                    # C2: Container database (type required for non-default)
+type = "containerDb"
+name = "Database"
+```
+
+**Explicit types** (when you need specific variants):
+
+```toml
+[mainapp]                       # C1: System
+type = "system"
+name = "Main Application"
+
+[mainapp.api]                   # C2: Container
+type = "container"
+name = "API Service"
+
+[mainapp.api.handlers]          # C3: Component (inside container)
+type = "component"
+name = "HTTP Handlers"
+
+[mainapp.api.services]          # C3: Another component
+type = "component"
+name = "Business Services"
+
+[mainapp.db]                    # C2: Container database (no subunits)
+type = "containerDb"
+name = "Database"
+```
+
+**`box` can be used at any nesting level** to create logical groupings:
+
+**C2: Box grouping containers (inside system)**
+
+```toml
+[mainapp]                       # C1: System
+type = "system"
+name = "Main App"
+
+[mainapp.services]              # C2: Box grouping containers
+type = "box"
+name = "Microservices"
+
+[mainapp.services.user]         # C2: Container inside box
+type = "container"
+name = "User Service"
+
+[mainapp.services.order]        # C2: Another container
+type = "container"
+name = "Order Service"
+```
+
+**C3: Box grouping components (inside container)**
+
+```toml
+[mainapp]
+type = "system"
+name = "Main App"
+
+[mainapp.api]
+type = "container"
+name = "API Service"
+
+[mainapp.api.domain]            # C3: Box grouping components
+type = "box"
+name = "Domain Layer"
+
+[mainapp.api.domain.repo]       # C3: Component inside box
+type = "component"
+name = "Repository"
+
+[mainapp.api.domain.service]    # C3: Another component
+type = "component"
+name = "Service"
+```
+
+**Nesting context in rendered diagrams (v1.21, extended v1.22):**
+authors can rely on container context being preserved. Any element a
+view depicts renders inside its complete ancestor-container chain; a
+link targeting a deeply nested unit terminates at the true target
+inside that chain (not at a collapsed top-level stand-in); and an
+expanded unit shows its nested containers as clusters (with the 🔍
+drill-down marker), not a flat list. **Ancestor wrapping (v1.22):**
+sibling and boundary entries a view depicts render inside their
+ancestor chains too — the generator synthesises wrapper clusters
+(labelled with the container's pretty name, no 🔍, no explore link)
+where the chain is not otherwise part of the view. Only fully external
+units stay top-level, and collapsed subtrees are not restructured.
+
+### Link Syntax
+
+Define relationships using `[[link]]` (outgoing) or
+`[[linkFrom]]` (incoming):
+
+**Outgoing link (defined on source):**
+
+```toml
+[user]
+type = "person"
+name = "User"
+
+[[user.link]]
+peer = "webapp"
+technology = "HTTPS"
+description = "Browses"
+```
+
+**Incoming link (defined on target):**
+
+```toml
+[api]
+type = "system"
+name = "API Service"
+
+[[api.linkFrom]]
+peer = "webapp"
+technology = "REST"
+description = "Calls"
+```
+
+**Multiple links (including to same peer):**
+
+```toml
+[[api.link]]
+peer = "webapp"
+technology = "HTTPS"
+description = "Browses"
+
+[[api.link]]
+peer = "webapp"
+technology = "WebSockets"
+description = "Real-time updates"
+```
+
+### Link Attributes
+
+| Attribute | Values | Description |
+|---|---|---|
+| `peer` | `"unit_name"` | **Required:** Target unit identifier |
+| `arrow` | `forward` (default), `reverse`, `bidirectional`, `none` | Arrow direction |
+| `rank` | `forward` (default), `reverse`, `equal` | Ranking: `reverse` flips vertical order keeping the arrow direction (v1.13) |
+| `kind` | `read`, `write`, `read-write` | Kind colouring (v1.13): green `#2E7D32` / red `#C62828` / purple `#6A1B9A`; explicit `color` wins. NOT substituted by template params |
+| `color` | `"blue"`, `"#FF5733"` | Edge color (overrides kind) |
+| `style` | `"solid"`, `"dashed"`, `"dotted"` | Line style |
+| `technology` | `"HTTPS"`, `"gRPC"`, `"TCP"` | Protocol/technology label |
+| `description` | `"Sends events to"` | Relationship description |
+| `labelPosition` | `middle` (default), `tail`, `head` | Where label appears |
+
+### Templates ([template.*] + [[use]])
+
+Define a parametrized unit template once and instantiate it N times with
+distinct parameter values. A `[template.<name>]` table declares its
+parameters and the unit shape (fields, links, subunit subtrees); each
+`[[use]]` directive instantiates it under a parent with concrete
+parameter values.
+
+**`[template.<name>]` fields:**
+
+| Field | Description |
+|---|---|
+| `params = ["a", "b", ...]` | Required: declares the named parameters. ALL are required on every `[[use]]` (no defaults). |
+| `name`, `description`, `technology`, `reference`, `color` | Standard unit fields; `${param}` substitutes into each. |
+| `type` | Standard unit type. Must be valid for the instantiation parent. |
+| `[[template.<name>.link]]` | Fixed link set (TMPL-03); peer/description/technology fields accept `${param}`. |
+| `[template.<name>.<child>]` | Subunit subtree (TMPL-04); child key verbatim (D-04), field values substituted. |
+
+**`[[use]]` directive fields:**
+
+| Field | Description |
+|---|---|
+| `template = "<name>"` | Required: the `[template.<name>]` to instantiate. |
+| `parent = "<dotted.path>"` | Optional: placement path (empty/omitted = top-level). Produced path = `parent + "." + name-param`. |
+| `name = "<value>"` | Required: fills the produced unit's last path segment AND the template's `${name}` token. |
+| (other keys) | The template's remaining params; each must match a declared `params` entry. |
+
+**Validation rules:**
+
+* All declared `params` are required on every `[[use]]`
+  (TMPL-02/06); a missing param is a hard error naming the template, the
+  param, and the instantiation site.
+* `${param}` substitutes into
+  Name/Description/Technology/Reference/Color and all Link fields
+  (TMPL-03, TMPL-10).
+* The link set is **fixed** — N instantiations of a template with one link
+  produce N links, not a fan-out (no `for_each`).
+* Subunit subtrees are deep-copied per instantiation (TMPL-08); the
+  subunit key is verbatim, only field values substitute.
+* Duplicate unit paths across instantiations (or with hand-authored
+  units) are a hard error (TMPL-07).
+* Forward references are allowed (a `[[use]]` may precede its
+  `[template.*]` definition; an instantiated unit may be
+  referenced before the `[[use]]`).
+
+**Interactions:** runs as the 2nd pipeline pass (see Pipeline Ordering).
+Relative peers authored inside a template resolve at the instantiation
+site (XC-03). Reference-field parametrization composes with the Phase 28
+reference feature (TMPL-10). A template with a subunit cannot also carry
+direct links (validator rule — split into a leaf template + a
+parent template if you need both).
+
+### Include ([[include]])
+
+Assemble a model from multiple TOML files. Each `[[include]]`
+pulls in another file relative to the including file and merges its
+units.
+
+**`[[include]]` fields:**
+
+| Field | Description |
+|---|---|
+| `path = "<relative>"` | Required: TOML file to include; relative to the including file's directory (INC-02). |
+| `once = true` | Optional: opts into visited-set dedup (INC-06) — a file included again via any path is skipped. |
+
+**Validation rules:**
+
+* Paths resolve relative to the INCLUDING file's directory, not the CLI
+  cwd (INC-02).
+* Includes are *transitive* (an included file may itself
+  `[[include]]` others) (INC-03).
+* Include cycles (self or mutual) are a fatal error naming the cycle
+  (INC-04).
+* A same-file diamond (the same canonical path reached via two
+  `[[include]]` paths) is auto-deduped silently (D-11); a
+  cross-file unit-path collision (two different files defining the same
+  `[unit]`) is a hard error.
+* `once=true` adds the file's canonical path to a visited set;
+  subsequent `[[include]]` of the same path is skipped (INC-06).
+* The merge is *flat* — no namespacing. Included units append to
+  `UnitOrder` in include-directive order (D-09).
+* Cross-file subunits (D-10): an included file may re-declare a parent
+  declared in the entry; its subunits attach onto the entry's existing
+  parent, appending to `SubunitOrder` in include-file order.
+* Properties follow root-file-wins (the entry's `[properties]`
+  takes precedence; included `[properties]` are ignored) (INC-08).
+* A missing include file is a hard error naming the including file
+  (INC-10/D-12).
+
+**Interactions:** runs as the 1st pipeline pass (see Pipeline Ordering) so
+templates defined in included files are visible to `[[use]]` in
+the entry (XC-02).
+
+### Relative Peer Resolution
+
+Bare peers (no dot) resolve by walking the host unit's ancestor scopes
+nearest-first (ERGO-01); absolute peers (with a dot) are used as-is
+(ERGO-02). A `peer` value is either **absolute** (contains a dot) or
+**bare** (no dot). The two are gated distinctly (D-16):
+
+* **Absolute peer** (e.g. `"platform.api"`): used as-is. No walk-up.
+* **Bare peer** (e.g. `"cache"`): resolved by walking the host unit's
+  ancestor scopes nearest-first (D-13/D-14/D-15).
+
+**Walk-up algorithm:** starting at the host unit's immediate parent's
+children-map, check for a child matching the peer name. If found,
+resolve to that child's absolute path. If not, ascend to the
+grandparent's children-map and repeat. Continue until a match is found
+or the root scope is exhausted.
+
+| Case | Host | Bare peer | Resolves to |
+|---|---|---|---|
+| Sibling (D-13) | `platform.api` | `cache` | `platform.cache` (sibling under nearest ancestor) |
+| Aunt (D-14) | `platform.api.handlers.auth` | `queue` | `platform.queue` (walk up past empty scopes) |
+| Root (D-15) | `platform.api.handlers.auth` | `messageBus` | `messageBus` (top-level, walk reaches root) |
+| Absolute (D-16) | any | `platform.cache` | `platform.cache` (dot = no walk-up) |
+
+**Error cases:** a bare peer that matches nothing at any scope up to and
+including root is a hard error naming the peer and the host unit.
+Multiple matches at the same depth are structurally impossible (sibling
+keys are unique per parent).
+
+**Interactions:** runs as the 3rd pipeline pass, after `template.Expand`
+(see Pipeline Ordering). Templated units' relative peers resolve at the
+instantiation site (XC-03). Absolute peers (with a dot) are always
+unchanged (ERGO-02 backward-compat — any pre-v1.10 model using dotted
+peers renders identically).
+
+---
+
+## Validation Rules
+
+**Rule 1: Referenced units must exist**
+
+```toml
+# ❌ INVALID: "api" unit not defined
+[user]
+type = "person"
+name = "User"
+
+[[user.link]]
+peer = "api"
+description = "Calls"
+
+# ✅ VALID: Both units defined
+[user]
+type = "person"
+name = "User"
+
+[[user.link]]
+peer = "api"
+description = "Calls"
+
+[api]
+type = "system"
+name = "API"
+```
+
+**Rule 2: Units with subunits cannot have links**
+
+```toml
+# ❌ INVALID: mainapp has subunits but also has links
+[mainapp]
+type = "system"
+
+[[mainapp.link]]
+peer = "external"
+description = "Calls"
+
+[mainapp.api]
+type = "container"
+
+# ✅ VALID: Links on subunits only
+[mainapp]
+type = "system"
+
+[mainapp.api]
+type = "container"
+
+[[mainapp.api.link]]
+peer = "external"
+description = "Calls"
+```
+
+**Rule 3: Cannot link to units with subunits**
+
+```toml
+# ❌ INVALID: Linking to mainapp which has subunits
+[user]
+type = "person"
+name = "User"
+
+[[user.link]]
+peer = "mainapp"
+description = "Uses"
+
+[mainapp]
+type = "system"
+
+[mainapp.api]
+type = "container"
+
+# ✅ VALID: Link to specific subunit
+[user]
+type = "person"
+name = "User"
+
+[[user.link]]
+peer = "mainapp.api"
+description = "Uses"
+```
+
+**Rule 4: Subunits only for system, systemExternal, box, and container
+types**
+
+```toml
+# ❌ INVALID: Database cannot have subunits
+[postgres]
+type = "db"
+
+[postgres.replica]
+type = "db"
+
+# ✅ VALID: Use box for grouping databases
+[postgres]
+type = "box"
+name = "Database Cluster"
+
+[postgres.primary]
+type = "db"
+name = "Primary"
+
+[postgres.replica]
+type = "db"
+name = "Replica"
+
+# ✅ VALID: Container can have component subunits
+[api]
+type = "container"
+name = "API"
+
+[api.handlers]
+type = "component"
+name = "Handlers"
+```
+
+---
+
+## Prompt Patterns
+
+Use these patterns when generating C4Drill TOML from natural language:
+
+### Pattern 1: Basic Architecture
+
+```text
+"Create a C4 diagram with: [list units and relationships]"
+
+Example: "Create a C4 diagram with: user, web application, API, database. User calls webapp, webapp calls API, API queries database."
+```
+
+### Pattern 2: Architecture Description
+
+```text
+"Generate TOML for: [architecture description]"
+
+Example: "Generate TOML for: E-commerce platform with customers browsing products, adding to cart, and checking out. Uses PostgreSQL for storage and Stripe for payments."
+```
+
+### Pattern 3: Level Specification
+
+```text
+"Create a C[C1/C2/C3] diagram for: [description]"
+
+Example: "Create a C2 diagram for: Microservices architecture with API Gateway, User Service, Order Service, and shared database."
+```
+
+### Pattern 4: Existing Architecture
+
+```text
+"Model this architecture in C4Drill TOML: [description]"
+
+Example: "Model this architecture in C4Drill TOML: 3-tier web app with React frontend, Node.js API, and PostgreSQL database. Frontend calls API via HTTPS, API queries database."
+```
+
+### Pattern 5: Feature Addition
+
+```text
+"Add [component] to the architecture: [existing TOML]"
+
+Example: "Add caching layer to the architecture: [paste existing TOML]"
+```
+
+---
+
+## Examples
+
+The following examples demonstrate increasing complexity:
+
+1. **[01-minimal.toml](examples/01-minimal.toml)** - Minimal working
+   example (person + system + single link)
+2. **[02-nested.toml](examples/02-nested.toml)** - Nested structure
+   (C2/C3 levels)
+3. **[03-links.toml](examples/03-links.toml)** - Link syntax (all
+   attributes)
+4. **[04-styling.toml](examples/04-styling.toml)** - Visual
+   customization (colors, borders, edges)
+5. **[05-ecommerce.toml](examples/05-ecommerce.toml)** - Realistic full
+   architecture
+6. **[06-templates.toml](examples/06-templates.toml)** - Templates
+   (`[template.*]` define + `[[use]]` instantiate, TMPL-01..10)
+7. **[07-relative-peer.toml](examples/07-relative-peer.toml)** -
+   Relative peer walk-up (4 cases: sibling, aunt, root, absolute)
+8. **[08-include/](examples/08-include/)** - Multi-file composition
+   (`[[include]]`, `once`, cross-file subunits)
+9. **[09-composed/](examples/09-composed/)** - All four features
+   composed (XC-05 golden pair)
+10. **[10-edge-kinds.toml](examples/10-edge-kinds.toml)** - Edge kind
+    colouring, `rank = "reverse"`, and the legend (v1.13)
+11. **[11-nesting-context.toml](examples/11-nesting-context.toml)** -
+    Deep container hierarchy, deep-link target, nested clusters (v1.21)
+12. **[12-plain.toml](examples/12-plain.toml)** - Custom formatting
+    fixture for the `--plain` before/after demo (v1.21)
+13. **[13-wrapping.toml](examples/13-wrapping.toml)** - Ancestor
+    wrapping (wrapper cluster, sibling boundary, external top-level)
+    and the granular `--no-*` keys (v1.22)
+
+All examples parse and validate successfully with `c4drill <file>`
+(rendering runs the full validation pipeline).
+Every example from 02 on also ships a `.c4d` twin (e.g.
+`examples/06-templates.c4d`, including the include-graph directories
+`08-include/` and `09-composed/`) that renders identically to its
+`.toml` source — generate or refresh twins with `c4drill convert
+to-c4d` (add `--follow-includes` for include graphs) and canonicalize
+them with `c4drill fmt`.
+
+---
+
+## Generation Guidelines
+
+When generating TOML:
+
+1. **Always include `[properties]` with `name`** - Required field
+2. **Always include `type` and `name` for each unit** - Required fields
+3. **Use descriptive section names** - They become identifiers (e.g.,
+   `user_service` not `svc1`)
+4. **Use dotted notation for nesting** - `parent.child` pattern
+5. **Prefer `[[link]]` over `[[linkFrom]]`** - More natural
+   (source → target)
+6. **Include `peer` field in every link** - Required field specifies
+   target unit
+7. **Include `technology` for systems/databases** - Shows tech stack in
+   diagram
+8. **Use `external` suffix for external units** - `systemExternal`,
+   `dbExternal`
+9. **Use `kind` for data-flow colouring** - `read`/`write`/`read-write`
+   colour edges green/red/purple with no color authoring; the legend
+   (default-on, upper-right) explains the colours automatically
+10. **Validate before committing** - Run `c4drill <file.toml|file.c4d>`
+   to check
+
+---
+
+## Common Mistakes
+
+**❌ Missing required fields:**
+
+```toml
+[user]
+# Missing type and name
+```
+
+**✅ Always include:**
+
+```toml
+[user]
+type = "person"
+name = "User"
+```
+
+---
+
+**❌ Linking to parent unit:**
+
+```toml
+[user]
+type = "person"
+name = "User"
+
+[[user.link]]
+peer = "mainapp"
+
+[mainapp]
+type = "system"
+
+[mainapp.api]
+type = "container"
+```
+
+**✅ Link to specific subunit:**
+
+```toml
+[user]
+type = "person"
+name = "User"
+
+[[user.link]]
+peer = "mainapp.api"
+
+[mainapp]
+type = "system"
+
+[mainapp.api]
+type = "container"
+```
+
+---
+
+**❌ Invalid unit type for nesting:**
+
+```toml
+[postgres]
+type = "db"
+
+[postgres.replica]
+type = "db"
+```
+
+**✅ Use box for grouping:**
+
+```toml
+[postgres]
+type = "box"
+name = "Database Cluster"
+
+[postgres.primary]
+type = "db"
+name = "Primary"
+
+[postgres.replica]
+type = "db"
+name = "Replica"
+```
+
+---
+
+## Validation Command
+
+Always validate generated definitions (both formats render directly —
+pass a `.toml` or a `.c4d` file):
+
+```bash
+c4drill architecture.toml
+c4drill architecture.c4d
+```
+
+Success = no output (generates SVG by default) Failure = error message
+with line number
+
+### Output Formats
+
+| Flag | Format | Use when |
+|---|---|---|
+| (default) | `svg` | General use; clickable navigation in Chrome/Firefox |
+| `-f html` | `html` | Safari/WebKit (which ignores SVG `<a>` links); also `file://` viewing |
+| `-f dot` | `dot` | Customizing layout in GraphViz tools |
+
+```bash
+c4drill architecture.toml -f html    # Safari-compatible
+```
+
+### Plain Rendering (--plain)
+
+`--plain` is a CLI-only render flag (the model file gains **no** new
+keys) that ignores author-custom formatting for a neutral, type-palette
+look — useful for reviews and diffs:
+
+```bash
+c4drill architecture.toml --plain             # neutral look
+c4drill architecture.toml --plain --expanded  # composes with --expanded
+```
+
+**Ignored under `--plain`:** unit `color`/`style`/`border` (units fall
+back to the C4 type palette, including expanded-unit clusters); link
+`color`/`style`; link `length` and `rank` (default spacing, forward
+ranking); `properties.edges` (default splines — though an explicit
+`--edges` flag still applies, see below); custom label formatting
+(plain-text labels — name/technology/description content preserved).
+
+**Deliberately kept:** kind-derived edge colours and the legend
+(including custom legend lines), queue pipe shapes, the 🔍/📖 glyphs
+and their explore links, and collapsed subtrees stay collapsed.
+`convert` and `fmt` are unaffected. See
+`examples/12-plain.toml` — a fixture full of custom formatting to try
+the flag against.
+
+### Edge Routing Override (--edges)
+
+`--edges` (v1.23) is a CLI-only override (no new model keys) that sets
+the edge routing style for the whole invocation — every generated
+diagram (C1 root, all drill-downs, `--expanded`) renders with it. It
+beats BOTH the global `properties.edges` value AND per-unit `edges`
+overrides, with no model edit. Values: `straight|spline|square|ortho`
+(`square` = ortho alias); anything else is a hard error naming the
+offending value and the enum. An explicit `--edges` also survives
+`--plain` — user intent beats author-format suppression.
+
+```bash
+c4drill architecture.toml --edges straight --expanded  # straight variant
+c4drill architecture.toml --plain --edges spline       # survives --plain
+```
+
+### Granular Render Flags (--no-*)
+
+Each granular switch (v1.22) turns off exactly one formatting concern;
+they compose freely with each other, with `--plain`, and with
+`--expanded`. The model file gains no new keys:
+
+```bash
+c4drill architecture.toml --no-colors           # author + kind colours off
+c4drill architecture.toml --no-styles           # author line styles off
+c4drill architecture.toml --no-length           # link length -> default spacing
+c4drill architecture.toml --no-rank             # link rank hints ignored
+c4drill architecture.toml --no-labels           # edge labels only: nodes/clusters/legend keep labels
+c4drill architecture.toml --plain --no-labels   # switches compose
+```
+
+Boundaries worth knowing:
+
+- `--no-colors` suppresses author unit/link colours *and* kind-derived
+  edge colours; the structural default source-border colour stays. The
+  legend keeps its rows but loses its colour swatches. Under `--plain`
+  alone kind colours survive (semantic), so `--plain --no-colors`
+  removes them.
+- `--no-labels` suppresses *edge label text* only (the
+  `[technology] description` on arrows) — node, cluster (wrapper and
+  boundary included), and legend labels all keep their text, so
+  identity never disappears. Colour/style semantics, cluster
+  structure, explore/reference URLs also stay (the legend is metadata
+  governed by `properties.legend`). Applies to every generation,
+  including `--expanded`.
+- `properties.edges` is tied to `--plain` only; no granular switch
+  touches it.
+- `--plain` remains the exact union of all the concerns above.
+
+See `examples/13-wrapping.toml` — ancestor wrapping plus custom
+formatting to try every switch against.
+
+---
+
+*Skill version: 2.0.0* *C4Drill version: v1.10+ (C4D support included)*

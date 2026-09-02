@@ -1,0 +1,12 @@
+src/**
+test/**
+node_modules/**
+out/**
+.vscode-test/**
+syntaxes/*.tmLanguage.json.src
+**/*.map
+**/*.ts
+.gitignore
+.vscodeignore
+tsconfig.json
+npm-debug.log

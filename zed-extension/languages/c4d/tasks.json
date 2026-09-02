@@ -1,0 +1,60 @@
+[
+  {
+    "label": "c4drill: render diagram",
+    "command": "c4drill",
+    "args": ["$ZED_FILE"],
+    "save": "current",
+    "reveal": "always",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "show_summary": true,
+    "show_output": true
+  },
+  {
+    "label": "c4drill: render diagram (all expanded)",
+    "command": "c4drill",
+    "args": ["$ZED_FILE", "--expanded"],
+    "save": "current",
+    "reveal": "always",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "show_summary": true,
+    "show_output": true
+  },
+  {
+    "label": "c4drill: render diagram and open in browser",
+    "command": "sh",
+    "args": [
+      "-c",
+      "c4drill \"$ZED_FILE\" && f=\"$ZED_DIRNAME/$ZED_STEM.svg\" && (open \"$f\" 2>/dev/null || xdg-open \"$f\" 2>/dev/null || echo \"Open $f in your browser\")"
+    ],
+    "save": "current",
+    "reveal": "always",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "show_summary": true,
+    "show_output": true
+  },
+  {
+    "label": "c4drill: export dot",
+    "command": "c4drill",
+    "args": ["$ZED_FILE", "-f", "dot"],
+    "save": "current",
+    "reveal": "always",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "show_summary": true,
+    "show_output": true
+  },
+  {
+    "label": "c4drill: export PlantUML",
+    "command": "c4drill",
+    "args": ["$ZED_FILE", "-f", "plantuml"],
+    "save": "current",
+    "reveal": "always",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "show_summary": true,
+    "show_output": true
+  }
+]

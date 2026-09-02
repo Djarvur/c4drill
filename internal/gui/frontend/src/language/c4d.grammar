@@ -1,0 +1,226 @@
+// c4d.grammar — a CodeMirror Lezer grammar for the C4D DSL (issue #36),
+// authored against the authoritative PEG spec at
+// `internal/c4d/grammar/c4d.peg`, with the #27 TextMate grammar
+// (`extension/syntaxes/c4d.tmLanguage.json`) and the #30 tree-sitter grammar
+// (`zed-extension/grammars/c4d/`) as the references for the hard cases:
+//
+//   - the three unit-header forms: id-led `id: type [external] ["Name"]`,
+//     type-led `type [external] ["Name"]`, and bare-id `id { }`;
+//   - the four ASCII arrows with `peer: label` and trailing `{ options }`;
+//   - `;` one-liners and empty blocks (separators are skipped tokens);
+//   - double-quoted strings with escapes and multi-line `"""triple"""`;
+//   - `${param}` template tokens in peers, values and labels;
+//   - `#` comments anywhere.
+//
+// Design notes — how the PEG's ordered choices map onto an LR grammar:
+//
+//   - Type words (person, system, queue, …) are deliberately NOT keyword
+//     tokens: models legally use them as unit ids (`queue: containerQueue
+//     "Q" { … }`), and a keyword token would win the lexer race and break
+//     the id-led header — the same call the tree-sitter grammar makes.
+//   - `id: type { }` vs a field statement `key: value` is ambiguous on
+//     `ident ":" word`. The grammar keeps ONE bare token spine for both
+//     readings (no wrapper rules there — a wrapper would force a reduce
+//     before the deciding token), so the LR state stays merged and the NEXT
+//     token decides, mirroring the PEG's backtrack out of FieldStmt: `{`
+//     continues the unit header, a quoted string becomes the header's
+//     display name, `external` becomes the header modifier (it also stays a
+//     legal value word, so `description: Used by external systems` remains
+//     a plain field), and any other word continues a multi-word value. The
+//     `~header` markers mark the two reduce points as intentional GLR
+//     ambiguity: the parser runs both readings and drops the one that fails.
+//   - The type slots are single words (exactly the PEG's TypeKeyword slot).
+//   - Statement-start `word { }` parses as the type-led header; the PEG
+//     would prefer the bare-id reading for non-type words, but the node
+//     shape (a unit block) is the same either way.
+//   - properties/template/use/include/type/once ARE reserved against unit
+//     ids (D-19) and are declared as @specialize'd Ident content: the
+//     scanner keeps longest-match identifiers ("username" stays one
+//     identifier) while exact words become keyword tokens. In free-text
+//     value positions the word loops admit the keyword tokens, so prose
+//     like `description: use the include template once` stays a field.
+//   - Trivia model: whitespace, `#` comments, `;` separators and `,` are
+//     skipped tokens, so one-liners (`box { api: system { } db: db { } }`)
+//     and comma-optional lists parse without terminator rules.
+
+@top Document { TopStatement* }
+
+@skip { space | LineComment | Semi | Comma }
+
+// Reserved statement keywords (D-19) as Ident-content specializations:
+// the scanner keeps longest-match identifiers ("username" stays one
+// identifier) while exact words become distinct keyword tokens — no
+// lexer-race truncation, unlike plain keyword tokens with precedence.
+kw<word> { @specialize[@name={word}]<Ident, word> }
+
+TopStatement {
+  PropertiesBlock |
+  TemplateDecl |
+  IncludeStmt |
+  UseStmt |
+  UnitBlock
+}
+
+UnitBlock { UnitHeader "{" BodyStatement* "}" }
+
+BodyStatement {
+  EdgeStmt |
+  UseStmt |
+  UnitBlock |
+  FieldStmt
+}
+
+UnitHeader {
+  IdHeader |
+  TypeHeader
+}
+
+// id: type [external] ["Display Name"] — the bare spine shared with
+// FieldStmt (see the design notes); the type slot is the PEG's single
+// TypeKeyword word.
+IdHeader { Ident ":" Ident ~header kw<"external">? ~header String? ~header }
+
+// type [external] ["Display Name"] — and, for a single word directly
+// followed by `{`, the bare-id form the PEG falls back to.
+TypeHeader { TypeWord kw<"external">? String? }
+
+TypeWord { Ident }
+
+// <-> | -> | <- | -- with a dotted peer path, optional `: label` and an
+// optional trailing option block (D-05/D-08/D-09).
+EdgeStmt { Arrow PeerPath Label? OptionsBlock? }
+
+PeerPath { PeerSeg ("." PeerSeg)* }
+
+PeerSeg { Ident | ParamToken }
+
+Label { ":" (~v LabelWord)+ ~v }
+
+LabelWord {
+  String | TripleString | Ident | RestWord | ParamToken | Pipe | kw<"external"> |
+  kw<"use"> | kw<"include"> | kw<"template"> | kw<"properties"> | kw<"type"> | kw<"once">
+}
+
+OptionsBlock { "{" Option* "}" }
+
+Option { OptionName ":" OptionValue }
+
+OptionName { Ident }
+
+OptionValue { String | Ident | RestWord | ParamToken }
+
+// key: value — field keys stay permissive identifiers (the PEG restricts
+// the key set and errors on unknown keys, D-19; here unknown keys parse so
+// highlighting survives partially-written code — the LSP still reports
+// them). The value word loop admits the keyword tokens so prose like
+// `description: use the include template once` stays a field.
+FieldStmt { Ident ":" Value ~header }
+
+Value {
+  String |
+  TripleString |
+  List |
+  (~v ValueWord)+ ~v
+}
+
+ValueWord {
+  Ident | RestWord | ParamToken | kw<"external"> |
+  kw<"use"> | kw<"include"> | kw<"template"> | kw<"properties"> | kw<"type"> | kw<"once">
+}
+
+// D-15: inline `[a, b]` and one-per-line forms; commas optional (they are
+// skipped tokens).
+List { "[" ListItem* "]" }
+
+ListItem { String | TripleString | Ident | RestWord | ParamToken }
+
+// D-13 function-like declaration; the body uses the unit statement set plus
+// the template-root type statement (D-22).
+TemplateDecl {
+  kw<"template"> TemplateName "(" ParamName* ")" "{" TemplateStatement* "}"
+}
+
+TemplateName { Ident }
+
+ParamName { Ident }
+
+TemplateStatement {
+  TypeStmt |
+  EdgeStmt |
+  UseStmt |
+  UnitBlock |
+  FieldStmt
+}
+
+// The template root's type: `type: <type> [external]` — the only place a
+// type statement is legal (D-22).
+TypeStmt { kw<"type"> ":" Ident kw<"external">? }
+
+// D-14: include <path> [once] — the path is a quoted string or a path-shaped
+// run of identifiers, dots and slashes, relative to the including file.
+IncludeStmt { kw<"include"> (String | IncludePath) kw<"once">? }
+
+IncludePath { (~v Ident | ~v "/" | ~v ".")+ ~v }
+
+// D-13/D-16/D-17 instantiation: named `key: value` args first-class,
+// positional values otherwise (a positional value containing ':' must be
+// quoted — the named form wins on a bare `key: value` shape).
+UseStmt { kw<"use"> TemplateName "(" Arg* ")" }
+
+Arg { Ident ":" ArgValue | ArgValue }
+
+ArgValue { String | TripleString | List | Ident | ArgRestWord | ParamToken }
+
+// D-12 top-level presentation block.
+PropertiesBlock { kw<"properties"> "{" FieldStmt* "}" }
+
+@tokens {
+  space { $[ \t\r\n\uFEFF\u2060\u200B]+ }
+
+  // `#` to end of line; the newline itself is not consumed.
+  LineComment { '#' ![\r\n]* }
+
+  Semi { ';' }
+
+  Comma { ',' }
+
+  // The four ASCII arrows of D-05; `<->` beats `<-` by maximal munch.
+  Arrow { '<->' | '->' | '<-' | '--' }
+
+  Pipe { '|' }
+
+  // ${param} substitution token; legal wherever a bareword can appear
+  // (substituted by the template expander, never by the parser).
+  ParamToken { '${' $[A-Za-z0-9_-]+ '}' }
+
+  // PEG Ident: [A-Za-z0-9_-]+ — unit ids, keys, path segments, type words.
+  Ident { $[A-Za-z0-9_-]+ }
+
+  // The non-identifier-leading value word: covers value/label words the
+  // Ident token cannot start (".js", "/Retrieves", "(keeps …)", "+", ":",
+  // em dashes, ${param}-glued tails, …). Ident wins the words that start
+  // with identifier characters; the two tokens concatenate inside the
+  // Value/Label word loops, so together they cover the PEG's full Bareword
+  // range (D-06: stops at EOL and the structural characters only).
+  RestWord { ![ \t\r\n{};|,"\[\]#A-Za-z0-9_-] ![ \t\r\n{};|,"\[\]#]* }
+
+  // The argument-list variant: also stops at parentheses, so the closing
+  // ")" of the use statement wins (PEG ArgBarewordStop).
+  ArgRestWord { ![ \t\r\n{}();|,"\[\]#A-Za-z0-9_-] ![ \t\r\n{}();|,"\[\]#]* }
+
+  // Double-quoted string with the parser's escape handling (\" \\ \n …).
+  String { '"' (!["\\\r\n] | '\\' ![\r\n])* '"' }
+
+  // """multi-line""" — only the closing triple quote terminates (no escapes
+  // inside, per c4d.peg TripleQuoted).
+  TripleString { '"""' (!["] | '"' !["] | '""' !["])* '"""' }
+
+  // Token precedence for same-context overlaps (earlier wins): trivia and
+  // separators terminate barewords; the arrow beats the `--` identifier
+  // tie; the triple-quoted string beats the plain string's `""` prefix.
+  @precedence {
+    space, LineComment, Semi, Comma,
+    Arrow, ":", "{", "}", "[", "]", Pipe,
+    TripleString, String, ParamToken, ArgRestWord, RestWord, Ident
+  }
+}

@@ -1,0 +1,43 @@
+# Templates Example - C4D twin of 06-templates.toml (renders identically)
+# template <name>(params) declares a parametrized unit; use <name>(args)
+# instantiates it. A use inside a unit block attaches the produced unit under
+# that parent (nested use); ${param} substitutes into every string field.
+properties {
+  name: Templates Example
+  description: Parametrized templates instantiated into leaf and parent units
+  edges: spline
+  expanded: [platform]
+}
+
+platform: system "Platform" {
+  description: Parent system hosting the instantiated services
+  use microservice(name: auth, tech: "Go, gRPC", upstreamBus: messageBus)
+  use microservice(name: billing, tech: "Rust, gRPC", upstreamBus: messageBus)
+  use dataService(name: users, tech: Go)
+}
+
+messageBus: queue "Message Bus" { description: Backbone for domain event publication }
+
+customer: person "Customer" {
+  description: End user whose requests flow into the instantiated services
+  -> platform.auth: "HTTPS | Authenticates and places orders"
+}
+
+template dataService(name, tech) {
+  type: container
+  name: "${name} Data Service"
+  description: "${name} owns a private cache"
+  technology: "${tech}"
+  cache: componentDb "${name} Cache" {
+    technology: Redis
+    -> messageBus: "Publishes ${name} cache invalidations"
+  }
+}
+template microservice(name, tech, upstreamBus) {
+  type: container
+  name: "${name} Service"
+  description: "${name} handles its domain; publishes to ${upstreamBus}"
+  technology: "${tech}"
+  reference: "https://wiki.example.com/${name}"
+  -> ${upstreamBus}: "Publishes ${name} domain events"
+}

@@ -1,0 +1,15 @@
+<!-- Loaded only when the platform LSP client (com.intellij.modules.lsp,
+     embedded in every commercial 2025.3+ IDE) is present. Registers the
+     c4drill language server support provider and the LSP-backed gateway the
+     preview tool window and actions consume via the dev.djarvur.c4drill.gateway
+     extension point. -->
+<idea-plugin>
+    <extensions defaultExtensionNs="com.intellij">
+        <platform.lsp.serverSupportProvider
+            implementation="dev.djarvur.c4drill.lsp.C4drillLspServerSupportProvider"/>
+    </extensions>
+
+    <extensions defaultExtensionNs="dev.djarvur.c4drill">
+        <gateway implementation="dev.djarvur.c4drill.lsp.LspC4drillGateway"/>
+    </extensions>
+</idea-plugin>

@@ -1,0 +1,11 @@
+<!-- Loaded only when the TextMate bundles plugin is present: contributes the
+     C4D grammar (reused verbatim from the VS Code extension #27) and wires it
+     into the C4D language's syntax highlighter. -->
+<idea-plugin>
+    <extensions defaultExtensionNs="com.intellij">
+        <textmate.bundleProvider implementation="dev.djarvur.c4drill.highlighting.C4dTextMateBundleProvider"/>
+
+        <lang.syntaxHighlighterFactory language="C4D"
+                                       implementationClass="dev.djarvur.c4drill.highlighting.C4dSyntaxHighlighterFactory"/>
+    </extensions>
+</idea-plugin>
