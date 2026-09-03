@@ -10,6 +10,8 @@ As of v1.15, rendering is CLI-controllable: every depicted node renders inside i
 
 As of v1.16, edge routing is per-invocation overridable: `--edges <style>` (`straight|spline|square|ortho`) beats both the global `[properties] edges` and per-unit `edges` on every generated view, and an explicit flag survives `--plain` (user intent beats author-format suppression — a documented delta to the exact-union contract).
 
+As of v1.17, output is byte-reproducible — rendering the same model twice yields byte-identical SVG, DOT, and HTML (deterministic edge-id ordering, fixed at the validator's mirror synthesis and guarded by a stable edge-slice sort); a `check` command validates any model without rendering or writing anything, reporting byte-identical errors and exit codes to the render path; and the GUI desktop transport calls the Wails-generated `main.desktop` binding, restoring desktop-window RPC.
+
 ## Core Value
 
 Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
@@ -90,7 +92,13 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - ✓ Switch-matrix E2E (GEDGE-07): `--edges` × generation (root / drill-down / `--expanded`) × `--plain` asserted via the graphviz `splines` attribute in RAW dot (~86 cells, `TestEdgesComposition` over the golden-free `edges_override.toml` fixture carrying both precedence layers)
 - ✓ Backward compat (GEDGE-08): without the flag, all existing canonicalDOT goldens pass untouched — zero re-baselining; scope.go resolution and converter mapping unchanged
 
-## Current Milestone: v1.17 Issue Sweep
+### Validated in Phases 40–42 (v1.17) — issue sweep
+
+- ✓ Deterministic output (REPRO-01..03): repeated renders are byte-identical across svg/dot/html — sorted-key mirror synthesis in the validator's `populateIncomingLinks` (the root cause) plus a stable name-order sort of `g.Edges` at the `buildEdges` tail (defense-in-depth); GraphViz's generated `edge<N>` SVG ids are a pure function of model content; pinned by the issue #42 reproducer regression — v1.25.0
+- ✓ `check` command (CHECK-01..04): `c4drill check <file.toml|file.c4d>` validates without rendering or writing anything — one pipeline front-half shared with render (extracted `parseValidatedModel`), byte-identical errors and exit codes, silent exit 0 on valid, composed multi-file sources validate exactly as they render; documented in README.adoc + skill/SKILL.md — v1.25.0
+- ✓ Desktop RPC fix (GUI-01..02): frontend transport resolver calls the Wails-generated `window.go.main.desktop.Dispatch` (matching the actually bound struct); zero phantom `main.App`/`backend.App` references; `--serve` HTTP path untouched, e2e green — v1.25.0
+
+## Previous Milestone: v1.17 Issue Sweep — COMPLETE (2026-09-03)
 
 **Goal:** Close the three actionable open GitHub issues — byte-reproducible SVG output, a render-free `check` command, and the Wails desktop binding fix.
 
@@ -103,6 +111,8 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 **Key context:**
 - Source: GitHub issues #42, #41, #38 (filed 2026-09-01/02); each carries a reproducer or a documented fix direction.
 - Out of scope: #34 Zed preview panel (blocked upstream on zed-industries/zed#53403); #35 JetBrains live-IDE validation (needs unrestricted network + interactive `runIde` — environmental, not codeable from a CLI agent).
+
+**Status:** ✅ COMPLETE (2026-09-03) — Phases 40-42 (3 phases, 5 plans) executed in parallel and shipped as product release v1.25.0; all 9 requirements validated (REPRO-01..03, CHECK-01..04, GUI-01..02); UAT 13/13 automated + 1 human-only desktop smoke deferred. Full record: [MILESTONES.md](MILESTONES.md).
 
 ## Previous Milestone: v1.16 Edge Style Override — COMPLETE (2026-08-31)
 
@@ -142,12 +152,13 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 ## Current Focus
 
-**v1.17 Issue Sweep is active** — closing GitHub issues #42 (reproducible SVG), #41 (`check` command), #38 (Wails binding fix). Remaining candidate backlog (unchanged):
+Planning the next milestone — nothing active. Remaining candidate backlog:
 - Template multi-output / `for_each` fan-out (Future, REQUIREMENTS archive)
 - Compact-link shorthand variants beyond baseline (Future, REQUIREMENTS archive)
 - C4D polish warnings: WR-03 duplicate `properties {}` last-win, WR-04 skill type-inference table drift, WR-05 quoted-label whitespace trim
 - Debug: docs-drift around the orphan rule (VAL-01) testdata; stale `knowledge-base` debug note
 - Human UAT follow-ups from 260831-01u: re-render the reporter's real model (compact root), eyeball re-baselined goldens
+- Human UAT from v1.17: desktop-window smoke (Wails GUI RPC path — 42-HUMAN-UAT.md); JetBrains live-IDE validation (#35, unrestricted network); revisit #34 when zed's visual extension API lands
 
 ## Previous Milestone: v1.14 Nesting Context and Plain Rendering — COMPLETE (2026-08-30)
 
@@ -174,7 +185,7 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 ## Current State (2026-09-03)
 
-**Active:** v1.17 Issue Sweep (GitHub issues #42, #41, #38) — Phases 40-42 executing concurrently. Phase 41 (Check Command) complete 2026-09-03: `c4drill check <file.toml|file.c4d>` (issue #41) validates without rendering through ONE pipeline front-half shared with render (extracted `parseValidatedModel` on cmd/c4drill/root.go) — silent exit 0 valid, byte-identical render validation errors exit 1, writes nothing, documented in README.adoc + skill/SKILL.md. TDD RED→GREEN, 10 behavior pins, verified 4/4. Phase 42 (Desktop GUI Binding Fix) complete 2026-09-03: frontend RPC resolver aligned to the Wails-generated `window.go.main.desktop.Dispatch` namespace (issue #38), TDD-verified with binding-shape tests; serve HTTP path untouched. Verified 7/7 truths; one manual item persisted (wails desktop smoke, 42-HUMAN-UAT.md). Phase 40 (Deterministic SVG Output) complete 2026-09-03: repeated renders are byte-identical (issue #42) — sorted-key LinksFrom mirror synthesis in the validator (D-02) plus a name-ordered stable sort of g.Edges at the buildEdges tail (D-03), so GraphViz's generated `edge<N>` SVG ids are a pure function of model content at two layers; pinned by the D-05 byte-equality regression over the issue #42 reproducer (svg/dot/html); zero golden churn, verified 8/8.
+**Shipped:** v1.17 Issue Sweep — 3 phases (40-42), 5 plans, 58 commits, 70 files (+5,312/−2,221), product release v1.25.0. Byte-reproducible output across svg/dot/html (issue #42 — deterministic mirror synthesis + stable edge-slice sort), render-free `check` command sharing the render pipeline's exact front-half (issue #41), desktop RPC restored via the real Wails `main.desktop` namespace (issue #38). All 9 requirements validated; verifications 8/8, 4/4, 7/7; UAT 13/13 automated + 1 human-only desktop smoke deferred (42-HUMAN-UAT.md).
 
 **Previously:** v1.16 Edge Style Override — 1 phase (39), 3 plans, 8 tasks, product release v1.23.0. Invocation-global `--edges` routing override (beats global + per-unit edges, survives `--plain`), switch-matrix E2E (~86 cells), zero golden churn. Verification 5/5, UAT 7/7. ~50.3k LOC Go, all tests green, CI at 0 lint issues.
 
@@ -182,11 +193,12 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 ## Next Milestone Goals
 
-*v1.16 shipped; nothing active. Candidate backlog for later:*
+*v1.17 shipped; nothing active. Candidate backlog for later:*
 - Template multi-output / `for_each` fan-out (Future, REQUIREMENTS archive)
 - Compact-link shorthand variants beyond baseline (Future, REQUIREMENTS archive)
 - C4D polish warnings: WR-03 duplicate `properties {}` last-win, WR-04 skill type-inference table drift, WR-05 quoted-label whitespace trim
 - Docs drift: README "Validation Rules" VAL-01 orphan rule + unused root testdata (pre-existing, acknowledged)
+- Human follow-ups: v1.17 desktop-window smoke (42-HUMAN-UAT.md); #35 JetBrains live-IDE validation; #34 Zed preview when upstream API lands
 
 ## Shipped
 
@@ -379,4 +391,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-03 — milestone v1.17 Issue Sweep started (GitHub issues #42, #41, #38); phases 40-42 complete*
+*Last updated: 2026-09-03 after v1.17 milestone (Issue Sweep shipped as v1.25.0)*

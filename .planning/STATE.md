@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.17
 milestone_name: Issue Sweep
-status: ready_to_plan
-last_updated: 2026-09-03T19:37:56.310Z
-last_activity: 2026-09-03
+status: Awaiting next milestone
+last_updated: "2026-09-03T20:29:55.342Z"
+last_activity: 2026-09-03 — Milestone v1.17 completed and archived
 progress:
   total_phases: 3
   completed_phases: 3
   total_plans: 5
   completed_plans: 5
   percent: 100
-stopped_at: Phase 40 complete (2/2) — ready to discuss Phase 41
 ---
 
 # Project State
@@ -21,20 +20,20 @@ stopped_at: Phase 40 complete (2/2) — ready to discuss Phase 41
 See: .planning/PROJECT.md (updated 2026-09-03)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** Phase 41 — check command
+**Current focus:** Milestone complete — planning next milestone
 
 ## Current Position
 
-Phase: 41
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-09-03
+Phase: Milestone v1.17 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-09-03 — Milestone v1.17 completed and archived
 
 ## Performance Metrics
 
 **Velocity (carry-forward):**
 
-- v1.11: 1 phase (34), 4 plans. v1.12: 1 phase (35), 9 plans. v1.13: 1 phase (36), 6 plans. v1.14: 1 phase (37), 7 plans. v1.15: 2 phases (37, 38), 13 plans + 1 validated quick task. v1.16: 1 phase (39), 3 plans.
+- v1.11: 1 phase (34), 4 plans. v1.12: 1 phase (35), 9 plans. v1.13: 1 phase (36), 6 plans. v1.14: 1 phase (37), 7 plans. v1.15: 2 phases (37, 38), 13 plans + 1 validated quick task. v1.16: 1 phase (39), 3 plans. v1.17: 3 phases (40-42), 5 plans — first fully parallel multi-phase milestone (3 planners + 3 executors concurrent), single day.
 
 | Phase | Plans | Notes |
 |-------|-------|-------|
@@ -70,7 +69,7 @@ None open. (v1.15 concerns — WRAP golden churn, LBL-03 legend pin — resolved
 
 ## Deferred Items
 
-Items acknowledged and deferred at milestone close on 2026-08-31 (v1.16): 5 open audit items, all pre-dating v1.16 — none produced by this milestone's work.
+Items acknowledged and deferred at milestone close on 2026-09-03 (v1.17): 7 open audit items — 5 pre-dating v1.17 (carried from v1.16 close), 2 produced by phase 42 (both human-only, not automatable in a CLI agent).
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
@@ -80,6 +79,8 @@ Items acknowledged and deferred at milestone close on 2026-08-31 (v1.16): 5 open
 | quick_task | 260828-qbx-render-queue-units-as-horizontal-pipe-sh — audit status "missing"; work shipped (queue pipes, v1.19–v1.20 review) | bookkeeping gap acknowledged at v1.16 close | v1.16 close |
 | quick_task | 260828-tgf-fix-pipe-end-cap-right-side-must-render- — audit status "missing"; work shipped with pipes render | bookkeeping gap acknowledged at v1.16 close | v1.16 close |
 | quick_task | 260831-01u-fix-three-rendering-bugs-from-todos-pend — audit status "missing"; work shipped, verified, retro'd | bookkeeping gap acknowledged at v1.16 close | v1.16 close |
+| uat | 42-HUMAN-UAT.md — desktop-window Wails smoke (launch GUI, exercise RPC) — human-only by design; automatable gates all green | acknowledged open at v1.17 close (2026-09-03) | v1.17 close |
+| verification | 42-VERIFICATION.md — human_needed (same desktop smoke scenario) | acknowledged open at v1.17 close (2026-09-03) | v1.17 close |
 
 ## Session Continuity
 
@@ -89,4 +90,4 @@ Resume file: None
 
 ## Operator Next Steps
 
-- Plan the first phase with /gsd:plan-phase 40 (Phases 40-42 are independent — execute in any order; default 40 → 41 → 42)
+- Start the next milestone with /gsd-new-milestone
