@@ -299,12 +299,9 @@ Bind: []interface{}{g},                         // L124 — the only bound value
 
 All other claims verified against the codebase (`[VERIFIED: repo grep/read]`) or official Wails docs (`[CITED: wails.io/docs/howdoesitwork]` via Context7).
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Typed constant for the namespace path?**
-   - What we know: D-02 requires exactly `go.main.desktop.Dispatch` in interface + resolver; CONTEXT leaves a typed constant to planner discretion.
-   - What's unclear: whether the indirection earns its keep in a 2-line surface.
-   - Recommendation: optional; prefer the plain optional chain matching existing style unless the executor sees duplication.
+1. **Typed constant for the namespace path?** — RESOLVED during planning: no typed constant. The resolver surface is a single optional chain (`w.go?.main?.desktop?.Dispatch ?? null`) used in exactly one place; the indirection earns nothing. Keep the plain chain matching existing rpc.ts style (per CONTEXT.md discretion area, planner's call).
 
 ## Environment Availability
 

@@ -162,8 +162,11 @@ Plans:
   1. `internal/gui/frontend/src/rpc.ts` calls `window.go.main.desktop.Dispatch` — the namespace Wails generates for the bound struct (cmd/c4drill-gui `main.desktop`, Wails `Bind`) — and no references to the phantom `window.go.main.App` / `go.backend.App` namespaces remain
   2. Desktop-window RPC works again: every method rpc.ts invokes exists on the generated `main.desktop` binding, restoring the desktop transport broken since the #31/#37 restructure (verified via frontend build + binding-shape assertions; TDD where testable)
   3. The `--serve` HTTP fallback path is unchanged and its existing e2e suite stays green
-**Plans**: TBD
+**Plans**: 1 plan
 **UI hint**: yes
+
+Plans:
+- [ ] 42-01-PLAN.md — Align frontend resolver to `window.go.main.desktop.Dispatch` (TDD: RED binding-shape tests → GREEN resolver fix → D-04 structural + regression gates)
 
 </details>
 
