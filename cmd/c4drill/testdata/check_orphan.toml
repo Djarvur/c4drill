@@ -1,0 +1,32 @@
+# CHECK-02 fixture: validation-stage failure with exactly one orphan unit.
+# `user` carries its own outgoing link and `app` an incoming one, so
+# ValidateOrphanUnits (internal/validator/rules.go) fires only on `orphan` —
+# a unit needs its OWN Links/LinksFrom/Subunits to stay clean. A bare-peer
+# invalid fixture would die in peer.Resolve before validation ever runs.
+
+[properties]
+name = "Orphan Check"
+description = "Validation-stage failure fixture: exactly one orphan unit"
+
+[user]
+type = "person"
+name = "User"
+description = "End user"
+
+[[user.link]]
+peer = "app"
+technology = "HTTPS"
+
+[app]
+type = "system"
+name = "Application"
+description = "Application linked to the user"
+
+[[app.linkFrom]]
+peer = "user"
+technology = "HTTPS"
+
+[orphan]
+type = "system"
+name = "Orphan"
+description = "No links and no subunits — the orphan ValidateOrphanUnits reports"
