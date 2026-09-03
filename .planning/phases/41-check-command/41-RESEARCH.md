@@ -281,12 +281,9 @@ Not applicable — internal Go CLI phase; no library landscape shifted. Cobra v1
 | A1 | GitHub issue #41's contract matches CHECK-01..04 as restated in CONTEXT.md (issue body not fetched this session; CONTEXT.md from discuss-phase is treated as authoritative) | User Constraints | Low — CONTEXT.md is the locked source; if the issue adds constraints, discuss-phase already absorbed them |
 | A2 | `cmd.OutOrStderr()` in production resolves to os.Stderr (main.go never calls SetOut) | Pitfall 2 | Low — verified main.go:5-10 constructs and executes without writers; cobra falls back to os.Stderr when no writer is set |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Hide inherited render flags from `check --help`?**
-   - What we know: cobra will inherit root's render PersistentFlags onto check; D-05 says check carries no render flags.
-   - What's unclear: whether "carries no flags" means "defines no flags" (weaker) or "documents/exposes none" (stronger, requires hiding inherited flags in help).
-   - Recommendation: implement the stronger reading (hide inherited render flags from check's help) — it is a small loop over `InheritedFlags()`, keeps `--help` honest, and needs no cobra hacks beyond `Hidden = true`.
+1. **Hide inherited render flags from `check --help`?** — RESOLVED: yes, hide them. cobra inherits root's render PersistentFlags onto every subcommand; D-05's "carries NO render flags" is implemented as the stronger reading — `newCheckCmd` sets `Hidden = true` on every inherited render flag (format, output, expanded, plain, edges, no-colors, no-styles, no-length, no-rank, no-labels, label-ratio) so `check --help` documents no render surface. Locked into Plan 41-01 Task 2.
 
 ## Environment Availability
 
