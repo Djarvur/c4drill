@@ -125,7 +125,7 @@ Full details: [milestones/v1.16-ROADMAP.md](milestones/v1.16-ROADMAP.md)
 
 **Goal:** Close the three actionable open GitHub issues — byte-reproducible SVG output (#42), a render-free `check` command (#41), and the Wails desktop binding fix (#38). Three independent issue families, one phase each; phases can execute in any order.
 
-- [ ] **Phase 40: Deterministic SVG Output** - Rendering the same model twice yields byte-identical output; edge ids derive from model content, not map iteration (issue #42)
+- [x] **Phase 40: Deterministic SVG Output** - Rendering the same model twice yields byte-identical output; edge ids derive from model content, not map iteration (issue #42) (completed 2026-09-03)
 - [x] **Phase 41: Check Command** - `c4drill check <file>` validates a model without rendering, with render-identical errors and exit codes (issue #41) (completed 2026-09-03)
 - [x] **Phase 42: Desktop GUI Binding Fix** - Frontend RPC aligned to the Wails-generated namespace of the actually bound struct, `main.desktop` (issue #38) (completed 2026-09-03)
 
@@ -149,7 +149,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 40-02-PLAN.md — Defense-in-depth name-sorted edge slice (D-03) + no-semantic-change gate (D-04/D-06) — wave 2
+- [x] 40-02-PLAN.md — Defense-in-depth name-sorted edge slice (D-03) + no-semantic-change gate (D-04/D-06) — wave 2
 
 ### Phase 41: Check Command
 
@@ -211,7 +211,7 @@ Plans:
 | 37. Nesting Context and Plain Rendering | v1.14 | 7/7 | Complete | 2026-08-30 |
 | 38. Hierarchy Wrapping and Granular Keys | v1.15 | 6/6 | Complete | 2026-08-30 |
 | 39. Edge Style Override (`--edges` flag) | v1.16 | 3/3 | Complete    | 2026-08-31 |
-| 40. Deterministic SVG Output | v1.17 | 1/2 | In Progress|  |
+| 40. Deterministic SVG Output | v1.17 | 2/2 | Complete   | 2026-09-03 |
 | 41. Check Command | v1.17 | 2/2 | Complete    | 2026-09-03 |
 | 42. Desktop GUI Binding Fix | v1.17 | 1/1 | Complete    | 2026-09-03 |
 
