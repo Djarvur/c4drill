@@ -244,12 +244,9 @@ b.WriteString("ext: personExternal \"User\" {\n  -> sys.c0\n}\n")
 | A1 | GraphViz SVG emitter assigns `edge<N>` ids in cgraph edge insertion order | Architecture Patterns | If ids followed a different order, the D-03 sort might not pin ids — but the byte-equality test (D-05) is the empirical arbiter, so the plan self-verifies |
 | A2 | In-process double render exercises different map iteration orders | Pattern 3 | If Go ever made iteration stable, the RED test would pass pre-fix (fail-fast rule catches it: "unexpected GREEN — investigate") |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Will any committed SVG golden actually shift?**
-   - What we know: canonicalDOT goldens are order-insensitive; no byte-exact SVG goldens were found in the repo (no `.golden` fixtures for svg; render tests assert structural properties).
-   - What's unclear: whether any test compares raw SVG bytes today.
-   - Recommendation: The D-06 policy covers both outcomes — plan includes an id-canonicalized diff check, re-baseline only if needed.
+1. **Will any committed SVG golden actually shift?** — RESOLVED: covered by the D-06 policy locked in CONTEXT.md and encoded in plans 40-01 (Task 3) and 40-02 (Task 2): canonicalDOT goldens are order-insensitive and must pass untouched; if any byte-exact golden shifts, the delta is audited id-numbers-only via id canonicalization and re-baselined once. No byte-exact SVG goldens exist today (no `.golden` fixtures for svg found), so no churn is expected.
 
 ## Environment Availability
 

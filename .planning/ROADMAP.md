@@ -142,9 +142,13 @@ Full details: [milestones/v1.16-ROADMAP.md](milestones/v1.16-ROADMAP.md)
   4. Existing canonicalDOT goldens (DI-1/COMPAT-02/REF-05) and the full test suite stay green — the fix changes only id-assignment ordering, not rendered semantics
 
 **Plans**: 2 plans
-
 Plans:
+**Wave 1**
+
 - [ ] 40-01-PLAN.md — Deterministic mirror synthesis (D-02) + issue #42 byte-equality regression pin (D-05) — TDD, wave 1
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 40-02-PLAN.md — Defense-in-depth name-sorted edge slice (D-03) + no-semantic-change gate (D-04/D-06) — wave 2
 
 ### Phase 41: Check Command
