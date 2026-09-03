@@ -130,42 +130,55 @@ Full details: [milestones/v1.16-ROADMAP.md](milestones/v1.16-ROADMAP.md)
 - [ ] **Phase 42: Desktop GUI Binding Fix** - Frontend RPC aligned to the Wails-generated namespace of the actually bound struct, `main.desktop` (issue #38)
 
 ### Phase 40: Deterministic SVG Output
+
 **Goal**: Rendering the same model twice produces byte-identical output — generated edge ids derive deterministically from model content, so diagrams can be diffed, committed, and cached reliably.
 **Depends on**: Nothing (fully independent)
 **Requirements**: REPRO-01, REPRO-02, REPRO-03
 **Success Criteria** (what must be TRUE):
+
   1. Rendering the same model file twice in separate invocations produces byte-identical SVG output, including the generated `id="edge<N>"` group ids — pinned by a byte-equality regression test built from the issue #42 reproducer (TDD: RED on current code, GREEN after the fix)
   2. Edge ids are assigned in a deterministic order derived from model content (sorted/insertion order), never Go map iteration order — repeated renders never permute or renumber edge ids
   3. The byte-equality-across-repeated-runs guarantee is asserted for every supported output format: `dot`, `svg`, and `html`
   4. Existing canonicalDOT goldens (DI-1/COMPAT-02/REF-05) and the full test suite stay green — the fix changes only id-assignment ordering, not rendered semantics
+
 **Plans**: TBD
 
 ### Phase 41: Check Command
+
 **Goal**: Users can validate a model without rendering — a fast, render-free `check` command that fits CI and edit loops and reports exactly what the render path would report.
 **Depends on**: Nothing (fully independent)
 **Requirements**: CHECK-01, CHECK-02, CHECK-03, CHECK-04
 **Success Criteria** (what must be TRUE):
+
   1. `c4drill check <file>` validates a model and exits without writing any output files or requiring an output directory
   2. `check` exits 0 when the model is valid and non-zero when invalid, reporting the same validation errors the render path reports (e.g. VAL orphan-unit rules) — pinned TDD-first with valid and invalid fixtures
   3. `check` runs the same pipeline front-half as render — includes resolved, templates expanded, relative peers resolved, then validation — proven by a composed multi-file fixture that checks exactly as it renders
   4. README documents the `check` command alongside the existing CLI surface (usage, exit codes, no-output behavior)
-**Plans**: 2 plans
-Plans:
+
+**Plans**: 2 plansPlans:
+**Wave 1**
+
 - [ ] 41-01-PLAN.md — check subcommand via shared render front-half (TDD: RED/GREEN/REFACTOR)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 41-02-PLAN.md — README.adoc + skill/SKILL.md document check
 
 ### Phase 42: Desktop GUI Binding Fix
+
 **Goal**: Desktop-window mode works again — the frontend RPC layer calls the Wails-generated namespace that matches the actually bound Go struct (`main.desktop`).
 **Depends on**: Nothing (fully independent)
 **Requirements**: GUI-01, GUI-02
 **Success Criteria** (what must be TRUE):
+
   1. `internal/gui/frontend/src/rpc.ts` calls `window.go.main.desktop.Dispatch` — the namespace Wails generates for the bound struct (cmd/c4drill-gui `main.desktop`, Wails `Bind`) — and no references to the phantom `window.go.main.App` / `go.backend.App` namespaces remain
   2. Desktop-window RPC works again: every method rpc.ts invokes exists on the generated `main.desktop` binding, restoring the desktop transport broken since the #31/#37 restructure (verified via frontend build + binding-shape assertions; TDD where testable)
   3. The `--serve` HTTP fallback path is unchanged and its existing e2e suite stays green
+
 **Plans**: 1 plan
 **UI hint**: yes
-
 Plans:
+
 - [ ] 42-01-PLAN.md — Align frontend resolver to `window.go.main.desktop.Dispatch` (TDD: RED binding-shape tests → GREEN resolver fix → D-04 structural + regression gates)
 
 </details>
