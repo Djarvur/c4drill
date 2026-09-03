@@ -12,7 +12,8 @@
 - ✅ **v1.13 Edge Semantics and Legend** — Phase 36 (shipped 2026-08-28) → [archive](milestones/v1.13-ROADMAP.md) — product release tag: v1.18.0
 - ✅ **v1.14 Nesting Context and Plain Rendering** — Phase 37 (shipped 2026-08-30) — product release tag: v1.21.0
 - ✅ **v1.15 Hierarchy Wrapping and Granular Keys** — Phase 38 (SHIPPED 2026-08-30) — product release tag: v1.22.0
-- 🚧 **v1.16 Edge Style Override** — Phase 39 (SHIPPED 2026-08-31) → [archive](milestones/v1.16-ROADMAP.md) — product release tag: v1.23.0
+- ✅ **v1.16 Edge Style Override** — Phase 39 (SHIPPED 2026-08-31) → [archive](milestones/v1.16-ROADMAP.md) — product release tag: v1.23.0
+- 🚧 **v1.17 Issue Sweep** — Phases 40-42 (IN PROGRESS, started 2026-09-03)
 
 ## Phases
 
@@ -119,9 +120,53 @@ Full details: [milestones/v1.16-ROADMAP.md](milestones/v1.16-ROADMAP.md)
 
 </details>
 
+<details>
+<summary>🚧 v1.17 Issue Sweep (Phases 40-42) — IN PROGRESS (started 2026-09-03)</summary>
+
+**Goal:** Close the three actionable open GitHub issues — byte-reproducible SVG output (#42), a render-free `check` command (#41), and the Wails desktop binding fix (#38). Three independent issue families, one phase each; phases can execute in any order.
+
+- [ ] **Phase 40: Deterministic SVG Output** - Rendering the same model twice yields byte-identical output; edge ids derive from model content, not map iteration (issue #42)
+- [ ] **Phase 41: Check Command** - `c4drill check <file>` validates a model without rendering, with render-identical errors and exit codes (issue #41)
+- [ ] **Phase 42: Desktop GUI Binding Fix** - Frontend RPC aligned to the Wails-generated namespace of the actually bound struct, `main.desktop` (issue #38)
+
+### Phase 40: Deterministic SVG Output
+**Goal**: Rendering the same model twice produces byte-identical output — generated edge ids derive deterministically from model content, so diagrams can be diffed, committed, and cached reliably.
+**Depends on**: Nothing (independent of Phases 41-42)
+**Requirements**: REPRO-01, REPRO-02, REPRO-03
+**Success Criteria** (what must be TRUE):
+  1. Rendering the same model file twice in separate invocations produces byte-identical SVG output, including the generated `id="edge<N>"` group ids — pinned by a byte-equality regression test built from the issue #42 reproducer (TDD: RED on current code, GREEN after the fix)
+  2. Edge ids are assigned in a deterministic order derived from model content (sorted/insertion order), never Go map iteration order — repeated renders never permute or renumber edge ids
+  3. The byte-equality-across-repeated-runs guarantee is asserted for every supported output format: `dot`, `svg`, and `html`
+  4. Existing canonicalDOT goldens (DI-1/COMPAT-02/REF-05) and the full test suite stay green — the fix changes only id-assignment ordering, not rendered semantics
+**Plans**: TBD
+
+### Phase 41: Check Command
+**Goal**: Users can validate a model without rendering — a fast, render-free `check` command that fits CI and edit loops and reports exactly what the render path would report.
+**Depends on**: Nothing (independent of Phases 40 and 42)
+**Requirements**: CHECK-01, CHECK-02, CHECK-03, CHECK-04
+**Success Criteria** (what must be TRUE):
+  1. `c4drill check <file>` validates a model and exits without writing any output files or requiring an output directory
+  2. `check` exits 0 when the model is valid and non-zero when invalid, reporting the same validation errors the render path reports (e.g. VAL orphan-unit rules) — pinned TDD-first with valid and invalid fixtures
+  3. `check` runs the same pipeline front-half as render — includes resolved, templates expanded, relative peers resolved, then validation — proven by a composed multi-file fixture that checks exactly as it renders
+  4. README documents the `check` command alongside the existing CLI surface (usage, exit codes, no-output behavior)
+**Plans**: TBD
+
+### Phase 42: Desktop GUI Binding Fix
+**Goal**: Desktop-window mode works again — the frontend RPC layer calls the Wails-generated namespace that matches the actually bound Go struct (`main.desktop`).
+**Depends on**: Nothing (independent of Phases 40 and 41)
+**Requirements**: GUI-01, GUI-02
+**Success Criteria** (what must be TRUE):
+  1. `internal/gui/frontend/src/rpc.ts` calls `window.go.main.desktop.Dispatch` — the namespace Wails generates for the bound struct (cmd/c4drill-gui `main.desktop`, Wails `Bind`) — and no references to the phantom `window.go.main.App` / `go.backend.App` namespaces remain
+  2. Desktop-window RPC works again: every method rpc.ts invokes exists on the generated `main.desktop` binding, restoring the desktop transport broken since the #31/#37 restructure (verified via frontend build + binding-shape assertions; TDD where testable)
+  3. The `--serve` HTTP fallback path is unchanged and its existing e2e suite stays green
+**Plans**: TBD
+**UI hint**: yes
+
+</details>
+
 ## Progress
 
-**Execution Order:** Phase 39 (single phase; plans sequenced by plan-phase)
+**Execution Order:** Phases 40-42 (independent issue families — default order 40 → 41 → 42; plans sequenced by plan-phase)
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -137,6 +182,9 @@ Full details: [milestones/v1.16-ROADMAP.md](milestones/v1.16-ROADMAP.md)
 | 37. Nesting Context and Plain Rendering | v1.14 | 7/7 | Complete | 2026-08-30 |
 | 38. Hierarchy Wrapping and Granular Keys | v1.15 | 6/6 | Complete | 2026-08-30 |
 | 39. Edge Style Override (`--edges` flag) | v1.16 | 3/3 | Complete    | 2026-08-31 |
+| 40. Deterministic SVG Output | v1.17 | 0/0 | Not started | - |
+| 41. Check Command | v1.17 | 0/0 | Not started | - |
+| 42. Desktop GUI Binding Fix | v1.17 | 0/0 | Not started | - |
 
 **Post-milestone (2026-08-28):** user-directed design review shipped outside any phase as v1.19.0–v1.20.0 — legend reworked into a floating framed node outside an invisible content cluster (REQUIREMENTS.md LEG-01..03 re-specified in place), queue units render as SVG pipes (SHAPE-01, quick task [260828-qbx](.planning/quick/260828-qbx-render-queue-units-as-horizontal-pipe-sh/)). Quick tasks are not tracked in the phase table above (GSD quick-mode convention).
 

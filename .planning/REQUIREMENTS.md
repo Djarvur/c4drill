@@ -49,12 +49,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REPRO-01 | — | Pending |
-| REPRO-02 | — | Pending |
-| REPRO-03 | — | Pending |
-| CHECK-01 | — | Pending |
-| CHECK-02 | — | Pending |
-| CHECK-03 | — | Pending |
-| CHECK-04 | — | Pending |
-| GUI-01 | — | Pending |
-| GUI-02 | — | Pending |
+| REPRO-01 | Phase 40 | Pending |
+| REPRO-02 | Phase 40 | Pending |
+| REPRO-03 | Phase 40 | Pending |
+| CHECK-01 | Phase 41 | Pending |
+| CHECK-02 | Phase 41 | Pending |
+| CHECK-03 | Phase 41 | Pending |
+| CHECK-04 | Phase 41 | Pending |
+| GUI-01 | Phase 42 | Pending |
+| GUI-02 | Phase 42 | Pending |

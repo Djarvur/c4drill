@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.17
 milestone_name: Issue Sweep
 status: planning
-last_updated: "2026-09-03T18:29:08.397Z"
+last_updated: "2026-09-03T18:35:10.000Z"
 last_activity: 2026-09-03
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,23 +17,23 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-31)
+See: .planning/PROJECT.md (updated 2026-09-03)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
-**Current focus:** Milestone complete
+**Current focus:** v1.17 Issue Sweep — close GitHub issues #42 (byte-reproducible SVG output), #41 (`check` command), #38 (Wails desktop binding fix) across Phases 40-42
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-09-03 — Milestone v1.17 started
+Phase: 40 — Deterministic SVG Output (first of Phases 40-42; all three independent, default order 40 → 41 → 42)
+Plan: — (not yet planned)
+Status: Roadmap created — ready for /gsd:plan-phase 40
+Last activity: 2026-09-03 — v1.17 roadmap created (Phases 40-42 mapped to REPRO-01..03, CHECK-01..04, GUI-01..02; 9/9 requirements covered)
 
 ## Performance Metrics
 
 **Velocity (carry-forward):**
 
-- v1.11: 1 phase (34), 4 plans. v1.12: 1 phase (35), 9 plans. v1.13: 1 phase (36), 6 plans. v1.14: 1 phase (37), 7 plans. v1.15: 2 phases (37, 38), 13 plans + 1 validated quick task.
+- v1.11: 1 phase (34), 4 plans. v1.12: 1 phase (35), 9 plans. v1.13: 1 phase (36), 6 plans. v1.14: 1 phase (37), 7 plans. v1.15: 2 phases (37, 38), 13 plans + 1 validated quick task. v1.16: 1 phase (39), 3 plans.
 
 | Phase | Plans | Notes |
 |-------|-------|-------|
@@ -50,7 +50,7 @@ Decisions are logged in PROJECT.md Key Decisions table (v1.15 phase-level decisi
 
 ### Pending Todos
 
-See .planning/todos/pending/. (1 pending: add CLI flag to override edge routing style — now IN SCOPE as Phase 39 of v1.16; design todo carries the data flow, file list, and the resolved `--plain` open question)
+See .planning/todos/pending/. (v1.16's `--edges` feature todo shipped with v1.16; v1.17 scope comes from GitHub issues #42/#41/#38, not todos)
 
 ### Blockers/Concerns
 
@@ -77,10 +77,10 @@ Items acknowledged and deferred at milestone close on 2026-08-31 (v1.16): 5 open
 
 ## Session Continuity
 
-Last session: 2026-08-31T07:57:42.117Z
-Stopped at: Completed 39-03-PLAN.md
+Last session: 2026-09-03 — v1.17 roadmap created
+Stopped at: ROADMAP.md (v1.17 Phases 40-42) + REQUIREMENTS.md traceability written; STATE.md counters reset
 Resume file: None
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Plan the first phase with /gsd:plan-phase 40 (Phases 40-42 are independent — execute in any order; default 40 → 41 → 42)
