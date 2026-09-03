@@ -23,8 +23,8 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Desktop GUI Fix (issue #38)
 
-- [ ] **GUI-01**: In desktop-window mode the frontend RPC layer calls the Wails-generated binding namespace that matches the actually bound struct (`main.desktop`), so desktop-window RPC works again (broken since the #31/#37 restructure)
-- [ ] **GUI-02**: The `--serve` HTTP fallback path is unchanged and the existing e2e suite stays green
+- [x] **GUI-01**: In desktop-window mode the frontend RPC layer calls the Wails-generated binding namespace that matches the actually bound struct (`main.desktop`), so desktop-window RPC works again (broken since the #31/#37 restructure)
+- [x] **GUI-02**: The `--serve` HTTP fallback path is unchanged and the existing e2e suite stays green
 
 ## Future Requirements
 
@@ -56,5 +56,5 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CHECK-02 | Phase 41 | Pending |
 | CHECK-03 | Phase 41 | Pending |
 | CHECK-04 | Phase 41 | Pending |
-| GUI-01 | Phase 42 | Pending |
-| GUI-02 | Phase 42 | Pending |
+| GUI-01 | Phase 42 | Complete |
+| GUI-02 | Phase 42 | Complete |

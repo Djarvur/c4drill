@@ -127,7 +127,7 @@ Full details: [milestones/v1.16-ROADMAP.md](milestones/v1.16-ROADMAP.md)
 
 - [ ] **Phase 40: Deterministic SVG Output** - Rendering the same model twice yields byte-identical output; edge ids derive from model content, not map iteration (issue #42)
 - [ ] **Phase 41: Check Command** - `c4drill check <file>` validates a model without rendering, with render-identical errors and exit codes (issue #41)
-- [ ] **Phase 42: Desktop GUI Binding Fix** - Frontend RPC aligned to the Wails-generated namespace of the actually bound struct, `main.desktop` (issue #38)
+- [x] **Phase 42: Desktop GUI Binding Fix** - Frontend RPC aligned to the Wails-generated namespace of the actually bound struct, `main.desktop` (issue #38) (completed 2026-09-03)
 
 ### Phase 40: Deterministic SVG Output
 
@@ -189,7 +189,7 @@ Plans:
 **UI hint**: yes
 Plans:
 
-- [ ] 42-01-PLAN.md — Align frontend resolver to `window.go.main.desktop.Dispatch` (TDD: RED binding-shape tests → GREEN resolver fix → D-04 structural + regression gates)
+- [x] 42-01-PLAN.md — Align frontend resolver to `window.go.main.desktop.Dispatch` (TDD: RED binding-shape tests → GREEN resolver fix → D-04 structural + regression gates)
 
 </details>
 
@@ -213,7 +213,7 @@ Plans:
 | 39. Edge Style Override (`--edges` flag) | v1.16 | 3/3 | Complete    | 2026-08-31 |
 | 40. Deterministic SVG Output | v1.17 | 0/0 | Not started | - |
 | 41. Check Command | v1.17 | 0/0 | Not started | - |
-| 42. Desktop GUI Binding Fix | v1.17 | 0/0 | Not started | - |
+| 42. Desktop GUI Binding Fix | v1.17 | 1/1 | Complete   | 2026-09-03 |
 
 **Post-milestone (2026-08-28):** user-directed design review shipped outside any phase as v1.19.0–v1.20.0 — legend reworked into a floating framed node outside an invisible content cluster (REQUIREMENTS.md LEG-01..03 re-specified in place), queue units render as SVG pipes (SHAPE-01, quick task [260828-qbx](.planning/quick/260828-qbx-render-queue-units-as-horizontal-pipe-sh/)). Quick tasks are not tracked in the phase table above (GSD quick-mode convention).
 
