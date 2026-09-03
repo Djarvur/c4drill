@@ -168,7 +168,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 41-01-PLAN.md — check subcommand via shared render front-half (TDD: RED/GREEN/REFACTOR)
+- [x] 41-01-PLAN.md — check subcommand via shared render front-half (TDD: RED/GREEN/REFACTOR)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -212,7 +212,7 @@ Plans:
 | 38. Hierarchy Wrapping and Granular Keys | v1.15 | 6/6 | Complete | 2026-08-30 |
 | 39. Edge Style Override (`--edges` flag) | v1.16 | 3/3 | Complete    | 2026-08-31 |
 | 40. Deterministic SVG Output | v1.17 | 0/0 | Not started | - |
-| 41. Check Command | v1.17 | 0/0 | Not started | - |
+| 41. Check Command | v1.17 | 1/2 | In Progress|  |
 | 42. Desktop GUI Binding Fix | v1.17 | 1/1 | Complete    | 2026-09-03 |
 
 **Post-milestone (2026-08-28):** user-directed design review shipped outside any phase as v1.19.0–v1.20.0 — legend reworked into a floating framed node outside an invisible content cluster (REQUIREMENTS.md LEG-01..03 re-specified in place), queue units render as SVG pipes (SHAPE-01, quick task [260828-qbx](.planning/quick/260828-qbx-render-queue-units-as-horizontal-pipe-sh/)). Quick tasks are not tracked in the phase table above (GSD quick-mode convention).
