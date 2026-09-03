@@ -126,7 +126,7 @@ Full details: [milestones/v1.16-ROADMAP.md](milestones/v1.16-ROADMAP.md)
 **Goal:** Close the three actionable open GitHub issues — byte-reproducible SVG output (#42), a render-free `check` command (#41), and the Wails desktop binding fix (#38). Three independent issue families, one phase each; phases can execute in any order.
 
 - [ ] **Phase 40: Deterministic SVG Output** - Rendering the same model twice yields byte-identical output; edge ids derive from model content, not map iteration (issue #42)
-- [ ] **Phase 41: Check Command** - `c4drill check <file>` validates a model without rendering, with render-identical errors and exit codes (issue #41)
+- [x] **Phase 41: Check Command** - `c4drill check <file>` validates a model without rendering, with render-identical errors and exit codes (issue #41) (completed 2026-09-03)
 - [x] **Phase 42: Desktop GUI Binding Fix** - Frontend RPC aligned to the Wails-generated namespace of the actually bound struct, `main.desktop` (issue #38) (completed 2026-09-03)
 
 ### Phase 40: Deterministic SVG Output
@@ -172,7 +172,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 41-02-PLAN.md — README.adoc + skill/SKILL.md document check
+- [x] 41-02-PLAN.md — README.adoc + skill/SKILL.md document check
 
 ### Phase 42: Desktop GUI Binding Fix
 
@@ -212,7 +212,7 @@ Plans:
 | 38. Hierarchy Wrapping and Granular Keys | v1.15 | 6/6 | Complete | 2026-08-30 |
 | 39. Edge Style Override (`--edges` flag) | v1.16 | 3/3 | Complete    | 2026-08-31 |
 | 40. Deterministic SVG Output | v1.17 | 1/2 | In Progress|  |
-| 41. Check Command | v1.17 | 1/2 | In Progress|  |
+| 41. Check Command | v1.17 | 2/2 | Complete    | 2026-09-03 |
 | 42. Desktop GUI Binding Fix | v1.17 | 1/1 | Complete    | 2026-09-03 |
 
 **Post-milestone (2026-08-28):** user-directed design review shipped outside any phase as v1.19.0–v1.20.0 — legend reworked into a floating framed node outside an invisible content cluster (REQUIREMENTS.md LEG-01..03 re-specified in place), queue units render as SVG pipes (SHAPE-01, quick task [260828-qbx](.planning/quick/260828-qbx-render-queue-units-as-horizontal-pipe-sh/)). Quick tasks are not tracked in the phase table above (GSD quick-mode convention).
