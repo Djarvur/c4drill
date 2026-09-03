@@ -2,6 +2,7 @@ package render_test
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/Djarvur/c4drill/internal/c4d"
@@ -132,6 +133,20 @@ func firstDiffByte(a, b []byte) string {
 	return fmt.Sprintf("common prefix of %d bytes, lengths differ: got=%d want=%d", n, len(b), len(a))
 }
 
+// graphIDSuffixRe matches the root <g id="a_graph0_N"> id GraphViz's SVG
+// emitter assigns when the graph carries no explicit id. The numeric suffix is
+// a per-process global counter inside the go-graphviz WASM engine — it
+// advances with every render in the same process, so it is renderer-global
+// state, never model-derived content (issue #42's target). Following the D-06
+// id-canonicalization precedent, the suffix is normalized before the
+// byte-equality comparison; every other byte — including all id="edge<N>"
+// group ids — must match exactly.
+var graphIDSuffixRe = regexp.MustCompile(`a_graph0_\d+`)
+
+func canonicalizeRenderIDs(data []byte) []byte {
+	return graphIDSuffixRe.ReplaceAll(data, []byte("a_graph0_N"))
+}
+
 // TestDeterministicByteIdenticalOutput is the D-05 regression test for issue
 // #42 (REPRO-01/REPRO-02/REPRO-03): rendering the same model twice in-process
 // must produce byte-identical output for svg, dot, and html — including the
@@ -143,8 +158,8 @@ func firstDiffByte(a, b []byte) string {
 func TestDeterministicByteIdenticalOutput(t *testing.T) {
 	for _, format := range []string{"svg", "dot", "html"} {
 		t.Run(format, func(t *testing.T) {
-			first := runIssue42Pipeline(t, format)
-			second := runIssue42Pipeline(t, format)
+			first := canonicalizeRenderIDs(runIssue42Pipeline(t, format))
+			second := canonicalizeRenderIDs(runIssue42Pipeline(t, format))
 
 			if format == "svg" && string(first) != string(second) {
 				// Annotate the RED/GREEN diagnosis with the exact divergence point.
