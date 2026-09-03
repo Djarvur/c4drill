@@ -39,6 +39,7 @@ Examples:
 // Cobra inherits them parseable onto every subcommand — the same is already
 // true of fmt/convert/serve — so they stay parseable-but-ignored here; only
 // check's help hides them.
+//
 //nolint:gochecknoglobals // flag-name list for the cobra inherited-flag surface (root.go:56 precedent)
 var renderOnlyFlags = []string{
 	"format", "output", "expanded", "plain", "edges", "no-colors",
