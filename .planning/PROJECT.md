@@ -172,11 +172,13 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - Legend: `graph.Graph.Legend` placeholder struct exists; render via the top graph-label HTML table (right-aligned legend column) — GraphViz has no cluster positioning.
 - Release tag for this milestone: **v1.18.0** (product tags v1.13.0–v1.17.0 already exist; GSD milestone numbering is internal).
 
-## Current State (2026-08-31)
+## Current State (2026-09-03)
 
-**Shipped:** v1.16 Edge Style Override — 1 phase (39), 3 plans, 8 tasks, product release v1.23.0. Invocation-global `--edges` routing override (beats global + per-unit edges, survives `--plain`), switch-matrix E2E (~86 cells), zero golden churn. Verification 5/5, UAT 7/7. ~50.3k LOC Go, all tests green, CI at 0 lint issues.
+**Active:** v1.17 Issue Sweep (GitHub issues #42, #41, #38) — Phases 40-42 executing concurrently. Phase 42 (Desktop GUI Binding Fix) complete 2026-09-03: frontend RPC resolver aligned to the Wails-generated `window.go.main.desktop.Dispatch` namespace (issue #38), TDD-verified with binding-shape tests; serve HTTP path untouched. Verified 7/7 truths; one manual item persisted (wails desktop smoke, 42-HUMAN-UAT.md).
 
-**Previously:** v1.15 Hierarchy Wrapping and Granular Keys — 2 phases (37, 38), 13 plans, product releases v1.21.0 + v1.22.0; post-release quick task 260831-01u restored the compact C1 root, narrowed `--no-labels` to edge labels, made edge identity flag-invariant.
+**Previously:** v1.16 Edge Style Override — 1 phase (39), 3 plans, 8 tasks, product release v1.23.0. Invocation-global `--edges` routing override (beats global + per-unit edges, survives `--plain`), switch-matrix E2E (~86 cells), zero golden churn. Verification 5/5, UAT 7/7. ~50.3k LOC Go, all tests green, CI at 0 lint issues.
+
+**Before that:** v1.15 Hierarchy Wrapping and Granular Keys — 2 phases (37, 38), 13 plans, product releases v1.21.0 + v1.22.0; post-release quick task 260831-01u restored the compact C1 root, narrowed `--no-labels` to edge labels, made edge identity flag-invariant.
 
 ## Next Milestone Goals
 
