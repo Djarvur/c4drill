@@ -2,6 +2,7 @@ package validator
 
 import (
 	"maps"
+	"sort"
 
 	"github.com/Djarvur/c4drill/internal/model"
 )
@@ -51,7 +52,20 @@ func BuildIndex(units map[string]*model.Unit, parentPath string) map[string]*Uni
 // IMPORTANT: All link attributes (including Length) are preserved to ensure edge
 // properties are correct regardless of which unit is processed first during edge building.
 func populateIncomingLinks(index map[string]*UnitInfo) {
-	for sourcePath, sourceInfo := range index {
+	// Issue #42 (D-02): iterate a sorted slice of index keys instead of ranging
+	// the map directly. Go map iteration order permutes between runs, which
+	// permuted the synthesized LinksFrom mirror order, the global edge
+	// insertion order, and therefore GraphViz's generated edge<N> SVG ids.
+	// Sorted source iteration makes mirror order a pure function of model
+	// content, so repeated renders are byte-identical.
+	sourcePaths := make([]string, 0, len(index))
+	for sourcePath := range index {
+		sourcePaths = append(sourcePaths, sourcePath)
+	}
+	sort.Strings(sourcePaths)
+
+	for _, sourcePath := range sourcePaths {
+		sourceInfo := index[sourcePath]
 		for _, link := range sourceInfo.Unit.Links {
 			targetInfo, exists := index[link.Peer]
 			if !exists {
