@@ -10,9 +10,9 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Deterministic Rendering (issue #42)
 
-- [ ] **REPRO-01**: Rendering the same model file twice with no changes produces byte-identical SVG output — including the generated `id="edge<N>"` group ids
-- [ ] **REPRO-02**: Edge ids are assigned in a deterministic order derived from model content (sorted/insertion order), never from Go map iteration order
-- [ ] **REPRO-03**: The determinism guarantee holds for every supported output format (`dot`, `svg`, `html`) across repeated runs
+- [x] **REPRO-01**: Rendering the same model file twice with no changes produces byte-identical SVG output — including the generated `id="edge<N>"` group ids
+- [x] **REPRO-02**: Edge ids are assigned in a deterministic order derived from model content (sorted/insertion order), never from Go map iteration order
+- [x] **REPRO-03**: The determinism guarantee holds for every supported output format (`dot`, `svg`, `html`) across repeated runs
 
 ### Check Command (issue #41)
 
@@ -49,9 +49,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REPRO-01 | Phase 40 | Pending |
-| REPRO-02 | Phase 40 | Pending |
-| REPRO-03 | Phase 40 | Pending |
+| REPRO-01 | Phase 40 | Complete |
+| REPRO-02 | Phase 40 | Complete |
+| REPRO-03 | Phase 40 | Complete |
 | CHECK-01 | Phase 41 | Complete |
 | CHECK-02 | Phase 41 | Complete |
 | CHECK-03 | Phase 41 | Complete |

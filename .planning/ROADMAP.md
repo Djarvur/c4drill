@@ -145,7 +145,7 @@ Full details: [milestones/v1.16-ROADMAP.md](milestones/v1.16-ROADMAP.md)
 Plans:
 **Wave 1**
 
-- [ ] 40-01-PLAN.md — Deterministic mirror synthesis (D-02) + issue #42 byte-equality regression pin (D-05) — TDD, wave 1
+- [x] 40-01-PLAN.md — Deterministic mirror synthesis (D-02) + issue #42 byte-equality regression pin (D-05) — TDD, wave 1
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -211,7 +211,7 @@ Plans:
 | 37. Nesting Context and Plain Rendering | v1.14 | 7/7 | Complete | 2026-08-30 |
 | 38. Hierarchy Wrapping and Granular Keys | v1.15 | 6/6 | Complete | 2026-08-30 |
 | 39. Edge Style Override (`--edges` flag) | v1.16 | 3/3 | Complete    | 2026-08-31 |
-| 40. Deterministic SVG Output | v1.17 | 0/0 | Not started | - |
+| 40. Deterministic SVG Output | v1.17 | 1/2 | In Progress|  |
 | 41. Check Command | v1.17 | 1/2 | In Progress|  |
 | 42. Desktop GUI Binding Fix | v1.17 | 1/1 | Complete    | 2026-09-03 |
 
