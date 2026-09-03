@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.17
 milestone_name: Issue Sweep
-status: planning
-last_updated: "2026-09-03T18:35:10.000Z"
-last_activity: 2026-09-03
+status: "Roadmap created — ready for /gsd:plan-phase 40"
+last_updated: "2026-09-03T18:43:38.518Z"
+last_activity: 2026-09-03 — v1.17 roadmap created (Phases 40-42 mapped to REPRO-01..03, CHECK-01..04, GUI-01..02; 9/9 requirements covered)
 progress:
   total_phases: 3
   completed_phases: 0
@@ -77,9 +77,9 @@ Items acknowledged and deferred at milestone close on 2026-08-31 (v1.16): 5 open
 
 ## Session Continuity
 
-Last session: 2026-09-03 — v1.17 roadmap created
-Stopped at: ROADMAP.md (v1.17 Phases 40-42) + REQUIREMENTS.md traceability written; STATE.md counters reset
-Resume file: None
+Last session: 2026-09-03T18:43:38.513Z
+Stopped at: Phase 40 context gathered
+Resume file: .planning/phases/40-deterministic-svg-output/40-CONTEXT.md
 
 ## Operator Next Steps
 
