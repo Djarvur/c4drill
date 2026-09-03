@@ -149,7 +149,10 @@ Full details: [milestones/v1.16-ROADMAP.md](milestones/v1.16-ROADMAP.md)
   2. `check` exits 0 when the model is valid and non-zero when invalid, reporting the same validation errors the render path reports (e.g. VAL orphan-unit rules) — pinned TDD-first with valid and invalid fixtures
   3. `check` runs the same pipeline front-half as render — includes resolved, templates expanded, relative peers resolved, then validation — proven by a composed multi-file fixture that checks exactly as it renders
   4. README documents the `check` command alongside the existing CLI surface (usage, exit codes, no-output behavior)
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 41-01-PLAN.md — check subcommand via shared render front-half (TDD: RED/GREEN/REFACTOR)
+- [ ] 41-02-PLAN.md — README.adoc + skill/SKILL.md document check
 
 ### Phase 42: Desktop GUI Binding Fix
 **Goal**: Desktop-window mode works again — the frontend RPC layer calls the Wails-generated namespace that matches the actually bound Go struct (`main.desktop`).
