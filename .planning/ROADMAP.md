@@ -131,7 +131,7 @@ Full details: [milestones/v1.16-ROADMAP.md](milestones/v1.16-ROADMAP.md)
 
 ### Phase 40: Deterministic SVG Output
 **Goal**: Rendering the same model twice produces byte-identical output — generated edge ids derive deterministically from model content, so diagrams can be diffed, committed, and cached reliably.
-**Depends on**: Nothing (independent of Phases 41-42)
+**Depends on**: Nothing (fully independent)
 **Requirements**: REPRO-01, REPRO-02, REPRO-03
 **Success Criteria** (what must be TRUE):
   1. Rendering the same model file twice in separate invocations produces byte-identical SVG output, including the generated `id="edge<N>"` group ids — pinned by a byte-equality regression test built from the issue #42 reproducer (TDD: RED on current code, GREEN after the fix)
@@ -142,7 +142,7 @@ Full details: [milestones/v1.16-ROADMAP.md](milestones/v1.16-ROADMAP.md)
 
 ### Phase 41: Check Command
 **Goal**: Users can validate a model without rendering — a fast, render-free `check` command that fits CI and edit loops and reports exactly what the render path would report.
-**Depends on**: Nothing (independent of Phases 40 and 42)
+**Depends on**: Nothing (fully independent)
 **Requirements**: CHECK-01, CHECK-02, CHECK-03, CHECK-04
 **Success Criteria** (what must be TRUE):
   1. `c4drill check <file>` validates a model and exits without writing any output files or requiring an output directory
@@ -153,7 +153,7 @@ Full details: [milestones/v1.16-ROADMAP.md](milestones/v1.16-ROADMAP.md)
 
 ### Phase 42: Desktop GUI Binding Fix
 **Goal**: Desktop-window mode works again — the frontend RPC layer calls the Wails-generated namespace that matches the actually bound Go struct (`main.desktop`).
-**Depends on**: Nothing (independent of Phases 40 and 41)
+**Depends on**: Nothing (fully independent)
 **Requirements**: GUI-01, GUI-02
 **Success Criteria** (what must be TRUE):
   1. `internal/gui/frontend/src/rpc.ts` calls `window.go.main.desktop.Dispatch` — the namespace Wails generates for the bound struct (cmd/c4drill-gui `main.desktop`, Wails `Bind`) — and no references to the phantom `window.go.main.App` / `go.backend.App` namespaces remain
