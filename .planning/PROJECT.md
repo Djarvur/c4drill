@@ -174,7 +174,7 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 ## Current State (2026-09-03)
 
-**Active:** v1.17 Issue Sweep (GitHub issues #42, #41, #38) — Phases 40-42 executing concurrently. Phase 42 (Desktop GUI Binding Fix) complete 2026-09-03: frontend RPC resolver aligned to the Wails-generated `window.go.main.desktop.Dispatch` namespace (issue #38), TDD-verified with binding-shape tests; serve HTTP path untouched. Verified 7/7 truths; one manual item persisted (wails desktop smoke, 42-HUMAN-UAT.md).
+**Active:** v1.17 Issue Sweep (GitHub issues #42, #41, #38) — Phases 40-42 executing concurrently. Phase 41 (Check Command) complete 2026-09-03: `c4drill check <file.toml|file.c4d>` (issue #41) validates without rendering through ONE pipeline front-half shared with render (extracted `parseValidatedModel` on cmd/c4drill/root.go) — silent exit 0 valid, byte-identical render validation errors exit 1, writes nothing, documented in README.adoc + skill/SKILL.md. TDD RED→GREEN, 10 behavior pins, verified 4/4. Phase 42 (Desktop GUI Binding Fix) complete 2026-09-03: frontend RPC resolver aligned to the Wails-generated `window.go.main.desktop.Dispatch` namespace (issue #38), TDD-verified with binding-shape tests; serve HTTP path untouched. Verified 7/7 truths; one manual item persisted (wails desktop smoke, 42-HUMAN-UAT.md).
 
 **Previously:** v1.16 Edge Style Override — 1 phase (39), 3 plans, 8 tasks, product release v1.23.0. Invocation-global `--edges` routing override (beats global + per-unit edges, survives `--plain`), switch-matrix E2E (~86 cells), zero golden churn. Verification 5/5, UAT 7/7. ~50.3k LOC Go, all tests green, CI at 0 lint issues.
 
