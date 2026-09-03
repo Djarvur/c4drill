@@ -145,6 +145,9 @@ func NewRootCmd() *cobra.Command {
 	// GUI app consume.
 	cmd.AddCommand(newServeCmd())
 
+	// Subcommand (issue #41): render-free model validation.
+	cmd.AddCommand(newCheckCmd())
+
 	return cmd
 }
 
@@ -173,53 +176,14 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	// Default output directory to input file's directory
 	outDir := resolveOutDir(inputPath)
 
-	// Stage 1: Parse — extension dispatch (D-27): .toml -> TOML front-end,
-	// .c4d -> C4D front-end so a .c4d document renders directly through the
-	// rest of the pipeline unchanged (D-29). Unknown extensions fail closed
-	// with a hard error naming the accepted ones — no fallback parsing.
-	m, err := parseInput(inputPath)
+	// Stages 1→2: parse (extension dispatch), resolve includes, expand
+	// templates, resolve relative peers, validate — the render pipeline
+	// front-half, shared with the check subcommand through ONE helper (D-02)
+	// so the stage order, the stage-prefixed errors, and the validation
+	// error surface cannot drift between check and render (D-03).
+	m, err := parseValidatedModel(cmd, inputPath)
 	if err != nil {
-		return fmt.Errorf("parse: %w", err)
-	}
-
-	// Stage 1a: Resolve includes (Phase 32; runs FIRST — before
-	// template.Expand and Validate). Walks every [[include]] directive,
-	// recursively ParseFile+merges the transitively-included files into one
-	// *parser.Model per D-09/D-10/D-11/INC-08. A no-op (returns m unchanged)
-	// when the model has no [[include]] — guaranteeing no regression for
-	// single-file input. Pipeline ordering is load-bearing: include must run
-	// before template.Expand so templates defined in included files are visible
-	// to [[use]] in the entry file (XC-02).
-	if m, err = include.Resolve(m, filepath.Dir(inputPath), inputPath); err != nil {
-		return fmt.Errorf("include: %w", err)
-	}
-
-	// Stage 1.5: Expand templates (Phase 31; runs after Parse, before
-	// peer.Resolve + Validate). Turns every [[use]] instantiation into a
-	// concrete, parametrized unit subtree drained into m.Units/m.UnitOrder,
-	// producing a model structurally indistinguishable from a hand-authored
-	// one. A no-op (returns m unchanged) when the model has no templates —
-	// guaranteeing no regression for hand-authored-only input. Pipeline
-	// ordering: Parse -> template.Expand -> peer.Resolve -> Validate.
-	m, err = template.Expand(m)
-	if err != nil {
-		return fmt.Errorf("expand: %w", err)
-	}
-
-	// Stage 1.6: Resolve relative peers (Phase 30; runs after
-	// template.Expand, before Validate). Rewrites every bare Link.Peer to an
-	// absolute dotted path so the validator sees only absolute paths. A miss
-	// at root is a hard error naming the peer + host.
-	if err := peer.Resolve(m); err != nil {
-		return fmt.Errorf("resolve peers: %w", err)
-	}
-
-	// Stage 2: Validate
-	valErrors := validator.Validate(m)
-	if len(valErrors) > 0 {
-		validator.ReportErrors(valErrors, cmd.OutOrStderr())
-
-		return errValidationFailed
+		return err
 	}
 
 	// Derive basename from input file
@@ -244,6 +208,71 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil // Success - silent per spec
+}
+
+// parseValidatedModel runs the shared pipeline front-half (stages 1→2, D-02)
+// both the render root command and the check subcommand call — ONE
+// implementation so check reports exactly what render reports (D-03):
+//
+// Stage 1: Parse — extension dispatch (D-27): .toml -> TOML front-end,
+// .c4d -> C4D front-end so a .c4d document renders directly through the
+// rest of the pipeline unchanged (D-29). Unknown extensions fail closed
+// with a hard error naming the accepted ones — no fallback parsing.
+//
+// Stage 1a: Resolve includes (Phase 32; runs FIRST — before
+// template.Expand and Validate). Walks every [[include]] directive,
+// recursively ParseFile+merges the transitively-included files into one
+// *parser.Model per D-09/D-10/D-11/INC-08. A no-op (returns m unchanged)
+// when the model has no [[include]] — guaranteeing no regression for
+// single-file input. Pipeline ordering is load-bearing: include must run
+// before template.Expand so templates defined in included files are visible
+// to [[use]] in the entry file (XC-02).
+//
+// Stage 1.5: Expand templates (Phase 31; runs after Parse, before
+// peer.Resolve + Validate). Turns every [[use]] instantiation into a
+// concrete, parametrized unit subtree drained into m.Units/m.UnitOrder,
+// producing a model structurally indistinguishable from a hand-authored
+// one. A no-op (returns m unchanged) when the model has no templates —
+// guaranteeing no regression for hand-authored-only input. Pipeline
+// ordering: Parse -> template.Expand -> peer.Resolve -> Validate.
+//
+// Stage 1.6: Resolve relative peers (Phase 30; runs after
+// template.Expand, before Validate). Rewrites every bare Link.Peer to an
+// absolute dotted path so the validator sees only absolute paths. A miss
+// at root is a hard error naming the peer + host.
+//
+// Stage 2: Validate — on failure the errors are printed on
+// cmd.OutOrStderr() (the render writer choice) and errValidationFailed is
+// returned; on success the validated model is returned for the callers'
+// stage 3+. Render-only concerns (validateOutputFlags, render.LabelRatio)
+// stay with the render caller (D-05) — check never touches them.
+func parseValidatedModel(cmd *cobra.Command, inputPath string) (*parser.Model, error) {
+	m, err := parseInput(inputPath)
+	if err != nil {
+		return nil, fmt.Errorf("parse: %w", err)
+	}
+
+	if m, err = include.Resolve(m, filepath.Dir(inputPath), inputPath); err != nil {
+		return nil, fmt.Errorf("include: %w", err)
+	}
+
+	m, err = template.Expand(m)
+	if err != nil {
+		return nil, fmt.Errorf("expand: %w", err)
+	}
+
+	if err := peer.Resolve(m); err != nil {
+		return nil, fmt.Errorf("resolve peers: %w", err)
+	}
+
+	valErrors := validator.Validate(m)
+	if len(valErrors) > 0 {
+		validator.ReportErrors(valErrors, cmd.OutOrStderr())
+
+		return nil, errValidationFailed
+	}
+
+	return m, nil
 }
 
 // parseInput parses the input file through the front-end its extension
