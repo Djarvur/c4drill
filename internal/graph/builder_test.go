@@ -1576,8 +1576,11 @@ func TestBuildGraphDeterministicOrder(t *testing.T) {
 		require.Equal(t, "gamma", g.Nodes[2].ID, "third node should be gamma (definition order)")
 	})
 
-	// Test 2: BuildGraph produces edges in definition order by source
-	t.Run("BuildGraph produces edges in definition order by source", func(t *testing.T) {
+	// Test 2: BuildGraph produces edges in ascending Edge.Name order (D-03,
+	// issue #42): the slice is name-sorted so cgraph insertion order is a pure
+	// function of model content, while the definition-order walk still decides
+	// which edges exist and anchors the per-pair sequence numbers.
+	t.Run("BuildGraph produces edges in name order by Edge.Name", func(t *testing.T) {
 		t.Parallel()
 
 		v := view.GenerateC1View(m)
@@ -1585,12 +1588,15 @@ func TestBuildGraphDeterministicOrder(t *testing.T) {
 
 		require.Len(t, g.Edges, 2)
 
-		// Edges should be in definition order by source (zeta first, then alpha)
-		// zeta->alpha comes first, then alpha->gamma
-		require.Equal(t, "zeta", g.Edges[0].Source, "first edge source should be zeta (definition order)")
-		require.Equal(t, "alpha", g.Edges[0].Target, "first edge target should be alpha")
-		require.Equal(t, "alpha", g.Edges[1].Source, "second edge source should be alpha (definition order)")
-		require.Equal(t, "gamma", g.Edges[1].Target, "second edge target should be gamma")
+		// Name order: alpha_to_gamma_1 sorts before zeta_to_alpha_1. The
+		// definition-order walk (zeta first) remains visible in the per-pair
+		// sequence numbers: each pair's first contributing link gets _1.
+		require.Equal(t, "alpha_to_gamma_1", g.Edges[0].Name, "first edge should be alpha_to_gamma_1 (name order, D-03)")
+		require.Equal(t, "alpha", g.Edges[0].Source, "first edge source should be alpha")
+		require.Equal(t, "gamma", g.Edges[0].Target, "first edge target should be gamma")
+		require.Equal(t, "zeta_to_alpha_1", g.Edges[1].Name, "second edge should be zeta_to_alpha_1 (name order, D-03)")
+		require.Equal(t, "zeta", g.Edges[1].Source, "second edge source should be zeta")
+		require.Equal(t, "alpha", g.Edges[1].Target, "second edge target should be alpha")
 	})
 
 	// Test 3: Multiple calls produce identical output order
@@ -1895,10 +1901,18 @@ func TestBuildGraphDefinitionOrder(t *testing.T) {
 	require.Equal(t, "alpha", g.Nodes[1].ID, "second node should be alpha (definition order)")
 	require.Equal(t, "gamma", g.Nodes[2].ID, "third node should be gamma (definition order)")
 
-	// Edges should also be in definition order by source
+	// Edges: D-03 (issue #42) — g.Edges leaves buildEdges in ascending
+	// Edge.Name order, a pure function of model content. The definition-order
+	// walk still chooses WHICH edges exist and anchors the per-pair sequence
+	// numbers; the slice order is name-sorted so cgraph insertion order (and
+	// GraphViz's edge<N> SVG ids) can never depend on walk or map iteration.
 	require.Len(t, g.Edges, 2)
-	require.Equal(t, "zulu", g.Edges[0].Source, "first edge source should be zulu")
-	require.Equal(t, "alpha", g.Edges[1].Source, "second edge source should be alpha")
+	require.Equal(t, "alpha_to_gamma_1", g.Edges[0].Name, "name-order puts alpha_to_gamma first (D-03)")
+	require.Equal(t, "zulu_to_alpha_1", g.Edges[1].Name, "name-order puts zulu_to_alpha second (D-03)")
+	require.Equal(t, "alpha", g.Edges[0].Source, "first edge is alpha->gamma")
+	require.Equal(t, "gamma", g.Edges[0].Target, "first edge is alpha->gamma")
+	require.Equal(t, "zulu", g.Edges[1].Source, "second edge is zulu->alpha")
+	require.Equal(t, "alpha", g.Edges[1].Target, "second edge is zulu->alpha")
 }
 
 // TestBuildEdgesPairCollapse verifies D-01/D-03/D-06: multiple links landing on the
