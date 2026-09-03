@@ -16,9 +16,9 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Check Command (issue #41)
 
-- [ ] **CHECK-01**: User can run `c4drill check <file>` to validate a model without producing any output files or requiring an output directory
-- [ ] **CHECK-02**: `check` exits 0 when the model is valid and exits non-zero when invalid, reporting the same validation errors the render path reports (e.g. orphan-unit VAL rules)
-- [ ] **CHECK-03**: `check` runs the same pipeline front-half as render — includes resolved, templates expanded, relative peers resolved — so composed multi-file sources validate exactly as they render
+- [x] **CHECK-01**: User can run `c4drill check <file>` to validate a model without producing any output files or requiring an output directory
+- [x] **CHECK-02**: `check` exits 0 when the model is valid and exits non-zero when invalid, reporting the same validation errors the render path reports (e.g. orphan-unit VAL rules)
+- [x] **CHECK-03**: `check` runs the same pipeline front-half as render — includes resolved, templates expanded, relative peers resolved — so composed multi-file sources validate exactly as they render
 - [ ] **CHECK-04**: README documents the `check` command alongside the existing CLI surface
 
 ### Desktop GUI Fix (issue #38)
@@ -52,9 +52,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REPRO-01 | Phase 40 | Pending |
 | REPRO-02 | Phase 40 | Pending |
 | REPRO-03 | Phase 40 | Pending |
-| CHECK-01 | Phase 41 | Pending |
-| CHECK-02 | Phase 41 | Pending |
-| CHECK-03 | Phase 41 | Pending |
+| CHECK-01 | Phase 41 | Complete |
+| CHECK-02 | Phase 41 | Complete |
+| CHECK-03 | Phase 41 | Complete |
 | CHECK-04 | Phase 41 | Pending |
 | GUI-01 | Phase 42 | Complete |
 | GUI-02 | Phase 42 | Complete |
