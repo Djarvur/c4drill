@@ -141,7 +141,11 @@ Full details: [milestones/v1.16-ROADMAP.md](milestones/v1.16-ROADMAP.md)
   3. The byte-equality-across-repeated-runs guarantee is asserted for every supported output format: `dot`, `svg`, and `html`
   4. Existing canonicalDOT goldens (DI-1/COMPAT-02/REF-05) and the full test suite stay green — the fix changes only id-assignment ordering, not rendered semantics
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 40-01-PLAN.md — Deterministic mirror synthesis (D-02) + issue #42 byte-equality regression pin (D-05) — TDD, wave 1
+- [ ] 40-02-PLAN.md — Defense-in-depth name-sorted edge slice (D-03) + no-semantic-change gate (D-04/D-06) — wave 2
 
 ### Phase 41: Check Command
 
@@ -155,7 +159,9 @@ Full details: [milestones/v1.16-ROADMAP.md](milestones/v1.16-ROADMAP.md)
   3. `check` runs the same pipeline front-half as render — includes resolved, templates expanded, relative peers resolved, then validation — proven by a composed multi-file fixture that checks exactly as it renders
   4. README documents the `check` command alongside the existing CLI surface (usage, exit codes, no-output behavior)
 
-**Plans**: 2 plansPlans:
+**Plans**: 2 plans
+
+Plans:
 **Wave 1**
 
 - [ ] 41-01-PLAN.md — check subcommand via shared render front-half (TDD: RED/GREEN/REFACTOR)
