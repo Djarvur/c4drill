@@ -211,7 +211,7 @@ Plans:
 | 37. Nesting Context and Plain Rendering | v1.14 | 7/7 | Complete | 2026-08-30 |
 | 38. Hierarchy Wrapping and Granular Keys | v1.15 | 6/6 | Complete | 2026-08-30 |
 | 39. Edge Style Override (`--edges` flag) | v1.16 | 3/3 | Complete    | 2026-08-31 |
-| 40. Deterministic SVG Output | v1.17 | 2/2 | Complete   | 2026-09-03 |
+| 40. Deterministic SVG Output | v1.17 | 2/2 | Complete    | 2026-09-03 |
 | 41. Check Command | v1.17 | 2/2 | Complete    | 2026-09-03 |
 | 42. Desktop GUI Binding Fix | v1.17 | 1/1 | Complete    | 2026-09-03 |
 
