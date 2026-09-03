@@ -4786,3 +4786,90 @@ func TestBuildGraph_EdgeOverride(t *testing.T) {
 		assert.Equal(t, "ortho", g.EdgeStyle, "flag beats the resolved model value on the expanded copy (D-03)")
 	})
 }
+
+// TestEdgeOrderNameSortedAndStable pins the D-03 defense-in-depth contract
+// (issue #42): the final g.Edges slice leaves buildEdges in ascending
+// Edge.Name order, so cgraph edge insertion order — and therefore GraphViz's
+// generated edge<N> SVG group ids — is a pure function of model content even
+// if a future walk regresses into Go map iteration. SortStableFunc preserves
+// the deterministic per-pair counter order for equal names; names are unique
+// by construction (assignEdgeName), so the sort must never introduce
+// duplicates or reorder equal names.
+func TestEdgeOrderNameSortedAndStable(t *testing.T) {
+	t.Parallel()
+
+	// edgeModel builds a model whose definition order (z, m, a, b) differs
+	// from name order, with edges from three+ source units and one multi-link
+	// pair (m->b twice) so per-pair sequence counters advance.
+	edgeModel := func() *parser.Model {
+		return &parser.Model{
+			Properties: model.Properties{Name: "Edge Order"},
+			UnitOrder:  []string{"z", "m", "a", "b"},
+			Units: map[string]*model.Unit{
+				"z": {
+					Type: model.TypeSystem, Name: "Z",
+					Links: []model.Link{
+						{Peer: "m"},
+						{Peer: "a"},
+					},
+				},
+				"m": {
+					Type: model.TypeSystem, Name: "M",
+					Links: []model.Link{
+						{Peer: "b", Technology: "HTTP"},
+						{Peer: "b", Technology: "gRPC"},
+					},
+				},
+				"a": {
+					Type: model.TypeSystem, Name: "A",
+					Links: []model.Link{{Peer: "b"}},
+				},
+				"b": {
+					Type: model.TypeSystem, Name: "B",
+					Links: []model.Link{{Peer: "m"}},
+				},
+			},
+		}
+	}
+
+	edgeNames := func() []string {
+		v := view.GenerateC1View(edgeModel())
+		require.NotNil(t, v, "GenerateC1View should return a view")
+
+		g := graph.BuildGraph(v)
+		require.NotNil(t, g, "BuildGraph should return a graph")
+		require.NotEmpty(t, g.Edges, "the model must produce edges")
+
+		names := make([]string, 0, len(g.Edges))
+		for _, e := range g.Edges {
+			names = append(names, e.Name)
+		}
+		return names
+	}
+
+	first := edgeNames()
+
+	// (b) stability: building the graph twice from the same model yields the
+	// identical Edge.Name sequence.
+	second := edgeNames()
+	require.Equal(t, first, second,
+		"two builds of the same model must produce identical Edge.Name sequences")
+
+	// (c) invariant: names stay unique — sorting must not introduce duplicates.
+	seen := make(map[string]int, len(first))
+	for _, n := range first {
+		seen[n]++
+	}
+	for n, count := range seen {
+		require.Equal(t, 1, count, "edge name %q must be unique, found %d times", n, count)
+	}
+
+	// (a) sortedness: names are non-decreasing under strings.Compare across
+	// the whole slice (RED on pre-sort code: walk order is UnitOrder-based,
+	// not name-ordered).
+	for i := 1; i < len(first); i++ {
+		require.LessOrEqual(t, strings.Compare(first[i-1], first[i]), 0,
+			"g.Edges must be non-decreasing by Edge.Name at index %d: %q > %q (full sequence: %v)",
+			i, first[i-1], first[i], first)
+	}
+}
