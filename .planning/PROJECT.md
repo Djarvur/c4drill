@@ -90,6 +90,20 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - ✓ Switch-matrix E2E (GEDGE-07): `--edges` × generation (root / drill-down / `--expanded`) × `--plain` asserted via the graphviz `splines` attribute in RAW dot (~86 cells, `TestEdgesComposition` over the golden-free `edges_override.toml` fixture carrying both precedence layers)
 - ✓ Backward compat (GEDGE-08): without the flag, all existing canonicalDOT goldens pass untouched — zero re-baselining; scope.go resolution and converter mapping unchanged
 
+## Current Milestone: v1.17 Issue Sweep
+
+**Goal:** Close the three actionable open GitHub issues — byte-reproducible SVG output, a render-free `check` command, and the Wails desktop binding fix.
+
+**Target features:**
+
+- **Deterministic rendering (#42)** — rendering the same model twice with no changes produces byte-identical SVG output; generated edge ids derive from a deterministic ordering (not Go map iteration).
+- **`check` command (#41)** — `c4drill check <file>` runs the full model validation without producing output; exit 0 when valid, non-zero with the same errors render reports.
+- **Wails desktop binding fix (#38)** — `internal/gui/frontend/src/rpc.ts` calls the namespace Wails actually generates for the bound struct (`main.desktop`), restoring desktop-window RPC; `--serve` HTTP fallback unaffected.
+
+**Key context:**
+- Source: GitHub issues #42, #41, #38 (filed 2026-09-01/02); each carries a reproducer or a documented fix direction.
+- Out of scope: #34 Zed preview panel (blocked upstream on zed-industries/zed#53403); #35 JetBrains live-IDE validation (needs unrestricted network + interactive `runIde` — environmental, not codeable from a CLI agent).
+
 ## Previous Milestone: v1.16 Edge Style Override — COMPLETE (2026-08-31)
 
 **Goal:** Let users override the edge routing style per invocation via a `--edges <style>` CLI flag — producing variants of the same model (e.g. expanded-with-straight vs non-expanded-with-spline) without editing or duplicating the model file.
@@ -128,7 +142,7 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 ## Current Focus
 
-Planning the next milestone — nothing active. Remaining candidate backlog:
+**v1.17 Issue Sweep is active** — closing GitHub issues #42 (reproducible SVG), #41 (`check` command), #38 (Wails binding fix). Remaining candidate backlog (unchanged):
 - Template multi-output / `for_each` fan-out (Future, REQUIREMENTS archive)
 - Compact-link shorthand variants beyond baseline (Future, REQUIREMENTS archive)
 - C4D polish warnings: WR-03 duplicate `properties {}` last-win, WR-04 skill type-inference table drift, WR-05 quoted-label whitespace trim
@@ -363,4 +377,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-31 — milestone v1.16 COMPLETE (Edge Style Override shipped as v1.23.0)*
+*Last updated: 2026-09-03 — milestone v1.17 Issue Sweep started (GitHub issues #42, #41, #38)*
