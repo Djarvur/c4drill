@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -2710,9 +2711,9 @@ func TestClusterReferenceURL_RenderedDOT(t *testing.T) {
 					},
 				},
 				"s": {
-					Type:      model.TypeSystem,
-					Name:      "S",
-					Reference: "https://example.com/docs/s",
+					Type:         model.TypeSystem,
+					Name:         "S",
+					Reference:    "https://example.com/docs/s",
 					SubunitOrder: []string{"api"},
 					Subunits: map[string]*model.Unit{
 						"api": {Type: model.TypeContainer, Name: "API"},
@@ -4886,4 +4887,169 @@ func TestEdgeOrderNameSortedAndStable(t *testing.T) {
 			"g.Edges must be non-decreasing by Edge.Name at index %d: %q > %q (full sequence: %v)",
 			i, first[i-1], first[i], first)
 	}
+}
+
+// clusterPenwidthValues extracts, per subgraph cluster, the penwidth value
+// carried by THAT cluster's own attribute statement (the `graph [...]` block
+// directly inside the subgraph). Edge statements carry their own penwidth
+// (1/2) and are not cluster attributes, so only `graph [` statements are
+// scanned. Clusters whose attribute statement carries no penwidth map to an
+// empty slice.
+func clusterPenwidthValues(t *testing.T, dot string) map[string][]string {
+	t.Helper()
+
+	clusterRe := regexp.MustCompile(`^\s*subgraph "?(cluster_[^" ]*)"?\s*\{\s*$`)
+	attrStartRe := regexp.MustCompile(`^\s*graph \[`)
+	penRe := regexp.MustCompile(`penwidth=("?)([\d.]+)("?)`)
+
+	values := make(map[string][]string)
+	stack := make([]string, 0)
+	lines := strings.Split(dot, "\n")
+
+	for i := 0; i < len(lines); {
+		line := lines[i]
+
+		if m := clusterRe.FindStringSubmatch(line); m != nil {
+			stack = append(stack, m[1])
+			i++
+
+			continue
+		}
+
+		if strings.TrimSpace(line) == "}" && len(stack) > 0 {
+			stack = stack[:len(stack)-1]
+			i++
+
+			continue
+		}
+
+		if len(stack) > 0 && attrStartRe.MatchString(line) {
+			// The cluster attribute statement spans until its closing `];`.
+			var sb strings.Builder
+			for i < len(lines) {
+				sb.WriteString(lines[i])
+				sb.WriteString("\n")
+				if strings.Contains(lines[i], "];") {
+					break
+				}
+				i++
+			}
+
+			id := stack[len(stack)-1]
+			if _, ok := values[id]; !ok {
+				values[id] = []string{}
+			}
+			for _, m := range penRe.FindAllStringSubmatch(sb.String(), -1) {
+				values[id] = append(values[id], m[2])
+			}
+			i++
+
+			continue
+		}
+
+		i++
+	}
+
+	return values
+}
+
+// assertSubjectBoundaryPenwidth pins BOLD-01/02 on one raw-DOT render: the
+// subject boundary cluster carries exactly penwidth=3.0, and no other cluster
+// on the same diagram carries any penwidth attribute.
+func assertSubjectBoundaryPenwidth(t *testing.T, dot, subject string) {
+	t.Helper()
+
+	pw := clusterPenwidthValues(t, dot)
+	require.Contains(t, pw, subject, "subject cluster %s must render", subject)
+	require.Equal(t, []string{"3.0"}, pw[subject],
+		"subject cluster must carry exactly penwidth=3.0 (BOLD-01)")
+
+	for id, vals := range pw {
+		if id == subject {
+			continue
+		}
+		assert.Empty(t, vals, "cluster %s must carry no penwidth attribute (BOLD-01/02)", id)
+	}
+}
+
+// TestSubjectBoundaryNoCollateral pins BOLD-01/D-04: the collapsed C1 root and
+// --expanded renders carry no bold-boundary penwidth anywhere, the --expanded
+// output stays canonical-identical to the committed golden (COMPAT-02), and a
+// deep-link C3 drill-down emphasizes its subject boundary cluster only.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestSubjectBoundaryNoCollateral(t *testing.T) {
+	m, err := parser.ParseFile("../../cmd/c4drill/testdata/multilevel.toml")
+	require.NoError(t, err)
+
+	valErrors := validator.Validate(m)
+	require.Empty(t, valErrors, "model should be valid")
+
+	t.Run("collapsed C1 root carries no bold penwidth", func(t *testing.T) {
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraph(v)
+
+		dotData, err := render.RenderDOT(g)
+		require.NoError(t, err)
+
+		assert.NotRegexp(t, regexp.MustCompile(`penwidth=3\.0`), string(dotData),
+			"collapsed C1 root must carry no bold boundary penwidth (BOLD-01/D-04)")
+	})
+
+	t.Run("expanded output stays canonical-identical to the golden", func(t *testing.T) {
+		v := view.GenerateExpandedView(m)
+		g := graph.BuildExpandedGraph(v)
+
+		dotData, err := render.RenderDOT(g)
+		require.NoError(t, err)
+
+		expected, err := os.ReadFile("../../cmd/c4drill/testdata/multilevel.expanded.dot")
+		require.NoError(t, err)
+
+		// DI-1: order-insensitive canonical comparison — the committed golden
+		// must stay green unchanged (COMPAT-02, D-04).
+		require.Equal(t, canonical.Canonical(t, string(expected)), canonical.Canonical(t, string(dotData)),
+			"expanded DOT must match the committed golden semantically (COMPAT-02)")
+	})
+
+	t.Run("deep-link C3 drill-down emphasizes the subject boundary only", func(t *testing.T) {
+		// Mirror of the CTX-02 deep-link fixture (builder_test.go:1237-1298):
+		// an external webUser links into mainSystem.iam.iamApi, registering the
+		// deep-link chain through the iam container.
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"webUser": {
+					Type:  model.TypePersonExternal,
+					Name:  "Web User",
+					Links: []model.Link{{Peer: "mainSystem.iam.iamApi"}},
+				},
+				"mainSystem": {
+					Type:         model.TypeSystem,
+					Name:         "Main System",
+					SubunitOrder: []string{"iam"},
+					Subunits: map[string]*model.Unit{
+						"iam": {
+							Type:         model.TypeContainer,
+							Name:         "IAM",
+							SubunitOrder: []string{"iamApi"},
+							Subunits: map[string]*model.Unit{
+								"iamApi": {Type: model.TypeComponent, Name: "IAM API"},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		v := view.GenerateC3View(m, "mainSystem.iam")
+		require.NotNil(t, v)
+
+		g := graph.BuildGraph(v)
+
+		dotData, err := render.RenderDOT(g)
+		require.NoError(t, err)
+
+		assertSubjectBoundaryPenwidth(t, string(dotData), "cluster_mainSystem.iam")
+	})
 }

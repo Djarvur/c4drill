@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -2932,4 +2933,134 @@ func TestEdgesComposition(t *testing.T) {
 			}
 		})
 	}
+}
+
+// clusterPenwidthValues extracts, per subgraph cluster, the penwidth value
+// carried by THAT cluster's own attribute statement — the `graph [...]` block
+// directly inside the subgraph. Edge statements carry their own penwidth (1/2)
+// and are not cluster attributes, so only `graph [` statements are scanned.
+// Clusters whose attribute statement carries no penwidth map to an empty slice.
+func clusterPenwidthValues(t *testing.T, dot string) map[string][]string {
+	t.Helper()
+
+	clusterRe := regexp.MustCompile(`^\s*subgraph "?(cluster_[^" ]*)"?\s*\{\s*$`)
+	attrStartRe := regexp.MustCompile(`^\s*graph \[`)
+	penRe := regexp.MustCompile(`penwidth=("?)([\d.]+)("?)`)
+
+	values := make(map[string][]string)
+	stack := make([]string, 0)
+	lines := strings.Split(dot, "\n")
+
+	for i := 0; i < len(lines); {
+		line := lines[i]
+
+		if m := clusterRe.FindStringSubmatch(line); m != nil {
+			stack = append(stack, m[1])
+			i++
+
+			continue
+		}
+
+		if strings.TrimSpace(line) == "}" && len(stack) > 0 {
+			stack = stack[:len(stack)-1]
+			i++
+
+			continue
+		}
+
+		if len(stack) > 0 && attrStartRe.MatchString(line) {
+			// The cluster attribute statement spans until its closing `];`.
+			var sb strings.Builder
+			for i < len(lines) {
+				sb.WriteString(lines[i])
+				sb.WriteString("\n")
+				if strings.Contains(lines[i], "];") {
+					break
+				}
+				i++
+			}
+
+			id := stack[len(stack)-1]
+			if _, ok := values[id]; !ok {
+				values[id] = []string{}
+			}
+			for _, m := range penRe.FindAllStringSubmatch(sb.String(), -1) {
+				values[id] = append(values[id], m[2])
+			}
+			i++
+
+			continue
+		}
+
+		i++
+	}
+
+	return values
+}
+
+// assertSubjectBoundaryPenwidth pins BOLD-01/02 on one raw-DOT render: the
+// subject boundary cluster carries exactly penwidth=3.0, and no other cluster
+// on the same diagram carries any penwidth attribute.
+func assertSubjectBoundaryPenwidth(t *testing.T, dot, subject string) {
+	t.Helper()
+
+	pw := clusterPenwidthValues(t, dot)
+	require.Contains(t, pw, subject, "subject cluster %s must render", subject)
+	require.Equal(t, []string{"3.0"}, pw[subject],
+		"subject cluster must carry exactly penwidth=3.0 (BOLD-01)")
+
+	for id, vals := range pw {
+		if id == subject {
+			continue
+		}
+		assert.Empty(t, vals, "cluster %s must carry no penwidth attribute (BOLD-01/02)", id)
+	}
+}
+
+// TestSubjectBoundaryCLIFlagMatrix proves BOLD-01/02/03 end-to-end on the
+// public multilevel fixture: C2 and deep-link C3 drill-down DOTs carry
+// penwidth=3.0 on the subject boundary cluster only; the collapsed C1 root and
+// --expanded renders carry no bold penwidth anywhere; --plain keeps the
+// semantic emphasis (D-03).
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestSubjectBoundaryCLIFlagMatrix(t *testing.T) {
+	noBoldPenRe := regexp.MustCompile(`penwidth=3\.0`)
+
+	t.Run("collapsed C1 root has no bold penwidth", func(t *testing.T) {
+		dir := generateMultilevelOutput(t, "dot")
+		dot := readOutputFile(t, filepath.Join(dir, "multilevel.dot"))
+
+		assert.NotRegexp(t, noBoldPenRe, dot,
+			"collapsed C1 root must carry no bold boundary penwidth (BOLD-01/D-04)")
+	})
+
+	t.Run("C2 drill-down emphasizes cluster_mainSystem only", func(t *testing.T) {
+		dir := generateMultilevelOutput(t, "dot")
+		dot := readOutputFile(t, filepath.Join(dir, "multilevel", "mainSystem.dot"))
+
+		assertSubjectBoundaryPenwidth(t, dot, "cluster_mainSystem")
+	})
+
+	t.Run("deep-link C3 drill-down emphasizes the subject boundary only", func(t *testing.T) {
+		dir := generateMultilevelOutput(t, "dot")
+		dot := readOutputFile(t, filepath.Join(dir, "multilevel", "mainSystem", "sshAuth.dot"))
+
+		assertSubjectBoundaryPenwidth(t, dot, "cluster_mainSystem.sshAuth")
+	})
+
+	t.Run("--expanded carries no bold penwidth", func(t *testing.T) {
+		dir := generateFixtureOutput(t, "multilevel.toml", "dot", "--expanded")
+		dot := readOutputFile(t, filepath.Join(dir, "multilevel.expanded.dot"))
+
+		assert.NotRegexp(t, noBoldPenRe, dot,
+			"--expanded output must carry no bold boundary penwidth (BOLD-03/D-04)")
+	})
+
+	t.Run("--plain keeps the bold boundary on C2", func(t *testing.T) {
+		dir := generateFixtureOutput(t, "multilevel.toml", "dot", "--plain")
+		dot := readOutputFile(t, filepath.Join(dir, "multilevel", "mainSystem.dot"))
+
+		assertSubjectBoundaryPenwidth(t, dot, "cluster_mainSystem")
+	})
 }
