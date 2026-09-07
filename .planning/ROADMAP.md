@@ -14,6 +14,7 @@
 - ✅ **v1.15 Hierarchy Wrapping and Granular Keys** — Phase 38 (SHIPPED 2026-08-30) — product release tag: v1.22.0
 - ✅ **v1.16 Edge Style Override** — Phase 39 (SHIPPED 2026-08-31) → [archive](milestones/v1.16-ROADMAP.md) — product release tag: v1.23.0
 - ✅ **v1.17 Issue Sweep** — Phases 40-42 (SHIPPED 2026-09-03) → [archive](milestones/v1.17-ROADMAP.md) — product release tag: v1.25.0
+- 🚧 **v1.18 Bold Subject Boundary** — Phase 43 (IN PROGRESS, started 2026-09-07)
 
 ## Phases
 
@@ -135,6 +136,27 @@ Full details: [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md)
 
 </details>
 
+<details>
+<summary>🚧 v1.18 Bold Subject Boundary (Phase 43) — IN PROGRESS (started 2026-09-07)</summary>
+
+**Goal:** The boundary of the element a non-expanded diagram depicts renders with a bold triple-width border — viewers instantly see which element the scheme belongs to.
+
+- [ ] **Phase 43: Bold Subject Boundary** - On every non-expanded (drill-down) view the subject unit's boundary cluster draws with `penwidth=3`; the emphasis is semantic (survives `--plain`/`--no-styles`); everything else unchanged (issue: user feedback 2026-09-07)
+
+### Phase 43: Bold Subject Boundary
+
+**Goal**: Every non-expanded view shows the subject unit's boundary with a triple-width (penwidth 3) border; other clusters unchanged; semantic so it survives `--plain`/`--no-styles`; expanded views and C1 root untouched.
+**Depends on**: Nothing (fully independent)
+**Requirements**: BOLD-01, BOLD-02, BOLD-03
+**Success Criteria** (what must be TRUE):
+  1. Raw DOT of a drill-down view asserts `penwidth=3` on the subject boundary cluster only — every other cluster keeps its previous attributes (TDD: RED on current output, GREEN after)
+  2. The emphasis appears on C2, C3, and deep-link drill-down views (multi-level fixture); collapsed C1 root output is byte-identical to before (no boundary clusters there)
+  3. `--plain` and `--no-styles` renders keep the bold boundary; `--expanded` output is byte-identical to v1.17 (no subject concept there)
+  4. CanonicalDOT goldens re-baselined ONLY for subject-boundary clusters (diff per golden = penwidth attribute only); full suite green
+**Plans**: TBD
+
+</details>
+
 ## Progress
 
 **Execution Order:** Phases 40-42 (independent issue families — default order 40 → 41 → 42; plans sequenced by plan-phase)
@@ -156,6 +178,7 @@ Full details: [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md)
 | 40. Deterministic SVG Output | v1.17 | 2/2 | Complete    | 2026-09-03 |
 | 41. Check Command | v1.17 | 2/2 | Complete    | 2026-09-03 |
 | 42. Desktop GUI Binding Fix | v1.17 | 1/1 | Complete    | 2026-09-03 |
+| 43. Bold Subject Boundary | v1.18 | 0/0 | Not started | - |
 
 **Post-milestone (2026-08-28):** user-directed design review shipped outside any phase as v1.19.0–v1.20.0 — legend reworked into a floating framed node outside an invisible content cluster (REQUIREMENTS.md LEG-01..03 re-specified in place), queue units render as SVG pipes (SHAPE-01, quick task [260828-qbx](.planning/quick/260828-qbx-render-queue-units-as-horizontal-pipe-sh/)). Quick tasks are not tracked in the phase table above (GSD quick-mode convention).
 
