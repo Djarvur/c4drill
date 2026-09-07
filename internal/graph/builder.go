@@ -410,6 +410,11 @@ func buildBoundaryCluster(v *view.View) *Cluster {
 		}
 	}
 
+	// Bold subject boundary (BOLD-01): the boundary frame IS the depicted unit,
+	// so it draws at triple width. Semantic — set at construction, outside the
+	// author-override path, so it survives --plain/--no-styles (D-03).
+	style.BorderWidth = 3.0
+
 	return &Cluster{
 		ID:       v.ExpandedUnit,
 		Label:    label,
