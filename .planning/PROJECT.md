@@ -98,6 +98,22 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - ✓ `check` command (CHECK-01..04): `c4drill check <file.toml|file.c4d>` validates without rendering or writing anything — one pipeline front-half shared with render (extracted `parseValidatedModel`), byte-identical errors and exit codes, silent exit 0 on valid, composed multi-file sources validate exactly as they render; documented in README.adoc + skill/SKILL.md — v1.25.0
 - ✓ Desktop RPC fix (GUI-01..02): frontend transport resolver calls the Wails-generated `window.go.main.desktop.Dispatch` (matching the actually bound struct); zero phantom `main.App`/`backend.App` references; `--serve` HTTP path untouched, e2e green — v1.25.0
 
+## Current Milestone: v1.18 Bold Subject Boundary
+
+**Goal:** Make the boundary group of the element a non-expanded diagram depicts unmistakable — drawn with a bold triple-width border, so viewers instantly see which element the scheme belongs to.
+
+**Target features:**
+
+- **Bold subject boundary** — on every non-expanded drill-down view (C2/C3/deep-link), the subject unit's boundary cluster renders with `penwidth=3` (triple the default 1.0); all other clusters on the same view keep their regular borders.
+- **Semantic, not author formatting** — the emphasis survives `--plain` and `--no-styles` (same rationale as kind-derived edge colours and the legend): a navigation aid, not content styling.
+- **Zero behavior change elsewhere** — expanded-mode views, node borders, edges, legend untouched; golden updates limited to the subject-boundary delta.
+
+**Key context:**
+- Source: user feedback 2026-09-07 — hard to tell which element a non-expanded scheme refers to.
+- Fix surface confirmed: `buildBoundaryCluster` (internal/graph/builder.go:373) is the single site creating the subject boundary ("the boundary frame IS the unit on its own child diagram"); `NodeStyle` (internal/graph/graph.go:195) has no border-width field yet; `applyClusterStyle` (internal/render/converter.go:656) emits cluster attributes.
+- Out of scope: `--expanded` views (no single subject), collapsed C1 root (no boundary clusters there), node shapes, legend.
+- Backlog: template fan-out, C4D polish warnings WR-03..05, docs drift, #34/#35 human follow-ups — unchanged, unaddressed by this milestone.
+
 ## Previous Milestone: v1.17 Issue Sweep — COMPLETE (2026-09-03)
 
 **Goal:** Close the three actionable open GitHub issues — byte-reproducible SVG output, a render-free `check` command, and the Wails desktop binding fix.
