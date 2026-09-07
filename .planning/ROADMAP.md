@@ -153,7 +153,17 @@ Full details: [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md)
   2. The emphasis appears on C2, C3, and deep-link drill-down views (multi-level fixture); collapsed C1 root output is byte-identical to before (no boundary clusters there)
   3. `--plain` and `--no-styles` renders keep the bold boundary; `--expanded` output is byte-identical to v1.17 (no subject concept there)
   4. CanonicalDOT goldens re-baselined ONLY for subject-boundary clusters (diff per golden = penwidth attribute only); full suite green
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+
+**Wave 1**
+
+- [ ] 43-01-PLAN.md — Semantic bold subject boundary: NodeStyle.BorderWidth + buildBoundaryCluster emphasis + applyClusterStyle penwidth emission, TDD RED/GREEN/REFACTOR with C2/C3/deep-link raw-DOT assertions and --plain/--no-styles survival
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 43-02-PLAN.md — Golden-delta audit (subject-boundary penwidth only) + PROJECT.md As of v1.18
 
 </details>
 
