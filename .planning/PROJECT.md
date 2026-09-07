@@ -12,6 +12,8 @@ As of v1.16, edge routing is per-invocation overridable: `--edges <style>` (`str
 
 As of v1.17, output is byte-reproducible — rendering the same model twice yields byte-identical SVG, DOT, and HTML (deterministic edge-id ordering, fixed at the validator's mirror synthesis and guarded by a stable edge-slice sort); a `check` command validates any model without rendering or writing anything, reporting byte-identical errors and exit codes to the render path; and the GUI desktop transport calls the Wails-generated `main.desktop` binding, restoring desktop-window RPC.
 
+As of v1.18, every non-expanded drill-down view (C2, C3, deep-link) draws the boundary of the depicted unit with a bold triple-width penwidth=3.0 border — a semantic navigation aid that survives `--plain`/`--no-styles` with no new flag, while expanded views, the collapsed C1 root, and every other cluster, node, legend, and edge stay unchanged.
+
 ## Core Value
 
 Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
