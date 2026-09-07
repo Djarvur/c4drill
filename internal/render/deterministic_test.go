@@ -123,7 +123,7 @@ func firstDiffByte(a, b []byte) string {
 		n = len(b)
 	}
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if a[i] != b[i] {
 			return fmt.Sprintf("first differing byte at index %d: got %q want %q (len got=%d want=%d)",
 				i, b[i], a[i], len(b), len(a))

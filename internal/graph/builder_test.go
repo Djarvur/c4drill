@@ -4859,6 +4859,7 @@ func TestEdgeOrderNameSortedAndStable(t *testing.T) {
 		for _, e := range g.Edges {
 			names = append(names, e.Name)
 		}
+
 		return names
 	}
 
@@ -4875,6 +4876,7 @@ func TestEdgeOrderNameSortedAndStable(t *testing.T) {
 	for _, n := range first {
 		seen[n]++
 	}
+
 	for n, count := range seen {
 		require.Equal(t, 1, count, "edge name %q must be unique, found %d times", n, count)
 	}
@@ -4924,25 +4926,18 @@ func clusterPenwidthValues(t *testing.T, dot string) map[string][]string {
 		}
 
 		if len(stack) > 0 && attrStartRe.MatchString(line) {
-			// The cluster attribute statement spans until its closing `];`.
-			var sb strings.Builder
-			for i < len(lines) {
-				sb.WriteString(lines[i])
-				sb.WriteString("\n")
-				if strings.Contains(lines[i], "];") {
-					break
-				}
-				i++
-			}
+			stmt, last := clusterAttrStatement(lines, i)
 
 			id := stack[len(stack)-1]
 			if _, ok := values[id]; !ok {
 				values[id] = []string{}
 			}
-			for _, m := range penRe.FindAllStringSubmatch(sb.String(), -1) {
+
+			for _, m := range penRe.FindAllStringSubmatch(stmt, -1) {
 				values[id] = append(values[id], m[2])
 			}
-			i++
+
+			i = last + 1
 
 			continue
 		}
@@ -4951,6 +4946,26 @@ func clusterPenwidthValues(t *testing.T, dot string) map[string][]string {
 	}
 
 	return values
+}
+
+// clusterAttrStatement joins the cluster attribute statement beginning at
+// lines[start] — a `graph [` block that spans until its closing `];` — and
+// returns the joined text together with the index of its final line.
+func clusterAttrStatement(lines []string, start int) (string, int) {
+	var sb strings.Builder
+
+	i := start
+
+	for ; i < len(lines); i++ {
+		sb.WriteString(lines[i])
+		sb.WriteString("\n")
+
+		if strings.Contains(lines[i], "];") {
+			break
+		}
+	}
+
+	return sb.String(), i
 }
 
 // assertSubjectBoundaryPenwidth pins BOLD-01/02 on one raw-DOT render: the
@@ -4968,6 +4983,7 @@ func assertSubjectBoundaryPenwidth(t *testing.T, dot, subject string) {
 		if id == subject {
 			continue
 		}
+
 		assert.Empty(t, vals, "cluster %s must carry no penwidth attribute (BOLD-01/02)", id)
 	}
 }
@@ -4992,7 +5008,7 @@ func TestSubjectBoundaryNoCollateral(t *testing.T) {
 		dotData, err := render.RenderDOT(g)
 		require.NoError(t, err)
 
-		assert.NotRegexp(t, regexp.MustCompile(`penwidth=3\.0`), string(dotData),
+		assert.NotRegexp(t, `penwidth=3\.0`, string(dotData),
 			"collapsed C1 root must carry no bold boundary penwidth (BOLD-01/D-04)")
 	})
 

@@ -62,6 +62,7 @@ func populateIncomingLinks(index map[string]*UnitInfo) {
 	for sourcePath := range index {
 		sourcePaths = append(sourcePaths, sourcePath)
 	}
+
 	sort.Strings(sourcePaths)
 
 	for _, sourcePath := range sourcePaths {

@@ -16,7 +16,7 @@ package main
 
 import (
 	"bytes"
-	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -67,7 +67,7 @@ func TestCheckOrphanUnitFailsWithValErrors(t *testing.T) {
 	buf, err := execCheck(t, filepath.Join("testdata", "check_orphan.toml"))
 
 	require.Error(t, err, "check exits 1 on a validation failure (CHECK-02)")
-	assert.True(t, errors.Is(err, errValidationFailed),
+	require.ErrorIs(t, err, errValidationFailed,
 		"failure rides the errValidationFailed sentinel — the render exit path")
 	assert.Contains(t, buf.String(),
 		`error: unit "orphan" has no incoming or outgoing links`,
@@ -141,7 +141,7 @@ func testdataSnapshot(t *testing.T) map[string]string {
 		//nolint:gosec // G304: test-relative fixture path, not user input
 		data, readErr := os.ReadFile(path)
 		if readErr != nil {
-			return readErr
+			return fmt.Errorf("read %s: %w", path, readErr)
 		}
 
 		snap[path] = string(data)

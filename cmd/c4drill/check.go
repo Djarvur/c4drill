@@ -98,5 +98,5 @@ func setRenderFlagsHidden(cmd *cobra.Command, hidden bool) {
 func runCheck(cmd *cobra.Command, args []string) error {
 	_, err := parseValidatedModel(cmd, args[0])
 
-	return err //nolint:wrapcheck // check surfaces the shared front-half error verbatim
+	return err
 }
