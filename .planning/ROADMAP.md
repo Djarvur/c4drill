@@ -188,7 +188,7 @@ Plans:
 | 40. Deterministic SVG Output | v1.17 | 2/2 | Complete    | 2026-09-03 |
 | 41. Check Command | v1.17 | 2/2 | Complete    | 2026-09-03 |
 | 42. Desktop GUI Binding Fix | v1.17 | 1/1 | Complete    | 2026-09-03 |
-| 43. Bold Subject Boundary | v1.18 | 2/2 | Complete   | 2026-09-07 |
+| 43. Bold Subject Boundary | v1.18 | 2/2 | Complete    | 2026-09-07 |
 
 **Post-milestone (2026-08-28):** user-directed design review shipped outside any phase as v1.19.0–v1.20.0 — legend reworked into a floating framed node outside an invisible content cluster (REQUIREMENTS.md LEG-01..03 re-specified in place), queue units render as SVG pipes (SHAPE-01, quick task [260828-qbx](.planning/quick/260828-qbx-render-queue-units-as-horizontal-pipe-sh/)). Quick tasks are not tracked in the phase table above (GSD quick-mode convention).
 
