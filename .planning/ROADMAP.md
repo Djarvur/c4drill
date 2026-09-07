@@ -141,7 +141,7 @@ Full details: [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md)
 
 **Goal:** The boundary of the element a non-expanded diagram depicts renders with a bold triple-width border — viewers instantly see which element the scheme belongs to.
 
-- [ ] **Phase 43: Bold Subject Boundary** - On every non-expanded (drill-down) view the subject unit's boundary cluster draws with `penwidth=3`; the emphasis is semantic (survives `--plain`/`--no-styles`); everything else unchanged (issue: user feedback 2026-09-07)
+- [x] **Phase 43: Bold Subject Boundary** - On every non-expanded (drill-down) view the subject unit's boundary cluster draws with `penwidth=3`; the emphasis is semantic (survives `--plain`/`--no-styles`); everything else unchanged (issue: user feedback 2026-09-07) (completed 2026-09-07)
 
 ### Phase 43: Bold Subject Boundary
 
@@ -163,7 +163,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 43-02-PLAN.md — Golden-delta audit (subject-boundary penwidth only) + PROJECT.md As of v1.18
+- [x] 43-02-PLAN.md — Golden-delta audit (subject-boundary penwidth only) + PROJECT.md As of v1.18
 
 </details>
 
@@ -188,7 +188,7 @@ Plans:
 | 40. Deterministic SVG Output | v1.17 | 2/2 | Complete    | 2026-09-03 |
 | 41. Check Command | v1.17 | 2/2 | Complete    | 2026-09-03 |
 | 42. Desktop GUI Binding Fix | v1.17 | 1/1 | Complete    | 2026-09-03 |
-| 43. Bold Subject Boundary | v1.18 | 1/2 | In Progress|  |
+| 43. Bold Subject Boundary | v1.18 | 2/2 | Complete   | 2026-09-07 |
 
 **Post-milestone (2026-08-28):** user-directed design review shipped outside any phase as v1.19.0–v1.20.0 — legend reworked into a floating framed node outside an invisible content cluster (REQUIREMENTS.md LEG-01..03 re-specified in place), queue units render as SVG pipes (SHAPE-01, quick task [260828-qbx](.planning/quick/260828-qbx-render-queue-units-as-horizontal-pipe-sh/)). Quick tasks are not tracked in the phase table above (GSD quick-mode convention).
 

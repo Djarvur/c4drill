@@ -12,7 +12,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [x] **BOLD-01**: On every non-expanded (drill-down) view, the boundary of the element the diagram depicts is drawn with a bold triple-width border — the user can tell at a glance which element the scheme belongs to
 - [x] **BOLD-02**: The bold boundary is a semantic navigation aid, not author formatting — it survives `--plain` and `--no-styles`, and no other cluster on the same view is affected
-- [ ] **BOLD-03**: Expanded-mode views, node borders, legend, and edge styling are unchanged; golden updates are limited to the subject-boundary delta
+- [x] **BOLD-03**: Expanded-mode views, node borders, legend, and edge styling are unchanged; golden updates are limited to the subject-boundary delta
 
 ## Future Requirements
 
@@ -42,4 +42,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | BOLD-01 | Phase 43 | Complete |
 | BOLD-02 | Phase 43 | Complete |
-| BOLD-03 | Phase 43 | Pending |
+| BOLD-03 | Phase 43 | Complete |
