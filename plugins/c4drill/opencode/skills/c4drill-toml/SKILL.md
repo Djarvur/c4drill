@@ -148,7 +148,7 @@ multi-line strings; `#` comments (fmt preserves them). Field keywords
 (`name`, `description`, `technology`, ...) are reserved — a unit id
 colliding with one is a hard parse error.
 
-### Converting and Formatting (convert / fmt)
+### Converting, Formatting, Validating (convert / fmt / check)
 
 ```bash
 # TOML -> C4D and back; the source is validated first (invalid input
@@ -163,6 +163,13 @@ c4drill convert to-c4d --follow-includes entry.toml
 # author's key order kept)
 c4drill fmt architecture.c4d
 c4drill fmt --check .        # CI gate: exit 1 listing offenders
+
+# render-free validation: same checks as render, nothing written
+# (exit 0 valid / exit 1 with the same errors render prints)
+c4drill check architecture.c4d
+
+# CI gate pair: validate + format-check (both exit 1 on failure)
+c4drill check architecture.toml && c4drill fmt --check .
 ```
 
 ---
