@@ -10,6 +10,10 @@ As of v1.15, rendering is CLI-controllable: every depicted node renders inside i
 
 As of v1.16, edge routing is per-invocation overridable: `--edges <style>` (`straight|spline|square|ortho`) beats both the global `[properties] edges` and per-unit `edges` on every generated view, and an explicit flag survives `--plain` (user intent beats author-format suppression — a documented delta to the exact-union contract).
 
+As of v1.17, output is byte-reproducible — rendering the same model twice yields byte-identical SVG, DOT, and HTML (deterministic edge-id ordering, fixed at the validator's mirror synthesis and guarded by a stable edge-slice sort); a `check` command validates any model without rendering or writing anything, reporting byte-identical errors and exit codes to the render path; and the GUI desktop transport calls the Wails-generated `main.desktop` binding, restoring desktop-window RPC.
+
+As of v1.18, every non-expanded drill-down view (C2, C3, deep-link) draws the boundary of the depicted unit with a bold triple-width penwidth=3.0 border — a semantic navigation aid that survives `--plain`/`--no-styles` with no new flag, while expanded views, the collapsed C1 root, and every other cluster, node, legend, and edge stay unchanged.
+
 ## Core Value
 
 Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
@@ -90,6 +94,48 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - ✓ Switch-matrix E2E (GEDGE-07): `--edges` × generation (root / drill-down / `--expanded`) × `--plain` asserted via the graphviz `splines` attribute in RAW dot (~86 cells, `TestEdgesComposition` over the golden-free `edges_override.toml` fixture carrying both precedence layers)
 - ✓ Backward compat (GEDGE-08): without the flag, all existing canonicalDOT goldens pass untouched — zero re-baselining; scope.go resolution and converter mapping unchanged
 
+### Validated in Phases 40–42 (v1.17) — issue sweep
+
+- ✓ Deterministic output (REPRO-01..03): repeated renders are byte-identical across svg/dot/html — sorted-key mirror synthesis in the validator's `populateIncomingLinks` (the root cause) plus a stable name-order sort of `g.Edges` at the `buildEdges` tail (defense-in-depth); GraphViz's generated `edge<N>` SVG ids are a pure function of model content; pinned by the issue #42 reproducer regression — v1.25.0
+- ✓ `check` command (CHECK-01..04): `c4drill check <file.toml|file.c4d>` validates without rendering or writing anything — one pipeline front-half shared with render (extracted `parseValidatedModel`), byte-identical errors and exit codes, silent exit 0 on valid, composed multi-file sources validate exactly as they render; documented in README.adoc + skill/SKILL.md — v1.25.0
+- ✓ Desktop RPC fix (GUI-01..02): frontend transport resolver calls the Wails-generated `window.go.main.desktop.Dispatch` (matching the actually bound struct); zero phantom `main.App`/`backend.App` references; `--serve` HTTP path untouched, e2e green — v1.25.0
+
+### Validated in Phase 43 (v1.18) — bold subject boundary
+
+- ✓ Semantic bold subject boundary (BOLD-01..03): every non-expanded drill-down view (C2, C3, deep-link) draws the boundary of the depicted unit with `penwidth=3.0` — a navigation aid decided at graph construction (`NodeStyle.BorderWidth`, `buildBoundaryCluster`), surviving `--plain`/`--no-styles` with no new flag; expanded views, the collapsed C1 root, and all other clusters/nodes/legend/edges byte-identical (7/7 goldens untouched, zero re-baselines) — v1.18.0
+
+## Current Milestone: v1.18 Bold Subject Boundary
+
+**Goal:** Make the boundary group of the element a non-expanded diagram depicts unmistakable — drawn with a bold triple-width border, so viewers instantly see which element the scheme belongs to.
+
+**Target features:**
+
+- **Bold subject boundary** — on every non-expanded drill-down view (C2/C3/deep-link), the subject unit's boundary cluster renders with `penwidth=3` (triple the default 1.0); all other clusters on the same view keep their regular borders.
+- **Semantic, not author formatting** — the emphasis survives `--plain` and `--no-styles` (same rationale as kind-derived edge colours and the legend): a navigation aid, not content styling.
+- **Zero behavior change elsewhere** — expanded-mode views, node borders, edges, legend untouched; golden updates limited to the subject-boundary delta.
+
+**Key context:**
+- Source: user feedback 2026-09-07 — hard to tell which element a non-expanded scheme refers to.
+- Fix surface confirmed: `buildBoundaryCluster` (internal/graph/builder.go:373) is the single site creating the subject boundary ("the boundary frame IS the unit on its own child diagram"); `NodeStyle` (internal/graph/graph.go:195) has no border-width field yet; `applyClusterStyle` (internal/render/converter.go:656) emits cluster attributes.
+- Out of scope: `--expanded` views (no single subject), collapsed C1 root (no boundary clusters there), node shapes, legend.
+- Backlog: template fan-out, C4D polish warnings WR-03..05, docs drift, #34/#35 human follow-ups — unchanged, unaddressed by this milestone.
+
+## Previous Milestone: v1.17 Issue Sweep — COMPLETE (2026-09-03)
+
+**Goal:** Close the three actionable open GitHub issues — byte-reproducible SVG output, a render-free `check` command, and the Wails desktop binding fix.
+
+**Target features:**
+
+- **Deterministic rendering (#42)** — rendering the same model twice with no changes produces byte-identical SVG output; generated edge ids derive from a deterministic ordering (not Go map iteration).
+- **`check` command (#41)** — `c4drill check <file>` runs the full model validation without producing output; exit 0 when valid, non-zero with the same errors render reports.
+- **Wails desktop binding fix (#38)** — `internal/gui/frontend/src/rpc.ts` calls the namespace Wails actually generates for the bound struct (`main.desktop`), restoring desktop-window RPC; `--serve` HTTP fallback unaffected.
+
+**Key context:**
+- Source: GitHub issues #42, #41, #38 (filed 2026-09-01/02); each carries a reproducer or a documented fix direction.
+- Out of scope: #34 Zed preview panel (blocked upstream on zed-industries/zed#53403); #35 JetBrains live-IDE validation (needs unrestricted network + interactive `runIde` — environmental, not codeable from a CLI agent).
+
+**Status:** ✅ COMPLETE (2026-09-03) — Phases 40-42 (3 phases, 5 plans) executed in parallel and shipped as product release v1.25.0; all 9 requirements validated (REPRO-01..03, CHECK-01..04, GUI-01..02); UAT 13/13 automated + 1 human-only desktop smoke deferred. Full record: [MILESTONES.md](MILESTONES.md).
+
 ## Previous Milestone: v1.16 Edge Style Override — COMPLETE (2026-08-31)
 
 **Goal:** Let users override the edge routing style per invocation via a `--edges <style>` CLI flag — producing variants of the same model (e.g. expanded-with-straight vs non-expanded-with-spline) without editing or duplicating the model file.
@@ -134,6 +180,7 @@ Planning the next milestone — nothing active. Remaining candidate backlog:
 - C4D polish warnings: WR-03 duplicate `properties {}` last-win, WR-04 skill type-inference table drift, WR-05 quoted-label whitespace trim
 - Debug: docs-drift around the orphan rule (VAL-01) testdata; stale `knowledge-base` debug note
 - Human UAT follow-ups from 260831-01u: re-render the reporter's real model (compact root), eyeball re-baselined goldens
+- Human UAT from v1.17: desktop-window smoke (Wails GUI RPC path — 42-HUMAN-UAT.md); JetBrains live-IDE validation (#35, unrestricted network); revisit #34 when zed's visual extension API lands
 
 ## Previous Milestone: v1.14 Nesting Context and Plain Rendering — COMPLETE (2026-08-30)
 
@@ -158,19 +205,24 @@ Planning the next milestone — nothing active. Remaining candidate backlog:
 - Legend: `graph.Graph.Legend` placeholder struct exists; render via the top graph-label HTML table (right-aligned legend column) — GraphViz has no cluster positioning.
 - Release tag for this milestone: **v1.18.0** (product tags v1.13.0–v1.17.0 already exist; GSD milestone numbering is internal).
 
-## Current State (2026-08-31)
+## Current State (2026-09-07)
 
-**Shipped:** v1.16 Edge Style Override — 1 phase (39), 3 plans, 8 tasks, product release v1.23.0. Invocation-global `--edges` routing override (beats global + per-unit edges, survives `--plain`), switch-matrix E2E (~86 cells), zero golden churn. Verification 5/5, UAT 7/7. ~50.3k LOC Go, all tests green, CI at 0 lint issues.
+**Shipped:** v1.18 Bold Subject Boundary — 1 phase (43), 2 plans, 12 commits, 6 files. Semantic `penwidth=3.0` bold boundary on the subject cluster of every non-expanded drill-down view (C2, C3, deep-link) — built via `NodeStyle.BorderWidth` and decided at graph construction so it survives `--plain`/`--no-styles` with no new flag. All 3 requirements validated (BOLD-01..03); verification passed with 8/8 plan truths; all 7 committed goldens byte-identical (zero re-baselines).
 
-**Previously:** v1.15 Hierarchy Wrapping and Granular Keys — 2 phases (37, 38), 13 plans, product releases v1.21.0 + v1.22.0; post-release quick task 260831-01u restored the compact C1 root, narrowed `--no-labels` to edge labels, made edge identity flag-invariant.
+**Previously:** v1.17 Issue Sweep — 3 phases (40-42), 5 plans, 58 commits, 70 files (+5,312/−2,221), product release v1.25.0. Byte-reproducible output across svg/dot/html (issue #42 — deterministic mirror synthesis + stable edge-slice sort), render-free `check` command sharing the render pipeline's exact front-half (issue #41), desktop RPC restored via the real Wails `main.desktop` namespace (issue #38). All 9 requirements validated; verifications 8/8, 4/4, 7/7; UAT 13/13 automated + 1 human-only desktop smoke deferred (42-HUMAN-UAT.md).
+
+**Previously:** v1.16 Edge Style Override — 1 phase (39), 3 plans, 8 tasks, product release v1.23.0. Invocation-global `--edges` routing override (beats global + per-unit edges, survives `--plain`), switch-matrix E2E (~86 cells), zero golden churn. Verification 5/5, UAT 7/7. ~50.3k LOC Go, all tests green, CI at 0 lint issues.
+
+**Before that:** v1.15 Hierarchy Wrapping and Granular Keys — 2 phases (37, 38), 13 plans, product releases v1.21.0 + v1.22.0; post-release quick task 260831-01u restored the compact C1 root, narrowed `--no-labels` to edge labels, made edge identity flag-invariant.
 
 ## Next Milestone Goals
 
-*v1.16 shipped; nothing active. Candidate backlog for later:*
+*v1.17 shipped; nothing active. Candidate backlog for later:*
 - Template multi-output / `for_each` fan-out (Future, REQUIREMENTS archive)
 - Compact-link shorthand variants beyond baseline (Future, REQUIREMENTS archive)
 - C4D polish warnings: WR-03 duplicate `properties {}` last-win, WR-04 skill type-inference table drift, WR-05 quoted-label whitespace trim
 - Docs drift: README "Validation Rules" VAL-01 orphan rule + unused root testdata (pre-existing, acknowledged)
+- Human follow-ups: v1.17 desktop-window smoke (42-HUMAN-UAT.md); #35 JetBrains live-IDE validation; #34 Zed preview when upstream API lands
 
 ## Shipped
 
@@ -363,4 +415,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-31 — milestone v1.16 COMPLETE (Edge Style Override shipped as v1.23.0)*
+*Last updated: 2026-09-07 after v1.18 milestone (Bold Subject Boundary — semantic penwidth=3.0 subject boundary on drill-down views)*

@@ -12,7 +12,9 @@
 - ✅ **v1.13 Edge Semantics and Legend** — Phase 36 (shipped 2026-08-28) → [archive](milestones/v1.13-ROADMAP.md) — product release tag: v1.18.0
 - ✅ **v1.14 Nesting Context and Plain Rendering** — Phase 37 (shipped 2026-08-30) — product release tag: v1.21.0
 - ✅ **v1.15 Hierarchy Wrapping and Granular Keys** — Phase 38 (SHIPPED 2026-08-30) — product release tag: v1.22.0
-- 🚧 **v1.16 Edge Style Override** — Phase 39 (SHIPPED 2026-08-31) → [archive](milestones/v1.16-ROADMAP.md) — product release tag: v1.23.0
+- ✅ **v1.16 Edge Style Override** — Phase 39 (SHIPPED 2026-08-31) → [archive](milestones/v1.16-ROADMAP.md) — product release tag: v1.23.0
+- ✅ **v1.17 Issue Sweep** — Phases 40-42 (SHIPPED 2026-09-03) → [archive](milestones/v1.17-ROADMAP.md) — product release tag: v1.25.0
+- 🚧 **v1.18 Bold Subject Boundary** — Phase 43 (IN PROGRESS, started 2026-09-07)
 
 ## Phases
 
@@ -119,9 +121,55 @@ Full details: [milestones/v1.16-ROADMAP.md](milestones/v1.16-ROADMAP.md)
 
 </details>
 
+<details>
+<summary>✅ v1.17 Issue Sweep (Phases 40-42) — SHIPPED 2026-09-03</summary>
+
+**Goal:** Close the three actionable open GitHub issues — byte-reproducible SVG output (#42), a render-free `check` command (#41), and the Wails desktop binding fix (#38). Three independent issue families, one phase each; executed in parallel.
+
+- [x] Phase 40: Deterministic SVG Output (2/2 plans) — completed 2026-09-03
+- [x] Phase 41: Check Command (2/2 plans) — completed 2026-09-03
+- [x] Phase 42: Desktop GUI Binding Fix (1/1 plan) — completed 2026-09-03
+
+**Stats:** 3 phases, 5 plans, 58 commits, 70 files (+5,312/−2,221). All 9 requirements validated (REPRO-01..03, CHECK-01..04, GUI-01..02). UAT: 13/13 automated checks passed; 1 human-only item deferred (desktop-window smoke — see milestones/v1.17-phases/42-desktop-gui-binding-fix/42-HUMAN-UAT.md). Release: v1.25.0.
+
+Full details: [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md)
+
+</details>
+
+<details>
+<summary>🚧 v1.18 Bold Subject Boundary (Phase 43) — IN PROGRESS (started 2026-09-07)</summary>
+
+**Goal:** The boundary of the element a non-expanded diagram depicts renders with a bold triple-width border — viewers instantly see which element the scheme belongs to.
+
+- [x] **Phase 43: Bold Subject Boundary** - On every non-expanded (drill-down) view the subject unit's boundary cluster draws with `penwidth=3`; the emphasis is semantic (survives `--plain`/`--no-styles`); everything else unchanged (issue: user feedback 2026-09-07) (completed 2026-09-07)
+
+### Phase 43: Bold Subject Boundary
+
+**Goal**: Every non-expanded view shows the subject unit's boundary with a triple-width (penwidth 3) border; other clusters unchanged; semantic so it survives `--plain`/`--no-styles`; expanded views and C1 root untouched.
+**Depends on**: Nothing (fully independent)
+**Requirements**: BOLD-01, BOLD-02, BOLD-03
+**Success Criteria** (what must be TRUE):
+  1. Raw DOT of a drill-down view asserts `penwidth=3` on the subject boundary cluster only — every other cluster keeps its previous attributes (TDD: RED on current output, GREEN after)
+  2. The emphasis appears on C2, C3, and deep-link drill-down views (multi-level fixture); collapsed C1 root output is byte-identical to before (no boundary clusters there)
+  3. `--plain` and `--no-styles` renders keep the bold boundary; `--expanded` output is byte-identical to v1.17 (no subject concept there)
+  4. CanonicalDOT goldens re-baselined ONLY for subject-boundary clusters (diff per golden = penwidth attribute only); full suite green
+**Plans**: 2 plans
+
+Plans:
+
+**Wave 1**
+
+- [x] 43-01-PLAN.md — Semantic bold subject boundary: NodeStyle.BorderWidth + buildBoundaryCluster emphasis + applyClusterStyle penwidth emission, TDD RED/GREEN/REFACTOR with C2/C3/deep-link raw-DOT assertions and --plain/--no-styles survival
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [x] 43-02-PLAN.md — Golden-delta audit (subject-boundary penwidth only) + PROJECT.md As of v1.18
+
+</details>
+
 ## Progress
 
-**Execution Order:** Phase 39 (single phase; plans sequenced by plan-phase)
+**Execution Order:** Phases 40-42 (independent issue families — default order 40 → 41 → 42; plans sequenced by plan-phase)
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -137,6 +185,10 @@ Full details: [milestones/v1.16-ROADMAP.md](milestones/v1.16-ROADMAP.md)
 | 37. Nesting Context and Plain Rendering | v1.14 | 7/7 | Complete | 2026-08-30 |
 | 38. Hierarchy Wrapping and Granular Keys | v1.15 | 6/6 | Complete | 2026-08-30 |
 | 39. Edge Style Override (`--edges` flag) | v1.16 | 3/3 | Complete    | 2026-08-31 |
+| 40. Deterministic SVG Output | v1.17 | 2/2 | Complete    | 2026-09-03 |
+| 41. Check Command | v1.17 | 2/2 | Complete    | 2026-09-03 |
+| 42. Desktop GUI Binding Fix | v1.17 | 1/1 | Complete    | 2026-09-03 |
+| 43. Bold Subject Boundary | v1.18 | 2/2 | Complete    | 2026-09-07 |
 
 **Post-milestone (2026-08-28):** user-directed design review shipped outside any phase as v1.19.0–v1.20.0 — legend reworked into a floating framed node outside an invisible content cluster (REQUIREMENTS.md LEG-01..03 re-specified in place), queue units render as SVG pipes (SHAPE-01, quick task [260828-qbx](.planning/quick/260828-qbx-render-queue-units-as-horizontal-pipe-sh/)). Quick tasks are not tracked in the phase table above (GSD quick-mode convention).
 

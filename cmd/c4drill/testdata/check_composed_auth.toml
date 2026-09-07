@@ -1,0 +1,11 @@
+# Included half of the composed CHECK-03 fixture: defines authService and
+# links back to user, so the merged model is fully connected and VALID.
+
+[authService]
+type = "system"
+name = "Auth Service"
+description = "Defined only in the included file"
+
+[[authService.linkFrom]]
+peer = "user"
+technology = "HTTPS"

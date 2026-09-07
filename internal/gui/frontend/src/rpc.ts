@@ -8,8 +8,7 @@ export type EventListener = (payload: any) => void;
 
 interface WailsWindow {
   go?: {
-    main?: { App?: { Dispatch?: (method: string, params: string) => Promise<string> } };
-    backend?: { App?: { Dispatch?: (method: string, params: string) => Promise<string> } };
+    main?: { desktop?: { Dispatch?: (method: string, params: string) => Promise<string> } };
   };
   runtime?: {
     EventsOn?: (event: string, cb: (...data: any[]) => void) => void;
@@ -20,7 +19,7 @@ interface WailsWindow {
 
 function wailsBinding(): ((method: string, params: string) => Promise<string>) | null {
   const w = window as unknown as WailsWindow;
-  return w.go?.main?.App?.Dispatch ?? w.go?.backend?.App?.Dispatch ?? null;
+  return w.go?.main?.desktop?.Dispatch ?? null;
 }
 
 export function wailsRuntime(): WailsWindow["runtime"] {

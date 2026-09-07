@@ -3,6 +3,7 @@ package render
 import (
 	"fmt"
 	"html"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -688,6 +689,15 @@ func applyClusterStyle(subgraph *cgraph.Graph, style *graph.NodeStyle) error {
 
 	if err := subgraph.SafeSet("style", strings.Join(styles, ","), ""); err != nil {
 		return fmt.Errorf("set cluster style: %w", err)
+	}
+
+	// Bold subject boundary (BOLD-01): only the subject boundary cluster carries
+	// a non-zero BorderWidth; 0 = renderer default (no attribute, D-02).
+	if style.BorderWidth > 0 {
+		if err := setClusterAttribute(subgraph, "penwidth",
+			strconv.FormatFloat(style.BorderWidth, 'f', 1, 64)); err != nil {
+			return err
+		}
 	}
 
 	return nil

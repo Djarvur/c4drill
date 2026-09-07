@@ -1471,6 +1471,31 @@ c4drill fmt [--check] <file|dir>...
 c4drill fmt --check .   # exits 1 listing offending files
 ----
 
+=== check
+
+[source,text]
+----
+c4drill check <file.toml|file.c4d>
+----
+
+* Validates a model *without rendering* (issue #41): runs the same
+  pipeline front-half as render — `[[include]]` graphs resolved,
+  templates expanded, relative peers resolved, then full semantic
+  validation — and reports exactly the errors render would report,
+  then stops.
+* Accepts both authoring formats: `.toml` and `.c4d`.
+* Exit codes: `0` when the model is valid (silent); `1` when it is
+  invalid, printing the same validation errors render prints (e.g.
+  the orphan-unit rule `unit "x" has no incoming or outgoing links`).
+* Writes nothing and needs no output directory — safe for CI gates
+  and edit loops:
+
+[source,bash]
+----
+c4drill check architecture.c4d   # exit 0 valid / exit 1 + errors invalid
+c4drill fmt --check . && c4drill check architecture.c4d   # format + validate gate
+----
+
 === serve
 
 [source,text]
