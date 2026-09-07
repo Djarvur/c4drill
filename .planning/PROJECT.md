@@ -100,6 +100,10 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - ✓ `check` command (CHECK-01..04): `c4drill check <file.toml|file.c4d>` validates without rendering or writing anything — one pipeline front-half shared with render (extracted `parseValidatedModel`), byte-identical errors and exit codes, silent exit 0 on valid, composed multi-file sources validate exactly as they render; documented in README.adoc + skill/SKILL.md — v1.25.0
 - ✓ Desktop RPC fix (GUI-01..02): frontend transport resolver calls the Wails-generated `window.go.main.desktop.Dispatch` (matching the actually bound struct); zero phantom `main.App`/`backend.App` references; `--serve` HTTP path untouched, e2e green — v1.25.0
 
+### Validated in Phase 43 (v1.18) — bold subject boundary
+
+- ✓ Semantic bold subject boundary (BOLD-01..03): every non-expanded drill-down view (C2, C3, deep-link) draws the boundary of the depicted unit with `penwidth=3.0` — a navigation aid decided at graph construction (`NodeStyle.BorderWidth`, `buildBoundaryCluster`), surviving `--plain`/`--no-styles` with no new flag; expanded views, the collapsed C1 root, and all other clusters/nodes/legend/edges byte-identical (7/7 goldens untouched, zero re-baselines) — v1.18.0
+
 ## Current Milestone: v1.18 Bold Subject Boundary
 
 **Goal:** Make the boundary group of the element a non-expanded diagram depicts unmistakable — drawn with a bold triple-width border, so viewers instantly see which element the scheme belongs to.
@@ -201,9 +205,11 @@ Planning the next milestone — nothing active. Remaining candidate backlog:
 - Legend: `graph.Graph.Legend` placeholder struct exists; render via the top graph-label HTML table (right-aligned legend column) — GraphViz has no cluster positioning.
 - Release tag for this milestone: **v1.18.0** (product tags v1.13.0–v1.17.0 already exist; GSD milestone numbering is internal).
 
-## Current State (2026-09-03)
+## Current State (2026-09-07)
 
-**Shipped:** v1.17 Issue Sweep — 3 phases (40-42), 5 plans, 58 commits, 70 files (+5,312/−2,221), product release v1.25.0. Byte-reproducible output across svg/dot/html (issue #42 — deterministic mirror synthesis + stable edge-slice sort), render-free `check` command sharing the render pipeline's exact front-half (issue #41), desktop RPC restored via the real Wails `main.desktop` namespace (issue #38). All 9 requirements validated; verifications 8/8, 4/4, 7/7; UAT 13/13 automated + 1 human-only desktop smoke deferred (42-HUMAN-UAT.md).
+**Shipped:** v1.18 Bold Subject Boundary — 1 phase (43), 2 plans, 12 commits, 6 files. Semantic `penwidth=3.0` bold boundary on the subject cluster of every non-expanded drill-down view (C2, C3, deep-link) — built via `NodeStyle.BorderWidth` and decided at graph construction so it survives `--plain`/`--no-styles` with no new flag. All 3 requirements validated (BOLD-01..03); verification passed with 8/8 plan truths; all 7 committed goldens byte-identical (zero re-baselines).
+
+**Previously:** v1.17 Issue Sweep — 3 phases (40-42), 5 plans, 58 commits, 70 files (+5,312/−2,221), product release v1.25.0. Byte-reproducible output across svg/dot/html (issue #42 — deterministic mirror synthesis + stable edge-slice sort), render-free `check` command sharing the render pipeline's exact front-half (issue #41), desktop RPC restored via the real Wails `main.desktop` namespace (issue #38). All 9 requirements validated; verifications 8/8, 4/4, 7/7; UAT 13/13 automated + 1 human-only desktop smoke deferred (42-HUMAN-UAT.md).
 
 **Previously:** v1.16 Edge Style Override — 1 phase (39), 3 plans, 8 tasks, product release v1.23.0. Invocation-global `--edges` routing override (beats global + per-unit edges, survives `--plain`), switch-matrix E2E (~86 cells), zero golden churn. Verification 5/5, UAT 7/7. ~50.3k LOC Go, all tests green, CI at 0 lint issues.
 
@@ -409,4 +415,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-03 after v1.17 milestone (Issue Sweep shipped as v1.25.0)*
+*Last updated: 2026-09-07 after v1.18 milestone (Bold Subject Boundary — semantic penwidth=3.0 subject boundary on drill-down views)*
