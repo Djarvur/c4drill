@@ -1,5 +1,18 @@
 ## v1.16 Edge Style Override (Shipped: 2026-08-31 — product release v1.23.0)
 
+## v1.18 Bold Subject Boundary (Shipped: 2026-09-10)
+
+**Known deferred items at close:** 5 (all pre-existing — 2 debug notes, 3 quick-task bookkeeping gaps from earlier closes; see STATE.md Deferred Items). Product release tag: **v1.26.0** (merged via PR #43, 2026-09-07).
+
+**Phases completed:** 1 phases, 2 plans, 5 tasks
+
+**Key accomplishments:**
+
+- NodeStyle.BorderWidth plumbing emits penwidth=3.0 on the subject boundary cluster of every non-expanded drill-down view (C2, C3, deep-link), surviving --plain/--no-styles, with zero collateral on other clusters, the C1 root, or --expanded goldens
+- BOLD-03 closed: the full module suite passes with all 7 committed goldens byte-identical to v1.17 (zero re-baselines — the penwidth emphasis never touches an expanded/plain/nolabels render path), and PROJECT.md now documents the 'As of v1.18' semantic bold boundary
+
+---
+
 ## v1.17 Issue Sweep (Shipped: 2026-09-03)
 
 **Phases completed:** 3 phases, 5 plans, 8 tasks
