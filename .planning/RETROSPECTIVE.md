@@ -119,6 +119,38 @@ Invocation-global `--edges <style>` CLI flag (straight|spline|square|ortho) with
 
 ---
 
+## Milestone: v1.18 — Bold Subject Boundary
+
+**Shipped:** 2026-09-07 (product release v1.26.0)
+**Phases:** 1 | **Plans:** 2
+
+### What Was Built
+`NodeStyle.BorderWidth` plumbing emits `penwidth=3.0` on the subject boundary cluster of every non-expanded drill-down view (C2, C3, deep-link) — a semantic navigation aid surviving `--plain`/`--no-styles`, with zero collateral: other clusters, the collapsed C1 root, and `--expanded` renders stay byte-identical (all 7 committed goldens untouched — no re-baselines).
+
+### What Worked
+- **Single-site construction paid off:** the subject boundary had exactly one builder (buildBoundaryCluster) — a two-line change plus attribute emission; the "boundary frame IS the unit" comment was the map.
+- **Semantics-over-formatting framing settled the design in one question:** "is this author styling or a navigation aid?" → PLAIN-02's kind-colours/legend precedent answered it; no new flag, no model key.
+- **Byte-equality scope guard:** asserting NOTHING ELSE changes (C1 root, --expanded, other clusters) made the golden audit trivial — 0 diffs to re-baseline.
+
+### What Was Inefficient
+- Plan research re-verifed ~40 code sites for a two-line change — process heaviness for a tiny feature, but it caught the `applyUnitOverrides` plain-gating trap that would have silently killed the feature under `--plain`.
+- `roadmap.annotate-dependencies` no-op'd; the wave annotation was hand-written.
+
+### Patterns Established
+- Semantic-survives-plain extends beyond colours: border emphasis is now a second member of the "navigation aid" family (kind colours → bold boundary).
+- 0-means-default numeric style fields (Edge.PenWidth → NodeStyle.BorderWidth) as the attribute-emission contract.
+
+### Key Lessons
+1. The "what is this diagram about?" affordance is a rendering concern, not a model concern — it belongs in the builder's subject cluster, not in the schema.
+2. When a change is tiny, the risk is collateral, not the change itself — byte-equality guards on untouched paths are the highest-value tests.
+
+### Cost Observations
+- Model mix: sonnet; single background planner + single background executor; no research subagents needed.
+- Sessions: one manager session (scaffold + auto-discuss inline; plan + execute background agents).
+- Notable: feature shipped and released (v1.26.0 via PR #43) without a single golden re-baseline.
+
+---
+
 ## Milestone: v1.17 — Issue Sweep
 
 **Shipped:** 2026-09-03 (product release v1.25.0)
@@ -165,6 +197,7 @@ Three GitHub issues closed in one day: byte-reproducible output across svg/dot/h
 | v1.15 | 1 orchestrator + planner/checker/executor/verifier | 2 (+1 quick task) | Capture→validated-quick pipeline for post-release bug reports; empirical bisection over diff-reading attribution; flags-must-not-change-topology invariant tests; branch protection added after lint debt blocked master |
 | v1.16 | 1 manager session (discuss inline; plan+execute via background agent) | 1 | Todo-as-spec single-day milestone; manager-driven dispatch; research skipped deliberately for an in-pattern feature; UAT fully agent-executed for a CLI surface |
 | v1.17 | 1 manager session (3 inline discusses; 3+3 background planners/executors) | 3 | GitHub-issues-as-specs scoping; first fully parallel multi-phase execution with disjoint-surface briefs; manual UAT deferral to HUMAN-UAT.md |
+| v1.18 | 1 manager session (scaffold + auto-discuss; 1+1 background planner/executor) | 1 | Single-site-builder scoping (buildBoundaryCluster); semantic-survives-plain framing; byte-equality scope guard → zero golden churn |
 
 ### Cumulative Quality
 
@@ -174,6 +207,7 @@ Three GitHub issues closed in one day: byte-reproducible output across svg/dot/h
 | v1.15 | full suite green (15+ packages), 0 lint issues | canonicalDOT goldens + switch-matrix E2E + deepcross root invariant | 0 new deps |
 | v1.16 | full suite green, 0 lint issues | canonicalDOT goldens (zero churn) + edges composition matrix (~86 cells) | 0 new deps |
 | v1.17 | full suite green (19 packages), 0 lint issues | canonicalDOT goldens (zero churn) + byte-equality-across-runs pins (svg/dot/html) + binding-shape vitest suite | 0 new deps |
+| v1.18 | full suite green (19 packages), 0 lint issues | canonicalDOT goldens (zero re-baselines) + subject-boundary penwidth pins + no-collateral byte guards | 0 new deps |
 
 ### Top Lessons (Verified Across Milestones)
 
