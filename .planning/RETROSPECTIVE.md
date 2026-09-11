@@ -119,6 +119,42 @@ Invocation-global `--edges <style>` CLI flag (straight|spline|square|ortho) with
 
 ---
 
+## Milestone: v1.17 — Issue Sweep
+
+**Shipped:** 2026-09-03 (product release v1.25.0)
+**Phases:** 3 | **Plans:** 5
+
+### What Was Built
+Three GitHub issues closed in one day: byte-reproducible output across svg/dot/html (issue #42 — sorted-key mirror synthesis in the validator's `populateIncomingLinks` plus a stable name-order sort of `g.Edges` at the `buildEdges` tail, so GraphViz's `edge<N>` ids are a pure function of model content); a render-free `c4drill check` command sharing ONE pipeline front-half with render via the extracted `parseValidatedModel` (issue #41 — byte-identical errors/exit codes, silent success, zero files); and the desktop RPC fix — frontend resolver aligned to the Wails-generated `window.go.main.desktop.Dispatch` with a binding-shape vitest suite (issue #38).
+
+### What Worked
+- **Issues-as-specs:** all three issues carried reproducers or verified fix directions; each mapped 1:1 to a phase with zero scope debate, and the issue reproducer became the acceptance test verbatim.
+- **Parallel everything:** three planners then three executors ran concurrently on disjoint file surfaces with explicit "treat out-of-surface failures as concurrent-phase noise" briefs — no cross-phase conflicts, only shared-artifact races that `phase.complete` reconciled.
+- **Empirical view selection:** the byte pin initially targeted the C1 view and passed pre-fix (fail-fast tripped); probes (0/12 vs 12/12 unstable pairs) showed only the C2 drill-down exposes the permuted mirrors — the pin moved there and RED held.
+- **Fix-at-source + defense-in-depth:** determinism established where the disorder originates AND guarded by a final stable sort, so a future regression can't silently reintroduce the bug.
+
+### What Was Inefficient
+- Free-text roadmap "Depends on" prose was parsed by init.manager as real dependencies (phantom 41↔42 deps, then "1.17" as a dep id) — the v1.16 lesson recurred and had to be fixed before dispatch.
+- Concurrent executors' full-suite runs intermittently saw sibling phases' transient TDD RED tests — correctly ignored per brief, but each occurrence cost interpretation time.
+- Shared-artifact races on STATE.md/ROADMAP.md between parallel agents (reconciled by `phase.complete`; one commit-message sweep absorbed sibling planning artifacts).
+
+### Patterns Established
+- Determinism contract: deterministic at the source + stable-sort guard + byte-equality regression over the canonical reproducer.
+- Single-sourced pipeline front-half: three render/convert/check copies collapsed into `parseValidatedModel` — validation surface can no longer drift.
+- Manual-UAT deferral: human-only checks land in `<phase>-HUMAN-UAT.md` (yolo auto-approved) instead of blocking close.
+
+### Key Lessons
+1. Roadmap machine fields must stay machine-clean — prose with version/phase numbers gets parsed as data (bit v1.16, bit v1.17).
+2. When a reproducer passes pre-fix, distrust the surface, not the fix — probe which view actually exposes the disorder before pinning.
+3. Parallel executors need their disjoint file surfaces and noise policy stated in the dispatch prompt, not assumed.
+
+### Cost Observations
+- Model mix: sonnet roadmapper; background planner/executor agents ran discuss-support, plan, execute, verify, and review inline per phase.
+- Sessions: one manager session — milestone setup, 3 inline auto-discusses, 3 background planners, 3 background executors, milestone UAT, and close.
+- Notable: first milestone with fully parallel multi-phase execution; wall clock for execution was the slowest single phase (~29 min), not the sum.
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -128,6 +164,7 @@ Invocation-global `--edges <style>` CLI flag (straight|spline|square|ortho) with
 | v1.10 | 1 + 16 bg agents | 6 | First use of parallel background executors with file-overlap-aware serialization; research-first milestone setup (4 parallel researchers) |
 | v1.15 | 1 orchestrator + planner/checker/executor/verifier | 2 (+1 quick task) | Capture→validated-quick pipeline for post-release bug reports; empirical bisection over diff-reading attribution; flags-must-not-change-topology invariant tests; branch protection added after lint debt blocked master |
 | v1.16 | 1 manager session (discuss inline; plan+execute via background agent) | 1 | Todo-as-spec single-day milestone; manager-driven dispatch; research skipped deliberately for an in-pattern feature; UAT fully agent-executed for a CLI surface |
+| v1.17 | 1 manager session (3 inline discusses; 3+3 background planners/executors) | 3 | GitHub-issues-as-specs scoping; first fully parallel multi-phase execution with disjoint-surface briefs; manual UAT deferral to HUMAN-UAT.md |
 
 ### Cumulative Quality
 
@@ -136,6 +173,7 @@ Invocation-global `--edges <style>` CLI flag (straight|spline|square|ortho) with
 | v1.10 | full suite green (12 packages) | canonicalDOT goldens (order-insensitive) | 0 new deps (stdlib + existing go-toml/go-graphviz/testify only) |
 | v1.15 | full suite green (15+ packages), 0 lint issues | canonicalDOT goldens + switch-matrix E2E + deepcross root invariant | 0 new deps |
 | v1.16 | full suite green, 0 lint issues | canonicalDOT goldens (zero churn) + edges composition matrix (~86 cells) | 0 new deps |
+| v1.17 | full suite green (19 packages), 0 lint issues | canonicalDOT goldens (zero churn) + byte-equality-across-runs pins (svg/dot/html) + binding-shape vitest suite | 0 new deps |
 
 ### Top Lessons (Verified Across Milestones)
 

@@ -1,5 +1,9 @@
 package validator_test
 
+// Exported-API tests for BuildIndex. The internal test that exercises the
+// unexported populateIncomingLinks lives in index_internal_test.go
+// (package validator).
+
 import (
 	"testing"
 

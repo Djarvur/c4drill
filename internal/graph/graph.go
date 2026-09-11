@@ -201,6 +201,9 @@ type NodeStyle struct {
 	FontColor string
 	// BorderStyle is "solid" or "dashed".
 	BorderStyle string
+	// BorderWidth is the penwidth attribute emitted on this style; 0 means the
+	// renderer default (no attribute emitted). Mirrors Edge.PenWidth (D-02).
+	BorderWidth float64
 }
 
 // Legend contains the entries rendered in the diagram's floating legend node

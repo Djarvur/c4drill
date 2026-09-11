@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -1576,8 +1577,11 @@ func TestBuildGraphDeterministicOrder(t *testing.T) {
 		require.Equal(t, "gamma", g.Nodes[2].ID, "third node should be gamma (definition order)")
 	})
 
-	// Test 2: BuildGraph produces edges in definition order by source
-	t.Run("BuildGraph produces edges in definition order by source", func(t *testing.T) {
+	// Test 2: BuildGraph produces edges in ascending Edge.Name order (D-03,
+	// issue #42): the slice is name-sorted so cgraph insertion order is a pure
+	// function of model content, while the definition-order walk still decides
+	// which edges exist and anchors the per-pair sequence numbers.
+	t.Run("BuildGraph produces edges in name order by Edge.Name", func(t *testing.T) {
 		t.Parallel()
 
 		v := view.GenerateC1View(m)
@@ -1585,12 +1589,15 @@ func TestBuildGraphDeterministicOrder(t *testing.T) {
 
 		require.Len(t, g.Edges, 2)
 
-		// Edges should be in definition order by source (zeta first, then alpha)
-		// zeta->alpha comes first, then alpha->gamma
-		require.Equal(t, "zeta", g.Edges[0].Source, "first edge source should be zeta (definition order)")
-		require.Equal(t, "alpha", g.Edges[0].Target, "first edge target should be alpha")
-		require.Equal(t, "alpha", g.Edges[1].Source, "second edge source should be alpha (definition order)")
-		require.Equal(t, "gamma", g.Edges[1].Target, "second edge target should be gamma")
+		// Name order: alpha_to_gamma_1 sorts before zeta_to_alpha_1. The
+		// definition-order walk (zeta first) remains visible in the per-pair
+		// sequence numbers: each pair's first contributing link gets _1.
+		require.Equal(t, "alpha_to_gamma_1", g.Edges[0].Name, "first edge should be alpha_to_gamma_1 (name order, D-03)")
+		require.Equal(t, "alpha", g.Edges[0].Source, "first edge source should be alpha")
+		require.Equal(t, "gamma", g.Edges[0].Target, "first edge target should be gamma")
+		require.Equal(t, "zeta_to_alpha_1", g.Edges[1].Name, "second edge should be zeta_to_alpha_1 (name order, D-03)")
+		require.Equal(t, "zeta", g.Edges[1].Source, "second edge source should be zeta")
+		require.Equal(t, "alpha", g.Edges[1].Target, "second edge target should be alpha")
 	})
 
 	// Test 3: Multiple calls produce identical output order
@@ -1895,10 +1902,18 @@ func TestBuildGraphDefinitionOrder(t *testing.T) {
 	require.Equal(t, "alpha", g.Nodes[1].ID, "second node should be alpha (definition order)")
 	require.Equal(t, "gamma", g.Nodes[2].ID, "third node should be gamma (definition order)")
 
-	// Edges should also be in definition order by source
+	// Edges: D-03 (issue #42) — g.Edges leaves buildEdges in ascending
+	// Edge.Name order, a pure function of model content. The definition-order
+	// walk still chooses WHICH edges exist and anchors the per-pair sequence
+	// numbers; the slice order is name-sorted so cgraph insertion order (and
+	// GraphViz's edge<N> SVG ids) can never depend on walk or map iteration.
 	require.Len(t, g.Edges, 2)
-	require.Equal(t, "zulu", g.Edges[0].Source, "first edge source should be zulu")
-	require.Equal(t, "alpha", g.Edges[1].Source, "second edge source should be alpha")
+	require.Equal(t, "alpha_to_gamma_1", g.Edges[0].Name, "name-order puts alpha_to_gamma first (D-03)")
+	require.Equal(t, "zulu_to_alpha_1", g.Edges[1].Name, "name-order puts zulu_to_alpha second (D-03)")
+	require.Equal(t, "alpha", g.Edges[0].Source, "first edge is alpha->gamma")
+	require.Equal(t, "gamma", g.Edges[0].Target, "first edge is alpha->gamma")
+	require.Equal(t, "zulu", g.Edges[1].Source, "second edge is zulu->alpha")
+	require.Equal(t, "alpha", g.Edges[1].Target, "second edge is zulu->alpha")
 }
 
 // TestBuildEdgesPairCollapse verifies D-01/D-03/D-06: multiple links landing on the
@@ -2696,9 +2711,9 @@ func TestClusterReferenceURL_RenderedDOT(t *testing.T) {
 					},
 				},
 				"s": {
-					Type:      model.TypeSystem,
-					Name:      "S",
-					Reference: "https://example.com/docs/s",
+					Type:         model.TypeSystem,
+					Name:         "S",
+					Reference:    "https://example.com/docs/s",
 					SubunitOrder: []string{"api"},
 					Subunits: map[string]*model.Unit{
 						"api": {Type: model.TypeContainer, Name: "API"},
@@ -4784,5 +4799,273 @@ func TestBuildGraph_EdgeOverride(t *testing.T) {
 		g := graph.BuildExpandedGraph(v)
 
 		assert.Equal(t, "ortho", g.EdgeStyle, "flag beats the resolved model value on the expanded copy (D-03)")
+	})
+}
+
+// TestEdgeOrderNameSortedAndStable pins the D-03 defense-in-depth contract
+// (issue #42): the final g.Edges slice leaves buildEdges in ascending
+// Edge.Name order, so cgraph edge insertion order — and therefore GraphViz's
+// generated edge<N> SVG group ids — is a pure function of model content even
+// if a future walk regresses into Go map iteration. SortStableFunc preserves
+// the deterministic per-pair counter order for equal names; names are unique
+// by construction (assignEdgeName), so the sort must never introduce
+// duplicates or reorder equal names.
+func TestEdgeOrderNameSortedAndStable(t *testing.T) {
+	t.Parallel()
+
+	// edgeModel builds a model whose definition order (z, m, a, b) differs
+	// from name order, with edges from three+ source units and one multi-link
+	// pair (m->b twice) so per-pair sequence counters advance.
+	edgeModel := func() *parser.Model {
+		return &parser.Model{
+			Properties: model.Properties{Name: "Edge Order"},
+			UnitOrder:  []string{"z", "m", "a", "b"},
+			Units: map[string]*model.Unit{
+				"z": {
+					Type: model.TypeSystem, Name: "Z",
+					Links: []model.Link{
+						{Peer: "m"},
+						{Peer: "a"},
+					},
+				},
+				"m": {
+					Type: model.TypeSystem, Name: "M",
+					Links: []model.Link{
+						{Peer: "b", Technology: "HTTP"},
+						{Peer: "b", Technology: "gRPC"},
+					},
+				},
+				"a": {
+					Type: model.TypeSystem, Name: "A",
+					Links: []model.Link{{Peer: "b"}},
+				},
+				"b": {
+					Type: model.TypeSystem, Name: "B",
+					Links: []model.Link{{Peer: "m"}},
+				},
+			},
+		}
+	}
+
+	edgeNames := func() []string {
+		v := view.GenerateC1View(edgeModel())
+		require.NotNil(t, v, "GenerateC1View should return a view")
+
+		g := graph.BuildGraph(v)
+		require.NotNil(t, g, "BuildGraph should return a graph")
+		require.NotEmpty(t, g.Edges, "the model must produce edges")
+
+		names := make([]string, 0, len(g.Edges))
+		for _, e := range g.Edges {
+			names = append(names, e.Name)
+		}
+
+		return names
+	}
+
+	first := edgeNames()
+
+	// (b) stability: building the graph twice from the same model yields the
+	// identical Edge.Name sequence.
+	second := edgeNames()
+	require.Equal(t, first, second,
+		"two builds of the same model must produce identical Edge.Name sequences")
+
+	// (c) invariant: names stay unique — sorting must not introduce duplicates.
+	seen := make(map[string]int, len(first))
+	for _, n := range first {
+		seen[n]++
+	}
+
+	for n, count := range seen {
+		require.Equal(t, 1, count, "edge name %q must be unique, found %d times", n, count)
+	}
+
+	// (a) sortedness: names are non-decreasing under strings.Compare across
+	// the whole slice (RED on pre-sort code: walk order is UnitOrder-based,
+	// not name-ordered).
+	for i := 1; i < len(first); i++ {
+		require.LessOrEqual(t, strings.Compare(first[i-1], first[i]), 0,
+			"g.Edges must be non-decreasing by Edge.Name at index %d: %q > %q (full sequence: %v)",
+			i, first[i-1], first[i], first)
+	}
+}
+
+// clusterPenwidthValues extracts, per subgraph cluster, the penwidth value
+// carried by THAT cluster's own attribute statement (the `graph [...]` block
+// directly inside the subgraph). Edge statements carry their own penwidth
+// (1/2) and are not cluster attributes, so only `graph [` statements are
+// scanned. Clusters whose attribute statement carries no penwidth map to an
+// empty slice.
+func clusterPenwidthValues(t *testing.T, dot string) map[string][]string {
+	t.Helper()
+
+	clusterRe := regexp.MustCompile(`^\s*subgraph "?(cluster_[^" ]*)"?\s*\{\s*$`)
+	attrStartRe := regexp.MustCompile(`^\s*graph \[`)
+	penRe := regexp.MustCompile(`penwidth=("?)([\d.]+)("?)`)
+
+	values := make(map[string][]string)
+	stack := make([]string, 0)
+	lines := strings.Split(dot, "\n")
+
+	for i := 0; i < len(lines); {
+		line := lines[i]
+
+		if m := clusterRe.FindStringSubmatch(line); m != nil {
+			stack = append(stack, m[1])
+			i++
+
+			continue
+		}
+
+		if strings.TrimSpace(line) == "}" && len(stack) > 0 {
+			stack = stack[:len(stack)-1]
+			i++
+
+			continue
+		}
+
+		if len(stack) > 0 && attrStartRe.MatchString(line) {
+			stmt, last := clusterAttrStatement(lines, i)
+
+			id := stack[len(stack)-1]
+			if _, ok := values[id]; !ok {
+				values[id] = []string{}
+			}
+
+			for _, m := range penRe.FindAllStringSubmatch(stmt, -1) {
+				values[id] = append(values[id], m[2])
+			}
+
+			i = last + 1
+
+			continue
+		}
+
+		i++
+	}
+
+	return values
+}
+
+// clusterAttrStatement joins the cluster attribute statement beginning at
+// lines[start] — a `graph [` block that spans until its closing `];` — and
+// returns the joined text together with the index of its final line.
+func clusterAttrStatement(lines []string, start int) (string, int) {
+	var sb strings.Builder
+
+	i := start
+
+	for ; i < len(lines); i++ {
+		sb.WriteString(lines[i])
+		sb.WriteString("\n")
+
+		if strings.Contains(lines[i], "];") {
+			break
+		}
+	}
+
+	return sb.String(), i
+}
+
+// assertSubjectBoundaryPenwidth pins BOLD-01/02 on one raw-DOT render: the
+// subject boundary cluster carries exactly penwidth=3.0, and no other cluster
+// on the same diagram carries any penwidth attribute.
+func assertSubjectBoundaryPenwidth(t *testing.T, dot, subject string) {
+	t.Helper()
+
+	pw := clusterPenwidthValues(t, dot)
+	require.Contains(t, pw, subject, "subject cluster %s must render", subject)
+	require.Equal(t, []string{"3.0"}, pw[subject],
+		"subject cluster must carry exactly penwidth=3.0 (BOLD-01)")
+
+	for id, vals := range pw {
+		if id == subject {
+			continue
+		}
+
+		assert.Empty(t, vals, "cluster %s must carry no penwidth attribute (BOLD-01/02)", id)
+	}
+}
+
+// TestSubjectBoundaryNoCollateral pins BOLD-01/D-04: the collapsed C1 root and
+// --expanded renders carry no bold-boundary penwidth anywhere, the --expanded
+// output stays canonical-identical to the committed golden (COMPAT-02), and a
+// deep-link C3 drill-down emphasizes its subject boundary cluster only.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestSubjectBoundaryNoCollateral(t *testing.T) {
+	m, err := parser.ParseFile("../../cmd/c4drill/testdata/multilevel.toml")
+	require.NoError(t, err)
+
+	valErrors := validator.Validate(m)
+	require.Empty(t, valErrors, "model should be valid")
+
+	t.Run("collapsed C1 root carries no bold penwidth", func(t *testing.T) {
+		v := view.GenerateC1View(m)
+		g := graph.BuildGraph(v)
+
+		dotData, err := render.RenderDOT(g)
+		require.NoError(t, err)
+
+		assert.NotRegexp(t, `penwidth=3\.0`, string(dotData),
+			"collapsed C1 root must carry no bold boundary penwidth (BOLD-01/D-04)")
+	})
+
+	t.Run("expanded output stays canonical-identical to the golden", func(t *testing.T) {
+		v := view.GenerateExpandedView(m)
+		g := graph.BuildExpandedGraph(v)
+
+		dotData, err := render.RenderDOT(g)
+		require.NoError(t, err)
+
+		expected, err := os.ReadFile("../../cmd/c4drill/testdata/multilevel.expanded.dot")
+		require.NoError(t, err)
+
+		// DI-1: order-insensitive canonical comparison — the committed golden
+		// must stay green unchanged (COMPAT-02, D-04).
+		require.Equal(t, canonical.Canonical(t, string(expected)), canonical.Canonical(t, string(dotData)),
+			"expanded DOT must match the committed golden semantically (COMPAT-02)")
+	})
+
+	t.Run("deep-link C3 drill-down emphasizes the subject boundary only", func(t *testing.T) {
+		// Mirror of the CTX-02 deep-link fixture (builder_test.go:1237-1298):
+		// an external webUser links into mainSystem.iam.iamApi, registering the
+		// deep-link chain through the iam container.
+		m := &parser.Model{
+			Properties: model.Properties{Name: "Test"},
+			Units: map[string]*model.Unit{
+				"webUser": {
+					Type:  model.TypePersonExternal,
+					Name:  "Web User",
+					Links: []model.Link{{Peer: "mainSystem.iam.iamApi"}},
+				},
+				"mainSystem": {
+					Type:         model.TypeSystem,
+					Name:         "Main System",
+					SubunitOrder: []string{"iam"},
+					Subunits: map[string]*model.Unit{
+						"iam": {
+							Type:         model.TypeContainer,
+							Name:         "IAM",
+							SubunitOrder: []string{"iamApi"},
+							Subunits: map[string]*model.Unit{
+								"iamApi": {Type: model.TypeComponent, Name: "IAM API"},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		v := view.GenerateC3View(m, "mainSystem.iam")
+		require.NotNil(t, v)
+
+		g := graph.BuildGraph(v)
+
+		dotData, err := render.RenderDOT(g)
+		require.NoError(t, err)
+
+		assertSubjectBoundaryPenwidth(t, string(dotData), "cluster_mainSystem.iam")
 	})
 }

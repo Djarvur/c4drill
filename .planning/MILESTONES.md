@@ -1,5 +1,21 @@
 ## v1.16 Edge Style Override (Shipped: 2026-08-31 — product release v1.23.0)
 
+## v1.17 Issue Sweep (Shipped: 2026-09-03)
+
+**Phases completed:** 3 phases, 5 plans, 8 tasks
+
+**Stats:** 58 commits, 70 files (+5,312/−2,221), single day (2026-09-03); phases planned and executed fully in parallel. Product release tag: **v1.25.0**.
+
+**Verification & UAT:** verifications 8/8 (phase 40), 4/4 (41), 7/7 (42); code reviews clean; UAT 13/13 automated checks passed. Known deferred items at close: 7 (2 pre-existing debug notes, 3 pre-existing quick-task bookkeeping items, 1 human-only desktop smoke, 1 human-needed verification — see STATE.md Deferred Items).
+
+**Key accomplishments:**
+
+- Sorted-key mirror synthesis in populateIncomingLinks makes repeated renders byte-identical (issue #42): validator unit pin + full-pipeline svg/dot/html byte-equality regression over the issue #42 reproducer
+- Stable name-order sort of g.Edges at the buildEdges tail (D-03) guarantees edge insertion order — and GraphViz edge\<N\> ids — stay a pure function of model content at a second layer, with the full D-06/D-04 no-semantic-change gate green
+- Frontend transport resolver now calls the Wails-generated window.go.main.desktop.Dispatch (matching the actually bound Go struct), developed RED-first with a binding-shape vitest suite; serve HTTP path byte-identical
+
+---
+
 **Phases completed:** 1 phase (39), 3 plans, 8 tasks
 
 **Key accomplishments:**

@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.16
-milestone_name: Edge Style Override
-status: Awaiting next milestone
-last_updated: "2026-08-31T08:21:50.823Z"
-last_activity: 2026-08-31 — Milestone v1.16 completed and archived
+milestone: v1.18
+milestone_name: Bold Subject Boundary
+status: completed
+last_updated: "2026-09-07T07:46:07.887Z"
+last_activity: 2026-09-07
 progress:
   total_phases: 1
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 2
+  completed_plans: 2
   percent: 100
 ---
 
@@ -17,23 +17,23 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-31)
+See: .planning/PROJECT.md (updated 2026-09-03)
 
 **Core value:** Transform simple TOML architecture descriptions into professional C4 diagrams without manual drawing.
 **Current focus:** Milestone complete
 
 ## Current Position
 
-Phase: Milestone v1.16 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-08-31 — Milestone v1.16 completed and archived
+Phase: 43
+Plan: Not started
+Status: Milestone complete
+Last activity: 2026-09-07
 
 ## Performance Metrics
 
 **Velocity (carry-forward):**
 
-- v1.11: 1 phase (34), 4 plans. v1.12: 1 phase (35), 9 plans. v1.13: 1 phase (36), 6 plans. v1.14: 1 phase (37), 7 plans. v1.15: 2 phases (37, 38), 13 plans + 1 validated quick task.
+- v1.11: 1 phase (34), 4 plans. v1.12: 1 phase (35), 9 plans. v1.13: 1 phase (36), 6 plans. v1.14: 1 phase (37), 7 plans. v1.15: 2 phases (37, 38), 13 plans + 1 validated quick task. v1.16: 1 phase (39), 3 plans. v1.17: 3 phases (40-42), 5 plans — first fully parallel multi-phase milestone (3 planners + 3 executors concurrent), single day.
 
 | Phase | Plans | Notes |
 |-------|-------|-------|
@@ -41,6 +41,11 @@ Last activity: 2026-08-31 — Milestone v1.16 completed and archived
 | Phase 39 P01 | 15min | 3 tasks | 5 files |
 | Phase 39 P02 | 12min | 2 tasks | 2 files |
 | Phase 39 P03 | 10min | 3 tasks | 4 files |
+| Phase 42 P01 | 4min | 3 tasks | 2 files |
+| Phase 41 P01 | 25 min | 3 tasks | 6 files |
+| Phase 40 P01 | 17min | 3 tasks | 3 files |
+| Phase 41 P02 | 8 min | 2 tasks | 2 files |
+| Phase 40 P02 | 12min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -50,7 +55,7 @@ Decisions are logged in PROJECT.md Key Decisions table (v1.15 phase-level decisi
 
 ### Pending Todos
 
-See .planning/todos/pending/. (1 pending: add CLI flag to override edge routing style — now IN SCOPE as Phase 39 of v1.16; design todo carries the data flow, file list, and the resolved `--plain` open question)
+See .planning/todos/pending/. (v1.16's `--edges` feature todo shipped with v1.16; v1.17 scope comes from GitHub issues #42/#41/#38, not todos)
 
 ### Blockers/Concerns
 
@@ -64,7 +69,7 @@ None open. (v1.15 concerns — WRAP golden churn, LBL-03 legend pin — resolved
 
 ## Deferred Items
 
-Items acknowledged and deferred at milestone close on 2026-08-31 (v1.16): 5 open audit items, all pre-dating v1.16 — none produced by this milestone's work.
+Items acknowledged and deferred at milestone close on 2026-09-03 (v1.17): 7 open audit items — 5 pre-dating v1.17 (carried from v1.16 close), 2 produced by phase 42 (both human-only, not automatable in a CLI agent).
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
@@ -74,11 +79,13 @@ Items acknowledged and deferred at milestone close on 2026-08-31 (v1.16): 5 open
 | quick_task | 260828-qbx-render-queue-units-as-horizontal-pipe-sh — audit status "missing"; work shipped (queue pipes, v1.19–v1.20 review) | bookkeeping gap acknowledged at v1.16 close | v1.16 close |
 | quick_task | 260828-tgf-fix-pipe-end-cap-right-side-must-render- — audit status "missing"; work shipped with pipes render | bookkeeping gap acknowledged at v1.16 close | v1.16 close |
 | quick_task | 260831-01u-fix-three-rendering-bugs-from-todos-pend — audit status "missing"; work shipped, verified, retro'd | bookkeeping gap acknowledged at v1.16 close | v1.16 close |
+| uat | 42-HUMAN-UAT.md — desktop-window Wails smoke (launch GUI, exercise RPC) — human-only by design; automatable gates all green | acknowledged open at v1.17 close (2026-09-03) | v1.17 close |
+| verification | 42-VERIFICATION.md — human_needed (same desktop smoke scenario) | acknowledged open at v1.17 close (2026-09-03) | v1.17 close |
 
 ## Session Continuity
 
-Last session: 2026-08-31T07:57:42.117Z
-Stopped at: Completed 39-03-PLAN.md
+Last session: 2026-09-07T07:46:07.881Z
+Stopped at: Phase 43 complete, milestone v1.18 finished — ready for complete-milestone
 Resume file: None
 
 ## Operator Next Steps

@@ -1,0 +1,20 @@
+# CHECK-03 fixture: entry file of a composed two-file model. The bare peer
+# "authService" is defined ONLY in the included file, so it resolves
+# exclusively because include.Resolve runs before peer.Resolve — the same
+# pipeline ordering render uses (root.go stages 1a -> 1.6).
+
+[properties]
+name = "Composed Check"
+description = "Entry file: includes the auth half and links across the file boundary"
+
+[user]
+type = "person"
+name = "User"
+description = "End user"
+
+[[user.link]]
+peer = "authService"
+technology = "HTTPS"
+
+[[include]]
+path = "check_composed_auth.toml"
