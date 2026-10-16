@@ -1,3 +1,15 @@
+## Quick 261016-mxp Parse Budget (Shipped: 2026-10-16 — product release v1.27.0)
+
+Quick task (not a milestone). User report: valid single-file .c4d models around
+110KB tripped pigeon's hardcoded 1M expression budget purely on volume — any
+growth of the model failed to parse. Delivered: default budget 10x (10M), the
+`--max-expressions` CLI flag (inherited by check/convert/fmt/serve; 0 =
+uncapped), budget errors that name the limit and the flag, and named-parse
+(check/render) error wrapping restored to DSL-native line extraction. See
+[quick/261016-mxp-raise-c4d-parse-budget-and-add-flag](./quick/261016-mxp-raise-c4d-parse-budget-and-add-flag/).
+
+---
+
 ## v1.16 Edge Style Override (Shipped: 2026-08-31 — product release v1.23.0)
 
 ## v1.18 Bold Subject Boundary (Shipped: 2026-09-10)

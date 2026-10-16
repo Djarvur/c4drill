@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.18
 milestone_name: Bold Subject Boundary
 status: Awaiting next milestone
-last_updated: "2026-09-10T16:03:30.811Z"
-last_activity: 2026-09-10 — Milestone v1.18 completed and archived
+last_updated: "2026-10-16T21:49:00.000Z"
+last_activity: 2026-10-16 — Quick task 261016-mxp shipped (product release v1.27.0)
 progress:
   total_phases: 1
   completed_phases: 1
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-09-03)
 Phase: Milestone v1.18 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-09-10 — Milestone v1.18 completed and archived
+Last activity: 2026-10-16 — Quick task 261016-mxp shipped (product release v1.27.0): c4d parse budget 10x + --max-expressions flag
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ None open. (v1.15 concerns — WRAP golden churn, LBL-03 legend pin — resolved
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 261016-mxp | Raise c4d parse budget 10x (valid ~110KB models tripped the hardcoded 1M pigeon bound), add --max-expressions flag (0 = uncapped), make the budget error name the limit and the flag; restore DSL-native line extraction on the named-parse (check/render) error path | 2026-10-16 | 605a892 | Complete | [261016-mxp-raise-c4d-parse-budget-and-add-flag](./quick/261016-mxp-raise-c4d-parse-budget-and-add-flag/) |
 | 260831-01u | Fix three rendering bugs from todos/pending: root diagram bloated by ancestor wrapping (bisect: ships in v1.21.0 CTX-02/CTX-03, not b2447da), --no-labels narrowed to edge labels only, edge merge made flag-invariant via builder-assigned Edge.Name | 2026-08-30 | 72afbbb | Needs Review (2 human items) | [260831-01u-fix-three-rendering-bugs-from-todos-pend](./quick/260831-01u-fix-three-rendering-bugs-from-todos-pend/) |
 
 ## Deferred Items
