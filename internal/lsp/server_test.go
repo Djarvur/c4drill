@@ -433,8 +433,9 @@ func TestC4DParseErrorParity(t *testing.T) {
 	h.request("initialize", lsp.InitializeResult{})
 	h.notify("initialized", lsp.InitializedParams{})
 
-	// C4D front-end via extension dispatch; the CLI embeds the file path in
-	// pigeon's message, so the diagnostic must carry the same path.
+	// C4D front-end via extension dispatch; the parse error renders in the
+	// same shape as the TOML front-end's — DSL-native line, no path echo
+	// (the diagnostic already travels on the document's URI).
 	text := "sysetm web { }\n"
 	path := "/ws/broken.c4d"
 	uri := lsp.DocumentURI("file://" + path)
@@ -444,10 +445,14 @@ func TestC4DParseErrorParity(t *testing.T) {
 	require.Len(t, pub.Diagnostics, 1)
 
 	d := pub.Diagnostics[0]
-	assert.True(t, strings.HasPrefix(d.Message, "parse: parse error: "+path+":1:"),
-		"c4d parse error names the file and line, got: %s", d.Message)
+	assert.True(t, strings.HasPrefix(d.Message, "parse: parse error at line 1:"),
+		"c4d parse error renders the DSL-native line like the TOML front-end, got: %s", d.Message)
 	assert.Contains(t, d.Message, "no match found",
 		"expected pigeon no-match text, got: %s", d.Message)
+	assert.NotContains(t, d.Message, path,
+		"the diagnostic rides the document URI; the message need not echo the path")
+	assert.Equal(t, uint32(0), d.Range.Start.Line,
+		"1-based CLI line 1 → 0-based LSP line 0")
 }
 
 func TestUnknownExtensionFailsClosed(t *testing.T) {
