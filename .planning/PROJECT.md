@@ -104,7 +104,7 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 
 - ✓ Semantic bold subject boundary (BOLD-01..03): every non-expanded drill-down view (C2, C3, deep-link) draws the boundary of the depicted unit with `penwidth=3.0` — a navigation aid decided at graph construction (`NodeStyle.BorderWidth`, `buildBoundaryCluster`), surviving `--plain`/`--no-styles` with no new flag; expanded views, the collapsed C1 root, and all other clusters/nodes/legend/edges byte-identical (7/7 goldens untouched, zero re-baselines) — v1.18.0
 
-## Current Milestone: v1.18 Bold Subject Boundary
+## Previous Milestone: v1.18 Bold Subject Boundary — COMPLETE (2026-09-07)
 
 **Goal:** Make the boundary group of the element a non-expanded diagram depicts unmistakable — drawn with a bold triple-width border, so viewers instantly see which element the scheme belongs to.
 
@@ -119,6 +119,8 @@ Transform simple TOML architecture descriptions into professional C4 diagrams wi
 - Fix surface confirmed: `buildBoundaryCluster` (internal/graph/builder.go:373) is the single site creating the subject boundary ("the boundary frame IS the unit on its own child diagram"); `NodeStyle` (internal/graph/graph.go:195) has no border-width field yet; `applyClusterStyle` (internal/render/converter.go:656) emits cluster attributes.
 - Out of scope: `--expanded` views (no single subject), collapsed C1 root (no boundary clusters there), node shapes, legend.
 - Backlog: template fan-out, C4D polish warnings WR-03..05, docs drift, #34/#35 human follow-ups — unchanged, unaddressed by this milestone.
+
+**Status:** ✅ COMPLETE (2026-09-07) — Phase 43 (1 phase, 2 plans) shipped as product release v1.26.0; all 3 requirements (BOLD-01..03) validated; verifications passed 8/8; full suite 19/19 green with zero golden re-baselines. Full record: [MILESTONES.md](MILESTONES.md).
 
 ## Previous Milestone: v1.17 Issue Sweep — COMPLETE (2026-09-03)
 
@@ -415,4 +417,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-07 after v1.18 milestone (Bold Subject Boundary — semantic penwidth=3.0 subject boundary on drill-down views)*
+*Last updated: 2026-09-10 after v1.18 milestone close (Bold Subject Boundary shipped as v1.26.0)*

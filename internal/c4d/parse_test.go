@@ -472,3 +472,49 @@ func TestParseSyntaxErrors(t *testing.T) {
 		})
 	}
 }
+
+// TestParseMaxExpressionsKnob proves the exported MaxExpressions knob is
+// honored by every parse entry: a budget of 1 fails a valid document with
+// pigeon's "max number of expressions parsed" message (the resource cap,
+// not a syntax verdict), 0 disables the cap entirely, and the default
+// parses the same document — the knob exists because the old 1M bound was
+// a file-size limit in disguise for ~110KB single-file models.
+//
+//nolint:paralleltest // mutates the package-level MaxExpressions knob
+func TestParseMaxExpressionsKnob(t *testing.T) {
+	const valid = "properties { name: Demo }\na: system { }"
+
+	orig := c4d.MaxExpressions
+
+	t.Cleanup(func() { c4d.MaxExpressions = orig })
+
+	c4d.MaxExpressions = 1
+	_, err := c4d.ParseAST([]byte(valid))
+	require.Error(t, err, "an expression budget of 1 must fail a valid document")
+	assert.Contains(t, err.Error(), "max number of expressions parsed",
+		"the failure must name the expression budget, not a syntax error")
+	assert.Contains(t, err.Error(), "budget (1)",
+		"the failure must name the current limit value")
+	assert.Contains(t, err.Error(), "--max-expressions",
+		"the failure must point at the knob that raises the limit")
+
+	// Named parses (ParseFile/ParseNamed — the check/render path) prefix
+	// pigeon lines with the path; the wrap must still extract the line and
+	// land the enriched message there too.
+	_, err = c4d.ParseNamed("model.c4d", []byte(valid))
+	require.Error(t, err, "a named parse must fail the same way")
+
+	var perr *parser.ParseError
+	require.ErrorAs(t, err, &perr, "errors.As must decode *parser.ParseError")
+	assert.Equal(t, 1, perr.Line, "named parse must still extract the DSL-native line")
+	assert.Contains(t, perr.Error(), "--max-expressions",
+		"the enriched message must reach named parses too")
+
+	c4d.MaxExpressions = 0
+	_, err = c4d.ParseAST([]byte(valid))
+	require.NoError(t, err, "0 must disable the cap (pigeon semantics)")
+
+	c4d.MaxExpressions = orig
+	_, err = c4d.ParseAST([]byte(valid))
+	require.NoError(t, err, "the default budget must parse a small valid document")
+}

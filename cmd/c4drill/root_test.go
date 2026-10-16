@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Djarvur/c4drill/internal/c4d"
 	"github.com/Djarvur/c4drill/internal/graph"
 	"github.com/Djarvur/c4drill/internal/include"
 	"github.com/Djarvur/c4drill/internal/model"
@@ -879,6 +880,58 @@ func TestExpandedFlag_Exists(t *testing.T) {
 	expandedFlag := cmd.PersistentFlags().Lookup("expanded")
 	require.NotNil(t, expandedFlag, "--expanded flag should exist")
 	assert.Equal(t, "false", expandedFlag.DefValue, "--expanded should default to false")
+}
+
+// TestMaxExpressionsFlag_Exists verifies --max-expressions is registered on
+// the root command with the 10x-raised default: the original 1M bound was
+// exceeded by valid ~110KB single-file .c4d models purely on file size.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestMaxExpressionsFlag_Exists(t *testing.T) {
+	cmd := NewRootCmd()
+
+	maxExprFlag := cmd.PersistentFlags().Lookup("max-expressions")
+	require.NotNil(t, maxExprFlag, "--max-expressions flag should exist")
+	assert.Equal(t, "10000000", maxExprFlag.DefValue,
+		"--max-expressions should default to 10x the original 1M bound")
+}
+
+// TestMaxExpressionsFlag_LimitsC4DParsing verifies the flag threads into the
+// parse: a budget of 1 fails a valid .c4d input with pigeon's
+// expression-budget message, while 0 (disable the cap) renders it.
+//
+//nolint:paralleltest // go-graphviz WASM engine has concurrency issues
+func TestMaxExpressionsFlag_LimitsC4DParsing(t *testing.T) {
+	tmpDir := t.TempDir()
+	c4dPath := filepath.Join(tmpDir, "minimal.c4d")
+	require.NoError(t, os.WriteFile(c4dPath, []byte(c4dMinimalTwin), 0o600), "write .c4d input")
+
+	// The flag binds to the c4d package knob; restore it so later tests
+	// in this binary keep the default budget.
+	orig := c4d.MaxExpressions
+
+	t.Cleanup(func() { c4d.MaxExpressions = orig })
+
+	cmd := NewRootCmd()
+	buf := &bytes.Buffer{}
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	cmd.SetArgs([]string{c4dPath, "--max-expressions", "1", "--format", "dot", "--output", tmpDir})
+
+	err := cmd.Execute()
+	require.Error(t, err, "an expression budget of 1 must fail a valid .c4d input")
+	assert.Contains(t, err.Error(), "max number of expressions parsed",
+		"the failure must name the expression budget, not a syntax error")
+	assert.Contains(t, err.Error(), "--max-expressions",
+		"the failure must point at the flag that raises the limit")
+
+	cmd = NewRootCmd()
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	cmd.SetArgs([]string{c4dPath, "--max-expressions", "0", "--format", "dot", "--output", tmpDir})
+
+	require.NoError(t, cmd.Execute(), "0 must disable the cap (pigeon semantics)")
+	require.FileExists(t, filepath.Join(tmpDir, "minimal.dot"), "unlimited parse must render")
 }
 
 // TestExpandedFlag_GeneratesExpandedFile verifies --expanded produces .expanded.{ext} file.

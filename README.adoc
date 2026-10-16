@@ -1254,19 +1254,20 @@ description = "Caches sessions"
 c4drill <input.toml|input.c4d> [flags]
 
 Flags:
-      --edges string        Override edge routing style for every generated diagram (straight|spline|square|ortho)
-      --expanded            Generate all-expanded diagram showing all units
-  -f, --format string       Output format (dot|svg|html|png|plantuml) (default "svg")
-  -h, --help                help for c4drill
-      --label-ratio float   Width:height ratio for unit labels (default: 1.6, credit card proportions)
-      --no-colors           Suppress colouring only: author unit/link colors and kind-derived edge colours
-      --no-labels           Suppress edge label text only: nodes, clusters and the legend keep their labels
-      --no-length           Suppress link spacing only: link length no longer sets minlen
-      --no-rank             Suppress ranking hints only: link rank reverse/equal ignored
-      --no-styles           Suppress line styles only: author unit/link style overrides
-  -o, --output string       Output directory (default: same as input file)
-      --plain               Ignore author-custom formatting: default unit/edge styling, spacing and ranking, plain-text labels
-  -v, --version             version for c4drill
+      --edges string           Override edge routing style for every generated diagram (straight|spline|square|ortho)
+      --expanded               Generate all-expanded diagram showing all units
+  -f, --format string          Output format (dot|svg|html|png|plantuml) (default "svg")
+  -h, --help                   help for c4drill
+      --label-ratio float      Width:height ratio for unit labels (default: 1.6, credit card proportions)
+      --max-expressions uint   Cap pigeon expression evaluations when parsing .c4d input; 0 disables the cap (default 10000000)
+      --no-colors              Suppress colouring only: author unit/link colors and kind-derived edge colours
+      --no-labels              Suppress edge label text only: nodes, clusters and the legend keep their labels
+      --no-length              Suppress link spacing only: link length no longer sets minlen
+      --no-rank                Suppress ranking hints only: link rank reverse/equal ignored
+      --no-styles              Suppress line styles only: author unit/link style overrides
+  -o, --output string          Output directory (default: same as input file)
+      --plain                  Ignore author-custom formatting: default unit/edge styling, spacing and ranking, plain-text labels
+  -v, --version                version for c4drill
 ----
 
 * `--expanded` renders a single diagram containing *all* units (every
@@ -1411,6 +1412,15 @@ Flags:
   wider, shorter labels; lower values produce narrower, taller ones.
   The same value can be set via the `C4DRILL_LABEL_RATIO` environment
   variable; the flag takes precedence.
+* `--max-expressions` caps the parse-expression budget for `.c4d`
+  input (default 10000000). The cap guards against pathological input
+  hanging the parser — it is not a syntax limit, and a valid model can
+  outgrow it: real-world single-file models around 110KB exhausted the
+  old 1M default purely on size, so the default is 10x that bound.
+  `0` disables the cap. The flag is inherited by `check`, `convert`,
+  `fmt` and `serve`. When the cap trips, the parse error names the
+  current budget and this flag, instead of reading as a syntax error
+  on the file's last line.
 * Input dispatch is by extension: `.toml` parses as TOML, `.c4d` as
   C4D (see <<C4D Format>>); any other extension is a hard error.
 

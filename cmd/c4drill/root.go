@@ -134,6 +134,12 @@ func NewRootCmd() *cobra.Command {
 		"Suppress edge label text only: nodes, clusters and the legend keep their labels")
 	cmd.PersistentFlags().Float64Var(&labelRatio, "label-ratio", 0,
 		"Width:height ratio for unit labels (default: 1.6, credit card proportions)")
+	// Bound directly to the c4d package knob: every parse path in the
+	// process (render, check, fmt, convert, serve/LSP, [[include]]
+	// resolution) reads it, so one inherited persistent flag covers all
+	// subcommands without threading a parameter through the pipeline.
+	cmd.PersistentFlags().Uint64Var(&c4d.MaxExpressions, "max-expressions", c4d.MaxExpressions,
+		"Cap pigeon expression evaluations when parsing .c4d input; 0 disables the cap")
 
 	// Subcommands (Plan 35-07): convert between TOML and C4D formats.
 	cmd.AddCommand(newConvertCmd())
