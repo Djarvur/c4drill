@@ -84,16 +84,22 @@ func ParseASTFile(path string) (*ast.Document, error) {
 	return parse(path, data)
 }
 
-// maxExpressions caps pigeon expression evaluations so pathological input
-// fails with an error instead of hanging the parser (T-35-01-01).
-const maxExpressions = 1_000_000
+// MaxExpressions caps pigeon expression evaluations so pathological input
+// fails with an error instead of hanging the parser (T-35-01-01). The
+// original 1M bound was a file-size limit in disguise — a valid single-file
+// model around 110KB exhausted it, so any growth of the model failed to
+// parse — hence the 10x default. 0 disables the cap (pigeon semantics).
+// The --max-expressions CLI flag overrides it.
+//
+//nolint:gochecknoglobals // CLI-tunable knob, render.LabelRatio precedent
+var MaxExpressions uint64 = 10_000_000
 
 // parse runs the generated grammar with the fixed parser options and
 // asserts the untyped result to the typed AST.
 func parse(name string, data []byte) (*ast.Document, error) {
 	result, err := grammar.Parse(name, data,
 		grammar.Memoize(true),
-		grammar.MaxExpressions(maxExpressions),
+		grammar.MaxExpressions(MaxExpressions),
 	)
 	if err != nil {
 		return nil, wrapPigeonError(err, name)

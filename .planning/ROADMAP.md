@@ -14,7 +14,7 @@
 - ✅ **v1.15 Hierarchy Wrapping and Granular Keys** — Phase 38 (SHIPPED 2026-08-30) — product release tag: v1.22.0
 - ✅ **v1.16 Edge Style Override** — Phase 39 (SHIPPED 2026-08-31) → [archive](milestones/v1.16-ROADMAP.md) — product release tag: v1.23.0
 - ✅ **v1.17 Issue Sweep** — Phases 40-42 (SHIPPED 2026-09-03) → [archive](milestones/v1.17-ROADMAP.md) — product release tag: v1.25.0
-- 🚧 **v1.18 Bold Subject Boundary** — Phase 43 (IN PROGRESS, started 2026-09-07)
+- ✅ **v1.18 Bold Subject Boundary** — Phase 43 (SHIPPED 2026-09-07) → [archive](milestones/v1.18-ROADMAP.md) — product release tag: v1.26.0
 
 ## Phases
 
@@ -137,33 +137,15 @@ Full details: [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md)
 </details>
 
 <details>
-<summary>🚧 v1.18 Bold Subject Boundary (Phase 43) — IN PROGRESS (started 2026-09-07)</summary>
+<summary>✅ v1.18 Bold Subject Boundary (Phase 43) — SHIPPED 2026-09-07</summary>
 
 **Goal:** The boundary of the element a non-expanded diagram depicts renders with a bold triple-width border — viewers instantly see which element the scheme belongs to.
 
-- [x] **Phase 43: Bold Subject Boundary** - On every non-expanded (drill-down) view the subject unit's boundary cluster draws with `penwidth=3`; the emphasis is semantic (survives `--plain`/`--no-styles`); everything else unchanged (issue: user feedback 2026-09-07) (completed 2026-09-07)
+- [x] Phase 43: Bold Subject Boundary (2/2 plans) — completed 2026-09-07
 
-### Phase 43: Bold Subject Boundary
+**Stats:** 1 phase, 2 plans, 13 commits. All 3 requirements validated (BOLD-01..03). Full suite 19/19 packages green; all 7 committed goldens byte-identical to v1.17 — zero re-baselines. Release: v1.26.0.
 
-**Goal**: Every non-expanded view shows the subject unit's boundary with a triple-width (penwidth 3) border; other clusters unchanged; semantic so it survives `--plain`/`--no-styles`; expanded views and C1 root untouched.
-**Depends on**: Nothing (fully independent)
-**Requirements**: BOLD-01, BOLD-02, BOLD-03
-**Success Criteria** (what must be TRUE):
-  1. Raw DOT of a drill-down view asserts `penwidth=3` on the subject boundary cluster only — every other cluster keeps its previous attributes (TDD: RED on current output, GREEN after)
-  2. The emphasis appears on C2, C3, and deep-link drill-down views (multi-level fixture); collapsed C1 root output is byte-identical to before (no boundary clusters there)
-  3. `--plain` and `--no-styles` renders keep the bold boundary; `--expanded` output is byte-identical to v1.17 (no subject concept there)
-  4. CanonicalDOT goldens re-baselined ONLY for subject-boundary clusters (diff per golden = penwidth attribute only); full suite green
-**Plans**: 2 plans
-
-Plans:
-
-**Wave 1**
-
-- [x] 43-01-PLAN.md — Semantic bold subject boundary: NodeStyle.BorderWidth + buildBoundaryCluster emphasis + applyClusterStyle penwidth emission, TDD RED/GREEN/REFACTOR with C2/C3/deep-link raw-DOT assertions and --plain/--no-styles survival
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 43-02-PLAN.md — Golden-delta audit (subject-boundary penwidth only) + PROJECT.md As of v1.18
+Full details: [milestones/v1.18-ROADMAP.md](milestones/v1.18-ROADMAP.md)
 
 </details>
 
