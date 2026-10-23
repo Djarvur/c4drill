@@ -29,7 +29,7 @@
     "@codemirror/view": "^6.38.1",
     "@lezer/generator": "^1.8.0",
     "typescript": "^5.9.2",
-    "vite": "^7.1.5",
+    "vite": "^7.3.7",
     "vitest": "^4.1.11"
   }
 }
