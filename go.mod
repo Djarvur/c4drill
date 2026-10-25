@@ -3,7 +3,7 @@ module github.com/Djarvur/c4drill
 go 1.26.1
 
 require (
-	github.com/agnivade/levenshtein v1.2.1
+	github.com/agnivade/levenshtein v1.2.2
 	github.com/mna/pigeon v1.3.0
 	github.com/onokonem/go-graphviz v0.11.0
 	github.com/pelletier/go-toml/v2 v2.4.3
