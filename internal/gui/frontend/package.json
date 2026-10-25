@@ -30,6 +30,6 @@
     "@lezer/generator": "^1.8.0",
     "typescript": "^5.9.2",
     "vite": "^7.1.5",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.12"
   }
 }
